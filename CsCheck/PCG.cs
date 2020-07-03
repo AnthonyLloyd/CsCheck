@@ -35,13 +35,13 @@ namespace CsCheck
             while ((n = Next()) < threshold) ;
             return (int)(n % bound);
         }
-        public int Next64(long maxExclusive)
+        public long Next64(long maxExclusive)
         {
             var bound = (ulong)maxExclusive;
             var threshold = ((ulong)-maxExclusive) % bound;
             ulong n;
             while ((n = Next64()) < threshold) ;
-            return (int)(n % bound);
+            return (long)(n % bound);
         }
         public override string ToString() => (Inc >> 1).ToString("X") + State.ToString("X16");
         public string ToString(ulong state) => (Inc >> 1).ToString("X") + state.ToString("X16");

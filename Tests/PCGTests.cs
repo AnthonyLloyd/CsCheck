@@ -82,5 +82,11 @@ namespace Tests
             Assert.Equal(0xf0b0f70cu, pcg.Next());
             Assert.Equal(0x9dc31b5cfc6658fdUL, pcg.State);
         }
+        [Fact]
+        public void Next_1()
+        {
+            var pcg = new PCG(10);
+            Assert.Equal(0, pcg.Next(1));
+        }
     }
 }
