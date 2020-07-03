@@ -15,7 +15,9 @@ namespace Tests
         [Fact]
         public void Test1()
         {
-            var x = Gen.Select(Gen.Byte(), Gen.Byte(), Gen.Byte(), (b1, b2, b3) => new Version(b1, b2, b3));
+            var x =
+                Gen.Select(Gen.Byte(), Gen.Byte(), Gen.Byte(), (b1, b2, b3) => new Version(b1, b2, b3))
+                .Array(Gen.Byte().Select(i => (int)i));
         }
     }
 }
