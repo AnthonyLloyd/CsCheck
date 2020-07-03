@@ -124,17 +124,18 @@ namespace CsCheck
         });
         public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, Gen<R>> selector) => new Gen<R>(gen.Start, gen.Length, (start, length, pcg) =>
         {
-            var (v, _) = gen.Generate(start, length, pcg);
-            var gen2 = selector(v);
-            return gen2.Generate(gen2.Start, gen2.Length, pcg);
+            var (v1, s1) = gen.Generate(start, length, pcg);
+            var gen2 = selector(v1);
+            var (v2, s2) = gen2.Generate(gen2.Start, gen2.Length, pcg);
+            return (v2, new Size(s1.I, new[] { s2 }));
         });
         public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Func<T1, Gen<T2>> genSelector, Func<T1, T2, R> resultSelector)
             => new Gen<R>(gen1.Start, gen1.Length, (start, length, pcg) =>
         {
-            var (v1, _) = gen1.Generate(start, length, pcg);
+            var (v1, s1) = gen1.Generate(start, length, pcg);
             var gen2 = genSelector(v1);
-            var (v2, s) = gen2.Generate(gen2.Start, gen2.Length, pcg);
-            return (resultSelector(v1, v2), s);
+            var (v2, s2) = gen2.Generate(gen2.Start, gen2.Length, pcg);
+            return (resultSelector(v1, v2), new Size(s1.I, new[] { s2 }));
         });
         public static readonly Gen<byte> Byte = new Gen<byte>(0, 256, (start, length, pcg) =>
         {
