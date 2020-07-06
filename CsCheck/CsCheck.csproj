@@ -8,8 +8,8 @@
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <!--<PackageIconUrl>CsCheck.png</PackageIconUrl>-->
         <PackageTags>test;testing;csharp;random;performance</PackageTags>
-        <Version>0.1.0-preview</Version>
-        <PackageReleaseNotes>Coming Soon...</PackageReleaseNotes>
+        <Version>0.2.0-preview</Version>
+        <PackageReleaseNotes>Starting to take shape with some tests</PackageReleaseNotes>
         <TargetFramework>net5.0</TargetFramework>
         <WarningLevel>4</WarningLevel>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

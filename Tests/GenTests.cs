@@ -9,9 +9,11 @@ namespace Tests
         [Fact]
         public void Int()
         {
-            Gen.Int
-            .SelectMany(i => Gen.Int[0, int.MaxValue - i], (s, l) => (s, f: s + l - 1))
-            .SelectMany(r => Gen.Int[r.s, r.f], (r, i) => (r.s, r.f, i))
+            (from s in Gen.Int
+             from l in Gen.Int[0, int.MaxValue - s]
+             let f = s + l - 1
+             from i in Gen.Int[s, f]
+             select (i, s, f))
             .Assert(i => Assert.InRange(i.i, i.s, i.f));
         }
 
