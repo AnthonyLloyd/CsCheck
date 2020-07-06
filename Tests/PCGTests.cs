@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System;
+using Xunit;
 using CsCheck;
 
 [assembly: CollectionBehavior(CollectionBehavior.CollectionPerAssembly)]
@@ -32,6 +33,7 @@ namespace Tests
             Assert.Equal(0xf9384b90u, pcg.Next());
             Assert.Equal(0x91723b7b84518c9dUL, pcg.State);
         }
+
         [Fact]
         public void PCG_Demo_2()
         {
@@ -57,6 +59,7 @@ namespace Tests
             Assert.Equal(0x15469766u, pcg.Next());
             Assert.Equal(0xe30a9b89171061f0UL, pcg.State);
         }
+
         [Fact]
         public void PCG_Demo_3()
         {
@@ -82,11 +85,39 @@ namespace Tests
             Assert.Equal(0xf0b0f70cu, pcg.Next());
             Assert.Equal(0x9dc31b5cfc6658fdUL, pcg.State);
         }
+
         [Fact]
-        public void Next_1()
+        public void Bound_UInt()
         {
-            var pcg = new PCG(10);
-            Assert.Equal(0u, pcg.Next(1u));
+            Gen.UInt.Assert(i =>
+            {
+                uint threshold = (uint)(-(int)i) % i;
+                Assert.Equal(threshold - 1U, uint.MaxValue % i);
+            });
+        }
+
+        [Fact]
+        public void Bound_ULong()
+        {
+            Gen.ULong.Assert(i =>
+            {
+                ulong threshold = (ulong)(-(long)i) % i;
+                Assert.Equal(threshold - 1UL, ulong.MaxValue % i);
+            });
+        }
+
+        readonly Gen<PCG> GenPCG =
+            Gen.Select(Gen.Int[0, 100], Gen.ULong, (stream, seed) => new PCG(stream, seed));
+
+        [Fact]
+        public void ToString_Roundtrip()
+        {
+            GenPCG.Assert(expected =>
+            {
+                var actual = PCG.Parse(expected.ToString());
+                Assert.Equal(expected.Stream, actual.Stream);
+                Assert.Equal(expected.State, actual.State);
+            });
         }
     }
 }

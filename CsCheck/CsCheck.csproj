@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <Description>CsCheck is a C# random testing library inspired by QuickCheck.%0a%0aIt differs in that generation and shrinking are both based on PCG, a fast random number generator.%0a%0aThis gives advantages particularly important for C#:%0a%0a- Automatic shrinking. Gen classes are composable and there is no need for Arb classes. So less boilerplate.%0a- Random testing and shrinking can run in parallel. This and PCG make it very fast.%0a- Shrunk cases report the seed so they can be rerun. Any failure can easily be reproduced.%0a- Shrinking can be done offline and multiple times to give simpler cases for high dimensional generators.</Description>
+        <Description>CsCheck is a C# random testing library inspired by QuickCheck.%0a%0aIt differs in that generation and shrinking are both based on PCG, a fast random number generator.%0a%0aThis gives advantages particularly important for C#:%0a%0a- Automatic shrinking. Gen classes are composable with no need for Arb classes. So less boilerplate.%0a- Random testing and shrinking can run in parallel. This and PCG make it very fast.%0a- Shrunk cases report the seed so they can be rerun. Any failure can easily be reproduced.%0a- Shrinking can be done offline and multiple times to give simpler cases for high dimensional generators.</Description>
         <Authors>Anthony Lloyd</Authors>
         <Owners>Anthony Lloyd</Owners>
         <Copyright>Copyright 2020</Copyright>

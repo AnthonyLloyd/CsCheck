@@ -184,7 +184,7 @@ namespace CsCheck
                 return new Gen<long>(pcg =>
                 {
                     var i = pcg.Next64(l);
-                    return ((long)((ulong)start+i), new Size(i, Array.Empty<Size>())); // long / ulogn logic is bad needs tests
+                    return ((long)((ulong)start+i), new Size(i, Array.Empty<Size>())); // long / ulong logic is bad needs tests
                 });
             }
         }
@@ -366,6 +366,12 @@ namespace CsCheck
             var gen2 = genSelector(v1);
             var (v2, s2) = gen2.Generate(pcg);
             return (resultSelector(v1, v2), new Size(s1.I, new[] { s2 }));
+        });
+        public static Gen<(T1, T2)> Tuple<T1, T2>(this IGen<T1> gen1, IGen<T2> gen2) => new Gen<(T1, T2)>(pcg =>
+        {
+            var (v1, s1) = gen1.Generate(pcg);
+            var (v2, s2) = gen2.Generate(pcg);
+            return ((v1, v2), new Size(0UL, new[] { s1, s2 }));
         });
         public static Gen<T[]> Array<T>(this IGen<T> gen, IGen<int> genLength) => new Gen<T[]>(pcg =>
         {
