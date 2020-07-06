@@ -9,12 +9,12 @@ namespace Tests
         [Fact]
         public void Int()
         {
-            (from s in Gen.Int
-             from l in Gen.Int[0, int.MaxValue - s]
-             let f = s + l - 1
-             from i in Gen.Int[s, f]
-             select (i, s, f))
-            .Assert(i => Assert.InRange(i.i, i.s, i.f));
+            (from start in Gen.Int
+             from length in Gen.Int[0, int.MaxValue - start]
+             let finish = start + length - 1
+             from value in Gen.Int[start, finish]
+             select (value, start, finish))
+            .Assert(i => Assert.InRange(i.value, i.start, i.finish));
         }
 
         [Fact]
