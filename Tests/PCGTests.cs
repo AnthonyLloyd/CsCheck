@@ -86,7 +86,7 @@ namespace Tests
         public void Next_1()
         {
             var pcg = new PCG(10);
-            Assert.Equal(0, pcg.Next(1));
+            Assert.Equal(0u, pcg.Next(1u));
         }
     }
 }

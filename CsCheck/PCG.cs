@@ -27,21 +27,21 @@ namespace CsCheck
             return BitOperations.RotateRight((uint)((State ^ (State >> 18)) >> 27), (int)(State >> 59));
         }
         public ulong Next64() => ((ulong)Next() << 32) + Next();
-        public int Next(int maxExclusive)
+        public uint Next(uint maxExclusive)
         {
-            var bound = (uint)maxExclusive;
-            var threshold = ((uint)-maxExclusive) % bound;
+            var bound = maxExclusive;
+            var threshold = ((uint)-(int)maxExclusive) % bound;
             uint n;
             while ((n = Next()) < threshold) ;
-            return (int)(n % bound);
+            return n % bound;
         }
-        public long Next64(long maxExclusive)
+        public ulong Next64(ulong maxExclusive)
         {
-            var bound = (ulong)maxExclusive;
-            var threshold = ((ulong)-maxExclusive) % bound;
+            var bound = maxExclusive;
+            var threshold = ((ulong)-(long)maxExclusive) % bound;
             ulong n;
             while ((n = Next64()) < threshold) ;
-            return (long)(n % bound);
+            return n % bound;
         }
         public override string ToString() => (Inc >> 1).ToString("X") + State.ToString("X16");
         public string ToString(ulong state) => (Inc >> 1).ToString("X") + state.ToString("X16");
