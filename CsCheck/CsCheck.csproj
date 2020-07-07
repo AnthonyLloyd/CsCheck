@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <Description>CsCheck is a C# random testing library inspired by QuickCheck.%0a%0aIt differs in that generation and shrinking are both based on PCG, a fast random number generator.%0a%0aThis gives advantages particularly important for C#:%0a%0a- Automatic shrinking. Gen classes are composable with no need for Arb classes. So less boilerplate.%0a- Random testing and shrinking can run in parallel. This and PCG make it very fast.%0a- Shrunk cases report the seed so they can be rerun. Any failure can easily be reproduced.%0a- Shrinking can be done offline and multiple times to give simpler cases for high dimensional generators.</Description>
         <Authors>Anthony Lloyd</Authors>
@@ -6,12 +6,15 @@
         <Copyright>Copyright 2020</Copyright>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
-        <PackageIconUrl>https://github.com/AnthonyLloyd/CsCheck/CsCheck.png</PackageIconUrl>
+        <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>test;testing;csharp;random;performance</PackageTags>
-        <Version>0.2.0-preview</Version>
-        <PackageReleaseNotes>Starting to take shape with some tests</PackageReleaseNotes>
+        <Version>0.2.1-preview</Version>
+        <PackageReleaseNotes>Try icon</PackageReleaseNotes>
         <TargetFramework>net5.0</TargetFramework>
         <WarningLevel>4</WarningLevel>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>
+    <ItemGroup>
+        <None Include="CsCheck.png" Pack="true" PackagePath="\" />
+    </ItemGroup>
 </Project>
