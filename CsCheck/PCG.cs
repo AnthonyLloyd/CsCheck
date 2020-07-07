@@ -24,7 +24,9 @@ namespace CsCheck
         public uint Next()
         {
             State = State * 6364136223846793005L + Inc;
-            return BitOperations.RotateRight((uint)((State ^ (State >> 18)) >> 27), (int)(State >> 59));
+            uint xorshifted = (uint)((State ^ (State >> 18)) >> 27);
+            int rot = (int)(State >> 59);
+            return (xorshifted >> rot) | (xorshifted << (-rot & 31));
         }
         public ulong Next64() => ((ulong)Next() << 32) + Next();
         public uint Next(uint maxExclusive)
@@ -45,8 +47,8 @@ namespace CsCheck
         public string ToString(ulong state) => (Inc >> 1).ToString("X") + state.ToString("X16");
         public static PCG Parse(string s)
         {
-            var stream = uint.Parse(s.AsSpan(0, s.Length - 16), NumberStyles.HexNumber, null);
-            var state = ulong.Parse(s.AsSpan(s.Length - 16), NumberStyles.HexNumber, null);
+            var stream = uint.Parse(s.Substring(0, s.Length - 16), NumberStyles.HexNumber, null);
+            var state = ulong.Parse(s.Substring(s.Length - 16), NumberStyles.HexNumber, null);
             return new PCG((ulong)(((long)stream << 1) | 1L), state);
         }
     }

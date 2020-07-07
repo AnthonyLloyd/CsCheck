@@ -10,7 +10,7 @@
         <PackageTags>test;testing;csharp;random;performance</PackageTags>
         <Version>0.2.2-preview</Version>
         <PackageReleaseNotes>Try icon</PackageReleaseNotes>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>netstandard2.0</TargetFramework>
         <WarningLevel>4</WarningLevel>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>

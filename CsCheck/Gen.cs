@@ -17,7 +17,7 @@ namespace CsCheck
 
     public interface IGen<T> : IEnumerable<T>
     {
-        public (T, Size) Generate(PCG pcg);
+        (T, Size) Generate(PCG pcg);
     }
 
     public struct Gen<T> : IGen<T>
@@ -242,8 +242,8 @@ namespace CsCheck
     {
         public (float, Size) Generate(PCG pcg)
         {
-            uint i = pcg.Next() >> 9;
-            return (BitConverter.Int32BitsToSingle((int)i | 0x3F800000) - 1f
+            ulong i = pcg.Next64() >> 12;
+            return ((float)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1f
                     , new Size(i, Array.Empty<Size>()));
         }
         public Gen<float> this[float start, float finish]
@@ -254,8 +254,8 @@ namespace CsCheck
                 start -= finish;
                 return new Gen<float>(pcg =>
                 {
-                    uint i = pcg.Next() >> 9;
-                    return (BitConverter.Int32BitsToSingle((int)i | 0x3F800000) * finish + start
+                    ulong i = pcg.Next64() >> 12;
+                    return ((float)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * finish + start
                             , new Size(i, Array.Empty<Size>()));
                 });
             }
@@ -504,15 +504,12 @@ namespace CsCheck
         static readonly Size zero = new Size(0UL, System.Array.Empty<Size>());
         public static Gen<T> Const<T>(T value) => new Gen<T>(_ => (value, zero));
         public static Gen<T> OneOf<T>(List<IGen<T>> gens) => Int[0, gens.Count].SelectMany(i => gens[i]);
-        internal static IEnumerator<T> GetEnumerator<T>(this IGen<T> gen)
+        static IEnumerable<T> Enumerable<T>(IGen<T> gen)
         {
-            static IEnumerable<T> Enumerable(IGen<T> gen)
-            {
-                var pcg = new PCG(102);
-                while (true) yield return gen.Generate(pcg).Item1;
-            }
-            return Enumerable(gen).GetEnumerator();
+            var pcg = new PCG(102);
+            while (true) yield return gen.Generate(pcg).Item1;
         }
+        internal static IEnumerator<T> GetEnumerator<T>(this IGen<T> gen) => Enumerable(gen).GetEnumerator();
         public static readonly GenBool Bool = new GenBool();
         public static readonly GenSByte SByte = new GenSByte();
         public static readonly GenByte Byte = new GenByte();
