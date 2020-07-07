@@ -1,0 +1,13 @@
+name: CI
+
+on: [ push, pull_request ]
+
+jobs:
+  build:
+
+    runs-on: [ ubuntu-latest, windows-latest, macos-latest ]
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: Test
+      run: dotnet test
