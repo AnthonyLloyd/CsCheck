@@ -7,7 +7,7 @@
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
-        <PackageTags>test;testing;csharp;random;performance</PackageTags>
+        <PackageTags>testing;random;performance;quickcheck</PackageTags>
         <Version>0.2.2-preview</Version>
         <PackageReleaseNotes>Try icon</PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
