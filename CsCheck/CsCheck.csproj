@@ -6,7 +6,7 @@
         <Copyright>Copyright 2020</Copyright>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
-        <!--<PackageIconUrl>CsCheck.png</PackageIconUrl>-->
+        <PackageIconUrl>https://github.com/AnthonyLloyd/CsCheck/CsCheck.png</PackageIconUrl>
         <PackageTags>test;testing;csharp;random;performance</PackageTags>
         <Version>0.2.0-preview</Version>
         <PackageReleaseNotes>Starting to take shape with some tests</PackageReleaseNotes>
