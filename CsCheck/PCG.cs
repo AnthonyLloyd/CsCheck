@@ -20,7 +20,7 @@ namespace CsCheck
             Inc = (ulong)(((long)stream << 1) | 1L);
             State = Inc + seed;
         }
-        public PCG(int stream) : this(stream, (ulong)Stopwatch.GetTimestamp()) {}
+        public PCG(int stream) : this(stream, (ulong)Stopwatch.GetTimestamp()) { }
         public uint Next()
         {
             State = State * 6364136223846793005L + Inc;

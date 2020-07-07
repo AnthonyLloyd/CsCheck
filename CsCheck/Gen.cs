@@ -238,7 +238,7 @@ namespace CsCheck
         IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
-    public struct GenFloat : IGen<float>
+    public struct GenSingle : IGen<float>
     {
         public (float, Size) Generate(PCG pcg)
         {
@@ -295,7 +295,7 @@ namespace CsCheck
         public (decimal, Size) Generate(PCG pcg)
         {
             var i = pcg.Next64() >> 12;
-            return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * 200.0M - 300.0M
+            return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1M
                     , new Size(i, Array.Empty<Size>()));
         }
         public Gen<decimal> this[decimal start, decimal finish]
@@ -522,7 +522,7 @@ namespace CsCheck
         public static readonly GenUInt UInt = new GenUInt();
         public static readonly GenLong Long = new GenLong();
         public static readonly GenULong ULong = new GenULong();
-        public static readonly GenFloat Float = new GenFloat();
+        public static readonly GenSingle Single = new GenSingle();
         public static readonly GenDouble Double = new GenDouble();
         public static readonly GenDecimal Decimal = new GenDecimal();
         public static readonly GenChar Char = new GenChar();
