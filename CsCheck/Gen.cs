@@ -180,11 +180,12 @@ namespace CsCheck
         {
             get
             {
+
                 ulong l = (ulong)(finish - start) + 1ul;
                 return new Gen<long>(pcg =>
                 {
                     var i = pcg.Next64(l);
-                    return ((long)((ulong)start+i), new Size(i, Array.Empty<Size>())); // long / ulong logic is bad needs tests
+                    return (start + (long)i, new Size(i, Array.Empty<Size>()));
                 });
             }
         }
@@ -215,9 +216,9 @@ namespace CsCheck
     {
         public (float, Size) Generate(PCG pcg)
         {
-            var i = pcg.Next64() >> 12;
-            var f = (float)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L); // can do as single with only Next32, test
-            return (-300.0f + f * 200.0f, new Size(i, Array.Empty<Size>()));
+            uint i = pcg.Next() >> 9;
+            return (BitConverter.Int32BitsToSingle((int)i | 0x3F800000) * 200.0f + -300.0f
+                    , new Size(i, Array.Empty<Size>()));
         }
         public Gen<float> this[float start, float finish]
         {
@@ -227,9 +228,9 @@ namespace CsCheck
                 start -= finish;
                 return new Gen<float>(pcg =>
                 {
-                    var i = pcg.Next64() >> 12;
-                    var f = (float)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L);
-                    return (start + f * finish, new Size(i, Array.Empty<Size>()));
+                    uint i = pcg.Next() >> 9;
+                    return (BitConverter.Int32BitsToSingle((int)i | 0x3F800000) * finish + start
+                            , new Size(i, Array.Empty<Size>()));
                 });
             }
         }
@@ -239,9 +240,9 @@ namespace CsCheck
     {
         public (double, Size) Generate(PCG pcg)
         {
-            var i = pcg.Next64() >> 12;
-            var f = BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L);
-            return (-300.0 + f * 200.0, new Size(i, Array.Empty<Size>()));
+            ulong i = pcg.Next64() >> 12;
+            return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * 200.0 + -300.0
+                    , new Size(i, Array.Empty<Size>()));
         }
         public Gen<double> this[double start, double finish]
         {
@@ -251,9 +252,9 @@ namespace CsCheck
                 start -= finish;
                 return new Gen<double>(pcg =>
                 {
-                    var i = pcg.Next64() >> 12;
-                    var f = BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L);
-                    return (start + f * finish, new Size(i, Array.Empty<Size>()));
+                    ulong i = pcg.Next64() >> 12;
+                    return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * finish + start
+                            , new Size(i, Array.Empty<Size>()));
                 });
             }
         }
@@ -406,6 +407,12 @@ namespace CsCheck
         static readonly Size zero = new Size(0UL, System.Array.Empty<Size>());
         public static Gen<T> Const<T>(T value) => new Gen<T>(_ => (value, zero));
         public static Gen<T> OneOf<T>(List<IGen<T>> gens) => Int[0, gens.Count].SelectMany(i => gens[i]);
+        public static IEnumerable<T> AsEnumerable<T>(this IGen<T> gen)
+        {
+            var pcg = new PCG(102);
+            while (true) yield return gen.Generate(pcg).Item1;
+        }
+        public static readonly GenBool Bool = new GenBool();
         public static readonly GenSByte SByte = new GenSByte();
         public static readonly GenByte Byte = new GenByte();
         public static readonly GenShort Short = new GenShort();

@@ -29,19 +29,17 @@ namespace CsCheck
         public ulong Next64() => ((ulong)Next() << 32) + Next();
         public uint Next(uint maxExclusive)
         {
-            var bound = maxExclusive;
-            var threshold = ((uint)-(int)maxExclusive) % bound;
+            var threshold = ((uint)-(int)maxExclusive) % maxExclusive;
             uint n;
-            while ((n = Next()) < threshold) ;
-            return n % bound;
+            while ((n = Next()) < threshold) { };
+            return n % maxExclusive;
         }
         public ulong Next64(ulong maxExclusive)
         {
-            var bound = maxExclusive;
-            var threshold = ((ulong)-(long)maxExclusive) % bound;
+            var threshold = ((ulong)-(long)maxExclusive) % maxExclusive;
             ulong n;
-            while ((n = Next64()) < threshold) ;
-            return n % bound;
+            while ((n = Next64()) < threshold) { };
+            return n % maxExclusive;
         }
         public override string ToString() => (Inc >> 1).ToString("X") + State.ToString("X16");
         public string ToString(ulong state) => (Inc >> 1).ToString("X") + state.ToString("X16");
