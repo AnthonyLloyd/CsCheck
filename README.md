@@ -1,6 +1,6 @@
 # CsCheck
 
-![CI](https://github.com/AnthonyLloyd/CsCheck/workflows/CI/badge.svg>branch=master)[![NuGet](https://buildstats.info/nuget/CsCheck?includePreReleases=true)](https://www.nuget.org/packages/CsCheck/)
+![CI](https://github.com/AnthonyLloyd/CsCheck/workflows/CI/badge.svg?branch=master)[![NuGet](https://buildstats.info/nuget/CsCheck?includePreReleases=true)](https://www.nuget.org/packages/CsCheck/)
 
 CsCheck is a C# random testing library inspired by QuickCheck.
 
