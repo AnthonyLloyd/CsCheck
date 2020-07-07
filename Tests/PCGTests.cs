@@ -89,7 +89,7 @@ namespace Tests
         [Fact]
         public void Bound_UInt()
         {
-            Gen.UInt.Assert(i =>
+            Gen.UInt.Sample(i =>
             {
                 uint threshold = (uint)(-(int)i) % i;
                 Assert.Equal(threshold - 1U, uint.MaxValue % i);
@@ -99,7 +99,7 @@ namespace Tests
         [Fact]
         public void Bound_ULong()
         {
-            Gen.ULong.Assert(i =>
+            Gen.ULong.Sample(i =>
             {
                 ulong threshold = (ulong)(-(long)i) % i;
                 Assert.Equal(threshold - 1UL, ulong.MaxValue % i);
@@ -112,7 +112,7 @@ namespace Tests
         [Fact]
         public void ToString_Roundtrip()
         {
-            GenPCG.Assert(expected =>
+            GenPCG.Sample(expected =>
             {
                 var actual = PCG.Parse(expected.ToString());
                 Assert.Equal(expected.Stream, actual.Stream);

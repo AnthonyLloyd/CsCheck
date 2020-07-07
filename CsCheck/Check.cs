@@ -10,13 +10,15 @@ namespace CsCheck
 
     public static class Check
     {
-        public static void Assert<T>(this IGen<T> gen, Action<T> action)
+        public static int SampleSize = 100;
+        public static void Sample<T>(this IGen<T> gen, Action<T> action, string seed = null, int size = -1, int threads = -1)
         {
-            var pcg = new PCG(101);
+            var pcg = seed is null ? new PCG(101) : PCG.Parse(seed);
             ulong state;
             try
             {
-                for (int i = 0; i < 100; i++)
+                int l = size == -1 ? SampleSize : size;
+                for (int i = 0; i < l; i++)
                 {
                     state = pcg.State;
                     var (v, s) = gen.Generate(pcg);
@@ -28,13 +30,15 @@ namespace CsCheck
                 throw;
             }
         }
-        public static void Assert<T>(this IGen<T> gen, Func<T, bool> action)
+
+        public static void Sample<T>(this IGen<T> gen, Func<T, bool> action, string seed = null, int size = -1, int threads = -1)
         {
-            var pcg = new PCG(101);
+            var pcg = seed is null ? new PCG(101) : PCG.Parse(seed);
             ulong state;
             try
             {
-                for (int i = 0; i < 100; i++)
+                int l = size == -1 ? SampleSize : size;
+                for (int i = 0; i < l; i++)
                 {
                     state = pcg.State;
                     var (v, s) = gen.Generate(pcg);
@@ -46,6 +50,7 @@ namespace CsCheck
                 throw;
             }
         }
+
         public static void ChiSquared(int[] expected, int[] actual)
         {
             if (expected.Length != actual.Length) throw new CsCheckException("Expected and actual lengths need to be the same.");
@@ -61,6 +66,26 @@ namespace CsCheck
             double sdev = Math.Sqrt(2 * mean);
             double SDs = (chi - mean) / sdev;
             if (Math.Abs(SDs) > 6.0) throw new CsCheckException("Chi-squared standard deviation = " + SDs.ToString("0.0"));
+        }
+
+        public static void Faster<T>(Action faster, Action slower)
+        {
+
+        }
+
+        public static void Faster<T>(Func<T> faster, Func<T> slower)
+        {
+
+        }
+
+        public static void Faster<T>(this IGen<T> gen, Action<T> faster, Action<T> slower)
+        {
+
+        }
+
+        public static void Faster<T1, T2>(this IGen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower)
+        {
+
         }
     }
 
