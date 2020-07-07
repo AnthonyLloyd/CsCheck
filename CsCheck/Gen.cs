@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace CsCheck
@@ -14,7 +15,7 @@ namespace CsCheck
         }
     }
 
-    public interface IGen<T>
+    public interface IGen<T> : IEnumerable<T>
     {
         public (T, Size) Generate(PCG pcg);
     }
@@ -24,23 +25,28 @@ namespace CsCheck
         readonly Func<PCG, (T, Size)> generate;
         public Gen(Func<PCG, (T, Size)> generate) => this.generate = generate;
         public (T, Size) Generate(PCG pcg) => generate(pcg);
+        public IEnumerator<T> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenBool : IGen<bool>
     {
         public (bool, Size) Generate(PCG pcg)
         {
-            var i = pcg.Next();
+            uint i = pcg.Next();
             return ((i & 1u) == 1u, new Size(i, Array.Empty<Size>()));
         }
+        public IEnumerator<bool> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenSByte : IGen<sbyte>
     {
+        static ulong Zigzag(sbyte i) => (ulong)((i << 1) ^ (i >> 7));
         public (sbyte, Size) Generate(PCG pcg)
         {
-            var i = pcg.Next() & 255u;
-            return ((sbyte)i, new Size(i, Array.Empty<Size>()));
+            sbyte i = (sbyte)(pcg.Next() & 255u);
+            return (i, new Size(Zigzag(i), Array.Empty<Size>()));
         }
         public Gen<sbyte> this[sbyte start, sbyte finish]
         {
@@ -49,41 +55,46 @@ namespace CsCheck
                 uint l = (uint)(finish - start) + 1u;
                 return new Gen<sbyte>(pcg =>
                 {
-                    var i = pcg.Next(l);
-                    return ((sbyte)(start + i), new Size(i, Array.Empty<Size>()));
+                    sbyte i = (sbyte)(start + pcg.Next(l));
+                    return (i, new Size(Zigzag(i), Array.Empty<Size>()));
                 });
             }
         }
+        public IEnumerator<sbyte> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenByte : IGen<byte>
     {
         public (byte, Size) Generate(PCG pcg)
         {
-            var i = pcg.Next() & 255u;
-            return ((byte)i, new Size(i, Array.Empty<Size>()));
+            byte i = (byte)(pcg.Next() & 255u);
+            return (i, new Size(i, Array.Empty<Size>()));
         }
         public Gen<byte> this[byte start, byte finish]
         {
             get
             {
                 uint s = start;
-                uint l = finish + 1u - s;
+                uint l = finish - s + 1u;
                 return new Gen<byte>(pcg =>
                 {
-                    var i = pcg.Next(l);
-                    return ((byte)(s + i), new Size(i, Array.Empty<Size>()));
+                    byte i = (byte)(s + pcg.Next(l));
+                    return (i, new Size(i, Array.Empty<Size>()));
                 });
             }
         }
+        public IEnumerator<byte> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenShort : IGen<short>
     {
+        static ulong Zigzag(short i) => (ulong)((i << 1) ^ (i >> 15));
         public (short, Size) Generate(PCG pcg)
         {
-            var i = pcg.Next() & 65535u;
-            return ((short)i, new Size(i, Array.Empty<Size>()));
+            short i = (short)(pcg.Next() & 65535u);
+            return (i, new Size(Zigzag(i), Array.Empty<Size>()));
         }
         public Gen<short> this[short start, short finish]
         {
@@ -92,19 +103,21 @@ namespace CsCheck
                 uint l = (uint)(finish - start) + 1u;
                 return new Gen<short>(pcg =>
                 {
-                    var i = pcg.Next(l);
-                    return ((short)(start + i), new Size(i, Array.Empty<Size>()));
+                    short i = (short)(start + pcg.Next(l));
+                    return (i, new Size(Zigzag(i), Array.Empty<Size>()));
                 });
             }
         }
+        public IEnumerator<short> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenUShort : IGen<ushort>
     {
         public (ushort, Size) Generate(PCG pcg)
         {
-            var i = pcg.Next() & 65535u;
-            return ((ushort)i, new Size(i, Array.Empty<Size>()));
+            ushort i = (ushort)(pcg.Next() & 65535u);
+            return (i, new Size(i, Array.Empty<Size>()));
         }
         public Gen<ushort> this[ushort start, ushort finish]
         {
@@ -113,24 +126,27 @@ namespace CsCheck
                 uint l = (uint)(finish - start) + 1u;
                 return new Gen<ushort>(pcg =>
                 {
-                    var i = pcg.Next(l);
-                    return ((ushort)(start + i), new Size(i, Array.Empty<Size>()));
+                    ushort i = (ushort)(start + pcg.Next(l));
+                    return (i, new Size(i, Array.Empty<Size>()));
                 });
             }
         }
+        public IEnumerator<ushort> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenInt : IGen<int>
     {
+        static uint Zigzag(int i) => (uint)((i << 1) ^ (i >> 31));
         public (int, Size) Generate(PCG pcg)
         {
-            var i = pcg.Next();
-            return ((int)i, new Size(i, Array.Empty<Size>()));
+            int i = (int)pcg.Next();
+            return (i, new Size(Zigzag(i), Array.Empty<Size>()));
         }
         static readonly Gen<int> int128 = new Gen<int>(pcg =>
         {
-            var i = pcg.Next() & 127u;
-            return ((int)i, new Size(i, Array.Empty<Size>()));
+            int i = (int)(pcg.Next() & 127u);
+            return (i, new Size(Zigzag(i), Array.Empty<Size>()));
         });
         public Gen<int> this[int start, int finish]
         {
@@ -141,18 +157,20 @@ namespace CsCheck
                 uint l = (uint)(finish - start) + 1u;
                 return new Gen<int>(pcg =>
                 {
-                    var i = pcg.Next(l);
-                    return ((int)(start + i), new Size(i, Array.Empty<Size>()));
+                    int i = (int)(start + pcg.Next(l));
+                    return (i, new Size(Zigzag(i), Array.Empty<Size>()));
                 });
             }
         }
+        public IEnumerator<int> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenUInt : IGen<uint>
     {
         public (uint, Size) Generate(PCG pcg)
         {
-            var i = pcg.Next();
+            uint i = pcg.Next();
             return (i, new Size(i, Array.Empty<Size>()));
         }
         public Gen<uint> this[uint start, uint finish]
@@ -162,19 +180,23 @@ namespace CsCheck
                 uint l = finish - start + 1u;
                 return new Gen<uint>(pcg =>
                 {
-                    var i = pcg.Next(l);
-                    return (start + i, new Size(i, Array.Empty<Size>()));
+                    uint i = start + pcg.Next(l);
+                    return (i, new Size(i, Array.Empty<Size>()));
                 });
             }
         }
+        public IEnumerator<uint> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenLong : IGen<long>
     {
+        static ulong Zigzag(long i) => (ulong)((i << 1) ^ (i >> 63));
+
         public (long, Size) Generate(PCG pcg)
         {
-            var i = pcg.Next64();
-            return ((long)i, new Size(i, Array.Empty<Size>()));
+            long i = (long)pcg.Next64();
+            return (i, new Size(Zigzag(i), Array.Empty<Size>()));
         }
         public Gen<long> this[long start, long finish]
         {
@@ -184,18 +206,20 @@ namespace CsCheck
                 ulong l = (ulong)(finish - start) + 1ul;
                 return new Gen<long>(pcg =>
                 {
-                    var i = pcg.Next64(l);
-                    return (start + (long)i, new Size(i, Array.Empty<Size>()));
+                    long i = start + (long)pcg.Next64(l);
+                    return (i, new Size(Zigzag(i), Array.Empty<Size>()));
                 });
             }
         }
+        public IEnumerator<long> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenULong : IGen<ulong>
     {
         public (ulong, Size) Generate(PCG pcg)
         {
-            var i = pcg.Next64();
+            ulong i = pcg.Next64();
             return (i, new Size(i, Array.Empty<Size>()));
         }
         public Gen<ulong> this[ulong start, ulong finish]
@@ -205,11 +229,13 @@ namespace CsCheck
                 ulong l = finish - start + 1ul;
                 return new Gen<ulong>(pcg =>
                 {
-                    var i = pcg.Next64(l);
-                    return (start + i, new Size(i, Array.Empty<Size>()));
+                    ulong i = start + pcg.Next64(l);
+                    return (i, new Size(i, Array.Empty<Size>()));
                 });
             }
         }
+        public IEnumerator<ulong> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenFloat : IGen<float>
@@ -217,7 +243,7 @@ namespace CsCheck
         public (float, Size) Generate(PCG pcg)
         {
             uint i = pcg.Next() >> 9;
-            return (BitConverter.Int32BitsToSingle((int)i | 0x3F800000) * 200.0f + -300.0f
+            return (BitConverter.Int32BitsToSingle((int)i | 0x3F800000) - 1f
                     , new Size(i, Array.Empty<Size>()));
         }
         public Gen<float> this[float start, float finish]
@@ -234,6 +260,8 @@ namespace CsCheck
                 });
             }
         }
+        public IEnumerator<float> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenDouble : IGen<double>
@@ -241,7 +269,7 @@ namespace CsCheck
         public (double, Size) Generate(PCG pcg)
         {
             ulong i = pcg.Next64() >> 12;
-            return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * 200.0 + -300.0
+            return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1.0
                     , new Size(i, Array.Empty<Size>()));
         }
         public Gen<double> this[double start, double finish]
@@ -258,6 +286,8 @@ namespace CsCheck
                 });
             }
         }
+        public IEnumerator<double> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenDecimal : IGen<decimal>
@@ -265,8 +295,8 @@ namespace CsCheck
         public (decimal, Size) Generate(PCG pcg)
         {
             var i = pcg.Next64() >> 12;
-            var f = (decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L);
-            return (-300.0M + f * 200.0M, new Size(i, Array.Empty<Size>()));
+            return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * 200.0M - 300.0M
+                    , new Size(i, Array.Empty<Size>()));
         }
         public Gen<decimal> this[decimal start, decimal finish]
         {
@@ -277,11 +307,13 @@ namespace CsCheck
                 return new Gen<decimal>(pcg =>
                 {
                     var i = pcg.Next64() >> 12;
-                    var f = (decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L);
-                    return (start + f * finish, new Size(i, Array.Empty<Size>()));
+                    return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * finish + start
+                            , new Size(i, Array.Empty<Size>()));
                 });
             }
         }
+        public IEnumerator<decimal> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenChar : IGen<char>
@@ -304,6 +336,8 @@ namespace CsCheck
                 });
             }
         }
+        public IEnumerator<char> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public struct GenString : IGen<string>
@@ -320,6 +354,8 @@ namespace CsCheck
                 return Gen.Char.Array(start, finish).Select(i => new string(i));
             }
         }
+        public IEnumerator<string> GetEnumerator() => Gen.GetEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
     }
 
     public static class Gen
@@ -352,6 +388,67 @@ namespace CsCheck
             var (v3, s3) = gen3.Generate(pcg);
             var (v4, s4) = gen4.Generate(pcg);
             return (selector(v1, v2, v3, v4), new Size(0UL, new[] { s1, s2, s3, s4 }));
+        });
+        public static Gen<R> Select<T1, T2, T3, T4, T5, R>(this IGen<T1> gen1, IGen<T2> gen2, IGen<T3> gen3, IGen<T4> gen4,
+            IGen<T5> gen5, Func<T1, T2, T3, T4, T5, R> selector) => new Gen<R>(pcg =>
+        {
+            var (v1, s1) = gen1.Generate(pcg);
+            var (v2, s2) = gen2.Generate(pcg);
+            var (v3, s3) = gen3.Generate(pcg);
+            var (v4, s4) = gen4.Generate(pcg);
+            var (v5, s5) = gen5.Generate(pcg);
+            return (selector(v1, v2, v3, v4, v5), new Size(0UL, new[] { s1, s2, s3, s4, s5 }));
+        });
+        public static Gen<R> Select<T1, T2, T3, T4, T5, T6, R>(this IGen<T1> gen1, IGen<T2> gen2, IGen<T3> gen3, IGen<T4> gen4,
+            IGen<T5> gen5, IGen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, R> selector) => new Gen<R>(pcg =>
+        {
+            var (v1, s1) = gen1.Generate(pcg);
+            var (v2, s2) = gen2.Generate(pcg);
+            var (v3, s3) = gen3.Generate(pcg);
+            var (v4, s4) = gen4.Generate(pcg);
+            var (v5, s5) = gen5.Generate(pcg);
+            var (v6, s6) = gen6.Generate(pcg);
+            return (selector(v1, v2, v3, v4, v5, v6), new Size(0UL, new[] { s1, s2, s3, s4, s5, s6 }));
+        });
+        public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, R>(this IGen<T1> gen1, IGen<T2> gen2, IGen<T3> gen3, IGen<T4> gen4,
+            IGen<T5> gen5, IGen<T6> gen6, IGen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) => new Gen<R>(pcg =>
+        {
+            var (v1, s1) = gen1.Generate(pcg);
+            var (v2, s2) = gen2.Generate(pcg);
+            var (v3, s3) = gen3.Generate(pcg);
+            var (v4, s4) = gen4.Generate(pcg);
+            var (v5, s5) = gen5.Generate(pcg);
+            var (v6, s6) = gen6.Generate(pcg);
+            var (v7, s7) = gen7.Generate(pcg);
+            return (selector(v1, v2, v3, v4, v5, v6, v7), new Size(0UL, new[] { s1, s2, s3, s4, s5, s6, s7 }));
+        });
+        public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, R>(this IGen<T1> gen1, IGen<T2> gen2, IGen<T3> gen3, IGen<T4> gen4,
+            IGen<T5> gen5, IGen<T6> gen6, IGen<T7> gen7, IGen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector) => new Gen<R>(pcg =>
+        {
+            var (v1, s1) = gen1.Generate(pcg);
+            var (v2, s2) = gen2.Generate(pcg);
+            var (v3, s3) = gen3.Generate(pcg);
+            var (v4, s4) = gen4.Generate(pcg);
+            var (v5, s5) = gen5.Generate(pcg);
+            var (v6, s6) = gen6.Generate(pcg);
+            var (v7, s7) = gen7.Generate(pcg);
+            var (v8, s8) = gen8.Generate(pcg);
+            return (selector(v1, v2, v3, v4, v5, v6, v7, v8), new Size(0UL, new[] { s1, s2, s3, s4, s5, s6, s7, s8 }));
+        });
+        public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>(this IGen<T1> gen1, IGen<T2> gen2, IGen<T3> gen3, IGen<T4> gen4,
+            IGen<T5> gen5, IGen<T6> gen6, IGen<T7> gen7, IGen<T8> gen8, IGen<T9> gen9,
+            Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> selector) => new Gen<R>(pcg =>
+        {
+            var (v1, s1) = gen1.Generate(pcg);
+            var (v2, s2) = gen2.Generate(pcg);
+            var (v3, s3) = gen3.Generate(pcg);
+            var (v4, s4) = gen4.Generate(pcg);
+            var (v5, s5) = gen5.Generate(pcg);
+            var (v6, s6) = gen6.Generate(pcg);
+            var (v7, s7) = gen7.Generate(pcg);
+            var (v8, s8) = gen8.Generate(pcg);
+            var (v9, s9) = gen9.Generate(pcg);
+            return (selector(v1, v2, v3, v4, v5, v6, v7, v8, v9), new Size(0UL, new[] { s1, s2, s3, s4, s5, s6, s7, s8, s9 }));
         });
         public static Gen<R> SelectMany<T, R>(this IGen<T> gen, Func<T, IGen<R>> selector) => new Gen<R>(pcg =>
         {
@@ -407,10 +504,14 @@ namespace CsCheck
         static readonly Size zero = new Size(0UL, System.Array.Empty<Size>());
         public static Gen<T> Const<T>(T value) => new Gen<T>(_ => (value, zero));
         public static Gen<T> OneOf<T>(List<IGen<T>> gens) => Int[0, gens.Count].SelectMany(i => gens[i]);
-        public static IEnumerable<T> AsEnumerable<T>(this IGen<T> gen)
+        internal static IEnumerator<T> GetEnumerator<T>(this IGen<T> gen)
         {
-            var pcg = new PCG(102);
-            while (true) yield return gen.Generate(pcg).Item1;
+            static IEnumerable<T> Enumerable(IGen<T> gen)
+            {
+                var pcg = new PCG(102);
+                while (true) yield return gen.Generate(pcg).Item1;
+            }
+            return Enumerable(gen).GetEnumerator();
         }
         public static readonly GenBool Bool = new GenBool();
         public static readonly GenSByte SByte = new GenSByte();

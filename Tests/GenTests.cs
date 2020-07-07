@@ -14,7 +14,7 @@ namespace Tests
             var expected = new int[2];
             for (int i = 0; i < 2; i++) expected[i] = frequency;
             var actual = new int[2];
-            var sample = Gen.Bool.AsEnumerable().Take(frequency * 2);
+            var sample = Gen.Bool.Take(frequency * 2);
             foreach (var i in sample) actual[i ? 1 : 0]++;
             Check.ChiSquared(expected, actual);
         }
@@ -38,7 +38,7 @@ namespace Tests
             var expected = new int[buckets];
             for (int i = 0; i < buckets; i++) expected[i] = frequency;
             var actual = new int[buckets];
-            var sample = Gen.Int[0, buckets - 1].AsEnumerable().Take(frequency * buckets);
+            var sample = Gen.Int[0, buckets - 1].Take(frequency * buckets);
             foreach (var i in sample) actual[i]++;
             Check.ChiSquared(expected, actual);
         }
@@ -62,7 +62,7 @@ namespace Tests
             var expected = new int[buckets];
             for (int i = 0; i < buckets; i++) expected[i] = frequency;
             var actual = new int[buckets];
-            var sample = Gen.Long[0, buckets - 1].AsEnumerable().Take(frequency * buckets);
+            var sample = Gen.Long[0, buckets - 1].Take(frequency * buckets);
             foreach (var i in sample) actual[i]++;
             Check.ChiSquared(expected, actual);
         }
@@ -70,7 +70,7 @@ namespace Tests
         [Fact]
         public void Float_Default_Range()
         {
-            Gen.Float.Assert(f => Assert.InRange(f, -100f, 100f));
+            Gen.Float.Assert(f => Assert.InRange(f, 0f, 0.9999999f));
         }
 
         [Fact]
@@ -92,15 +92,15 @@ namespace Tests
             var expected = new int[buckets];
             for (int i = 0; i < buckets; i++) expected[i] = frequency;
             var actual = new int[buckets];
-            var sample = Gen.Float.AsEnumerable().Take(frequency * buckets);
-            foreach (var i in sample) actual[(int)((i / 200f + 0.5f) * buckets)]++;
+            var sample = Gen.Float.Take(frequency * buckets);
+            foreach (var i in sample) actual[(int)(i * buckets)]++;
             Check.ChiSquared(expected, actual);
         }
 
         [Fact]
         public void Double_Default_Range()
         {
-            Gen.Double.Assert(f => Assert.InRange(f, -100.0, 100.0));
+            Gen.Double.Assert(f => Assert.InRange(f, 0.0, 0.99999999999999978));
         }
 
         [Fact]
@@ -122,8 +122,8 @@ namespace Tests
             var expected = new int[buckets];
             for (int i = 0; i < buckets; i++) expected[i] = frequency;
             var actual = new int[buckets];
-            var sample = Gen.Double.AsEnumerable().Take(frequency * buckets);
-            foreach (var i in sample) actual[(int)((i / 200.0 + 0.5) * buckets)]++;
+            var sample = Gen.Double.Take(frequency * buckets);
+            foreach (var i in sample) actual[(int)(i * buckets)]++;
             Check.ChiSquared(expected, actual);
         }
     }
