@@ -1,4 +1,4 @@
-<h1 align="center">CsCheck</h1>
+# CsCheck
 
 <p>
 <a href="https://github.com/AnthonyLloyd/CsCheck/actions"><img src="https://github.com/AnthonyLloyd/CsCheck/workflows/CI/badge.svg?branch=master"></a>
