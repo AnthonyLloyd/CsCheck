@@ -1,10 +1,22 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Globalization;
+using System.Threading;
 
 namespace CsCheck
 {
     public class PCG
     {
+        static int threadCount;
+        [ThreadStatic]
+        static PCG threadPCG;
+        internal static PCG ThreadPCG
+        {
+            get
+            {
+                return threadPCG ?? (threadPCG = new PCG(Interlocked.Increment(ref threadCount)));
+            }
+        }
         public ulong Inc { get; }
         public ulong State { get; private set; }
         public int Stream => (int)(Inc >> 1);

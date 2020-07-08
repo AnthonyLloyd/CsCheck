@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 
+// $env:CsCheck_SampleSeed = '657257e6655b2ffd50'; $env:CsCheck_SampleSize = 100; dotnet test -c Release --filter SByte_Range; Remove-Item Env:CsCheck*
+// print output? would need to out via an Action<string>
+
 // TODO:
-// Can cmd line parameters be passed to here? $env:CsCheck_SampleSeed = '657257e6655b2ffd50'; $env:CsCheck_SampleSize = 100; dotnet test -c Release --filter SByte_Range; Remove-Item Env:CsCheck*
-// print output?
-// Size compare
-// ThreadLocal PCG
 // Check tests/examples
 
 namespace CsCheck
@@ -29,43 +29,142 @@ namespace CsCheck
         }
         public static void Sample<T>(this IGen<T> gen, Action<T> action = null, string seed = null, int size = -1, int threads = -1)
         {
-            seed = seed ?? SampleSeed;
-            var pcg = seed is null ? new PCG(101) : PCG.Parse(seed);
-            ulong state = 0U;
-            try
+            var lockObj = new object();
+            int shrinks = 0;
+            PCG minPCG = null;
+            ulong minState = 0UL;
+            Size minSize = null;
+            Exception minException = null;
+
+            if(seed != null || SampleSeed != null)
             {
-                int l = size == -1 ? SampleSize : size;
-                for (int i = 0; i < l; i++)
+                var pcg = PCG.Parse(seed ?? SampleSeed);
+                ulong state = pcg.State;
+                Size s = null;
+                try
                 {
-                    state = pcg.State;
-                    var (v, s) = gen.Generate(pcg);
-                    action(v);
+                    var t = gen.Generate(pcg);
+                    s = t.Item2;
+                    action(t.Item1);
+                }
+                catch (Exception e)
+                {
+                    minPCG = pcg;
+                    minState = state;
+                    minSize = s;
+                    minException = e;
                 }
             }
-            catch (Exception e)
+
+            Parallel.For(0, size == -1 ? SampleSize : size, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
             {
-                throw new CsCheckException("$env:CsCheck_SampleSeed = '" + pcg.ToString(state) + "'", e);
-            }
+                var pcg = PCG.ThreadPCG;
+                ulong state = pcg.State;
+                Size s = null;
+                try
+                {
+                    var t = gen.Generate(pcg);
+                    s = t.Item2;
+                    if (minSize is null || s.IsLessThan(minSize)) action(t.Item1);
+                }
+                catch (Exception e)
+                {
+                    lock (lockObj)
+                    {
+                        if (minSize is null || s.IsLessThan(minSize))
+                        {
+                            if(minSize is object) shrinks++;
+                            minPCG = pcg;
+                            minState = state;
+                            minSize = s;
+                            minException = e;
+                        }
+                    }
+                }
+            });
+
+            if (minPCG != null)
+                throw new CsCheckException("$env:CsCheck_SampleSeed = '" + minPCG.ToString(minState) +
+                    "' (" + (shrinks == 1 ? "1 shrink)" : shrinks + " shrinks)"), minException);
         }
 
         public static void Sample<T>(this IGen<T> gen, Func<T, bool> action, string seed = null, int size = -1, int threads = -1)
         {
-            var pcg = seed is null ? new PCG(101) : PCG.Parse(seed);
-            ulong state;
-            try
+            var lockObj = new object();
+            int shrinks = 0;
+            PCG minPCG = null;
+            ulong minState = 0UL;
+            Size minSize = null;
+            Exception minException = null;
+
+            if (seed != null || SampleSeed != null)
             {
-                int l = size == -1 ? SampleSize : size;
-                for (int i = 0; i < l; i++)
+                var pcg = PCG.Parse(seed ?? SampleSeed);
+                ulong state = pcg.State;
+                Size s = null;
+                try
                 {
-                    state = pcg.State;
-                    var (v, s) = gen.Generate(pcg);
-                    if (!action(v)) throw new Exception("hi");
+                    var t = gen.Generate(pcg);
+                    s = t.Item2;
+                    if(!action(t.Item1))
+                    {
+                        minPCG = pcg;
+                        minState = state;
+                        minSize = s;
+                    }
+                }
+                catch (Exception e)
+                {
+                    minPCG = pcg;
+                    minState = state;
+                    minSize = s;
+                    minException = e;
                 }
             }
-            catch (Exception)
+
+            Parallel.For(0, size == -1 ? SampleSize : size, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
             {
-                throw;
-            }
+                var pcg = PCG.ThreadPCG;
+                ulong state = pcg.State;
+                Size s = null;
+                try
+                {
+                    var t = gen.Generate(pcg);
+                    s = t.Item2;
+                    if (minSize is null || s.IsLessThan(minSize))
+                        if(!action(t.Item1))
+                        {
+                            lock (lockObj)
+                            {
+                                if (minSize is null || s.IsLessThan(minSize))
+                                {
+                                    if (minSize is object) shrinks++;
+                                    minPCG = pcg;
+                                    minState = state;
+                                    minSize = s;
+                                }
+                            }
+                        }
+                }
+                catch (Exception e)
+                {
+                    lock (lockObj)
+                    {
+                        if (minSize is null || s.IsLessThan(minSize))
+                        {
+                            if (minSize is object) shrinks++;
+                            minPCG = pcg;
+                            minState = state;
+                            minSize = s;
+                            minException = e;
+                        }
+                    }
+                }
+            });
+
+            if (minPCG != null)
+                throw new CsCheckException("$env:CsCheck_SampleSeed = '" + minPCG.ToString(minState) +
+                    "' (" + (shrinks == 1 ? "1 shrink)" : shrinks + " shrinks)"), minException);
         }
 
         public static void ChiSquared(int[] expected, int[] actual)

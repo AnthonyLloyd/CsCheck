@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 // TODO:
+// Single from int32 function for netstandard2.0?
 // Frequency
 // NaN, Infinity
 // char from string
@@ -26,7 +27,7 @@ namespace CsCheck
             if (a is null || b is null) return b is object;
             ulong ta = a.Aggregate(0UL, (s, i) => s + i.I);
             ulong tb = b.Aggregate(0UL, (s, i) => s + i.I);
-            return ta == tb ? IsLessThan(a.SelectMany(i => i.Next), b.SelectMany(i => i.Next))
+            return ta == tb ? IsLessThan(a.SelectMany(i => i.Next), b.SelectMany(i => i.Next)) // TODO: one of the next could be null
                 : ta < tb;
         }
     }
@@ -515,7 +516,7 @@ namespace CsCheck
         public static Gen<T> OneOf<T>(List<IGen<T>> gens) => Int[0, gens.Count].SelectMany(i => gens[i]);
         public static IEnumerable<T> ToEnumerable<T>(IGen<T> gen)
         {
-            var pcg = new PCG(102);
+            var pcg = PCG.ThreadPCG;
             while (true) yield return gen.Generate(pcg).Item1;
         }
         public static IEnumerator<T> GetEnumerator<T>(this IGen<T> gen) => ToEnumerable(gen).GetEnumerator();
