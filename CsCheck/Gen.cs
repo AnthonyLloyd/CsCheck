@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 // TODO:
 // Frequency
@@ -18,6 +19,15 @@ namespace CsCheck
         {
             I = i;
             Next = next;
+        }
+        internal bool IsLessThan(Size s) => I != s.I ? I < s.I : IsLessThan(Next, s.Next);
+        static bool IsLessThan(IEnumerable<Size> a, IEnumerable<Size> b)
+        {
+            if (a is null || b is null) return b is object;
+            ulong ta = a.Aggregate(0UL, (s, i) => s + i.I);
+            ulong tb = b.Aggregate(0UL, (s, i) => s + i.I);
+            return ta == tb ? IsLessThan(a.SelectMany(i => i.Next), b.SelectMany(i => i.Next))
+                : ta < tb;
         }
     }
 
@@ -40,7 +50,7 @@ namespace CsCheck
         public (bool, Size) Generate(PCG pcg)
         {
             uint i = pcg.Next();
-            return ((i & 1u) == 1u, new Size(i, Array.Empty<Size>()));
+            return ((i & 1u) == 1u, new Size(i, null));
         }
         public IEnumerator<bool> GetEnumerator() => Gen.GetEnumerator(this);
         IEnumerator IEnumerable.GetEnumerator() => Gen.GetEnumerator(this);
@@ -52,7 +62,7 @@ namespace CsCheck
         public (sbyte, Size) Generate(PCG pcg)
         {
             sbyte i = (sbyte)(pcg.Next() & 255u);
-            return (i, new Size(Zigzag(i), Array.Empty<Size>()));
+            return (i, new Size(Zigzag(i), null));
         }
         public Gen<sbyte> this[sbyte start, sbyte finish]
         {
@@ -62,7 +72,7 @@ namespace CsCheck
                 return new Gen<sbyte>(pcg =>
                 {
                     sbyte i = (sbyte)(start + pcg.Next(l));
-                    return (i, new Size(Zigzag(i), Array.Empty<Size>()));
+                    return (i, new Size(Zigzag(i), null));
                 });
             }
         }
@@ -75,7 +85,7 @@ namespace CsCheck
         public (byte, Size) Generate(PCG pcg)
         {
             byte i = (byte)(pcg.Next() & 255u);
-            return (i, new Size(i, Array.Empty<Size>()));
+            return (i, new Size(i, null));
         }
         public Gen<byte> this[byte start, byte finish]
         {
@@ -86,7 +96,7 @@ namespace CsCheck
                 return new Gen<byte>(pcg =>
                 {
                     byte i = (byte)(s + pcg.Next(l));
-                    return (i, new Size(i, Array.Empty<Size>()));
+                    return (i, new Size(i, null));
                 });
             }
         }
@@ -100,7 +110,7 @@ namespace CsCheck
         public (short, Size) Generate(PCG pcg)
         {
             short i = (short)(pcg.Next() & 65535u);
-            return (i, new Size(Zigzag(i), Array.Empty<Size>()));
+            return (i, new Size(Zigzag(i), null));
         }
         public Gen<short> this[short start, short finish]
         {
@@ -110,7 +120,7 @@ namespace CsCheck
                 return new Gen<short>(pcg =>
                 {
                     short i = (short)(start + pcg.Next(l));
-                    return (i, new Size(Zigzag(i), Array.Empty<Size>()));
+                    return (i, new Size(Zigzag(i), null));
                 });
             }
         }
@@ -123,7 +133,7 @@ namespace CsCheck
         public (ushort, Size) Generate(PCG pcg)
         {
             ushort i = (ushort)(pcg.Next() & 65535u);
-            return (i, new Size(i, Array.Empty<Size>()));
+            return (i, new Size(i, null));
         }
         public Gen<ushort> this[ushort start, ushort finish]
         {
@@ -133,7 +143,7 @@ namespace CsCheck
                 return new Gen<ushort>(pcg =>
                 {
                     ushort i = (ushort)(start + pcg.Next(l));
-                    return (i, new Size(i, Array.Empty<Size>()));
+                    return (i, new Size(i, null));
                 });
             }
         }
@@ -147,7 +157,7 @@ namespace CsCheck
         public (int, Size) Generate(PCG pcg)
         {
             int i = (int)pcg.Next();
-            return (i, new Size(Zigzag(i), Array.Empty<Size>()));
+            return (i, new Size(Zigzag(i), null));
         }
         public Gen<int> this[int start, int finish]
         {
@@ -157,7 +167,7 @@ namespace CsCheck
                 return new Gen<int>(pcg =>
                 {
                     int i = (int)(start + pcg.Next(l));
-                    return (i, new Size(Zigzag(i), Array.Empty<Size>()));
+                    return (i, new Size(Zigzag(i), null));
                 });
             }
         }
@@ -170,7 +180,7 @@ namespace CsCheck
         public (uint, Size) Generate(PCG pcg)
         {
             uint i = pcg.Next();
-            return (i, new Size(i, Array.Empty<Size>()));
+            return (i, new Size(i, null));
         }
         public Gen<uint> this[uint start, uint finish]
         {
@@ -180,7 +190,7 @@ namespace CsCheck
                 return new Gen<uint>(pcg =>
                 {
                     uint i = start + pcg.Next(l);
-                    return (i, new Size(i, Array.Empty<Size>()));
+                    return (i, new Size(i, null));
                 });
             }
         }
@@ -195,7 +205,7 @@ namespace CsCheck
         public (long, Size) Generate(PCG pcg)
         {
             long i = (long)pcg.Next64();
-            return (i, new Size(Zigzag(i), Array.Empty<Size>()));
+            return (i, new Size(Zigzag(i), null));
         }
         public Gen<long> this[long start, long finish]
         {
@@ -206,7 +216,7 @@ namespace CsCheck
                 return new Gen<long>(pcg =>
                 {
                     long i = start + (long)pcg.Next64(l);
-                    return (i, new Size(Zigzag(i), Array.Empty<Size>()));
+                    return (i, new Size(Zigzag(i), null));
                 });
             }
         }
@@ -219,7 +229,7 @@ namespace CsCheck
         public (ulong, Size) Generate(PCG pcg)
         {
             ulong i = pcg.Next64();
-            return (i, new Size(i, Array.Empty<Size>()));
+            return (i, new Size(i, null));
         }
         public Gen<ulong> this[ulong start, ulong finish]
         {
@@ -229,7 +239,7 @@ namespace CsCheck
                 return new Gen<ulong>(pcg =>
                 {
                     ulong i = start + pcg.Next64(l);
-                    return (i, new Size(i, Array.Empty<Size>()));
+                    return (i, new Size(i, null));
                 });
             }
         }
@@ -243,7 +253,7 @@ namespace CsCheck
         {
             ulong i = pcg.Next64() >> 12;
             return ((float)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1f
-                    , new Size(i, Array.Empty<Size>()));
+                    , new Size(i, null));
         }
         public Gen<float> this[float start, float finish]
         {
@@ -255,7 +265,7 @@ namespace CsCheck
                 {
                     ulong i = pcg.Next64() >> 12;
                     return ((float)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * finish + start
-                            , new Size(i, Array.Empty<Size>()));
+                            , new Size(i, null));
                 });
             }
         }
@@ -269,7 +279,7 @@ namespace CsCheck
         {
             ulong i = pcg.Next64() >> 12;
             return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1.0
-                    , new Size(i, Array.Empty<Size>()));
+                    , new Size(i, null));
         }
         public Gen<double> this[double start, double finish]
         {
@@ -281,7 +291,7 @@ namespace CsCheck
                 {
                     ulong i = pcg.Next64() >> 12;
                     return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * finish + start
-                            , new Size(i, Array.Empty<Size>()));
+                            , new Size(i, null));
                 });
             }
         }
@@ -295,7 +305,7 @@ namespace CsCheck
         {
             var i = pcg.Next64() >> 12;
             return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1M
-                    , new Size(i, Array.Empty<Size>()));
+                    , new Size(i, null));
         }
         public Gen<decimal> this[decimal start, decimal finish]
         {
@@ -307,7 +317,7 @@ namespace CsCheck
                 {
                     var i = pcg.Next64() >> 12;
                     return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * finish + start
-                            , new Size(i, Array.Empty<Size>()));
+                            , new Size(i, null));
                 });
             }
         }
@@ -320,7 +330,7 @@ namespace CsCheck
         public (char, Size) Generate(PCG pcg)
         {
             var i = pcg.Next() & 127u;
-            return ((char)i, new Size(i, Array.Empty<Size>()));
+            return ((char)i, new Size(i, null));
         }
         public Gen<char> this[char start, char finish]
         {
@@ -331,7 +341,7 @@ namespace CsCheck
                 return new Gen<char>(pcg =>
                 {
                     var i = pcg.Next(l);
-                    return ((char)(s + i), new Size(i, Array.Empty<Size>()));
+                    return ((char)(s + i), new Size(i, null));
                 });
             }
         }
@@ -500,7 +510,7 @@ namespace CsCheck
         });
         public static Gen<List<T>> List<T>(this IGen<T> gen, int start, int finish) => List(gen, Int[start,finish]);
         public static Gen<List<T>> List<I,T>(this IGen<T> gen, int length) => List(gen, Const(length));
-        static readonly Size zero = new Size(0UL, System.Array.Empty<Size>());
+        static readonly Size zero = new Size(0UL, null);
         public static Gen<T> Const<T>(T value) => new Gen<T>(_ => (value, zero));
         public static Gen<T> OneOf<T>(List<IGen<T>> gens) => Int[0, gens.Count].SelectMany(i => gens[i]);
         public static IEnumerable<T> ToEnumerable<T>(IGen<T> gen)
