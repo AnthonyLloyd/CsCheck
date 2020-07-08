@@ -1,6 +1,4 @@
-﻿using System;
-using System.Numerics;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 
 namespace CsCheck
@@ -23,7 +21,7 @@ namespace CsCheck
         public PCG(int stream) : this(stream, (ulong)Stopwatch.GetTimestamp()) { }
         public uint Next()
         {
-            State = State * 6364136223846793005L + Inc;
+            State = State * 6364136223846793005UL + Inc;
             uint xorshifted = (uint)((State ^ (State >> 18)) >> 27);
             int rot = (int)(State >> 59);
             return (xorshifted >> rot) | (xorshifted << (-rot & 31));
@@ -31,6 +29,7 @@ namespace CsCheck
         public ulong Next64() => ((ulong)Next() << 32) + Next();
         public uint Next(uint maxExclusive)
         {
+            if (maxExclusive == 1U) return 0U;
             var threshold = ((uint)-(int)maxExclusive) % maxExclusive;
             uint n;
             while ((n = Next()) < threshold) { };
@@ -38,6 +37,7 @@ namespace CsCheck
         }
         public ulong Next64(ulong maxExclusive)
         {
+            if (maxExclusive <= uint.MaxValue) return Next((uint)maxExclusive);
             var threshold = ((ulong)-(long)maxExclusive) % maxExclusive;
             ulong n;
             while ((n = Next64()) < threshold) { };

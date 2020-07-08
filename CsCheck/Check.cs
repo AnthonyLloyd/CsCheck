@@ -1,6 +1,13 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 
+// TODO:
+// Can cmd line parameters be passed to here?
+// Check ReadyToRun
+// Size compare
+// ThreadLocal PCG
+// Check tests/examples
+
 namespace CsCheck
 {
     public class CsCheckException : Exception
@@ -11,7 +18,7 @@ namespace CsCheck
     public static class Check
     {
         public static int SampleSize = 100;
-        public static void Sample<T>(this IGen<T> gen, Action<T> action, string seed = null, int size = -1, int threads = -1)
+        public static void Sample<T>(this IGen<T> gen, Action<T> action = null, string seed = null, int size = -1, int threads = -1)
         {
             var pcg = seed is null ? new PCG(101) : PCG.Parse(seed);
             ulong state;
@@ -68,22 +75,22 @@ namespace CsCheck
             if (Math.Abs(SDs) > 6.0) throw new CsCheckException("Chi-squared standard deviation = " + SDs.ToString("0.0"));
         }
 
-        public static void Faster<T>(Action faster, Action slower)
+        public static void Faster<T>(Action faster, Action slower, int threads = -1)
         {
 
         }
 
-        public static void Faster<T>(Func<T> faster, Func<T> slower)
+        public static void Faster<T>(Func<T> faster, Func<T> slower, int threads = -1)
         {
 
         }
 
-        public static void Faster<T>(this IGen<T> gen, Action<T> faster, Action<T> slower)
+        public static void Faster<T>(this IGen<T> gen, Action<T> faster, Action<T> slower, int threads = -1)
         {
 
         }
 
-        public static void Faster<T1, T2>(this IGen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower)
+        public static void Faster<T1, T2>(this IGen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower, int threads = -1)
         {
 
         }

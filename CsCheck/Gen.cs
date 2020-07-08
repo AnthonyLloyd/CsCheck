@@ -2,6 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 
+// TODO:
+// Frequency
+// NaN, Infinity
+// char from string
+// string types, from char, extension method example
+
 namespace CsCheck
 {
     public class Size
@@ -143,17 +149,10 @@ namespace CsCheck
             int i = (int)pcg.Next();
             return (i, new Size(Zigzag(i), Array.Empty<Size>()));
         }
-        static readonly Gen<int> int128 = new Gen<int>(pcg =>
-        {
-            int i = (int)(pcg.Next() & 127u);
-            return (i, new Size(Zigzag(i), Array.Empty<Size>()));
-        });
         public Gen<int> this[int start, int finish]
         {
             get
             {
-                if (start == finish) return Gen.Const(start);
-                if (finish == 127 && start == 0) return int128;
                 uint l = (uint)(finish - start) + 1u;
                 return new Gen<int>(pcg =>
                 {
@@ -504,12 +503,12 @@ namespace CsCheck
         static readonly Size zero = new Size(0UL, System.Array.Empty<Size>());
         public static Gen<T> Const<T>(T value) => new Gen<T>(_ => (value, zero));
         public static Gen<T> OneOf<T>(List<IGen<T>> gens) => Int[0, gens.Count].SelectMany(i => gens[i]);
-        static IEnumerable<T> Enumerable<T>(IGen<T> gen)
+        public static IEnumerable<T> ToEnumerable<T>(IGen<T> gen)
         {
             var pcg = new PCG(102);
             while (true) yield return gen.Generate(pcg).Item1;
         }
-        internal static IEnumerator<T> GetEnumerator<T>(this IGen<T> gen) => Enumerable(gen).GetEnumerator();
+        public static IEnumerator<T> GetEnumerator<T>(this IGen<T> gen) => ToEnumerable(gen).GetEnumerator();
         public static readonly GenBool Bool = new GenBool();
         public static readonly GenSByte SByte = new GenSByte();
         public static readonly GenByte Byte = new GenByte();
