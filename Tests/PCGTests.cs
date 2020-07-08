@@ -2,8 +2,6 @@
 using Xunit;
 using CsCheck;
 
-[assembly: CollectionBehavior(CollectionBehavior.CollectionPerAssembly)]
-
 namespace Tests
 {
     public class PCGTests

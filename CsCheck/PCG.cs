@@ -43,8 +43,8 @@ namespace CsCheck
             while ((n = Next64()) < threshold) { };
             return n % maxExclusive;
         }
-        public override string ToString() => (Inc >> 1).ToString("X") + State.ToString("X16");
-        public string ToString(ulong state) => (Inc >> 1).ToString("X") + state.ToString("X16");
+        public override string ToString() => (Inc >> 1).ToString("x") + State.ToString("x16");
+        public string ToString(ulong state) => (Inc >> 1).ToString("x") + state.ToString("x16");
         public static PCG Parse(string s)
         {
             var stream = uint.Parse(s.Substring(0, s.Length - 16), NumberStyles.HexNumber, null);

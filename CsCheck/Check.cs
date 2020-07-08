@@ -2,8 +2,8 @@
 using System.Runtime.CompilerServices;
 
 // TODO:
-// Can cmd line parameters be passed to here?
-// Check ReadyToRun
+// Can cmd line parameters be passed to here? $env:CsCheck_SampleSeed = '657257e6655b2ffd50'; $env:CsCheck_SampleSize = 100; dotnet test -c Release --filter SByte_Range; Remove-Item Env:CsCheck*
+// print output?
 // Size compare
 // ThreadLocal PCG
 // Check tests/examples
@@ -13,15 +13,25 @@ namespace CsCheck
     public class CsCheckException : Exception
     {
         public CsCheckException(string message) : base(message) { }
+        public CsCheckException(string message, Exception exception) : base(message, exception) { }
     }
 
     public static class Check
     {
-        public static int SampleSize = 100;
+        public readonly static int SampleSize = 100;
+        public readonly static string SampleSeed;
+        static Check()
+        {
+            var sampleSize = Environment.GetEnvironmentVariable("CsCheck_SampleSize");
+            if (!string.IsNullOrWhiteSpace(sampleSize)) SampleSize = int.Parse(sampleSize);
+            var sampleSeed = Environment.GetEnvironmentVariable("CsCheck_SampleSeed");
+            if (!string.IsNullOrWhiteSpace(sampleSeed)) SampleSeed = PCG.Parse(sampleSeed).ToString();
+        }
         public static void Sample<T>(this IGen<T> gen, Action<T> action = null, string seed = null, int size = -1, int threads = -1)
         {
+            seed = seed ?? SampleSeed;
             var pcg = seed is null ? new PCG(101) : PCG.Parse(seed);
-            ulong state;
+            ulong state = 0U;
             try
             {
                 int l = size == -1 ? SampleSize : size;
@@ -32,9 +42,9 @@ namespace CsCheck
                     action(v);
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                throw;
+                throw new CsCheckException("$env:CsCheck_SampleSeed = '" + pcg.ToString(state) + "'", e);
             }
         }
 
