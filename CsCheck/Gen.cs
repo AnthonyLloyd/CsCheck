@@ -6,7 +6,6 @@ using System.Runtime.InteropServices;
 
 // TODO:
 // NaN, Infinity
-// IEnumerable may be a bad ides for distribution as can't repeat, change to how frequency does it.
 
 namespace CsCheck
 {
@@ -19,14 +18,15 @@ namespace CsCheck
             I = i;
             Next = next;
         }
-        internal bool IsLessThan(Size s) => I != s.I ? I < s.I : IsLessThan(Next, s.Next);
+        internal bool IsLessThan(Size s) => I == s.I ? IsLessThan(Next, s.Next) : I < s.I;
         static bool IsLessThan(IEnumerable<Size> a, IEnumerable<Size> b)
         {
             if (a is null || b is null) return b is object;
             ulong ta = a.Aggregate(0UL, (s, i) => s + i.I);
             ulong tb = b.Aggregate(0UL, (s, i) => s + i.I);
-            return ta == tb ? IsLessThan(a.SelectMany(i => i.Next), b.SelectMany(i => i.Next)) // TODO: one of the next could be null
-                : ta < tb;
+            return ta == tb ? IsLessThan(a.Where(i => i.Next != null).SelectMany(i => i.Next),
+                                         b.Where(i => i.Next != null).SelectMany(i => i.Next))
+                            : ta < tb;
         }
     }
 
@@ -223,6 +223,23 @@ namespace CsCheck
         public static Gen<T> Const<T>(T value) => new GenF<T>(_ => (value, zero));
         public static Gen<T> OneOf<T>(params T[] ts) => Int[0, ts.Length - 1].Select(i => ts[i]);
         public static Gen<T> OneOf<T>(params Gen<T>[] gens) => Int[0, gens.Length - 1].SelectMany(i => gens[i]);
+        public static Gen<T> Frequency<T>(params (int, T)[] ts)
+        {
+            ts = ((int, T)[])ts.Clone();
+            int total = 0;
+            for (int i = 0; i < ts.Length; i++)
+            {
+                total += ts[i].Item1;
+                ts[i].Item1 = total;
+            }
+            return Int[1, total].Select(c =>
+            {
+                for (int i = 0; i < ts.Length - 1; i++)
+                    if (c <= ts[i].Item1)
+                        return ts[i].Item2;
+                return ts[ts.Length - 1].Item2;
+            });
+        }
         public static Gen<T> Frequency<T>(params (int, Gen<T>)[] gens)
         {
             gens = ((int, Gen<T>)[])gens.Clone();
@@ -234,10 +251,10 @@ namespace CsCheck
             }
             return Int[1, total].SelectMany(c =>
             {
-                for (int i = 0; i < gens.Length; i++)
+                for (int i = 0; i < gens.Length - 1; i++)
                     if (c <= gens[i].Item1)
                         return gens[i].Item2;
-                return null;
+                return gens[gens.Length - 1].Item2;
             });
         }
         public static readonly GenBool Bool = new GenBool();

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
+using System.Linq;
 
 // $env:CsCheck_SampleSeed = '657257e6655b2ffd50'; $env:CsCheck_SampleSize = 100; dotnet test -c Release --filter SByte_Range; Remove-Item Env:CsCheck*
 // print output? would need to out via an Action<string>
@@ -27,7 +28,7 @@ namespace CsCheck
             var sampleSeed = Environment.GetEnvironmentVariable("CsCheck_SampleSeed");
             if (!string.IsNullOrWhiteSpace(sampleSeed)) SampleSeed = PCG.Parse(sampleSeed).ToString();
         }
-        public static void Sample<T>(this Gen<T> gen, Action<T> action = null, string seed = null, int size = -1, int threads = -1)
+        public static void Sample<T>(this Gen<T> gen, Action<T> action, string seed = null, int size = -1, int threads = -1)
         {
             var lockObj = new object();
             int shrinks = 0;
@@ -88,7 +89,12 @@ namespace CsCheck
                     "' (" + (shrinks == 1 ? "1 shrink)" : shrinks + " shrinks)"), minException);
         }
 
-        public static void Sample<T>(this Gen<T> gen, Func<T, bool> action, string seed = null, int size = -1, int threads = -1)
+        public static void SampleOne<T>(this Gen<T> gen, Action<T> action, string seed = null)
+        {
+            Sample(gen, action, seed, 1, 1);
+        }
+
+        public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, int size = -1, int threads = -1)
         {
             var lockObj = new object();
             int shrinks = 0;
@@ -106,7 +112,7 @@ namespace CsCheck
                 {
                     var t = gen.Generate(pcg);
                     s = t.Item2;
-                    if(!action(t.Item1))
+                    if(!predicate(t.Item1))
                     {
                         minPCG = pcg;
                         minState = state;
@@ -132,7 +138,7 @@ namespace CsCheck
                     var t = gen.Generate(pcg);
                     s = t.Item2;
                     if (minSize is null || s.IsLessThan(minSize))
-                        if(!action(t.Item1))
+                        if(!predicate(t.Item1))
                         {
                             lock (lockObj)
                             {
@@ -167,6 +173,10 @@ namespace CsCheck
                     "' (" + (shrinks == 1 ? "1 shrink)" : shrinks + " shrinks)"), minException);
         }
 
+        public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null)
+        {
+            Sample(gen, predicate, seed, 1, 1);
+        }
         public static void ChiSquared(int[] expected, int[] actual)
         {
             if (expected.Length != actual.Length) throw new CsCheckException("Expected and actual lengths need to be the same.");

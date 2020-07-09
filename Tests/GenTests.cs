@@ -7,22 +7,34 @@ namespace Tests
 {
     public class GenTests
     {
+        int[] ArrayRepeat(int x, int n)
+        {
+            var a = new int[n];
+            while (--n >= 0) a[n] = x;
+            return a;
+        }
+
+        int[] Tally(int n, int[] ia)
+        {
+            var a = new int[n];
+            for (int i = 0; i < ia.Length; i++) a[ia[i]]++;
+            return a;
+        }
+
         [Fact]
         public void Bool_Distribution()
         {
             var frequency = 10;
-            var expected = new int[2];
-            for (int i = 0; i < 2; i++) expected[i] = frequency;
-            var actual = new int[2];
-            var sample = Gen.Bool.Take(frequency * 2);
-            foreach (var i in sample) actual[i ? 1 : 0]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, 2);
+            Gen.Bool.Select(i => i ? 1 : 0).Array(frequency * 2)
+            .Select(i => Tally(2, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
         public void SByte_Range()
         {
-            (from t in Gen.SByte.Select(Gen.SByte)
+            (from t in Gen.Select(Gen.SByte, Gen.SByte)
              let start = Math.Min(t.V0, t.V1)
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.SByte[start, finish]
@@ -35,12 +47,11 @@ namespace Tests
         {
             var frequency = 10;
             var buckets = 70;
-            var expected = new int[buckets];
-            for (int i = 0; i < buckets; i++) expected[i] = frequency;
-            var actual = new int[buckets];
-            var sample = Gen.SByte[0, (sbyte)(buckets - 1)].Take(frequency * buckets);
-            foreach (var i in sample) actual[i]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, buckets);
+            Gen.SByte[0, (sbyte)(buckets - 1)]
+            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => Tally(buckets, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
@@ -59,12 +70,11 @@ namespace Tests
         {
             var frequency = 10;
             var buckets = 70;
-            var expected = new int[buckets];
-            for (int i = 0; i < buckets; i++) expected[i] = frequency;
-            var actual = new int[buckets];
-            var sample = Gen.Byte[0, (byte)(buckets - 1)].Take(frequency * buckets);
-            foreach (var i in sample) actual[i]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, buckets);
+            Gen.Byte[0, (byte)(buckets - 1)]
+            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => Tally(buckets, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
@@ -83,12 +93,11 @@ namespace Tests
         {
             var frequency = 10;
             var buckets = 70;
-            var expected = new int[buckets];
-            for (int i = 0; i < buckets; i++) expected[i] = frequency;
-            var actual = new int[buckets];
-            var sample = Gen.Short[0, (short)(buckets - 1)].Take(frequency * buckets);
-            foreach (var i in sample) actual[i]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, buckets);
+            Gen.Short[0, (short)(buckets - 1)]
+            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => Tally(buckets, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
@@ -107,12 +116,11 @@ namespace Tests
         {
             var frequency = 10;
             var buckets = 70;
-            var expected = new int[buckets];
-            for (int i = 0; i < buckets; i++) expected[i] = frequency;
-            var actual = new int[buckets];
-            var sample = Gen.UShort[0, (ushort)(buckets - 1)].Take(frequency * buckets);
-            foreach (var i in sample) actual[i]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, buckets);
+            Gen.UShort[0, (ushort)(buckets - 1)]
+            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => Tally(buckets, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
@@ -131,12 +139,11 @@ namespace Tests
         {
             var frequency = 10;
             var buckets = 70;
-            var expected = new int[buckets];
-            for (int i = 0; i < buckets; i++) expected[i] = frequency;
-            var actual = new int[buckets];
-            var sample = Gen.Int[0, buckets - 1].Take(frequency * buckets);
-            foreach (var i in sample) actual[i]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, buckets);
+            Gen.Int[0, buckets - 1]
+            .Select(i => i).Array(frequency * buckets)
+            .Select(i => Tally(buckets, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
@@ -155,12 +162,11 @@ namespace Tests
         {
             var frequency = 10;
             var buckets = 70;
-            var expected = new int[buckets];
-            for (int i = 0; i < buckets; i++) expected[i] = frequency;
-            var actual = new int[buckets];
-            var sample = Gen.UInt[0, (uint)(buckets - 1)].Take(frequency * buckets);
-            foreach (var i in sample) actual[i]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, buckets);
+            Gen.UInt[0, (uint)(buckets - 1)]
+            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => Tally(buckets, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
@@ -179,12 +185,11 @@ namespace Tests
         {
             var frequency = 10;
             var buckets = 70;
-            var expected = new int[buckets];
-            for (int i = 0; i < buckets; i++) expected[i] = frequency;
-            var actual = new int[buckets];
-            var sample = Gen.Long[0, buckets - 1].Take(frequency * buckets);
-            foreach (var i in sample) actual[i]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, buckets);
+            Gen.Long[0, buckets - 1]
+            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => Tally(buckets, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
@@ -203,12 +208,11 @@ namespace Tests
         {
             var frequency = 10;
             var buckets = 70;
-            var expected = new int[buckets];
-            for (int i = 0; i < buckets; i++) expected[i] = frequency;
-            var actual = new int[buckets];
-            var sample = Gen.ULong[0, (ulong)(buckets - 1)].Take(frequency * buckets);
-            foreach (var i in sample) actual[i]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, buckets);
+            Gen.ULong[0, (ulong)(buckets - 1)]
+            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => Tally(buckets, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
@@ -233,12 +237,11 @@ namespace Tests
         {
             var frequency = 10;
             var buckets = 70;
-            var expected = new int[buckets];
-            for (int i = 0; i < buckets; i++) expected[i] = frequency;
-            var actual = new int[buckets];
-            var sample = Gen.Single.Take(frequency * buckets);
-            foreach (var i in sample) actual[(int)(i * buckets)]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, buckets);
+            Gen.Single
+            .Select(i => (int)(i * buckets)).Array(frequency * buckets)
+            .Select(i => Tally(buckets, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
@@ -263,12 +266,11 @@ namespace Tests
         {
             var frequency = 10;
             var buckets = 70;
-            var expected = new int[buckets];
-            for (int i = 0; i < buckets; i++) expected[i] = frequency;
-            var actual = new int[buckets];
-            var sample = Gen.Double.Take(frequency * buckets);
-            foreach (var i in sample) actual[(int)(i * buckets)]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, buckets);
+            Gen.Double
+            .Select(i => (int)(i * buckets)).Array(frequency * buckets)
+            .Select(i => Tally(buckets, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
@@ -293,12 +295,11 @@ namespace Tests
         {
             var frequency = 10;
             var buckets = 70;
-            var expected = new int[buckets];
-            for (int i = 0; i < buckets; i++) expected[i] = frequency;
-            var actual = new int[buckets];
-            var sample = Gen.Decimal.Take(frequency * buckets);
-            foreach (var i in sample) actual[(int)(i * buckets)]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, buckets);
+            Gen.Decimal
+            .Select(i => (int)(i * buckets)).Array(frequency * buckets)
+            .Select(i => Tally(buckets, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
@@ -317,12 +318,11 @@ namespace Tests
         {
             var frequency = 10;
             var buckets = 70;
-            var expected = new int[buckets];
-            for (int i = 0; i < buckets; i++) expected[i] = frequency;
-            var actual = new int[buckets];
-            var sample = Gen.Char[(char)0, (char)(buckets - 1)].Take(frequency * buckets);
-            foreach (var i in sample) actual[i]++;
-            Check.ChiSquared(expected, actual);
+            var expected = ArrayRepeat(frequency, buckets);
+            Gen.Char[(char)0, (char)(buckets - 1)]
+            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => Tally(buckets, i))
+            .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
@@ -342,13 +342,12 @@ namespace Tests
         public void Frequency()
         {
             var frequency = 10;
-            (from f in Gen.Select(Gen.Int[1, 9], Gen.Int[1, 9], Gen.Int[1, 9])
+            (from f in Gen.Select(Gen.Int[1, 5], Gen.Int[1, 5], Gen.Int[1, 5])
              let expected = new[] { f.V0 * frequency, f.V1 * frequency, f.V2 * frequency }
-             from sample in Gen.Frequency((f.V0, Gen.Const(0)), (f.V1, Gen.Const(1)), (f.V2, Gen.Const(2)))
-                            .Array(frequency * (f.V0 + f.V1 + f.V2))
-             let actual = new[] { sample.Count(i => i == 0), sample.Count(i => i == 1), sample.Count(i => i == 2) }
+             from actual in Gen.Frequency((f.V0, 0), (f.V1, 1), (f.V2, 2)).Array(frequency * (f.V0 + f.V1 + f.V2))
+                            .Select(i => Tally(3, i))
              select (expected, actual))
-            .Sample(t => Check.ChiSquared(t.expected, t.actual), size: 1);
+            .SampleOne(t => Check.ChiSquared(t.expected, t.actual));
         }
     }
 }
