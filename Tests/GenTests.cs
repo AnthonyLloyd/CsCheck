@@ -216,9 +216,9 @@ namespace Tests
         }
 
         [Fact]
-        public void Single_Default_Range()
+        public void Single_Unit_Range()
         {
-            Gen.Single.Sample(f => Assert.InRange(f, 0f, 0.9999999f));
+            Gen.Single.Unit.Sample(f => Assert.InRange(f, 0f, 0.9999999f));
         }
 
         [Fact]
@@ -238,16 +238,16 @@ namespace Tests
             var frequency = 10;
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
-            Gen.Single
+            Gen.Single.Unit
             .Select(i => (int)(i * buckets)).Array(frequency * buckets)
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
-        public void Double_Default_Range()
+        public void Double_Unit_Range()
         {
-            Gen.Double.Sample(f => Assert.InRange(f, 0.0, 0.99999999999999978));
+            Gen.Double.Unit.Sample(f => Assert.InRange(f, 0.0, 0.99999999999999978));
         }
 
         [Fact]
@@ -267,16 +267,16 @@ namespace Tests
             var frequency = 10;
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
-            Gen.Double
+            Gen.Double.Unit
             .Select(i => (int)(i * buckets)).Array(frequency * buckets)
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
         [Fact]
-        public void Decimal_Default_Range()
+        public void Decimal_Unit_Range()
         {
-            Gen.Decimal.Sample(i => Assert.InRange(i, 0.0M, 0.99999999999999978M));
+            Gen.Decimal.Unit.Sample(i => Assert.InRange(i, 0.0M, 0.99999999999999978M));
         }
 
         [Fact]

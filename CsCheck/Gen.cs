@@ -4,9 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 
-// TODO:
-// NaN, Infinity
-
 namespace CsCheck
 {
     public class Size
@@ -462,14 +459,14 @@ namespace CsCheck
         [StructLayout(LayoutKind.Explicit)]
         struct Converter
         {
-            [FieldOffset(0)] public int I;
+            [FieldOffset(0)] public uint I;
             [FieldOffset(0)] public float F;
         }
         public override (float, Size) Generate(PCG pcg)
         {
-            ulong i = pcg.Next() >> 9;
-            return (new Converter { I = (int)i | 0x3F800000 }.F - 1f
-                    , new Size(i, null));
+            uint i = pcg.Next();
+            // TODO: Add more NaN, Infinity, Epsilon, 0, 1, MaxValue, MinValue
+            return (new Converter { I = i }.F, new Size(i, null));
         }
         public Gen<float> this[float start, float finish]
         {
@@ -479,21 +476,32 @@ namespace CsCheck
                 start -= finish;
                 return new GenF<float>(pcg =>
                 {
-                    ulong i = pcg.Next() >> 9;
-                    return (new Converter { I = (int)i | 0x3F800000 }.F * finish + start
+                    uint i = pcg.Next() >> 9;
+                    return (new Converter { I = i | 0x3F800000 }.F * finish + start
                             , new Size(i, null));
                 });
             }
         }
+        public Gen<float> Unit = new GenF<float>(pcg =>
+        {
+            uint i = pcg.Next() >> 9;
+            return (new Converter { I = i | 0x3F800000 }.F - 1f, new Size(i, null));
+        });
+        public Gen<float> Normal = new GenF<float>(pcg =>
+        {
+            uint i = pcg.Next();
+            // TODO: Remove NaN, Infinity
+            return (new Converter { I = i }.F, new Size(i, null));
+        });
     }
 
     public class GenDouble : Gen<double>
     {
         public override (double, Size) Generate(PCG pcg)
         {
-            ulong i = pcg.Next64() >> 12;
-            return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1.0
-                    , new Size(i, null));
+            ulong i = pcg.Next64();
+            // TODO: Add more NaN, Infinity, Epsilon, 0, 1, MaxValue, MinValue
+            return (BitConverter.Int64BitsToDouble((long)i), new Size(i, null));
         }
         public Gen<double> this[double start, double finish]
         {
@@ -509,15 +517,33 @@ namespace CsCheck
                 });
             }
         }
+        public Gen<double> Unit = new GenF<double>(pcg =>
+        {
+            ulong i = pcg.Next64() >> 12;
+            return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1.0
+                    , new Size(i, null));
+        });
+        public Gen<double> Normal = new GenF<double>(pcg =>
+        {
+            ulong i = pcg.Next64();
+            // TODO: Remove NaN, Infinity
+            return (BitConverter.Int64BitsToDouble((long)i), new Size(i, null));
+        });
     }
 
     public class GenDecimal : Gen<decimal>
     {
+        [StructLayout(LayoutKind.Explicit)]
+        struct Converter
+        {
+            [FieldOffset(0)] public ulong I0;
+            [FieldOffset(8)] public ulong I1;
+            [FieldOffset(0)] public decimal D;
+        }
         public override (decimal, Size) Generate(PCG pcg)
         {
-            var i = pcg.Next64() >> 12;
-            return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1M
-                    , new Size(i, null));
+            var c = new Converter { I0 = pcg.Next64(), I1 = pcg.Next64() };
+            return (c.D, new Size(c.I0, null));
         }
         public Gen<decimal> this[decimal start, decimal finish]
         {
@@ -533,6 +559,12 @@ namespace CsCheck
                 });
             }
         }
+        public Gen<decimal> Unit = new GenF<decimal>(pcg =>
+        {
+            ulong i = pcg.Next64() >> 12;
+            return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1M
+                    , new Size(i, null));
+        });
     }
 
     public class GenChar : Gen<char>
@@ -572,23 +604,10 @@ namespace CsCheck
     public class GenString : Gen<string>
     {
         static readonly Gen<string> d = Gen.Char.Array(0, 127).Select(i => new string(i));
-        public override (string, Size) Generate(PCG pcg)
-        {
-            return d.Generate(pcg);
-        }
-        public Gen<string> this[int start, int finish]
-        {
-            get
-            {
-                return Gen.Char.Array(start, finish).Select(i => new string(i));
-            }
-        }
-        public Gen<string> this[Gen<char> gen, int start, int finish]
-        {
-            get
-            {
-                return gen.Array(start, finish).Select(i => new string(i));
-            }
-        }
+        public override (string, Size) Generate(PCG pcg) => d.Generate(pcg);
+        public Gen<string> this[int start, int finish] =>
+            Gen.Char.Array(start, finish).Select(i => new string(i));
+        public Gen<string> this[Gen<char> gen, int start, int finish] =>
+            gen.Array(start, finish).Select(i => new string(i));
     }
 }

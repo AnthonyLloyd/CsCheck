@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
-using System.Linq;
 
 // $env:CsCheck_SampleSeed = '657257e6655b2ffd50'; $env:CsCheck_SampleSize = 100; dotnet test -c Release --filter SByte_Range; Remove-Item Env:CsCheck*
 // print output? would need to out via an Action<string>
@@ -30,8 +29,7 @@ namespace CsCheck
         }
         public static void Sample<T>(this Gen<T> gen, Action<T> action, string seed = null, int size = -1, int threads = -1)
         {
-            var lockObj = new object();
-            int shrinks = 0;
+            if (size == -1) size = SampleSize;
             PCG minPCG = null;
             ulong minState = 0UL;
             Size minSize = null;
@@ -57,7 +55,9 @@ namespace CsCheck
                 }
             }
 
-            Parallel.For(0, size == -1 ? SampleSize : size, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
+            var lockObj = new object();
+            int shrinks = 0, skipped = 0;
+            Parallel.For(0, size, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
@@ -66,7 +66,10 @@ namespace CsCheck
                 {
                     var t = gen.Generate(pcg);
                     s = t.Item2;
-                    if (minSize is null || s.IsLessThan(minSize)) action(t.Item1);
+                    if (minSize is null || s.IsLessThan(minSize))
+                        action(t.Item1);
+                    else
+                        skipped++;
                 }
                 catch (Exception e)
                 {
@@ -84,9 +87,9 @@ namespace CsCheck
                 }
             });
 
-            if (minPCG != null)
-                throw new CsCheckException("$env:CsCheck_SampleSeed = '" + minPCG.ToString(minState) +
-                    "' (" + (shrinks == 1 ? "1 shrink)" : shrinks + " shrinks)"), minException);
+            if (minPCG != null) throw new CsCheckException(
+                $"$env:CsCheck_SampleSeed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
+                    , minException);
         }
 
         public static void SampleOne<T>(this Gen<T> gen, Action<T> action, string seed = null)
@@ -96,8 +99,7 @@ namespace CsCheck
 
         public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, int size = -1, int threads = -1)
         {
-            var lockObj = new object();
-            int shrinks = 0;
+            if (size == -1) size = SampleSize;
             PCG minPCG = null;
             ulong minState = 0UL;
             Size minSize = null;
@@ -128,7 +130,9 @@ namespace CsCheck
                 }
             }
 
-            Parallel.For(0, size == -1 ? SampleSize : size, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
+            var lockObj = new object();
+            int shrinks = 0, skipped = 0;
+            Parallel.For(0, size, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
@@ -138,7 +142,8 @@ namespace CsCheck
                     var t = gen.Generate(pcg);
                     s = t.Item2;
                     if (minSize is null || s.IsLessThan(minSize))
-                        if(!predicate(t.Item1))
+                    {
+                        if (!predicate(t.Item1))
                         {
                             lock (lockObj)
                             {
@@ -151,6 +156,8 @@ namespace CsCheck
                                 }
                             }
                         }
+                    }
+                    else skipped++;
                 }
                 catch (Exception e)
                 {
@@ -168,9 +175,9 @@ namespace CsCheck
                 }
             });
 
-            if (minPCG != null)
-                throw new CsCheckException("$env:CsCheck_SampleSeed = '" + minPCG.ToString(minState) +
-                    "' (" + (shrinks == 1 ? "1 shrink)" : shrinks + " shrinks)"), minException);
+            if (minPCG != null) throw new CsCheckException(
+                $"$env:CsCheck_SampleSeed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
+                    , minException);
         }
 
         public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null)
@@ -194,7 +201,7 @@ namespace CsCheck
             if (Math.Abs(SDs) > 6.0) throw new CsCheckException("Chi-squared standard deviation = " + SDs.ToString("0.0"));
         }
 
-        public static void Faster<T>(Action faster, Action slower, int threads = -1)
+        public static void Faster(Action faster, Action slower, int threads = -1)
         {
 
         }
