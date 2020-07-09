@@ -533,15 +533,16 @@ namespace CsCheck
 
     public class GenDecimal : Gen<decimal>
     {
-        [StructLayout(LayoutKind.Explicit)]
+        [StructLayout(LayoutKind.Explicit, Size = 16)]
         struct Converter
         {
+            [FieldOffset(0)] public decimal D;
             [FieldOffset(0)] public ulong I0;
             [FieldOffset(8)] public ulong I1;
-            [FieldOffset(0)] public decimal D;
         }
         public override (decimal, Size) Generate(PCG pcg)
         {
+            // TODO: Converter looks to have memory issues
             var c = new Converter { I0 = pcg.Next64(), I1 = pcg.Next64() };
             return (c.D, new Size(c.I0, null));
         }

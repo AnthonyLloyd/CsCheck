@@ -224,7 +224,7 @@ namespace Tests
         [Fact]
         public void Single_Range()
         {
-            (from t in Gen.Single.Select(Gen.Single)
+            (from t in Gen.Single.Unit.Select(Gen.Single.Unit)
              let start = Math.Min(t.V0, t.V1)
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Single[start, finish]
@@ -253,7 +253,7 @@ namespace Tests
         [Fact]
         public void Double_Range()
         {
-            (from t in Gen.Double.Select(Gen.Double)
+            (from t in Gen.Double.Unit.Select(Gen.Double.Unit)
              let start = Math.Min(t.V0, t.V1)
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Double[start, finish]
@@ -282,7 +282,7 @@ namespace Tests
         [Fact]
         public void Decimal_Range()
         {
-            (from t in Gen.Decimal.Select(Gen.Decimal)
+            (from t in Gen.Decimal.Unit.Select(Gen.Decimal.Unit)
              let start = Math.Min(t.V0, t.V1)
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Decimal[start, finish]
@@ -296,7 +296,7 @@ namespace Tests
             var frequency = 10;
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
-            Gen.Decimal
+            Gen.Decimal.Unit
             .Select(i => (int)(i * buckets)).Array(frequency * buckets)
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
