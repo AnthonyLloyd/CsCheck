@@ -22,9 +22,9 @@ namespace Tests
         [Fact]
         public void SByte_Range()
         {
-            (from t in Gen.SByte.Tuple(Gen.SByte)
-             let start = Math.Min(t.Item1, t.Item2)
-             let finish = Math.Max(t.Item1, t.Item2)
+            (from t in Gen.SByte.Select(Gen.SByte)
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
              from value in Gen.SByte[start, finish]
              select (value, start, finish))
             .Sample(i => Assert.InRange(i.value, i.start, i.finish));
@@ -46,9 +46,9 @@ namespace Tests
         [Fact]
         public void Byte_Range()
         {
-            (from t in Gen.Byte.Tuple(Gen.Byte)
-             let start = Math.Min(t.Item1, t.Item2)
-             let finish = Math.Max(t.Item1, t.Item2)
+            (from t in Gen.Byte.Select(Gen.Byte)
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Byte[start, finish]
              select (value, start, finish))
             .Sample(i => Assert.InRange(i.value, i.start, i.finish));
@@ -70,9 +70,9 @@ namespace Tests
         [Fact]
         public void Short_Range()
         {
-            (from t in Gen.Short.Tuple(Gen.Short)
-             let start = Math.Min(t.Item1, t.Item2)
-             let finish = Math.Max(t.Item1, t.Item2)
+            (from t in Gen.Short.Select(Gen.Short)
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Short[start, finish]
              select (value, start, finish))
             .Sample(i => Assert.InRange(i.value, i.start, i.finish));
@@ -94,9 +94,9 @@ namespace Tests
         [Fact]
         public void UShort_Range()
         {
-            (from t in Gen.UShort.Tuple(Gen.UShort)
-             let start = Math.Min(t.Item1, t.Item2)
-             let finish = Math.Max(t.Item1, t.Item2)
+            (from t in Gen.UShort.Select(Gen.UShort)
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
              from value in Gen.UShort[start, finish]
              select (value, start, finish))
             .Sample(i => Assert.InRange(i.value, i.start, i.finish));
@@ -118,9 +118,9 @@ namespace Tests
         [Fact]
         public void Int_Range()
         {
-            (from t in Gen.Int.Tuple(Gen.Int)
-             let start = Math.Min(t.Item1, t.Item2)
-             let finish = Math.Max(t.Item1, t.Item2)
+            (from t in Gen.Int.Select(Gen.Int)
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Int[start, finish]
              select (value, start, finish))
             .Sample(i => Assert.InRange(i.value, i.start, i.finish));
@@ -142,9 +142,9 @@ namespace Tests
         [Fact]
         public void UInt_Range()
         {
-            (from t in Gen.UInt.Tuple(Gen.UInt)
-             let start = Math.Min(t.Item1, t.Item2)
-             let finish = Math.Max(t.Item1, t.Item2)
+            (from t in Gen.UInt.Select(Gen.UInt)
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
              from value in Gen.UInt[start, finish]
              select (value, start, finish))
             .Sample(i => Assert.InRange(i.value, i.start, i.finish));
@@ -166,9 +166,9 @@ namespace Tests
         [Fact]
         public void Long_Range()
         {
-            (from t in Gen.Long.Tuple(Gen.Long)
-             let start = Math.Min(t.Item1, t.Item2)
-             let finish = Math.Max(t.Item1, t.Item2)
+            (from t in Gen.Long.Select(Gen.Long)
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Long[start, finish]
              select (value, start, finish))
             .Sample(i => Assert.InRange(i.value, i.start, i.finish));
@@ -190,9 +190,9 @@ namespace Tests
         [Fact]
         public void ULong_Range()
         {
-            (from t in Gen.ULong.Tuple(Gen.ULong)
-             let start = Math.Min(t.Item1, t.Item2)
-             let finish = Math.Max(t.Item1, t.Item2)
+            (from t in Gen.ULong.Select(Gen.ULong)
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
              from value in Gen.ULong[start, finish]
              select (value, start, finish))
             .Sample(i => Assert.InRange(i.value, i.start, i.finish));
@@ -220,9 +220,9 @@ namespace Tests
         [Fact]
         public void Single_Range()
         {
-            (from t in Gen.Single.Tuple(Gen.Single)
-             let start = Math.Min(t.Item1, t.Item2)
-             let finish = Math.Max(t.Item1, t.Item2)
+            (from t in Gen.Single.Select(Gen.Single)
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Single[start, finish]
              select (value, start, finish))
             .Sample(i => Assert.InRange(i.value, i.start, i.finish));
@@ -250,9 +250,9 @@ namespace Tests
         [Fact]
         public void Double_Range()
         {
-            (from t in Gen.Double.Tuple(Gen.Double)
-             let start = Math.Min(t.Item1, t.Item2)
-             let finish = Math.Max(t.Item1, t.Item2)
+            (from t in Gen.Double.Select(Gen.Double)
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Double[start, finish]
              select (value, start, finish))
             .Sample(i => Assert.InRange(i.value, i.start, i.finish));
@@ -280,9 +280,9 @@ namespace Tests
         [Fact]
         public void Decimal_Range()
         {
-            (from t in Gen.Decimal.Tuple(Gen.Decimal)
-             let start = Math.Min(t.Item1, t.Item2)
-             let finish = Math.Max(t.Item1, t.Item2)
+            (from t in Gen.Decimal.Select(Gen.Decimal)
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Decimal[start, finish]
              select (value, start, finish))
             .Sample(i => Assert.InRange(i.value, i.start, i.finish));
@@ -304,9 +304,9 @@ namespace Tests
         [Fact]
         public void Char_Range()
         {
-            (from t in Gen.Char.Tuple(Gen.Char)
-             let start = t.Item1 > t.Item2 ? t.Item2 : t.Item1
-             let finish = t.Item1 > t.Item2 ? t.Item1 : t.Item2
+            (from t in Gen.Char.Select(Gen.Char)
+             let start = t.V0 > t.V1 ? t.V1 : t.V0
+             let finish = t.V0 > t.V1 ? t.V0 : t.V1
              from value in Gen.Char[start, finish]
              select (value, start, finish))
             .Sample(i => Assert.InRange(i.value, i.start, i.finish));
@@ -335,15 +335,20 @@ namespace Tests
         [Fact]
         public void OneOf()
         {
-            Gen.OneOf(Gen.Const(0), Gen.Const(1), Gen.Const(2))
-            .Sample(i => Assert.InRange(i, 0, 2));
+            Gen.OneOf(0, 1, 2).Sample(i => Assert.InRange(i, 0, 2));
         }
 
         [Fact]
         public void Frequency()
         {
-            Gen.Frequency((2, Gen.Const(0)), (4, Gen.Const(1)), (9, Gen.Const(2)))
-            .Sample(i => Assert.InRange(i, 0, 2));
+            var frequency = 10;
+            (from f in Gen.Select(Gen.Int[1, 9], Gen.Int[1, 9], Gen.Int[1, 9])
+             let expected = new[] { f.V0 * frequency, f.V1 * frequency, f.V2 * frequency }
+             from sample in Gen.Frequency((f.V0, Gen.Const(0)), (f.V1, Gen.Const(1)), (f.V2, Gen.Const(2)))
+                            .Array(frequency * (f.V0 + f.V1 + f.V2))
+             let actual = new[] { sample.Count(i => i == 0), sample.Count(i => i == 1), sample.Count(i => i == 2) }
+             select (expected, actual))
+            .Sample(t => Check.ChiSquared(t.expected, t.actual), size: 1);
         }
     }
 }

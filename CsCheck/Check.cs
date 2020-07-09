@@ -27,7 +27,7 @@ namespace CsCheck
             var sampleSeed = Environment.GetEnvironmentVariable("CsCheck_SampleSeed");
             if (!string.IsNullOrWhiteSpace(sampleSeed)) SampleSeed = PCG.Parse(sampleSeed).ToString();
         }
-        public static void Sample<T>(this IGen<T> gen, Action<T> action = null, string seed = null, int size = -1, int threads = -1)
+        public static void Sample<T>(this Gen<T> gen, Action<T> action = null, string seed = null, int size = -1, int threads = -1)
         {
             var lockObj = new object();
             int shrinks = 0;
@@ -88,7 +88,7 @@ namespace CsCheck
                     "' (" + (shrinks == 1 ? "1 shrink)" : shrinks + " shrinks)"), minException);
         }
 
-        public static void Sample<T>(this IGen<T> gen, Func<T, bool> action, string seed = null, int size = -1, int threads = -1)
+        public static void Sample<T>(this Gen<T> gen, Func<T, bool> action, string seed = null, int size = -1, int threads = -1)
         {
             var lockObj = new object();
             int shrinks = 0;
@@ -194,12 +194,12 @@ namespace CsCheck
 
         }
 
-        public static void Faster<T>(this IGen<T> gen, Action<T> faster, Action<T> slower, int threads = -1)
+        public static void Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower, int threads = -1)
         {
 
         }
 
-        public static void Faster<T1, T2>(this IGen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower, int threads = -1)
+        public static void Faster<T1, T2>(this Gen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower, int threads = -1)
         {
 
         }
