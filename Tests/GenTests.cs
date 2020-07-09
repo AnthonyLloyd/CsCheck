@@ -324,5 +324,26 @@ namespace Tests
             foreach (var i in sample) actual[i]++;
             Check.ChiSquared(expected, actual);
         }
+
+        [Fact]
+        public void Char_Array()
+        {
+            var chars = "abcdefghijklmopqrstuvwxyz0123456789_/";
+            Gen.Char[chars].Sample(c => Assert.True(chars.Contains(c)));
+        }
+
+        [Fact]
+        public void OneOf()
+        {
+            Gen.OneOf(Gen.Const(0), Gen.Const(1), Gen.Const(2))
+            .Sample(i => Assert.InRange(i, 0, 2));
+        }
+
+        [Fact]
+        public void Frequency()
+        {
+            Gen.Frequency((2, Gen.Const(0)), (4, Gen.Const(1)), (9, Gen.Const(2)))
+            .Sample(i => Assert.InRange(i, 0, 2));
+        }
     }
 }

@@ -2,12 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 // TODO:
 // Single from int32 function for netstandard2.0?
-// Frequency
 // NaN, Infinity
-// char from string
 // string types, from char, extension method example
 
 namespace CsCheck
@@ -250,10 +249,16 @@ namespace CsCheck
 
     public struct GenSingle : IGen<float>
     {
+        [StructLayout(LayoutKind.Explicit)]
+        private struct Converter
+        {
+            [FieldOffset(0)] public int I;
+            [FieldOffset(0)] public float F;
+        }
         public (float, Size) Generate(PCG pcg)
         {
-            ulong i = pcg.Next64() >> 12;
-            return ((float)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1f
+            ulong i = pcg.Next() >> 9;
+            return (new Converter { I = (int)i | 0x3F800000 }.F - 1f
                     , new Size(i, null));
         }
         public Gen<float> this[float start, float finish]
@@ -264,8 +269,8 @@ namespace CsCheck
                 start -= finish;
                 return new Gen<float>(pcg =>
                 {
-                    ulong i = pcg.Next64() >> 12;
-                    return ((float)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * finish + start
+                    ulong i = pcg.Next() >> 9;
+                    return (new Converter { I = (int)i | 0x3F800000 }.F * finish + start
                             , new Size(i, null));
                 });
             }
@@ -343,6 +348,18 @@ namespace CsCheck
                 {
                     var i = pcg.Next(l);
                     return ((char)(s + i), new Size(i, null));
+                });
+            }
+        }
+        public Gen<char> this[string chars]
+        {
+            get
+            {
+                char[] charArray = chars.ToArray();
+                return new Gen<char>(pcg =>
+                {
+                    var i = pcg.Next((uint)charArray.Length);
+                    return (charArray[i], new Size(i, null));
                 });
             }
         }
@@ -509,11 +526,46 @@ namespace CsCheck
             }
             return (vs, new Size(sl.I, ss));
         });
-        public static Gen<List<T>> List<T>(this IGen<T> gen, int start, int finish) => List(gen, Int[start,finish]);
-        public static Gen<List<T>> List<I,T>(this IGen<T> gen, int length) => List(gen, Const(length));
+        public static Gen<List<T>> List<T>(this IGen<T> gen, int start, int finish) => List(gen, Int[start, finish]);
+        public static Gen<List<T>> List<I, T>(this IGen<T> gen, int length) => List(gen, Const(length));
         static readonly Size zero = new Size(0UL, null);
         public static Gen<T> Const<T>(T value) => new Gen<T>(_ => (value, zero));
-        public static Gen<T> OneOf<T>(List<IGen<T>> gens) => Int[0, gens.Count].SelectMany(i => gens[i]);
+        public static Gen<T> OneOf<T>(params IGen<T>[] gens) => Int[0, gens.Length - 1].SelectMany(i => gens[i]);
+        public static Gen<T> OneOf<T>(params Gen<T>[] gens) => Int[0, gens.Length - 1].SelectMany(i => gens[i]);
+        public static Gen<T> Frequency<T>(params (int, IGen<T>)[] gens)
+        {
+            gens = ((int, IGen<T>)[])gens.Clone();
+            int total = 0;
+            for (int i = 0; i < gens.Length; i++)
+            {
+                total += gens[i].Item1;
+                gens[i].Item1 = total;
+            }
+            return Int[1, total].SelectMany(c =>
+            {
+                for (int i = 0; i < gens.Length; i++)
+                    if (c <= gens[i].Item1)
+                        return gens[i].Item2;
+                return null;
+            });
+        }
+        public static Gen<T> Frequency<T>(params (int, Gen<T>)[] gens)
+        {
+            gens = ((int, Gen<T>)[])gens.Clone();
+            int total = 0;
+            for (int i = 0; i < gens.Length; i++)
+            {
+                total += gens[i].Item1;
+                gens[i].Item1 = total;
+            }
+            return Int[1, total].SelectMany(c =>
+            {
+                for (int i = 0; i < gens.Length; i++)
+                    if (c <= gens[i].Item1)
+                        return gens[i].Item2;
+                return null;
+            });
+        }
         public static IEnumerable<T> ToEnumerable<T>(IGen<T> gen)
         {
             var pcg = PCG.ThreadPCG;
