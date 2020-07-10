@@ -5,7 +5,7 @@
 <a href="https://www.nuget.org/packages/CsCheck"><img src="https://buildstats.info/nuget/CsCheck?includePreReleases=true"></a>
 </p>
 
-CsCheck is a C# random testing library inspired by QuickCheck.
+CsCheck is a C# random and performance testing library inspired by QuickCheck.
 
 It differs in that generation and shrinking are both based on [PCG](https://www.pcg-random.org), a fast random number generator.
 
@@ -63,5 +63,7 @@ public void Faster_Matrix_Multiply_Range()
         t => MulIJK(t.n, t.a, t.b, t.c));
 }
 ```
+
+Tests are in xUnit but could equally be used in any testing framework.
 
 More to see in the [Tests](Tests).
