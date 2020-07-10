@@ -245,6 +245,13 @@ namespace Tests
         }
 
         [Fact]
+        public void Single_Normal()
+        {
+            Gen.Single.Normal
+            .Sample(f => Assert.False(float.IsNaN(f) || float.IsInfinity(f)));
+        }
+
+        [Fact]
         public void Double_Unit_Range()
         {
             Gen.Double.Unit.Sample(f => Assert.InRange(f, 0.0, 0.99999999999999978));
@@ -271,6 +278,13 @@ namespace Tests
             .Select(i => (int)(i * buckets)).Array(frequency * buckets)
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
+        }
+
+        [Fact]
+        public void Double_Normal()
+        {
+            Gen.Double.Normal
+            .Sample(d => Assert.False(double.IsNaN(d) || double.IsInfinity(d)));
         }
 
         [Fact]

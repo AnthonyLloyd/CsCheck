@@ -456,7 +456,7 @@ namespace CsCheck
 
     public class GenSingle : Gen<float>
     {
-        [StructLayout(LayoutKind.Explicit)]
+        [StructLayout(LayoutKind.Explicit, Size = 4)]
         struct Converter
         {
             [FieldOffset(0)] public uint I;
@@ -465,7 +465,6 @@ namespace CsCheck
         public override (float, Size) Generate(PCG pcg)
         {
             uint i = pcg.Next();
-            // TODO: Add more NaN, Infinity, Epsilon, 0, 1, MaxValue, MinValue
             return (new Converter { I = i }.F, new Size(i, null));
         }
         public Gen<float> this[float start, float finish]
@@ -490,8 +489,38 @@ namespace CsCheck
         public Gen<float> Normal = new GenF<float>(pcg =>
         {
             uint i = pcg.Next();
-            // TODO: Remove NaN, Infinity
-            return (new Converter { I = i }.F, new Size(i, null));
+            return ((i & 0x7F800000U) == 0x7F800000U ? (8f-(i & 0xFU))
+                    : new Converter { I = i }.F
+                , new Size(i, null));
+        });
+        static float MakeSpecial(uint i)
+        {
+            switch (i & 0xFU)
+            {
+                case 0x0U: return float.NaN;
+                case 0x1U: return float.PositiveInfinity;
+                case 0x2U: return float.NegativeInfinity;
+                case 0x3U: return float.MaxValue;
+                case 0x4U: return float.MinValue;
+                case 0x5U: return float.Epsilon;
+                case 0x6U: return -float.Epsilon;
+                case 0x7U: return 1f;
+                case 0x8U: return -1f;
+                case 0x9U: return 2f;
+                case 0xAU: return -2f;
+                case 0xBU: return 3f;
+                case 0xCU: return -3f;
+                case 0xDU: return 4f;
+                case 0xEU: return -4f;
+                default: return 0f;
+            }
+        }
+        public Gen<float> Special = new GenF<float>(pcg =>
+        {
+            uint i = pcg.Next();
+            return ((i & 0xF0U) == 0xD0U ? MakeSpecial(i)
+                    : new Converter { I = i }.F
+                , new Size(i, null));
         });
     }
 
@@ -500,7 +529,6 @@ namespace CsCheck
         public override (double, Size) Generate(PCG pcg)
         {
             ulong i = pcg.Next64();
-            // TODO: Add more NaN, Infinity, Epsilon, 0, 1, MaxValue, MinValue
             return (BitConverter.Int64BitsToDouble((long)i), new Size(i, null));
         }
         public Gen<double> this[double start, double finish]
@@ -512,7 +540,7 @@ namespace CsCheck
                 return new GenF<double>(pcg =>
                 {
                     ulong i = pcg.Next64() >> 12;
-                    return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * finish + start
+                    return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * finish + start
                             , new Size(i, null));
                 });
             }
@@ -520,14 +548,44 @@ namespace CsCheck
         public Gen<double> Unit = new GenF<double>(pcg =>
         {
             ulong i = pcg.Next64() >> 12;
-            return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1.0
+            return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1.0
                     , new Size(i, null));
         });
         public Gen<double> Normal = new GenF<double>(pcg =>
         {
             ulong i = pcg.Next64();
-            // TODO: Remove NaN, Infinity
-            return (BitConverter.Int64BitsToDouble((long)i), new Size(i, null));
+            return ((i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL))
+                  : BitConverter.Int64BitsToDouble((long)i)
+                , new Size(i, null));
+        });
+        static double MakeSpecial(ulong i)
+        {
+            switch (i & 0xFUL)
+            {
+                case 0x0UL: return double.NaN;
+                case 0x1UL: return double.PositiveInfinity;
+                case 0x2UL: return double.NegativeInfinity;
+                case 0x3UL: return double.MaxValue;
+                case 0x4UL: return double.MinValue;
+                case 0x5UL: return double.Epsilon;
+                case 0x6UL: return -double.Epsilon;
+                case 0x7UL: return 1.0;
+                case 0x8UL: return -1.0;
+                case 0x9UL: return 2.0;
+                case 0xAUL: return -2.0;
+                case 0xBUL: return 3.0;
+                case 0xCUL: return -3.0;
+                case 0xDUL: return 4.0;
+                case 0xEUL: return -4.0;
+                default: return 0.0;
+            }
+        }
+        public Gen<double> Special = new GenF<double>(pcg =>
+        {
+            ulong i = pcg.Next64();
+            return ((i & 0xF0UL) == 0xD0UL ? MakeSpecial(i)
+                    : BitConverter.Int64BitsToDouble((long)i)
+                , new Size(i, null));
         });
     }
 
@@ -542,7 +600,6 @@ namespace CsCheck
         }
         public override (decimal, Size) Generate(PCG pcg)
         {
-            // TODO: Converter looks to have memory issues
             var c = new Converter { I0 = pcg.Next64(), I1 = pcg.Next64() };
             return (c.D, new Size(c.I0, null));
         }
@@ -555,7 +612,7 @@ namespace CsCheck
                 return new GenF<decimal>(pcg =>
                 {
                     var i = pcg.Next64() >> 12;
-                    return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) * finish + start
+                    return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * finish + start
                             , new Size(i, null));
                 });
             }
@@ -563,7 +620,7 @@ namespace CsCheck
         public Gen<decimal> Unit = new GenF<decimal>(pcg =>
         {
             ulong i = pcg.Next64() >> 12;
-            return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000L) - 1M
+            return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1M
                     , new Size(i, null));
         });
     }
