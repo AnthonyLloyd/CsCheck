@@ -13,7 +13,7 @@ This gives the following advantages:
 
 - Automatic shrinking. Gen classes are composable with no need for Arb classes. So less boilerplate.
 - Random testing and shrinking can run in parallel. This and PCG make it very fast.
-- Shrunk cases report the seed so they can be rerun. Any failure can easily be reproduced.
+- Shrunk cases report the seed so they can be rerun. Simpler examples can easily be reproduced.
 - Shrinking can be repeated to give simpler cases for high dimensional problems.
 
 ### Examples
