@@ -67,3 +67,11 @@ public void Faster_Matrix_Multiply_Range()
 Tests are in xUnit but could equally be used in any testing framework.
 
 More to see in the [Tests](Tests).
+
+### Configuration
+
+Sample and Faster accept configuration parameters. Global defaults can also be set via environment variables.
+
+```powershell
+$env:CsCheck_SampleSeed = '657257e6655b2ffd50'; $env:CsCheck_SampleSize = 1000; dotnet test -c Release --filter SByte_Range; Remove-Item Env:CsCheck*
+```
