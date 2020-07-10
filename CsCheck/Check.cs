@@ -1,12 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
-
-// $env:CsCheck_SampleSeed = '657257e6655b2ffd50'; $env:CsCheck_SampleSize = 100; dotnet test -c Release --filter SByte_Range; Remove-Item Env:CsCheck*
-// print output? would need to out via an Action<string>
-
-// TODO:
-// Check tests/examples
+using System.Threading;
 
 namespace CsCheck
 {
@@ -20,12 +16,18 @@ namespace CsCheck
     {
         public readonly static int SampleSize = 100;
         public readonly static string SampleSeed;
+        public readonly static double FasterSigma;
+        public readonly static string FasterSeed;
         static Check()
         {
             var sampleSize = Environment.GetEnvironmentVariable("CsCheck_SampleSize");
             if (!string.IsNullOrWhiteSpace(sampleSize)) SampleSize = int.Parse(sampleSize);
             var sampleSeed = Environment.GetEnvironmentVariable("CsCheck_SampleSeed");
             if (!string.IsNullOrWhiteSpace(sampleSeed)) SampleSeed = PCG.Parse(sampleSeed).ToString();
+            var fasterSigma = Environment.GetEnvironmentVariable("CsCheck_FasterSigma");
+            if (!string.IsNullOrWhiteSpace(fasterSigma)) FasterSigma = double.Parse(fasterSigma);
+            var fasterSeed = Environment.GetEnvironmentVariable("CsCheck_FasterSeed");
+            if (!string.IsNullOrWhiteSpace(fasterSeed)) FasterSeed = PCG.Parse(fasterSeed).ToString();
         }
         public static void Sample<T>(this Gen<T> gen, Action<T> action, string seed = null, int size = -1, int threads = -1)
         {
@@ -184,6 +186,7 @@ namespace CsCheck
         {
             Sample(gen, predicate, seed, 1, 1);
         }
+
         public static void ChiSquared(int[] expected, int[] actual)
         {
             if (expected.Length != actual.Length) throw new CsCheckException("Expected and actual lengths need to be the same.");
@@ -201,28 +204,228 @@ namespace CsCheck
             if (Math.Abs(SDs) > 6.0) throw new CsCheckException("Chi-squared standard deviation = " + SDs.ToString("0.0"));
         }
 
-        public static void Faster(Action faster, Action slower, int threads = -1)
+        public static FasterResult Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int timeout = -1)
         {
-
+            if (sigma == -1.0) sigma = FasterSigma == 0.0 ? 6.0 : FasterSigma;
+            sigma *= sigma;
+            if (threads == -1) threads = Environment.ProcessorCount;
+            var r = new FasterResult { Median = new MedianEstimator() };
+            var mre = new ManualResetEventSlim();
+            Exception exception = null;
+            while (threads-- > 0)
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        while (!mre.IsSet)
+                        {
+                            var tf = Stopwatch.GetTimestamp();
+                            faster();
+                            tf = Stopwatch.GetTimestamp() - tf;
+                            if (mre.IsSet) return;
+                            var ts = Stopwatch.GetTimestamp();
+                            slower();
+                            ts = Stopwatch.GetTimestamp() - ts;
+                            if (mre.IsSet) return;
+                            var e = (float)(ts - tf) / Math.Max(ts, tf);
+                            lock (r)
+                            {
+                                r.Median.Add(e);
+                            }
+                            if (tf < ts) Interlocked.Increment(ref r.Faster);
+                            else if (tf > ts) Interlocked.Increment(ref r.Slower);
+                            if (r.Variance >= sigma) mre.Set();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        exception = e;
+                        mre.Set();
+                    }
+                });
+            mre.Wait(timeout);
+            if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+            return r;
         }
 
-        public static void Faster<T>(Func<T> faster, Func<T> slower, int threads = -1)
+        public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, double sigma = -1.0, int threads = -1, int timeout = -1)
         {
-
+            if (sigma == -1.0) sigma = FasterSigma == 0.0 ? 6.0 : FasterSigma;
+            sigma *= sigma;
+            if (threads == -1) threads = Environment.ProcessorCount;
+            var r = new FasterResult { Median = new MedianEstimator() };
+            var mre = new ManualResetEventSlim();
+            Exception exception = null;
+            while (threads-- > 0)
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        while (!mre.IsSet)
+                        {
+                            var tf = Stopwatch.GetTimestamp();
+                            var vf = faster();
+                            tf = Stopwatch.GetTimestamp() - tf;
+                            if (mre.IsSet) return;
+                            var ts = Stopwatch.GetTimestamp();
+                            var vs = slower();
+                            ts = Stopwatch.GetTimestamp() - ts;
+                            if (mre.IsSet) return;
+                            if (!vf.Equals(vs))
+                            {
+                                exception = new CsCheckException($"Return values differ: faster={vf} slower={vs}");
+                                mre.Set();
+                                return;
+                            }
+                            var e = (float)(ts - tf) / Math.Max(ts, tf);
+                            lock (r)
+                            {
+                                r.Median.Add(e);
+                            }
+                            if (tf < ts) Interlocked.Increment(ref r.Faster);
+                            else if (tf > ts) Interlocked.Increment(ref r.Slower);
+                            if (r.Variance >= sigma) mre.Set();
+                        }
+                    }
+                    catch(Exception e)
+                    {
+                        exception = e;
+                        mre.Set();
+                    }
+                });
+            mre.Wait(timeout);
+            if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+            return r;
         }
 
-        public static void Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower, int threads = -1)
+        public static FasterResult Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower,
+            double sigma = -1.0, int threads = -1, int timeout = -1)
         {
-
+            if (sigma == -1.0) sigma = FasterSigma == 0.0 ? 6.0 : FasterSigma;
+            sigma *= sigma;
+            if (threads == -1) threads = Environment.ProcessorCount;
+            var r = new FasterResult { Median = new MedianEstimator() };
+            var mre = new ManualResetEventSlim();
+            Exception exception = null;
+            while (threads-- > 0)
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        var pcg = PCG.ThreadPCG;
+                        while (!mre.IsSet)
+                        {
+                            var t = gen.Generate(pcg).Item1;
+                            var tf = Stopwatch.GetTimestamp();
+                            faster(t);
+                            tf = Stopwatch.GetTimestamp() - tf;
+                            if (mre.IsSet) return;
+                            var ts = Stopwatch.GetTimestamp();
+                            slower(t);
+                            ts = Stopwatch.GetTimestamp() - ts;
+                            if (mre.IsSet) return;
+                            var e = (float)(ts - tf) / Math.Max(ts, tf);
+                            lock (r)
+                            {
+                                r.Median.Add(e);
+                            }
+                            if (tf < ts) Interlocked.Increment(ref r.Faster);
+                            else if (tf > ts) Interlocked.Increment(ref r.Slower);
+                            if (r.Variance >= sigma) mre.Set();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        exception = e;
+                        mre.Set();
+                    }
+                });
+            mre.Wait(timeout);
+            if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+            return r;
         }
 
-        public static void Faster<T1, T2>(this Gen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower, int threads = -1)
+        public static FasterResult Faster<T1, T2>(this Gen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower,
+            double sigma = -1.0, int threads = -1, int timeout = -1, string seed = null)
         {
-
+            if (sigma == -1.0) sigma = FasterSigma == 0.0 ? 6.0 : FasterSigma;
+            sigma *= sigma;
+            if (seed == null) seed = SampleSeed;
+            if (threads == -1) threads = Environment.ProcessorCount;
+            var r = new FasterResult { Median = new MedianEstimator() };
+            var mre = new ManualResetEventSlim();
+            Exception exception = null;
+            while (threads-- > 0)
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        var pcg = seed == null ? PCG.ThreadPCG : PCG.Parse(seed);
+                        while (!mre.IsSet)
+                        {
+                            var state = pcg.State;
+                            var t = gen.Generate(pcg).Item1;
+                            var tf = Stopwatch.GetTimestamp();
+                            var vf = faster(t);
+                            tf = Stopwatch.GetTimestamp() - tf;
+                            if (mre.IsSet) return;
+                            var ts = Stopwatch.GetTimestamp();
+                            var vs = slower(t);
+                            ts = Stopwatch.GetTimestamp() - ts;
+                            if (mre.IsSet) return;
+                            if (!vf.Equals(vs))
+                            {
+                                exception = new CsCheckException(
+                                    $"Return values differ: CsCheck_FasterSeed={pcg.ToString(state)} faster={vf} slower={vs}");
+                                mre.Set();
+                                return;
+                            }
+                            var e = (float)(ts - tf) / Math.Max(ts, tf);
+                            lock (r)
+                            {
+                                r.Median.Add(e);
+                            }
+                            if (tf < ts) Interlocked.Increment(ref r.Faster);
+                            else if (tf > ts) Interlocked.Increment(ref r.Slower);
+                            if (r.Variance >= sigma) mre.Set();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        exception = e;
+                        mre.Set();
+                    }
+                });
+            mre.Wait(timeout);
+            if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+            return r;
         }
     }
 
-    internal class MedianEstimator
+    public class FasterResult
+    {
+        public int Faster;
+        public int Slower;
+        public MedianEstimator Median;
+        internal float Variance
+        {
+            get
+            {
+                float d = Faster - Slower;
+                d *= d;
+                return d / (Faster + Slower);
+            }
+        }
+        public override string ToString()
+        {
+            var result = $"%[-{Median.MADless * 100.0:#0}..+{Median.MADmore * 100.0:#0}]";
+            result = Median.Median >= 0.0 ? (Median.Median * 100.0).ToString("#0.0") + result + " faster"
+                : (Median.Median * 100.0 / (-1.0 - Median.Median)).ToString("#0.0") + result + " slower";
+            return result + $", sigma={Math.Sqrt(Variance):#0.0} ({Faster:#,0} vs {Slower:#,0})";
+        }
+    }
+
+    public class MedianEstimator
     {
         int N, n2 = 2, n3 = 3, n4 = 4;
         double q1, q2, q3, q4, q5;

@@ -8,8 +8,8 @@
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>testing;random;performance;quickcheck</PackageTags>
-        <Version>0.3.0-preview</Version>
-        <PackageReleaseNotes>Gen and Sample are close to complete.%0aFaster next.%0aAPI up for discussion.</PackageReleaseNotes>
+        <Version>0.4</Version>
+        <PackageReleaseNotes>Gen, Sample and Faster are all about complete.%0aMore tests and docs to come.%0aAPI up for discussion.</PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <WarningLevel>4</WarningLevel>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

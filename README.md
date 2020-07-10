@@ -15,3 +15,53 @@ This gives the following advantages:
 - Random testing and shrinking can run in parallel. This and PCG make it very fast.
 - Shrunk cases report the seed so they can be rerun. Any failure can easily be reproduced.
 - Shrinking can be repeated to give simpler cases for high dimensional problems.
+
+### Examples
+
+Sample test of the range of a unit single.
+```csharp
+[Fact]
+public void Single_Unit_Range()
+{
+    Gen.Single.Unit.Sample(f => Assert.InRange(f, 0f, 0.9999999f));
+}
+```
+
+Sample test for chars taken from a string.
+```csharp
+[Fact]
+public void Char_Array()
+{
+    var chars = "abcdefghijklmopqrstuvwxyz0123456789_/";
+    Gen.Char[chars].Sample(c => Assert.True(chars.Contains(c)));
+}
+```
+
+Sample test for long ranges.
+```csharp
+[Fact]
+public void Long_Range()
+{
+    (from t in Gen.Long.Select(Gen.Long)
+     let start = Math.Min(t.V0, t.V1)
+     let finish = Math.Max(t.V0, t.V1)
+     from value in Gen.Long[start, finish]
+     select (value, start, finish))
+    .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+}
+```
+
+Performance test of two different ways of multiplying a matrix for a range of matrix sizes.
+```csharp
+[Fact]
+public void Faster_Matrix_Multiply_Range()
+{
+    Gen.Int[10, 100]
+    .Select(n => (n, a: new double[n, n], b: new double[n, n], c: new double[n, n]))
+    .Faster(
+        t => MulIKJ(t.n, t.a, t.b, t.c),
+        t => MulIJK(t.n, t.a, t.b, t.c));
+}
+```
+
+More to see in the [Tests](Tests).
