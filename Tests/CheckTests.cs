@@ -7,6 +7,9 @@ namespace Tests
 {
     public class CheckTests
     {
+        readonly Action<string> writeLine;
+        public CheckTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
+
         void MulIJK(int n, double[,] a, double[,] b, double[,] c)
         {
             for (int i = 0; i < n; i++)
@@ -36,7 +39,8 @@ namespace Tests
             var c = new double[n, n];
             Check.Faster(
                 () => MulIKJ(n, a, b, c),
-                () => MulIJK(n, a, b, c));
+                () => MulIJK(n, a, b, c))
+            .Output(writeLine);
         }
 
         [Fact]
@@ -46,7 +50,8 @@ namespace Tests
             .Select(n => (n, a: new double[n, n], b: new double[n, n], c: new double[n, n]))
             .Faster(
                 t => MulIKJ(t.n, t.a, t.b, t.c),
-                t => MulIJK(t.n, t.a, t.b, t.c));
+                t => MulIJK(t.n, t.a, t.b, t.c))
+            .Output(writeLine);
         }
 
         [Fact]
@@ -56,7 +61,8 @@ namespace Tests
             new Random(42).NextBytes(data);
             Check.Faster(
                 () => data.Aggregate(0.0, (t, b) => t + b),
-                () => data.Select(i => (double)i).Sum());
+                () => data.Select(i => (double)i).Sum())
+            .Output(writeLine);
         }
 
         [Fact]
@@ -65,7 +71,9 @@ namespace Tests
             Gen.Byte.Array(100, 1000)
             .Faster(
                 data => data.Aggregate(0.0, (t, b) => t + b),
-                data => data.Select(i => (double)i).Sum());
+                data => data.Select(i => (double)i).Sum(),
+                Assert.Equal)
+            .Output(writeLine);
         }
 
         //[Fact]

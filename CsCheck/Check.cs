@@ -14,10 +14,10 @@ namespace CsCheck
 
     public static class Check
     {
-        public readonly static int SampleSize = 100;
-        public readonly static string SampleSeed;
-        public readonly static double FasterSigma;
-        public readonly static string FasterSeed;
+        public static int SampleSize = 100;
+        public static string SampleSeed;
+        public static double FasterSigma;
+        public static string FasterSeed;
         static Check()
         {
             var sampleSize = Environment.GetEnvironmentVariable("CsCheck_SampleSize");
@@ -248,7 +248,8 @@ namespace CsCheck
             return r;
         }
 
-        public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, double sigma = -1.0, int threads = -1, int timeout = -1)
+        public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Action<T, T> assertEqual = null,
+            double sigma = -1.0, int threads = -1, int timeout = -1)
         {
             if (sigma == -1.0) sigma = FasterSigma == 0.0 ? 6.0 : FasterSigma;
             sigma *= sigma;
@@ -271,11 +272,27 @@ namespace CsCheck
                             var vs = slower();
                             ts = Stopwatch.GetTimestamp() - ts;
                             if (mre.IsSet) return;
-                            if (!vf.Equals(vs))
+                            if (assertEqual == null)
                             {
-                                exception = new CsCheckException($"Return values differ: faster={vf} slower={vs}");
-                                mre.Set();
-                                return;
+                                if (!vf.Equals(vs))
+                                {
+                                    exception = new CsCheckException($"Return values differ: faster={vf} slower={vs}");
+                                    mre.Set();
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    assertEqual(vf, vs);
+                                }
+                                catch(Exception ex)
+                                {
+                                    exception = ex;
+                                    mre.Set();
+                                    return;
+                                }
                             }
                             var e = (float)(ts - tf) / Math.Max(ts, tf);
                             lock (r)
@@ -287,7 +304,7 @@ namespace CsCheck
                             if (r.Variance >= sigma) mre.Set();
                         }
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         exception = e;
                         mre.Set();
@@ -346,7 +363,7 @@ namespace CsCheck
         }
 
         public static FasterResult Faster<T1, T2>(this Gen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower,
-            double sigma = -1.0, int threads = -1, int timeout = -1, string seed = null)
+            Action<T2, T2> assertEqual = null, double sigma = -1.0, int threads = -1, int timeout = -1, string seed = null)
         {
             if (sigma == -1.0) sigma = FasterSigma == 0.0 ? 6.0 : FasterSigma;
             sigma *= sigma;
@@ -373,12 +390,29 @@ namespace CsCheck
                             var vs = slower(t);
                             ts = Stopwatch.GetTimestamp() - ts;
                             if (mre.IsSet) return;
-                            if (!vf.Equals(vs))
+                            if (assertEqual == null)
                             {
-                                exception = new CsCheckException(
-                                    $"Return values differ: CsCheck_FasterSeed={pcg.ToString(state)} faster={vf} slower={vs}");
-                                mre.Set();
-                                return;
+                                if (!vf.Equals(vs))
+                                {
+                                    exception = new CsCheckException(
+                                        $"Return values differ: CsCheck_FasterSeed={pcg.ToString(state)} faster={vf} slower={vs}");
+                                    mre.Set();
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    assertEqual(vf, vs);
+                                }
+                                catch (Exception ex)
+                                {
+                                    exception = new CsCheckException(
+                                        $"Return values differ: CsCheck_FasterSeed=" + pcg.ToString(state), ex);
+                                    mre.Set();
+                                    return;
+                                }
                             }
                             var e = (float)(ts - tf) / Math.Max(ts, tf);
                             lock (r)
@@ -422,6 +456,10 @@ namespace CsCheck
             result = Median.Median >= 0.0 ? (Median.Median * 100.0).ToString("#0.0") + result + " faster"
                 : (Median.Median * 100.0 / (-1.0 - Median.Median)).ToString("#0.0") + result + " slower";
             return result + $", sigma={Math.Sqrt(Variance):#0.0} ({Faster:#,0} vs {Slower:#,0})";
+        }
+        public void Output(Action<string> output)
+        {
+            output(ToString());
         }
     }
 
