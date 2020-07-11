@@ -26,7 +26,8 @@ namespace Tests
         {
             var frequency = 10;
             var expected = ArrayRepeat(frequency, 2);
-            Gen.Bool.Select(i => i ? 1 : 0).Array(frequency * 2)
+            Gen.Bool.Select(i => i ? 1 : 0)
+            .Array[frequency * 2]
             .Select(i => Tally(2, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -49,7 +50,8 @@ namespace Tests
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
             Gen.SByte[0, (sbyte)(buckets - 1)]
-            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => (int)i)
+            .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -72,7 +74,8 @@ namespace Tests
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
             Gen.Byte[0, (byte)(buckets - 1)]
-            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => (int)i)
+            .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -95,7 +98,8 @@ namespace Tests
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
             Gen.Short[0, (short)(buckets - 1)]
-            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => (int)i)
+            .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -118,7 +122,8 @@ namespace Tests
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
             Gen.UShort[0, (ushort)(buckets - 1)]
-            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => (int)i)
+            .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -141,7 +146,7 @@ namespace Tests
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
             Gen.Int[0, buckets - 1]
-            .Select(i => i).Array(frequency * buckets)
+            .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -164,7 +169,8 @@ namespace Tests
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
             Gen.UInt[0, (uint)(buckets - 1)]
-            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => (int)i)
+            .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -187,7 +193,8 @@ namespace Tests
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
             Gen.Long[0, buckets - 1]
-            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => (int)i)
+            .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -210,7 +217,8 @@ namespace Tests
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
             Gen.ULong[0, (ulong)(buckets - 1)]
-            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => (int)i)
+            .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -239,7 +247,8 @@ namespace Tests
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
             Gen.Single.Unit
-            .Select(i => (int)(i * buckets)).Array(frequency * buckets)
+            .Select(i => (int)(i * buckets))
+            .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -275,7 +284,8 @@ namespace Tests
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
             Gen.Double.Unit
-            .Select(i => (int)(i * buckets)).Array(frequency * buckets)
+            .Select(i => (int)(i * buckets))
+            .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -311,7 +321,8 @@ namespace Tests
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
             Gen.Decimal.Unit
-            .Select(i => (int)(i * buckets)).Array(frequency * buckets)
+            .Select(i => (int)(i * buckets))
+            .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -334,7 +345,8 @@ namespace Tests
             var buckets = 70;
             var expected = ArrayRepeat(frequency, buckets);
             Gen.Char[(char)0, (char)(buckets - 1)]
-            .Select(i => (int)i).Array(frequency * buckets)
+            .Select(i => (int)i)
+            .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
@@ -358,7 +370,8 @@ namespace Tests
             var frequency = 10;
             (from f in Gen.Select(Gen.Int[1, 5], Gen.Int[1, 5], Gen.Int[1, 5])
              let expected = new[] { f.V0 * frequency, f.V1 * frequency, f.V2 * frequency }
-             from actual in Gen.Frequency((f.V0, 0), (f.V1, 1), (f.V2, 2)).Array(frequency * (f.V0 + f.V1 + f.V2))
+             from actual in Gen.Frequency((f.V0, 0), (f.V1, 1), (f.V2, 2))
+                            .Array[frequency * (f.V0 + f.V1 + f.V2)]
                             .Select(i => Tally(3, i))
              select (expected, actual))
             .SampleOne(t => Check.ChiSquared(t.expected, t.actual));

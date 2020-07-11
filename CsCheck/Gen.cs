@@ -35,6 +35,8 @@ namespace CsCheck
             var pcg = PCG.ThreadPCG;
             while (true) yield return Generate(pcg).Item1;
         }
+        public GenArray<T> Array => new GenArray<T>(this);
+        public GenList<T> List => new GenList<T>(this);
         public IEnumerator<T> GetEnumerator() => ToEnumerable().GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => ToEnumerable().GetEnumerator();
     }
@@ -186,36 +188,6 @@ namespace CsCheck
             var (v2, s2) = gen2.Generate(pcg);
             return (resultSelector(v1, v2), new Size(s1.I, new[] { s2 }));
         });
-        public static Gen<T[]> Array<T>(this Gen<T> gen, Gen<int> genLength) => new GenF<T[]>(pcg =>
-        {
-            var (l, sl) = genLength.Generate(pcg);
-            var vs = new T[l];
-            var ss = new Size[l];
-            for (int i = 0; i < vs.Length; i++)
-            {
-                var (v, s) = gen.Generate(pcg);
-                vs[i] = v;
-                ss[i] = s;
-            }
-            return (vs, new Size(sl.I, ss));
-        });
-        public static Gen<T[]> Array<T>(this Gen<T> gen, int start, int finish) => Array(gen, Int[start, finish]);
-        public static Gen<T[]> Array<T>(this Gen<T> gen, int length) => Array(gen, Const(length));
-        public static Gen<List<T>> List<T>(this Gen<T> gen, Gen<int> genLength) => new GenF<List<T>>(pcg =>
-        {
-            var (l, sl) = genLength.Generate(pcg);
-            var vs = new List<T>(l);
-            var ss = new Size[l];
-            for (int i = 0; i < l; i++)
-            {
-                var (v, s) = gen.Generate(pcg);
-                vs[i] = v;
-                ss[i] = s;
-            }
-            return (vs, new Size(sl.I, ss));
-        });
-        public static Gen<List<T>> List<T>(this Gen<T> gen, int start, int finish) => List(gen, Int[start, finish]);
-        public static Gen<List<T>> List<I, T>(this Gen<T> gen, int length) => List(gen, Const(length));
         static readonly Size zero = new Size(0UL, null);
         public static Gen<T> Const<T>(T value) => new GenF<T>(_ => (value, zero));
         public static Gen<T> OneOf<T>(params T[] ts) => Int[0, ts.Length - 1].Select(i => ts[i]);
@@ -254,6 +226,7 @@ namespace CsCheck
                 return gens[gens.Length - 1].Item2;
             });
         }
+
         public static readonly GenBool Bool = new GenBool();
         public static readonly GenSByte SByte = new GenSByte();
         public static readonly GenByte Byte = new GenByte();
@@ -661,11 +634,101 @@ namespace CsCheck
 
     public class GenString : Gen<string>
     {
-        static readonly Gen<string> d = Gen.Char.Array(0, 127).Select(i => new string(i));
+        static readonly Gen<string> d = Gen.Char.Array.Select(i => new string(i));
         public override (string, Size) Generate(PCG pcg) => d.Generate(pcg);
         public Gen<string> this[int start, int finish] =>
-            Gen.Char.Array(start, finish).Select(i => new string(i));
+            Gen.Char.Array[start, finish].Select(i => new string(i));
         public Gen<string> this[Gen<char> gen, int start, int finish] =>
-            gen.Array(start, finish).Select(i => new string(i));
+            gen.Array[start, finish].Select(i => new string(i));
+    }
+
+    public class GenArray<T> : Gen<T[]>
+    {
+        readonly Gen<T> gen;
+        public GenArray(Gen<T> gen) => this.gen = gen;
+        public override (T[], Size) Generate(PCG pcg)
+        {
+            var l = pcg.Next() & 127U;
+            var vs = new T[l];
+            var ss = new Size[l];
+            for (int i = 0; i < vs.Length; i++)
+            {
+                var (v, s) = gen.Generate(pcg);
+                vs[i] = v;
+                ss[i] = s;
+            }
+            return (vs, new Size(l, ss));
+        }
+        public Gen<T[]> this[Gen<int> length] => new GenF<T[]>(pcg =>
+        {
+            var (l, sl) = length.Generate(pcg);
+            var vs = new T[l];
+            var ss = new Size[l];
+            for (int i = 0; i < vs.Length; i++)
+            {
+                var (v, s) = gen.Generate(pcg);
+                vs[i] = v;
+                ss[i] = s;
+            }
+            return (vs, new Size(sl.I, ss));
+        });
+        public Gen<T[]> this[int length] => new GenF<T[]>(pcg =>
+        {
+            var vs = new T[length];
+            var ss = new Size[length];
+            for (int i = 0; i < vs.Length; i++)
+            {
+                var (v, s) = gen.Generate(pcg);
+                vs[i] = v;
+                ss[i] = s;
+            }
+            return (vs, new Size(0L, ss));
+        });
+        public Gen<T[]> this[int start, int finish] => this[Gen.Int[start, finish]];
+    }
+
+    public class GenList<T> : Gen<List<T>>
+    {
+        readonly Gen<T> gen;
+        public GenList(Gen<T> gen) => this.gen = gen;
+        public override (List<T>, Size) Generate(PCG pcg)
+        {
+            var l = pcg.Next() & 127U;
+            var vs = new List<T>((int)l);
+            var ss = new Size[l];
+            for (int i = 0; i < ss.Length; i++)
+            {
+                var (v, s) = gen.Generate(pcg);
+                vs.Add(v);
+                ss[i] = s;
+            }
+            return (vs, new Size(l, ss));
+        }
+        public Gen<List<T>> this[Gen<int> length] => new GenF<List<T>>(pcg =>
+        {
+            var (l, sl) = length.Generate(pcg);
+            var vs = new List<T>(l);
+            var ss = new Size[l];
+            for (int i = 0; i < ss.Length; i++)
+            {
+                var (v, s) = gen.Generate(pcg);
+                vs.Add(v);
+                ss[i] = s;
+            }
+            return (vs, new Size(sl.I, ss));
+        });
+        public Gen<List<T>> this[int length] => new GenF<List<T>>(pcg =>
+        {
+            var vs = new List<T>(length);
+            var ss = new Size[length];
+            for (int i = 0; i < ss.Length; i++)
+            {
+                var (v, s) = gen.Generate(pcg);
+                vs.Add(v);
+                ss[i] = s;
+            }
+            return (vs, new Size(0L, ss));
+        });
+        public Gen<List<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
     }
 }

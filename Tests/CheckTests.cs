@@ -68,7 +68,7 @@ namespace Tests
         [Fact]
         public void Faster_Linq_Random()
         {
-            Gen.Byte.Array(100, 1000)
+            Gen.Byte.Array[100, 1000]
             .Faster(
                 data => data.Aggregate(0.0, (t, b) => t + b),
                 data => data.Select(i => (double)i).Sum(),
