@@ -74,4 +74,6 @@ Sample and Faster accept configuration parameters. Global defaults can also be s
 
 ```powershell
 $env:CsCheck_SampleSeed = '657257e6655b2ffd50'; $env:CsCheck_SampleSize = 1000; dotnet test -c Release --filter SByte_Range; Remove-Item Env:CsCheck*
+
+$env:CsCheck_FasterSigma = 200; dotnet test -c Release --logger:"console;verbosity=detailed" --filter Faster; ; Remove-Item Env:CsCheck*
 ```
