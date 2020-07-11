@@ -141,6 +141,22 @@ namespace CsCheck
             var (v9, s9) = gen9.Generate(pcg);
             return (selector(v1, v2, v3, v4, v5, v6, v7, v8, v9), new Size(0UL, new[] { s1, s2, s3, s4, s5, s6, s7, s8, s9 }));
         });
+        public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
+            Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> selector) => new GenF<R>(pcg =>
+        {
+            var (v1, s1) = gen1.Generate(pcg);
+            var (v2, s2) = gen2.Generate(pcg);
+            var (v3, s3) = gen3.Generate(pcg);
+            var (v4, s4) = gen4.Generate(pcg);
+            var (v5, s5) = gen5.Generate(pcg);
+            var (v6, s6) = gen6.Generate(pcg);
+            var (v7, s7) = gen7.Generate(pcg);
+            var (v8, s8) = gen8.Generate(pcg);
+            var (v9, s9) = gen9.Generate(pcg);
+            var (v10, s10) = gen10.Generate(pcg);
+            return (selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10), new Size(0UL, new[] { s1, s2, s3, s4, s5, s6, s7, s8, s9, s10 }));
+        });
         public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen0, Gen<T1> gen1) => new GenF<(T0, T1)>(pcg =>
         {
             var (v0, s0) = gen0.Generate(pcg);
@@ -154,6 +170,25 @@ namespace CsCheck
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
             return ((v0, v1, v2), new Size(0UL, new[] { s0, s1, s2 }));
+        });
+        public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> Select<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1,
+            Gen<T2> gen2, Gen<T3> gen3) => new GenF<(T0, T1, T2, T3)>(pcg =>
+        {
+            var (v0, s0) = gen0.Generate(pcg);
+            var (v1, s1) = gen1.Generate(pcg);
+            var (v2, s2) = gen2.Generate(pcg);
+            var (v3, s3) = gen3.Generate(pcg);
+            return ((v0, v1, v2, v3), new Size(0UL, new[] { s0, s1, s2, s3 }));
+        });
+        public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3, T4 V4)> Select<T0, T1, T2, T3, T4>(this Gen<T0> gen0, Gen<T1> gen1,
+            Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4) => new GenF<(T0, T1, T2, T3, T4)>(pcg =>
+        {
+            var (v0, s0) = gen0.Generate(pcg);
+            var (v1, s1) = gen1.Generate(pcg);
+            var (v2, s2) = gen2.Generate(pcg);
+            var (v3, s3) = gen3.Generate(pcg);
+            var (v4, s4) = gen4.Generate(pcg);
+            return ((v0, v1, v2, v3, v4), new Size(0UL, new[] { s0, s1, s2, s3, s4 }));
         });
         public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, Gen<R>> selector) => new GenF<R>(pcg =>
         {
@@ -180,6 +215,29 @@ namespace CsCheck
             var (vR, sR) = genR.Generate(pcg);
             return (vR, new Size(s1.I + s2.I + s3.I, new[] { sR }));
         });
+        public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+            Func<T1, T2, T3, T4, Gen<R>> selector) => new GenF<R>(pcg =>
+        {
+            var (v1, s1) = gen1.Generate(pcg);
+            var (v2, s2) = gen2.Generate(pcg);
+            var (v3, s3) = gen3.Generate(pcg);
+            var (v4, s4) = gen4.Generate(pcg);
+            var genR = selector(v1, v2, v3, v4);
+            var (vR, sR) = genR.Generate(pcg);
+            return (vR, new Size(s1.I + s2.I + s3.I +s4.I, new[] { sR }));
+        });
+        public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+            Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector) => new GenF<R>(pcg =>
+        {
+            var (v1, s1) = gen1.Generate(pcg);
+            var (v2, s2) = gen2.Generate(pcg);
+            var (v3, s3) = gen3.Generate(pcg);
+            var (v4, s4) = gen4.Generate(pcg);
+            var (v5, s5) = gen5.Generate(pcg);
+            var genR = selector(v1, v2, v3, v4, v5);
+            var (vR, sR) = genR.Generate(pcg);
+            return (vR, new Size(s1.I + s2.I + s3.I + s4.I + s5.I, new[] { sR }));
+        });
         public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Func<T1, Gen<T2>> genSelector, Func<T1, T2, R> resultSelector)
             => new GenF<R>(pcg =>
         {
@@ -187,6 +245,12 @@ namespace CsCheck
             var gen2 = genSelector(v1);
             var (v2, s2) = gen2.Generate(pcg);
             return (resultSelector(v1, v2), new Size(s1.I, new[] { s2 }));
+        });
+        public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => new GenF<T>(pcg =>
+        {
+            var t = gen.Generate(pcg);
+            while (!predicate(t.Item1)) t = gen.Generate(pcg);
+            return t;
         });
         static readonly Size zero = new Size(0UL, null);
         public static Gen<T> Const<T>(T value) => new GenF<T>(_ => (value, zero));
