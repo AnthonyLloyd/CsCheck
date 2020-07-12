@@ -18,7 +18,7 @@ This gives the following advantages:
 
 ### Examples
 
-Sample test of the range of a unit single.
+Sample test of the range of a unit single. The default sample size is 100.
 ```csharp
 [Fact]
 public void Single_Unit_Range()
@@ -85,9 +85,9 @@ The performance is raised in an exception if it fails but can also be output if 
  32.2%[-3..+4] faster, sigma=50.0 (2,551 vs 17)
  ```
 
- The first number is the median performance improvement with the interquartile range in the square brackets.
+ The first number is the estimated median performance improvement with the interquartile range in the square brackets.
  The counts of faster vs slower for each run and the corresponding sigma (the number of standard deviations of
- the binomial distribution for the null hypothosis P(faster) = P(slower) = 0.5).
+ the binomial distribution for the null hypothosis P(faster) = P(slower) = 0.5). The default sigma used is 6.0.
 
 Tests are in xUnit but could equally be used in any testing framework.
 
@@ -100,5 +100,5 @@ Sample and Faster accept configuration parameters. Global defaults can also be s
 ```powershell
 $env:CsCheck_SampleSeed = '657257e6655b2ffd50'; $env:CsCheck_SampleSize = 1000; dotnet test -c Release --filter SByte_Range; Remove-Item Env:CsCheck*
 
-$env:CsCheck_FasterSigma = 200; dotnet test -c Release --logger:"console;verbosity=detailed" --filter Faster; Remove-Item Env:CsCheck*
+$env:CsCheck_FasterSigma = 50; dotnet test -c Release --logger:"console;verbosity=detailed" --filter Faster; Remove-Item Env:CsCheck*
 ```

@@ -132,18 +132,18 @@ namespace Tests
             .Output(writeLine);
         }
 
-        //[Fact]
-        //public void Version()
-        //{
-        //    Gen.Select(Gen.Byte, Gen.Byte, Gen.Byte)
-        //    .Select(t => new Version(t.V0, t.V1, t.V2))
-        //    .Array[0, 100]
-        //    .Sample(expected =>
-        //    {
-        //        var actual = (Version[])expected.Clone();
-        //        Array.Reverse(actual);
-        //        Assert.Equal(expected, actual);
-        //    });
-        //}
+        [Fact]
+        public void Version()
+        {
+            Gen.Select(Gen.Byte, Gen.Byte, Gen.Byte)
+            .Select(t => new Version(t.V0, t.V1, t.V2))
+            .Array[0, 100]
+            .Sample(expected =>
+            {
+                var actual = (Version[])expected.Clone();
+                Array.Reverse(actual);
+                Assert.Equal(expected, actual);
+            });
+        }
     }
 }

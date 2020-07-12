@@ -1,4 +1,4 @@
-﻿// Copyright 2000 Anthony Lloyd
+﻿// Copyright 2020 Anthony Lloyd
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -104,7 +104,7 @@ namespace CsCheck
             });
 
             if (minPCG != null) throw new CsCheckException(
-                $"$env:CsCheck_SampleSeed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
+                $"CsCheck_SampleSeed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
         }
 
@@ -192,7 +192,7 @@ namespace CsCheck
             });
 
             if (minPCG != null) throw new CsCheckException(
-                $"$env:CsCheck_SampleSeed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
+                $"CsCheck_SampleSeed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
         }
 
@@ -212,10 +212,11 @@ namespace CsCheck
                 double d = actual[i] - e;
                 chi += d * d / e;
             }
-            double mean = expected.Length - 1;
-            double sdev = Math.Sqrt(2 * mean);
-            double SDs = (chi - mean) / sdev;
-            if (Math.Abs(SDs) > 6.0) throw new CsCheckException("Chi-squared standard deviation = " + SDs.ToString("0.0"));
+            // chi-squared distribution has Mean = k and Variance = 2 k where k is the number of degrees of freedom.
+            int k = expected.Length - 1;
+            double sigmaSquared = (chi - k) * (chi - k) / k / 2.0;
+            if (sigmaSquared > 36.0) throw new CsCheckException(
+                "Chi-squared standard deviation = " + Math.Sqrt(sigmaSquared).ToString("0.0"));
         }
 
         public static FasterResult Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int timeout = -1)
