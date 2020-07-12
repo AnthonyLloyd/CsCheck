@@ -64,6 +64,31 @@ public void Faster_Matrix_Multiply_Range()
 }
 ```
 
+Performance test of linq expressions checking the results are always the same.
+```csharp
+[Fact]
+public void Faster_Linq_Random()
+{
+    Gen.Byte.Array[100, 1000]
+    .Faster(
+        data => data.Aggregate(0.0, (t, b) => t + b),
+        data => data.Select(i => (double)i).Sum(),
+        Assert.Equal)
+    .Output(writeLine);
+}
+```
+
+The performance is raised in an exception if it fails but can also be output if it passes with the above output function.
+```
+ Tests.CheckTests.Faster_Linq_Random [27ms]
+ Standard Output Messages:
+ 32.2%[-3..+4] faster, sigma=50.0 (2,551 vs 17)
+ ```
+
+ The first number is the median performance improvement with the interquartile range in the square brackets.
+ The counts of faster vs slower for each run and the corresponding sigma (the number of standard deviations of
+ the binomial distribution for the null hypothosis P(faster) = P(slower) = 0.5).
+
 Tests are in xUnit but could equally be used in any testing framework.
 
 More to see in the [Tests](Tests).
@@ -75,5 +100,5 @@ Sample and Faster accept configuration parameters. Global defaults can also be s
 ```powershell
 $env:CsCheck_SampleSeed = '657257e6655b2ffd50'; $env:CsCheck_SampleSize = 1000; dotnet test -c Release --filter SByte_Range; Remove-Item Env:CsCheck*
 
-$env:CsCheck_FasterSigma = 200; dotnet test -c Release --logger:"console;verbosity=detailed" --filter Faster; ; Remove-Item Env:CsCheck*
+$env:CsCheck_FasterSigma = 200; dotnet test -c Release --logger:"console;verbosity=detailed" --filter Faster; Remove-Item Env:CsCheck*
 ```

@@ -1,4 +1,18 @@
-﻿using System;
+﻿// Copyright 2000 Anthony Lloyd
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
@@ -234,7 +248,7 @@ namespace CsCheck
                             }
                             if (tf < ts) Interlocked.Increment(ref r.Faster);
                             else if (tf > ts) Interlocked.Increment(ref r.Slower);
-                            if (r.Variance >= sigma) mre.Set();
+                            if (r.SigmaSquared >= sigma) mre.Set();
                         }
                     }
                     catch (Exception e)
@@ -301,7 +315,7 @@ namespace CsCheck
                             }
                             if (tf < ts) Interlocked.Increment(ref r.Faster);
                             else if (tf > ts) Interlocked.Increment(ref r.Slower);
-                            if (r.Variance >= sigma) mre.Set();
+                            if (r.SigmaSquared >= sigma) mre.Set();
                         }
                     }
                     catch (Exception e)
@@ -319,7 +333,7 @@ namespace CsCheck
             double sigma = -1.0, int threads = -1, int timeout = -1)
         {
             if (sigma == -1.0) sigma = FasterSigma == 0.0 ? 6.0 : FasterSigma;
-            sigma *= sigma;
+            sigma *= sigma; // using sigma as sigma squared now
             if (threads == -1) threads = Environment.ProcessorCount;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
@@ -348,7 +362,7 @@ namespace CsCheck
                             }
                             if (tf < ts) Interlocked.Increment(ref r.Faster);
                             else if (tf > ts) Interlocked.Increment(ref r.Slower);
-                            if (r.Variance >= sigma) mre.Set();
+                            if (r.SigmaSquared >= sigma) mre.Set();
                         }
                     }
                     catch (Exception e)
@@ -366,7 +380,7 @@ namespace CsCheck
             Action<T2, T2> assertEqual = null, double sigma = -1.0, int threads = -1, int timeout = -1, string seed = null)
         {
             if (sigma == -1.0) sigma = FasterSigma == 0.0 ? 6.0 : FasterSigma;
-            sigma *= sigma;
+            sigma *= sigma; // using sigma as sigma squared now
             if (seed == null) seed = SampleSeed;
             if (threads == -1) threads = Environment.ProcessorCount;
             var r = new FasterResult { Median = new MedianEstimator() };
@@ -421,7 +435,7 @@ namespace CsCheck
                             }
                             if (tf < ts) Interlocked.Increment(ref r.Faster);
                             else if (tf > ts) Interlocked.Increment(ref r.Slower);
-                            if (r.Variance >= sigma) mre.Set();
+                            if (r.SigmaSquared >= sigma) mre.Set();
                         }
                     }
                     catch (Exception e)
@@ -441,8 +455,12 @@ namespace CsCheck
         public int Faster;
         public int Slower;
         public MedianEstimator Median;
-        internal float Variance
+        internal float SigmaSquared
         {
+            // Binomial distribution: Mean = n p, Variance = n p q
+            // in this case H0 has n = Faster + Slower, p = 0.5, and q = 0.5
+            // sigmas = Abs(Faster - Mean) / Sqrt(Variance)
+            //        = Sqrt((Faster - Slower)^2/(Faster + Slower))
             get
             {
                 float d = Faster - Slower;
@@ -455,7 +473,7 @@ namespace CsCheck
             var result = $"%[-{Median.MADless * 100.0:#0}..+{Median.MADmore * 100.0:#0}]";
             result = Median.Median >= 0.0 ? (Median.Median * 100.0).ToString("#0.0") + result + " faster"
                 : (Median.Median * 100.0 / (-1.0 - Median.Median)).ToString("#0.0") + result + " slower";
-            return result + $", sigma={Math.Sqrt(Variance):#0.0} ({Faster:#,0} vs {Slower:#,0})";
+            return result + $", sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
         }
         public void Output(Action<string> output)
         {

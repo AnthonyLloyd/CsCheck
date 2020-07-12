@@ -2,6 +2,8 @@
 using Xunit;
 using CsCheck;
 using System.Linq;
+using Microsoft.Collections.Extensions;
+using System.Collections.Generic;
 
 namespace Tests
 {
@@ -73,6 +75,60 @@ namespace Tests
                 data => data.Aggregate(0.0, (t, b) => t + b),
                 data => data.Select(i => (double)i).Sum(),
                 Assert.Equal)
+            .Output(writeLine);
+        }
+
+        [Fact]
+        public void Faster_DictionarySlim_Add()
+        {
+            Gen.Int.Select(Gen.String).Array
+            .Faster(
+                t =>
+                {
+                    var d = new DictionarySlim<int, string>();
+                    for (int i = 0; i < t.Length; i++)
+                    {
+                        var (k, v) = t[i];
+                        d.GetOrAddValueRef(k) = v;
+                    }
+                    return d.Count;
+                },
+                t =>
+                {
+                    var d = new Dictionary<int, string>();
+                    for (int i = 0; i < t.Length; i++)
+                    {
+                        var (k, v) = t[i];
+                        d[k] = v;
+                    }
+                    return d.Count;
+                })
+            .Output(writeLine);
+        }
+
+        [Fact]
+        public void Faster_DictionarySlim_Counter()
+        {
+            Gen.Byte.Array
+            .Faster(
+                t =>
+                {
+                    var d = new DictionarySlim<byte, int>();
+                    for (int i = 0; i < t.Length; i++)
+                        d.GetOrAddValueRef(t[i])++;
+                    return d.Count;
+                },
+                t =>
+                {
+                    var d = new Dictionary<byte, int>();
+                    for (int i = 0; i < t.Length; i++)
+                    {
+                        var k = t[i];
+                        d.TryGetValue(k, out var v);
+                        d[k] = v + 1;
+                    }
+                    return d.Count;
+                })
             .Output(writeLine);
         }
 
