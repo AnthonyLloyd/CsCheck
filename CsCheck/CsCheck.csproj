@@ -17,10 +17,8 @@ This gives the following advantages:
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>testing;random;performance;quickcheck</PackageTags>
-        <Version>0.5.0</Version>
-        <PackageReleaseNotes>Faster assertEqual and output.
-Array and List to classes [s, e] range.
-Added where and more selects.</PackageReleaseNotes>
+        <Version>0.6.0</Version>
+        <PackageReleaseNotes>Added Array2D.</PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <WarningLevel>4</WarningLevel>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
