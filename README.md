@@ -33,7 +33,7 @@ Sample test for chars taken from a string.
 public void Char_Array()
 {
     var chars = "abcdefghijklmopqrstuvwxyz0123456789_/";
-    Gen.Char[chars].Sample(c => Assert.True(chars.Contains(c)));
+    Gen.Char[chars].Sample(c => chars.Contains(c));
 }
 ```
 

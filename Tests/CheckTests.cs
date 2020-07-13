@@ -134,8 +134,7 @@ namespace Tests
             Gen.Byte.Array[100, 1000]
             .Faster(
                 data => data.Aggregate(0.0, (t, b) => t + b),
-                data => data.Select(i => (double)i).Sum(),
-                Assert.Equal)
+                data => data.Select(i => (double)i).Sum())
             .Output(writeLine);
         }
 
@@ -150,8 +149,7 @@ namespace Tests
                     foreach (var b in data) s += b;
                     return s;
                 },
-                data => data.Aggregate(0.0, (t, b) => t + b),
-                Assert.Equal)
+                data => data.Aggregate(0.0, (t, b) => t + b))
             .Output(writeLine);
         }
 

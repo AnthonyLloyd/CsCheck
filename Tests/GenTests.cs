@@ -224,6 +224,12 @@ namespace Tests
         }
 
         [Fact]
+        public void Single()
+        {
+            Gen.Single.Sample(i => i <= float.PositiveInfinity || float.IsNaN(i));
+        }
+
+        [Fact]
         public void Single_Unit_Range()
         {
             Gen.Single.Unit.Sample(f => Assert.InRange(f, 0f, 0.9999999f));
@@ -257,7 +263,7 @@ namespace Tests
         public void Single_Normal()
         {
             Gen.Single.Normal
-            .Sample(f => Assert.False(float.IsNaN(f) || float.IsInfinity(f)));
+            .Sample(f => !float.IsNaN(f) && !float.IsInfinity(f));
         }
 
         [Fact]
@@ -294,7 +300,13 @@ namespace Tests
         public void Double_Normal()
         {
             Gen.Double.Normal
-            .Sample(d => Assert.False(double.IsNaN(d) || double.IsInfinity(d)));
+            .Sample(d => !double.IsNaN(d) && !double.IsInfinity(d));
+        }
+
+        [Fact]
+        public void Decimal()
+        {
+            Gen.Decimal.Unit.Sample(i => i <= decimal.MaxValue);
         }
 
         [Fact]
@@ -355,7 +367,7 @@ namespace Tests
         public void Char_Array()
         {
             var chars = "abcdefghijklmopqrstuvwxyz0123456789_/";
-            Gen.Char[chars].Sample(c => Assert.True(chars.Contains(c)));
+            Gen.Char[chars].Sample(c => chars.Contains(c));
         }
 
         [Fact]
