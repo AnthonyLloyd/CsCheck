@@ -79,34 +79,6 @@ namespace Tests
         }
 
         [Fact]
-        public void Faster_DictionarySlim_Add()
-        {
-            Gen.Int.Select(Gen.String).Array
-            .Faster(
-                t =>
-                {
-                    var d = new DictionarySlim<int, string>();
-                    for (int i = 0; i < t.Length; i++)
-                    {
-                        var (k, v) = t[i];
-                        d.GetOrAddValueRef(k) = v;
-                    }
-                    return d.Count;
-                },
-                t =>
-                {
-                    var d = new Dictionary<int, string>();
-                    for (int i = 0; i < t.Length; i++)
-                    {
-                        var (k, v) = t[i];
-                        d[k] = v;
-                    }
-                    return d.Count;
-                })
-            .Output(writeLine);
-        }
-
-        [Fact]
         public void Faster_DictionarySlim_Counter()
         {
             Gen.Byte.Array

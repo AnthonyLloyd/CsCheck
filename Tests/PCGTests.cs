@@ -1,5 +1,4 @@
-﻿using System;
-using Xunit;
+﻿using Xunit;
 using CsCheck;
 
 namespace Tests
@@ -90,7 +89,7 @@ namespace Tests
             Gen.UInt.Sample(i =>
             {
                 if (i == 0U) return; // as Next(0) is an error
-                uint threshold = (uint)(-(int)i) % i;
+                uint threshold = (uint)-(int)i % i;
                 Assert.Equal(threshold, (uint.MaxValue % i + 1U) % i);
             });
         }
@@ -101,18 +100,17 @@ namespace Tests
             Gen.ULong.Sample(i =>
             {
                 if (i == 0UL) return; // as Next64(0) is an error
-                ulong threshold = (ulong)(-(long)i) % i;
+                ulong threshold = (ulong)-(long)i % i;
                 Assert.Equal(threshold, (ulong.MaxValue % i + 1UL) % i);
             });
         }
 
-        readonly Gen<PCG> GenPCG =
-            Gen.Select(Gen.Int[0, 100], Gen.ULong, (stream, seed) => new PCG(stream, seed));
 
         [Fact]
         public void ToString_Roundtrip()
         {
-            GenPCG.Sample(expected =>
+            Gen.Select(Gen.Int[0, 100], Gen.ULong, (stream, seed) => new PCG(stream, seed))
+            .Sample(expected =>
             {
                 var actual = PCG.Parse(expected.ToString());
                 Assert.Equal(expected.Stream, actual.Stream);
