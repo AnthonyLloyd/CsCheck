@@ -65,8 +65,7 @@ public void Faster_Matrix_Multiply_Range()
         t => MulIKJ(t.V0, t.V1),
         t => MulIJK(t.V0, t.V1),
         Assert.Equal
-    )
-    .Output(writeLine);
+    );
 }
 ```
 
