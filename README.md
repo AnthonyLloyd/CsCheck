@@ -91,10 +91,10 @@ The performance is raised in an exception if it fails but can also be output if 
  ```
 
  The first number is the estimated median performance improvement with the interquartile range in the square brackets.
- The counts of faster vs slower for each run and the corresponding sigma (the number of standard deviations of
- the binomial distribution for the null hypothosis P(faster) = P(slower) = 0.5). The default sigma used is 6.0.
+ The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
+ distribution for the null hypothosis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
 
-Tests are in xUnit but could equally be used in any testing framework.
+These tests are in xUnit but could equally be used in any testing framework.
 
 More to see in the [Tests](Tests).
 

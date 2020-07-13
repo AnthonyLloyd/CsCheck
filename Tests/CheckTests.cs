@@ -102,7 +102,7 @@ namespace Tests
         [Fact]
         public void Faster_Matrix_Multiply_Fixed()
         {
-            int I = 10, J = 12, K = 7;
+            int I = 10, J = 7, K = 12;
             var rand = new Random(42);
             var a = new double[I, J];
             for (int i = 0; i < I; i++)
@@ -123,10 +123,10 @@ namespace Tests
         [Fact]
         public void Faster_Matrix_Multiply_Range()
         {
-            var genDim = Gen.Int[1, 20];
+            var genDim = Gen.Int[5, 30];
+            var genArray = Gen.Double.Unit.Array2D;
             Gen.SelectMany(genDim, genDim, genDim, (i, j, k) =>
-                Gen.Select(Gen.Double.Unit.Array2D[i, j],
-                           Gen.Double.Unit.Array2D[j, k])
+                Gen.Select(genArray[i, j], genArray[j, k])
             )
             .Faster(
                 t => MulIKJ(t.V0, t.V1),
