@@ -51,16 +51,22 @@ public void Long_Range()
 }
 ```
 
-Performance test of two different ways of multiplying a matrix for a range of matrix sizes.
+Performance test of two different ways of multiplying a matrix for a range of matrix sizes checking the results are always the same.
 ```csharp
 [Fact]
 public void Faster_Matrix_Multiply_Range()
 {
-    Gen.Int[10, 100]
-    .Select(n => (n, a: new double[n, n], b: new double[n, n], c: new double[n, n]))
+    var genDim = Gen.Int[1, 20];
+    Gen.SelectMany(genDim, genDim, genDim, (i, j, k) =>
+        Gen.Select(Gen.Double.Unit.Array2D[i, j],
+                   Gen.Double.Unit.Array2D[j, k])
+    )
     .Faster(
-        t => MulIKJ(t.n, t.a, t.b, t.c),
-        t => MulIJK(t.n, t.a, t.b, t.c));
+        t => MulIKJ(t.V0, t.V1),
+        t => MulIJK(t.V0, t.V1),
+        Assert.Equal
+    )
+    .Output(writeLine);
 }
 ```
 
@@ -72,8 +78,8 @@ public void Faster_Linq_Random()
     Gen.Byte.Array[100, 1000]
     .Faster(
         data => data.Aggregate(0.0, (t, b) => t + b),
-        data => data.Select(i => (double)i).Sum(),
-        Assert.Equal)
+        data => data.Select(i => (double)i).Sum()
+    )
     .Output(writeLine);
 }
 ```

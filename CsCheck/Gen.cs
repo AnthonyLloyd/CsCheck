@@ -51,6 +51,7 @@ namespace CsCheck
             while (true) yield return Generate(pcg).Item1;
         }
         public GenArray<T> Array => new GenArray<T>(this);
+        public GenArray2D<T> Array2D => new GenArray2D<T>(this);
         public GenList<T> List => new GenList<T>(this);
         public IEnumerator<T> GetEnumerator() => ToEnumerable().GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => ToEnumerable().GetEnumerator();
@@ -769,6 +770,32 @@ namespace CsCheck
             return (vs, new Size(0L, ss));
         });
         public Gen<T[]> this[int start, int finish] => this[Gen.Int[start, finish]];
+
+    }
+
+    public class GenArray2D<T> : Gen<T[,]>
+    {
+        readonly Gen<T> gen;
+        public GenArray2D(Gen<T> gen) => this.gen = gen;
+        (T[,], Size) Generate(PCG pcg, uint length0, uint length1)
+        {
+            var vs = new T[length0, length1];
+            for (int i = 0; i < length0; i++)
+                for (int j = 0; j < length1; j++)
+                {
+                    var v = gen.Generate(pcg).Item1;
+                    vs[i, j] = v;
+                }
+            return (vs, new Size(length0 + length1, null));
+        }
+        public override (T[,], Size) Generate(PCG pcg)
+        {
+            return Generate(pcg, pcg.Next() & 127U, pcg.Next() & 127U);
+        }
+        public Gen<T[,]> this[int length0, int length1] => new GenF<T[,]>(pcg =>
+        {
+            return Generate(pcg, (uint)length0, (uint)length1);
+        });
     }
 
     public class GenList<T> : Gen<List<T>>

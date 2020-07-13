@@ -19,7 +19,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Addition_Is_Commutative()
+        public void Sample_Addition_Is_Commutative()
         {
             Assert_Commutative(Gen.Byte, (x, y) => x + y);
             Assert_Commutative(Gen.SByte, (x, y) => x + y);
@@ -34,7 +34,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Multiplication_Is_Commutative()
+        public void Sample_Multiplication_Is_Commutative()
         {
             Assert_Commutative(Gen.Byte, (x, y) => x * y);
             Assert_Commutative(Gen.SByte, (x, y) => x * y);
@@ -56,7 +56,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Addition_Is_Associative()
+        public void Sample_Addition_Is_Associative()
         {
             Assert_Associative(Gen.UInt, (x, y) => x + y);
             Assert_Associative(Gen.Int, (x, y) => x + y);
@@ -65,7 +65,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Multiplication_Is_Associative()
+        public void Sample_Multiplication_Is_Associative()
         {
             Assert_Associative(Gen.UInt, (x, y) => x * y);
             Assert_Associative(Gen.Int, (x, y) => x * y);
@@ -73,47 +73,66 @@ namespace Tests
             Assert_Associative(Gen.Long, (x, y) => x * y);
         }
 
-        void MulIJK(int n, double[,] a, double[,] b, double[,] c)
+        double[,] MulIJK(double[,] a, double[,] b)
         {
-            for (int i = 0; i < n; i++)
-                for (int j = 0; j < n; j++)
-                    for (int k = 0; k < n; k++)
+            int I = a.GetLength(0), J = a.GetLength(1), K = b.GetLength(1);
+            var c = new double[I, K];
+            for (int i = 0; i < I; i++)
+                for (int j = 0; j < J; j++)
+                    for (int k = 0; k < K; k++)
                         c[i, k] += a[i, j] * b[j, k];
+            return c;
         }
 
-        void MulIKJ(int n, double[,] a, double[,] b, double[,] c)
+        double[,] MulIKJ(double[,] a, double[,] b)
         {
-            for (int i = 0; i < n; i++)
-                for (int k = 0; k < n; k++)
+            int I = a.GetLength(0), J = a.GetLength(1), K = b.GetLength(1);
+            var c = new double[I, K];
+            for (int i = 0; i < I; i++)
+                for (int k = 0; k < K; k++)
                 {
                     double t = 0.0;
-                    for (int j = 0; j < n; j++)
+                    for (int j = 0; j < J; j++)
                         t += a[i, j] * b[j, k];
                     c[i, k] = t;
                 }
+            return c;
         }
 
         [Fact]
         public void Faster_Matrix_Multiply_Fixed()
         {
-            int n = 10;
-            var a = new double[n, n];
-            var b = new double[n, n];
-            var c = new double[n, n];
+            int I = 10, J = 12, K = 7;
+            var rand = new Random(42);
+            var a = new double[I, J];
+            for (int i = 0; i < I; i++)
+                for (int j = 0; j < J; j++)
+                    a[i, j] = rand.NextDouble();
+            var b = new double[J, K];
+            for (int j = 0; j < J; j++)
+                for (int k = 0; k < K; k++)
+                    b[j, k] = rand.NextDouble();
             Check.Faster(
-                () => MulIKJ(n, a, b, c),
-                () => MulIJK(n, a, b, c))
+                () => MulIKJ(a, b),
+                () => MulIJK(a, b),
+                Assert.Equal
+            )
             .Output(writeLine);
         }
 
         [Fact]
         public void Faster_Matrix_Multiply_Range()
         {
-            Gen.Int[10, 50]
-            .Select(n => (n, a: new double[n, n], b: new double[n, n], c: new double[n, n]))
+            var genDim = Gen.Int[1, 20];
+            Gen.SelectMany(genDim, genDim, genDim, (i, j, k) =>
+                Gen.Select(Gen.Double.Unit.Array2D[i, j],
+                           Gen.Double.Unit.Array2D[j, k])
+            )
             .Faster(
-                t => MulIKJ(t.n, t.a, t.b, t.c),
-                t => MulIJK(t.n, t.a, t.b, t.c))
+                t => MulIKJ(t.V0, t.V1),
+                t => MulIJK(t.V0, t.V1),
+                Assert.Equal
+            )
             .Output(writeLine);
         }
 
@@ -124,7 +143,8 @@ namespace Tests
             new Random(42).NextBytes(data);
             Check.Faster(
                 () => data.Aggregate(0.0, (t, b) => t + b),
-                () => data.Select(i => (double)i).Sum())
+                () => data.Select(i => (double)i).Sum()
+            )
             .Output(writeLine);
         }
 
@@ -134,7 +154,8 @@ namespace Tests
             Gen.Byte.Array[100, 1000]
             .Faster(
                 data => data.Aggregate(0.0, (t, b) => t + b),
-                data => data.Select(i => (double)i).Sum())
+                data => data.Select(i => (double)i).Sum()
+            )
             .Output(writeLine);
         }
 
@@ -149,7 +170,8 @@ namespace Tests
                     foreach (var b in data) s += b;
                     return s;
                 },
-                data => data.Aggregate(0.0, (t, b) => t + b))
+                data => data.Aggregate(0.0, (t, b) => t + b)
+            )
             .Output(writeLine);
         }
 
@@ -175,7 +197,8 @@ namespace Tests
                         d[k] = v + 1;
                     }
                     return d.Count;
-                })
+                }
+            )
             .Output(writeLine);
         }
 
