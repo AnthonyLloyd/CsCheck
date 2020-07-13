@@ -16,6 +16,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace CsCheck
@@ -315,6 +316,7 @@ namespace CsCheck
         public static readonly GenLong Long = new GenLong();
         public static readonly GenULong ULong = new GenULong();
         public static readonly GenSingle Single = new GenSingle();
+        public static readonly GenSingle Float = Single;
         public static readonly GenDouble Double = new GenDouble();
         public static readonly GenDecimal Decimal = new GenDecimal();
         public static readonly GenChar Char = new GenChar();
@@ -332,6 +334,7 @@ namespace CsCheck
 
     public class GenSByte : Gen<sbyte>
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static ulong Zigzag(sbyte i) => (ulong)((i << 1) ^ (i >> 7));
         public override (sbyte, Size) Generate(PCG pcg)
         {
@@ -376,6 +379,7 @@ namespace CsCheck
 
     public class GenShort : Gen<short>
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static ulong Zigzag(short i) => (ulong)((i << 1) ^ (i >> 15));
         public override (short, Size) Generate(PCG pcg)
         {
@@ -419,6 +423,7 @@ namespace CsCheck
 
     public class GenInt : Gen<int>
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static uint Zigzag(int i) => (uint)((i << 1) ^ (i >> 31));
         public override (int, Size) Generate(PCG pcg)
         {
@@ -462,6 +467,7 @@ namespace CsCheck
 
     public class GenLong : Gen<long>
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static ulong Zigzag(long i) => (ulong)((i << 1) ^ (i >> 63));
 
         public override (long, Size) Generate(PCG pcg)
@@ -507,7 +513,7 @@ namespace CsCheck
 
     public class GenSingle : Gen<float>
     {
-        [StructLayout(LayoutKind.Explicit, Size = 4)]
+        [StructLayout(LayoutKind.Explicit)]
         struct Converter
         {
             [FieldOffset(0)] public uint I;
@@ -642,12 +648,12 @@ namespace CsCheck
 
     public class GenDecimal : Gen<decimal>
     {
-        [StructLayout(LayoutKind.Explicit, Size = 16)]
+        [StructLayout(LayoutKind.Explicit)]
         struct Converter
         {
-            [FieldOffset(0)] public decimal D;
             [FieldOffset(0)] public ulong I0;
             [FieldOffset(8)] public ulong I1;
+            [FieldOffset(0)] public decimal D;
         }
         public override (decimal, Size) Generate(PCG pcg)
         {

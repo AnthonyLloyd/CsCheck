@@ -1,9 +1,9 @@
 ﻿using System;
-using Xunit;
-using CsCheck;
-using System.Linq;
-using Microsoft.Collections.Extensions;
 using System.Collections.Generic;
+using System.Linq;
+using CsCheck;
+using Microsoft.Collections.Extensions;
+using Xunit;
 
 namespace Tests
 {
@@ -11,6 +11,67 @@ namespace Tests
     {
         readonly Action<string> writeLine;
         public CheckTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
+
+        void Assert_Commutative<T, R>(Gen<T> gen, Func<T, T, R> operation)
+        {
+            Gen.Select(gen, gen)
+            .Sample(t => Assert.Equal(operation(t.V0, t.V1), operation(t.V1, t.V0)));
+        }
+
+        [Fact]
+        public void Addition_Is_Commutative()
+        {
+            Assert_Commutative(Gen.Byte, (x, y) => x + y);
+            Assert_Commutative(Gen.SByte, (x, y) => x + y);
+            Assert_Commutative(Gen.UShort, (x, y) => x + y);
+            Assert_Commutative(Gen.Short, (x, y) => x + y);
+            Assert_Commutative(Gen.UInt, (x, y) => x + y);
+            Assert_Commutative(Gen.Int, (x, y) => x + y);
+            Assert_Commutative(Gen.ULong, (x, y) => x + y);
+            Assert_Commutative(Gen.Long, (x, y) => x + y);
+            Assert_Commutative(Gen.Single, (x, y) => x + y);
+            Assert_Commutative(Gen.Double, (x, y) => x + y);
+        }
+
+        [Fact]
+        public void Multiplication_Is_Commutative()
+        {
+            Assert_Commutative(Gen.Byte, (x, y) => x * y);
+            Assert_Commutative(Gen.SByte, (x, y) => x * y);
+            Assert_Commutative(Gen.UShort, (x, y) => x * y);
+            Assert_Commutative(Gen.Short, (x, y) => x * y);
+            Assert_Commutative(Gen.UInt, (x, y) => x * y);
+            Assert_Commutative(Gen.Int, (x, y) => x * y);
+            Assert_Commutative(Gen.ULong, (x, y) => x * y);
+            Assert_Commutative(Gen.Long, (x, y) => x * y);
+            Assert_Commutative(Gen.Single, (x, y) => x * y);
+            Assert_Commutative(Gen.Double, (x, y) => x * y);
+        }
+
+        void Assert_Associative<T>(Gen<T> gen, Func<T, T, T> operation)
+        {
+            Gen.Select(gen, gen, gen)
+            .Sample(t => Assert.Equal(operation(t.V0, operation(t.V1, t.V2)),
+                                      operation(operation(t.V0, t.V1), t.V2)));
+        }
+
+        [Fact]
+        public void Addition_Is_Associative()
+        {
+            Assert_Associative(Gen.UInt, (x, y) => x + y);
+            Assert_Associative(Gen.Int, (x, y) => x + y);
+            Assert_Associative(Gen.ULong, (x, y) => x + y);
+            Assert_Associative(Gen.Long, (x, y) => x + y);
+        }
+
+        [Fact]
+        public void Multiplication_Is_Associative()
+        {
+            Assert_Associative(Gen.UInt, (x, y) => x * y);
+            Assert_Associative(Gen.Int, (x, y) => x * y);
+            Assert_Associative(Gen.ULong, (x, y) => x * y);
+            Assert_Associative(Gen.Long, (x, y) => x * y);
+        }
 
         void MulIJK(int n, double[,] a, double[,] b, double[,] c)
         {
@@ -74,6 +135,22 @@ namespace Tests
             .Faster(
                 data => data.Aggregate(0.0, (t, b) => t + b),
                 data => data.Select(i => (double)i).Sum(),
+                Assert.Equal)
+            .Output(writeLine);
+        }
+
+        [Fact]
+        public void Faster_Linq_Imperative_Random()
+        {
+            Gen.Byte.Array[100, 1000]
+            .Faster(
+                data =>
+                {
+                    double s = 0.0;
+                    foreach (var b in data) s += b;
+                    return s;
+                },
+                data => data.Aggregate(0.0, (t, b) => t + b),
                 Assert.Equal)
             .Output(writeLine);
         }
