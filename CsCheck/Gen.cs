@@ -796,6 +796,12 @@ namespace CsCheck
         {
             return Generate(pcg, (uint)length0, (uint)length1);
         });
+        public Gen<T[,]> this[Gen<int> length0, Gen<int> length1] => new GenF<T[,]>(pcg =>
+        {
+            var l0 = length0.Generate(pcg).Item1;
+            var l1 = length1.Generate(pcg).Item1;
+            return Generate(pcg, (uint)l0, (uint)l1);
+        });
     }
 
     public class GenList<T> : Gen<List<T>>
