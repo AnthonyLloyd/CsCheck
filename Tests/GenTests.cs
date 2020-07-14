@@ -7,14 +7,14 @@ namespace Tests
 {
     public class GenTests
     {
-        int[] ArrayRepeat(int x, int n)
+        public static int[] ArrayRepeat(int x, int n)
         {
             var a = new int[n];
             while (--n >= 0) a[n] = x;
             return a;
         }
 
-        int[] Tally(int n, int[] ia)
+        static int[] Tally(int n, int[] ia)
         {
             var a = new int[n];
             for (int i = 0; i < ia.Length; i++) a[ia[i]]++;
@@ -40,7 +40,7 @@ namespace Tests
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.SByte[start, finish]
              select (value, start, finish))
-            .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -64,7 +64,7 @@ namespace Tests
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Byte[start, finish]
              select (value, start, finish))
-            .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -88,7 +88,7 @@ namespace Tests
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Short[start, finish]
              select (value, start, finish))
-            .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -112,7 +112,7 @@ namespace Tests
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.UShort[start, finish]
              select (value, start, finish))
-            .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -136,7 +136,7 @@ namespace Tests
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Int[start, finish]
              select (value, start, finish))
-            .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -159,7 +159,7 @@ namespace Tests
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.UInt[start, finish]
              select (value, start, finish))
-            .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -183,7 +183,7 @@ namespace Tests
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Long[start, finish]
              select (value, start, finish))
-            .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -207,7 +207,7 @@ namespace Tests
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.ULong[start, finish]
              select (value, start, finish))
-            .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -232,7 +232,7 @@ namespace Tests
         [Fact]
         public void Single_Unit_Range()
         {
-            Gen.Single.Unit.Sample(f => Assert.InRange(f, 0f, 0.9999999f));
+            Gen.Single.Unit.Sample(f => f >= 0f && f <= 0.9999999f);
         }
 
         [Fact]
@@ -243,7 +243,7 @@ namespace Tests
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Single[start, finish]
              select (value, start, finish))
-            .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -269,7 +269,7 @@ namespace Tests
         [Fact]
         public void Double_Unit_Range()
         {
-            Gen.Double.Unit.Sample(f => Assert.InRange(f, 0.0, 0.99999999999999978));
+            Gen.Double.Unit.Sample(f => f >= 0.0 && f <= 0.99999999999999978);
         }
 
         [Fact]
@@ -280,7 +280,7 @@ namespace Tests
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Double[start, finish]
              select (value, start, finish))
-            .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -312,7 +312,7 @@ namespace Tests
         [Fact]
         public void Decimal_Unit_Range()
         {
-            Gen.Decimal.Unit.Sample(i => Assert.InRange(i, 0.0M, 0.99999999999999978M));
+            Gen.Decimal.Unit.Sample(i => i >= 0.0M && i <= 0.99999999999999978M);
         }
 
         [Fact]
@@ -323,7 +323,7 @@ namespace Tests
              let finish = Math.Max(t.V0, t.V1)
              from value in Gen.Decimal[start, finish]
              select (value, start, finish))
-            .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -347,7 +347,7 @@ namespace Tests
              let finish = t.V0 > t.V1 ? t.V0 : t.V1
              from value in Gen.Char[start, finish]
              select (value, start, finish))
-            .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -371,9 +371,19 @@ namespace Tests
         }
 
         [Fact]
+        public void List()
+        {
+
+            Gen.UShort[1, 1000]
+            .List[10, 100]
+            .Sample(l => l.Count >= 10 && l.Count <= 100
+                      && l.All(i => i >= 1 && i <= 1000));
+        }
+
+        [Fact]
         public void OneOf()
         {
-            Gen.OneOf(0, 1, 2).Sample(i => Assert.InRange(i, 0, 2));
+            Gen.OneOf(0, 1, 2).Sample(i => i >= 0 && i <= 2);
         }
 
         [Fact]

@@ -84,7 +84,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Bound_UInt()
+        public void PCG_Bound_UInt()
         {
             Gen.UInt.Sample(i =>
             {
@@ -95,7 +95,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Bound_ULong()
+        public void PCG_Bound_ULong()
         {
             Gen.ULong.Sample(i =>
             {
@@ -105,16 +105,56 @@ namespace Tests
             });
         }
 
+        readonly Gen<PCG> genPCG =
+            Gen.Select(Gen.Int[0, int.MaxValue], Gen.ULong,
+                (stream, seed) => new PCG(stream, seed));
 
         [Fact]
-        public void ToString_Roundtrip()
+        public void PCG_Next()
         {
-            Gen.Select(Gen.Int[0, 100], Gen.ULong, (stream, seed) => new PCG(stream, seed))
-            .Sample(expected =>
+            genPCG
+            .Select(i => i.Next())
+            .Array[20]
+            .SampleOne(t => {
+                var expected = GenTests.ArrayRepeat(10, 32);
+                var actual = new int[32];
+                foreach(var i in t)
+                {
+                    var mask = 1U;
+                    for(int m = 0; m < 32; m++)
+                    {
+                        if ((i & mask) == mask) actual[m]++;
+                        mask <<= 1;
+                    }
+                }
+                Check.ChiSquared(expected, actual);
+            });
+        }
+
+        [Fact]
+        public void PCG_Next32()
+        {
+            Gen.UInt[1, uint.MaxValue].Select(genPCG)
+            .Select(t => (Max:t.V0,x:t.V1.Next(t.V0)))
+            .Sample(t => t.x >= 0 && t.x <= t.Max);
+        }
+
+        [Fact]
+        public void PCG_Next64()
+        {
+            Gen.ULong[1, ulong.MaxValue].Select(genPCG)
+            .Select(t => (Max: t.V0, x: t.V1.Next64(t.V0)))
+            .Sample(t => t.x >= 0UL && t.x <= t.Max);
+        }
+
+        [Fact]
+        public void PCG_ToString_Roundtrip()
+        {
+            genPCG.Sample(expected =>
             {
                 var actual = PCG.Parse(expected.ToString());
-                Assert.Equal(expected.Stream, actual.Stream);
-                Assert.Equal(expected.State, actual.State);
+                return expected.Stream == actual.Stream
+                    && expected.State == actual.State;
             });
         }
     }

@@ -102,7 +102,7 @@ namespace Tests
         [Fact]
         public void Faster_Matrix_Multiply_Fixed()
         {
-            int I = 10, J = 7, K = 12;
+            int I = 10, J = 7, K = 19;
             var rand = new Random(42);
             var a = new double[I, J];
             for (int i = 0; i < I; i++)
