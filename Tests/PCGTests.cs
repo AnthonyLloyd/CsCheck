@@ -115,13 +115,14 @@ namespace Tests
             genPCG
             .Select(i => i.Next())
             .Array[20]
-            .SampleOne(t => {
+            .SampleOne(t =>
+            {
                 var expected = GenTests.ArrayRepeat(10, 32);
                 var actual = new int[32];
-                foreach(var i in t)
+                foreach (var i in t)
                 {
                     var mask = 1U;
-                    for(int m = 0; m < 32; m++)
+                    for (int m = 0; m < 32; m++)
                     {
                         if ((i & mask) == mask) actual[m]++;
                         mask <<= 1;
@@ -135,7 +136,7 @@ namespace Tests
         public void PCG_Next32()
         {
             Gen.UInt[1, uint.MaxValue].Select(genPCG)
-            .Select(t => (Max:t.V0,x:t.V1.Next(t.V0)))
+            .Select(t => (Max: t.V0, x: t.V1.Next(t.V0)))
             .Sample(t => t.x >= 0 && t.x <= t.Max);
         }
 
