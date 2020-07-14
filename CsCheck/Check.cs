@@ -28,32 +28,29 @@ namespace CsCheck
 
     public static class Check
     {
-        public static int SampleSize = 100;
-        public static string SampleSeed;
-        public static double FasterSigma;
-        public static string FasterSeed;
+        public static string Seed;
+        public static int Size = 100;
+        public static double Sigma;
         static Check()
         {
-            var sampleSize = Environment.GetEnvironmentVariable("CsCheck_SampleSize");
-            if (!string.IsNullOrWhiteSpace(sampleSize)) SampleSize = int.Parse(sampleSize);
-            var sampleSeed = Environment.GetEnvironmentVariable("CsCheck_SampleSeed");
-            if (!string.IsNullOrWhiteSpace(sampleSeed)) SampleSeed = PCG.Parse(sampleSeed).ToString();
-            var fasterSigma = Environment.GetEnvironmentVariable("CsCheck_FasterSigma");
-            if (!string.IsNullOrWhiteSpace(fasterSigma)) FasterSigma = double.Parse(fasterSigma);
-            var fasterSeed = Environment.GetEnvironmentVariable("CsCheck_FasterSeed");
-            if (!string.IsNullOrWhiteSpace(fasterSeed)) FasterSeed = PCG.Parse(fasterSeed).ToString();
+            var seed = Environment.GetEnvironmentVariable("CsCheck_Seed");
+            if (!string.IsNullOrWhiteSpace(seed)) Seed = PCG.Parse(seed).ToString();
+            var size = Environment.GetEnvironmentVariable("CsCheck_Size");
+            if (!string.IsNullOrWhiteSpace(size)) Size = int.Parse(size);
+            var sigma = Environment.GetEnvironmentVariable("CsCheck_Sigma");
+            if (!string.IsNullOrWhiteSpace(sigma)) Sigma = double.Parse(sigma);
         }
         public static void Sample<T>(this Gen<T> gen, Action<T> action, string seed = null, int size = -1, int threads = -1)
         {
-            if (size == -1) size = SampleSize;
+            if (size == -1) size = Size;
             PCG minPCG = null;
             ulong minState = 0UL;
             Size minSize = null;
             Exception minException = null;
 
-            if(seed != null || SampleSeed != null)
+            if (seed != null || Seed != null)
             {
-                var pcg = PCG.Parse(seed ?? SampleSeed);
+                var pcg = PCG.Parse(seed ?? Seed);
                 ulong state = pcg.State;
                 Size s = null;
                 try
@@ -93,7 +90,7 @@ namespace CsCheck
                     {
                         if (minSize is null || s.IsLessThan(minSize))
                         {
-                            if(minSize is object) shrinks++;
+                            if (minSize is object) shrinks++;
                             minPCG = pcg;
                             minState = state;
                             minSize = s;
@@ -104,7 +101,7 @@ namespace CsCheck
             });
 
             if (minPCG != null) throw new CsCheckException(
-                $"CsCheck_SampleSeed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
+                $"CsCheck_Seed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
         }
 
@@ -115,22 +112,22 @@ namespace CsCheck
 
         public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, int size = -1, int threads = -1)
         {
-            if (size == -1) size = SampleSize;
+            if (size == -1) size = Size;
             PCG minPCG = null;
             ulong minState = 0UL;
             Size minSize = null;
             Exception minException = null;
 
-            if (seed != null || SampleSeed != null)
+            if (seed != null || Seed != null)
             {
-                var pcg = PCG.Parse(seed ?? SampleSeed);
+                var pcg = PCG.Parse(seed ?? Seed);
                 ulong state = pcg.State;
                 Size s = null;
                 try
                 {
                     var t = gen.Generate(pcg);
                     s = t.Item2;
-                    if(!predicate(t.Item1))
+                    if (!predicate(t.Item1))
                     {
                         minPCG = pcg;
                         minState = state;
@@ -192,7 +189,7 @@ namespace CsCheck
             });
 
             if (minPCG != null) throw new CsCheckException(
-                $"CsCheck_SampleSeed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
+                $"CsCheck_Seed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
         }
 
@@ -221,7 +218,7 @@ namespace CsCheck
 
         public static FasterResult Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int timeout = -1)
         {
-            if (sigma == -1.0) sigma = FasterSigma == 0.0 ? 6.0 : FasterSigma;
+            if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma;
             if (threads == -1) threads = Environment.ProcessorCount;
             var r = new FasterResult { Median = new MedianEstimator() };
@@ -266,7 +263,7 @@ namespace CsCheck
         public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Action<T, T> assertEqual = null,
             double sigma = -1.0, int threads = -1, int timeout = -1)
         {
-            if (sigma == -1.0) sigma = FasterSigma == 0.0 ? 6.0 : FasterSigma;
+            if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma;
             if (threads == -1) threads = Environment.ProcessorCount;
             var r = new FasterResult { Median = new MedianEstimator() };
@@ -302,7 +299,7 @@ namespace CsCheck
                                 {
                                     assertEqual(vf, vs);
                                 }
-                                catch(Exception ex)
+                                catch (Exception ex)
                                 {
                                     exception = ex;
                                     mre.Set();
@@ -331,10 +328,11 @@ namespace CsCheck
         }
 
         public static FasterResult Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower,
-            double sigma = -1.0, int threads = -1, int timeout = -1)
+            double sigma = -1.0, int threads = -1, int timeout = -1, string seed = null)
         {
-            if (sigma == -1.0) sigma = FasterSigma == 0.0 ? 6.0 : FasterSigma;
+            if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma; // using sigma as sigma squared now
+            if (seed == null) seed = Seed;
             if (threads == -1) threads = Environment.ProcessorCount;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
@@ -342,12 +340,15 @@ namespace CsCheck
             while (threads-- > 0)
                 Task.Run(() =>
                 {
+                    var pcg = seed == null ? PCG.ThreadPCG : PCG.Parse(seed);
+                    ulong state = 0;
+                    T t = default;
                     try
                     {
-                        var pcg = PCG.ThreadPCG;
                         while (!mre.IsSet)
                         {
-                            var t = gen.Generate(pcg).Item1;
+                            state = pcg.State;
+                            t = gen.Generate(pcg).Item1;
                             var tf = Stopwatch.GetTimestamp();
                             faster(t);
                             tf = Stopwatch.GetTimestamp() - tf;
@@ -368,7 +369,9 @@ namespace CsCheck
                     }
                     catch (Exception e)
                     {
-                        exception = e;
+                        var tstring = t.ToString();
+                        if (tstring.Length > 100) tstring = tstring.Substring(0, 100);
+                        exception = new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tstring}", e);
                         mre.Set();
                     }
                 });
@@ -380,9 +383,9 @@ namespace CsCheck
         public static FasterResult Faster<T1, T2>(this Gen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower,
             Action<T2, T2> assertEqual = null, double sigma = -1.0, int threads = -1, int timeout = -1, string seed = null)
         {
-            if (sigma == -1.0) sigma = FasterSigma == 0.0 ? 6.0 : FasterSigma;
+            if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma; // using sigma as sigma squared now
-            if (seed == null) seed = SampleSeed;
+            if (seed == null) seed = Seed;
             if (threads == -1) threads = Environment.ProcessorCount;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
@@ -390,13 +393,16 @@ namespace CsCheck
             while (threads-- > 0)
                 Task.Run(() =>
                 {
+                    var pcg = seed == null ? PCG.ThreadPCG : PCG.Parse(seed);
+                    ulong state = 0;
+                    T1 t = default;
                     try
                     {
-                        var pcg = seed == null ? PCG.ThreadPCG : PCG.Parse(seed);
+
                         while (!mre.IsSet)
                         {
-                            var state = pcg.State;
-                            var t = gen.Generate(pcg).Item1;
+                            state = pcg.State;
+                            t = gen.Generate(pcg).Item1;
                             var tf = Stopwatch.GetTimestamp();
                             var vf = faster(t);
                             tf = Stopwatch.GetTimestamp() - tf;
@@ -410,7 +416,7 @@ namespace CsCheck
                                 if (!vf.Equals(vs))
                                 {
                                     exception = new CsCheckException(
-                                        $"Return values differ: CsCheck_FasterSeed={pcg.ToString(state)} faster={vf} slower={vs}");
+                                        $"Return values differ: CsCheck_Seed={pcg.ToString(state)} faster={vf} slower={vs}");
                                     mre.Set();
                                     return;
                                 }
@@ -424,7 +430,7 @@ namespace CsCheck
                                 catch (Exception ex)
                                 {
                                     exception = new CsCheckException(
-                                        $"Return values differ: CsCheck_FasterSeed=" + pcg.ToString(state), ex);
+                                        $"Return values differ: CsCheck_Seed=" + pcg.ToString(state), ex);
                                     mre.Set();
                                     return;
                                 }
@@ -441,7 +447,9 @@ namespace CsCheck
                     }
                     catch (Exception e)
                     {
-                        exception = e;
+                        var tstring = t.ToString();
+                        if (tstring.Length > 100) tstring = tstring.Substring(0, 100);
+                        exception = new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tstring}", e);
                         mre.Set();
                     }
                 });

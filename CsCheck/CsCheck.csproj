@@ -17,8 +17,8 @@ This gives the following advantages:
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>testing;random;performance;quickcheck</PackageTags>
-        <Version>0.6.0</Version>
-        <PackageReleaseNotes>Added Array2D.</PackageReleaseNotes>
+        <Version>0.6.1</Version>
+        <PackageReleaseNotes>Environment variables rename</PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <WarningLevel>4</WarningLevel>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

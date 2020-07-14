@@ -133,7 +133,30 @@ namespace Tests
         }
 
         [Fact]
-        public void PCG_Next32()
+        public void PCG_Next64()
+        {
+            genPCG
+            .Select(i => i.Next64())
+            .Array[20]
+            .SampleOne(t =>
+            {
+                var expected = GenTests.ArrayRepeat(10, 64);
+                var actual = new int[64];
+                foreach (var i in t)
+                {
+                    var mask = 1UL;
+                    for (int m = 0; m < 64; m++)
+                    {
+                        if ((i & mask) == mask) actual[m]++;
+                        mask <<= 1;
+                    }
+                }
+                Check.ChiSquared(expected, actual);
+            });
+        }
+
+        [Fact]
+        public void PCG_Next_UInt()
         {
             Gen.UInt[1, uint.MaxValue].Select(genPCG)
             .Select(t => (Max: t.V0, x: t.V1.Next(t.V0)))
@@ -141,7 +164,7 @@ namespace Tests
         }
 
         [Fact]
-        public void PCG_Next64()
+        public void PCG_Next64_ULong()
         {
             Gen.ULong[1, ulong.MaxValue].Select(genPCG)
             .Select(t => (Max: t.V0, x: t.V1.Next64(t.V0)))
