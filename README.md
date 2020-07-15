@@ -5,7 +5,7 @@
 <a href="https://www.nuget.org/packages/CsCheck"><img src="https://buildstats.info/nuget/CsCheck?includePreReleases=true"></a>
 </p>
 
-CsCheck is a C# random and performance testing library inspired by QuickCheck.
+CsCheck is a C# random testing library inspired by QuickCheck.
 
 It differs in that generation and shrinking are both based on [PCG](https://www.pcg-random.org), a fast random number generator.
 
@@ -15,6 +15,8 @@ This gives the following advantages:
 - Random testing and shrinking can run in parallel. This and PCG make it very fast.
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be repeated to give simpler cases for high dimensional problems.
+
+CsCheck also makes multithreading and performance testing simple and fast.
 
 ### Examples
 
@@ -48,6 +50,29 @@ public void Long_Range()
      from value in Gen.Long[start, finish]
      select (value, start, finish))
     .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+}
+```
+
+Multithreading test for DictionarySlim.
+```csharp
+[Fact]
+public void Multithreading_DictionarySlim()
+{
+    var d = new DictionarySlim<int, int>();
+    Check.Sample(
+        Gen.Int[1, 10],
+        i =>
+        {
+            ref var v = ref d.GetOrAddValueRef(i);
+            v = 1 - v;
+        },
+        Gen.Int[1, 10],
+        i =>
+        {
+            d.TryGetValue(i, out var v);
+            Assert.True(v == 0 || v == 1);
+        }
+    );
 }
 ```
 
@@ -103,7 +128,9 @@ More to see in the [Tests](Tests).
 Sample and Faster accept configuration parameters. Global defaults can also be set via environment variables.
 
 ```powershell
-$env:CsCheck_Seed = '657257e6655b2ffd50'; $env:CsCheck_Size = 1000; dotnet test -c Release --filter List; rm env:CsCheck*
+$env:CsCheck_Size = 10000; dotnet test -c Release --filter Multithreading; rm Env:CsCheck*
+
+$env:CsCheck_Seed = '657257e6655b2ffd50'; dotnet test -c Release --filter List; rm env:CsCheck*
 
 $env:CsCheck_Sigma = 50; dotnet test -c Release -l 'console;verbosity=detailed' --filter Faster; rm env:CsCheck*
 ```

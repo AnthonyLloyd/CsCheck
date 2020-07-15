@@ -110,6 +110,81 @@ namespace CsCheck
             Sample(gen, action, seed, 1, 1);
         }
 
+        public static void Sample<T1, T2>(Gen<T1> gen1, Action<T1> action1, Gen<T2> gen2, Action<T2> action2,
+            string seed = null, int size = -1, int threads = -1)
+        {
+            try
+            {
+                Sample(
+                    Gen.Bool.SelectMany(b => b ? gen1.Select(t => (b, (object)t))
+                                               : gen2.Select(t => (b, (object)t))),
+                    t => { if (t.b) action1((T1)t.Item2); else action2((T2)t.Item2); },
+                    seed, size, threads
+                );
+            }
+            catch(CsCheckException e)
+            {
+                throw e.InnerException; // remove seed info as it's not reproducible.
+            }
+        }
+
+        public static void Sample<T1, T2, T3>(Gen<T1> gen1, Action<T1> action1, Gen<T2> gen2, Action<T2> action2,
+            Gen<T3> gen3, Action<T3> action3, string seed = null, int size = -1, int threads = -1)
+        {
+            try
+            {
+                Sample(
+                    Gen.Int[0, 2].SelectMany(i => i == 0 ? gen1.Select(t => (i, (object)t))
+                                                : i == 1 ? gen2.Select(t => (i, (object)t))
+                                                : gen3.Select(t => (i, (object)t))),
+                    t =>
+                    {
+                        if (t.i == 0) action1((T1)t.Item2);
+                        else if (t.i == 1) action2((T2)t.Item2);
+                        else action3((T3)t.Item2);
+                    },
+                    seed, size, threads
+                );
+            }
+            catch(CsCheckException e)
+            {
+                throw e.InnerException; // remove seed info as it's not reproducible.
+            }
+        }
+
+        public static void Sample<T1, T2, T3, T4>(Gen<T1> gen1, Action<T1> action1, Gen<T2> gen2, Action<T2> action2,
+            Gen<T3> gen3, Action<T3> action3, Gen<T4> gen4, Action<T4> action4, string seed = null, int size = -1, int threads = -1)
+        {
+            try
+            {
+                Sample(
+                    Gen.Int.SelectMany(i =>
+                    {
+                        i &= 3;
+                        return i == 0 ? gen1.Select(t => (i, (object)t))
+                             : i == 1 ? gen2.Select(t => (i, (object)t))
+                             : i == 2 ? gen3.Select(t => (i, (object)t))
+                             : gen4.Select(t => (i, (object)t));
+                    }),
+                    t =>
+                    {
+                        switch (t.i & 3)
+                        {
+                            case 0: action1((T1)t.Item2); break;
+                            case 1: action2((T2)t.Item2); break;
+                            case 2: action3((T3)t.Item2); break;
+                            default: action4((T4)t.Item2); break;
+                        }
+                    },
+                    seed, size, threads
+                );
+            }
+            catch (CsCheckException e)
+            {
+                throw e.InnerException; // remove seed info as it's not reproducible.
+            }
+        }
+
         public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, int size = -1, int threads = -1)
         {
             if (size == -1) size = Size;

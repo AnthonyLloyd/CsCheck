@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using CsCheck;
 using Microsoft.Collections.Extensions;
@@ -200,6 +201,71 @@ namespace Tests
                 }
             )
             .Output(writeLine);
+        }
+
+        [Fact]
+        public void Multithreading_DictionarySlim()
+        {
+            var d = new DictionarySlim<int, int>();
+            Check.Sample(
+                Gen.Int[1, 10],
+                i =>
+                {
+                    ref var v = ref d.GetOrAddValueRef(i);
+                    v = 1 - v;
+                },
+                Gen.Int[1, 10],
+                i =>
+                {
+                    d.TryGetValue(i, out var v);
+                    Assert.True(v == 0 || v == 1);
+                }
+            );
+        }
+
+        [Fact]
+        public void Multithreading_ConcurrentDictionary()
+        {
+            var d = new ConcurrentDictionary<int, int>();
+            Check.Sample(
+                Gen.Int[1, 10],
+                i => d.AddOrUpdate(i, 0, (_,v) => 1 -v),
+                Gen.Int[1, 10],
+                i =>
+                {
+                    d.TryGetValue(i, out var v);
+                    Assert.True(v == 0 || v == 1);
+                },
+                Gen.Const(0),
+                _ => Assert.True(d.Count <= 10)
+            );
+        }
+
+        [Fact]
+        public void Multithreading_ConcurrentBag()
+        {
+            Gen.Int[5, 40].SampleOne(n =>
+            {
+                var b = new ConcurrentBag<int>();
+                Check.Sample(
+                    Gen.Int[1, n],
+                    b.Add,
+                    Gen.Const(0),
+                    _ =>
+                    {
+                        b.TryTake(out int v);
+                        Assert.True(v >= 0 && v <= n);
+                    },
+                    Gen.Const(0),
+                    _ =>
+                    {
+                        b.TryPeek(out int v);
+                        Assert.True(v >= 0 && v <= n);
+                    },
+                    Gen.Const(0),
+                    _ => b.Clear()
+                );
+            });
         }
 
         //[Fact]
