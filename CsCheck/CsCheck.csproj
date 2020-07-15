@@ -20,7 +20,7 @@ CsCheck also makes multithreading and performance testing simple and fast.
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
-        <PackageTags>testing;random;performance;quickcheck</PackageTags>
+        <PackageTags>testing;quickcheck;random;performance;multithreading</PackageTags>
         <Version>0.7.0</Version>
         <PackageReleaseNotes>Multithreading testing</PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
