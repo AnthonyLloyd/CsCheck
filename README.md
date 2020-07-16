@@ -53,7 +53,7 @@ public void Long_Range()
 }
 ```
 
-Multithreading test for DictionarySlim.
+Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
 ```csharp
 [Fact]
 public void Multithreading_DictionarySlim()
@@ -76,7 +76,22 @@ public void Multithreading_DictionarySlim()
 }
 ```
 
+Performance test of linq expressions checking the results are always the same. The first expression is asserted to be faster than the second.
+```csharp
+[Fact]
+public void Faster_Linq_Random()
+{
+    Gen.Byte.Array[100, 1000]
+    .Faster(
+        data => data.Aggregate(0.0, (t, b) => t + b),
+        data => data.Select(i => (double)i).Sum()
+    )
+    .Output(writeLine);
+}
+```
+
 Performance test of two different ways of multiplying a matrix for a range of matrix sizes checking the results are always the same.
+An external equal assert is used.
 ```csharp
 [Fact]
 public void Faster_Matrix_Multiply_Range()
@@ -91,20 +106,6 @@ public void Faster_Matrix_Multiply_Range()
         t => MulIJK(t.V0, t.V1),
         Assert.Equal
     )
-}
-```
-
-Performance test of linq expressions checking the results are always the same.
-```csharp
-[Fact]
-public void Faster_Linq_Random()
-{
-    Gen.Byte.Array[100, 1000]
-    .Faster(
-        data => data.Aggregate(0.0, (t, b) => t + b),
-        data => data.Select(i => (double)i).Sum()
-    )
-    .Output(writeLine);
 }
 ```
 

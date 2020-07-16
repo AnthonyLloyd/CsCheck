@@ -2,7 +2,6 @@
 using Xunit;
 using CsCheck;
 using System.Linq;
-using System.Reflection.PortableExecutable;
 
 namespace Tests
 {
