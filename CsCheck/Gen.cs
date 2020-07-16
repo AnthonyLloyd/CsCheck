@@ -42,19 +42,28 @@ namespace CsCheck
         }
     }
 
-    public abstract class Gen<T> : IEnumerable<T>
+    public interface IGen
+    {
+        (object, Size) Generate(PCG pcg);
+    }
+
+    public abstract class Gen<T> : IGen, IEnumerable<T>
     {
         public abstract (T, Size) Generate(PCG pcg);
+        (object, Size) IGen.Generate(PCG pcg)
+        {
+            return Generate(pcg);
+        }
         IEnumerable<T> ToEnumerable()
         {
             var pcg = PCG.ThreadPCG;
             while (true) yield return Generate(pcg).Item1;
         }
+        public IEnumerator<T> GetEnumerator() => ToEnumerable().GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => ToEnumerable().GetEnumerator();
         public GenArray<T> Array => new GenArray<T>(this);
         public GenArray2D<T> Array2D => new GenArray2D<T>(this);
         public GenList<T> List => new GenList<T>(this);
-        public IEnumerator<T> GetEnumerator() => ToEnumerable().GetEnumerator();
-        IEnumerator IEnumerable.GetEnumerator() => ToEnumerable().GetEnumerator();
     }
 
     class GenF<T> : Gen<T>
@@ -272,6 +281,18 @@ namespace CsCheck
         public static Gen<T> Const<T>(T value) => new GenF<T>(_ => (value, zero));
         public static Gen<T> OneOf<T>(params T[] ts) => Int[0, ts.Length - 1].Select(i => ts[i]);
         public static Gen<T> OneOf<T>(params Gen<T>[] gens) => Int[0, gens.Length - 1].SelectMany(i => gens[i]);
+        public static Gen<T> Enum<T>() where T : Enum
+        {
+            var a = System.Enum.GetValues(typeof(T));
+            var ts = new T[a.Length];
+            for (int i = 0; i < ts.Length; i++)
+                ts[i] = (T)a.GetValue(i);
+            return OneOf(ts);
+        }
+        public static Gen<T> Cast<T>(this IGen gen) => new GenF<T>(pcg => {
+            var (o, s) = gen.Generate(pcg);
+            return ((T)o, s);
+        });
         public static Gen<T> Frequency<T>(params (int, T)[] ts)
         {
             ts = ((int, T)[])ts.Clone();
