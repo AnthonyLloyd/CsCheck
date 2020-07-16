@@ -340,6 +340,17 @@ namespace Tests
         }
 
         [Fact]
+        public void DateTime_Range()
+        {
+            (from t in Gen.DateTime.Select(Gen.DateTime)
+             let start = t.V0 < t.V1 ? t.V0 : t.V1
+             let finish = t.V0 < t.V1 ? t.V1 : t.V0
+             from value in Gen.DateTime[start, finish]
+             select (value, start, finish))
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
+        }
+
+        [Fact]
         public void Char_Range()
         {
             (from t in Gen.Char.Select(Gen.Char)

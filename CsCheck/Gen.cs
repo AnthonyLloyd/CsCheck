@@ -316,10 +316,11 @@ namespace CsCheck
         public static readonly GenUInt UInt = new GenUInt();
         public static readonly GenLong Long = new GenLong();
         public static readonly GenULong ULong = new GenULong();
-        public static readonly GenSingle Single = new GenSingle();
-        public static readonly GenSingle Float = Single;
+        public static readonly GenFloat Float = new GenFloat();
+        public static readonly GenFloat Single = Float;
         public static readonly GenDouble Double = new GenDouble();
         public static readonly GenDecimal Decimal = new GenDecimal();
+        public static readonly GenDateTime DateTime = new GenDateTime();
         public static readonly GenChar Char = new GenChar();
         public static readonly GenString String = new GenString();
     }
@@ -512,7 +513,7 @@ namespace CsCheck
         }
     }
 
-    public class GenSingle : Gen<float>
+    public class GenFloat : Gen<float>
     {
         [StructLayout(LayoutKind.Explicit)]
         struct Converter
@@ -681,6 +682,28 @@ namespace CsCheck
             return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1M
                     , new Size(i, null));
         });
+    }
+
+    public class GenDateTime : Gen<DateTime>
+    {
+        readonly ulong max = (ulong)DateTime.MaxValue.Ticks;
+        public override (DateTime, Size) Generate(PCG pcg)
+        {
+            ulong i = pcg.Next64(max);
+            return (new DateTime((long)i), new Size(i, null));
+        }
+        public Gen<DateTime> this[DateTime start, DateTime finish]
+        {
+            get
+            {
+                ulong l = (ulong)(finish.Ticks - start.Ticks) + 1ul;
+                return new GenF<DateTime>(pcg =>
+                {
+                    ulong i = (ulong)start.Ticks + pcg.Next64(l);
+                    return (new DateTime((long)i), new Size(i, null));
+                });
+            }
+        }
     }
 
     public class GenChar : Gen<char>
