@@ -21,8 +21,8 @@ CsCheck also makes multithreading and performance testing simple and fast.
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>testing;quickcheck;random;performance;multithreading</PackageTags>
-        <Version>0.8.0</Version>
-        <PackageReleaseNotes>Added DateTime, Enum and Cast</PackageReleaseNotes>
+        <Version>0.8.1</Version>
+        <PackageReleaseNotes>Added HashSet and Dictionary</PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <WarningLevel>4</WarningLevel>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

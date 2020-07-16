@@ -64,6 +64,7 @@ namespace CsCheck
         public GenArray<T> Array => new GenArray<T>(this);
         public GenArray2D<T> Array2D => new GenArray2D<T>(this);
         public GenList<T> List => new GenList<T>(this);
+        public GenHashSet<T> HashSet => new GenHashSet<T>(this);
     }
 
     class GenF<T> : Gen<T>
@@ -249,7 +250,7 @@ namespace CsCheck
             var (v4, s4) = gen4.Generate(pcg);
             var genR = selector(v1, v2, v3, v4);
             var (vR, sR) = genR.Generate(pcg);
-            return (vR, new Size(s1.I + s2.I + s3.I +s4.I, new[] { sR }));
+            return (vR, new Size(s1.I + s2.I + s3.I + s4.I, new[] { sR }));
         });
         public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector) => new GenF<R>(pcg =>
@@ -289,7 +290,8 @@ namespace CsCheck
                 ts[i] = (T)a.GetValue(i);
             return OneOf(ts);
         }
-        public static Gen<T> Cast<T>(this IGen gen) => new GenF<T>(pcg => {
+        public static Gen<T> Cast<T>(this IGen gen) => new GenF<T>(pcg =>
+        {
             var (o, s) = gen.Generate(pcg);
             return ((T)o, s);
         });
@@ -329,14 +331,7 @@ namespace CsCheck
                 return gensAgg[gensAgg.Length - 1].Item2;
             });
         }
-        public static Gen<Dictionary<K, V>> Dictionary<K, V>(this Gen<(K, V)[]> gen) => new GenF<Dictionary<K, V>>(pcg =>
-        {
-            var (a, s) = gen.Generate(pcg);
-            var d = new Dictionary<K, V>(a.Length);
-            foreach (var (k, v) in a)
-                d[k] = v;
-            return (d, s);
-        });
+        public static GenDictionary<K, V> Dictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new GenDictionary<K, V>(genK, genV);
         public static readonly GenBool Bool = new GenBool();
         public static readonly GenSByte SByte = new GenSByte();
         public static readonly GenByte Byte = new GenByte();
@@ -578,7 +573,7 @@ namespace CsCheck
         public Gen<float> Normal = new GenF<float>(pcg =>
         {
             uint i = pcg.Next();
-            return ((i & 0x7F800000U) == 0x7F800000U ? (8f-(i & 0xFU))
+            return ((i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU))
                     : new Converter { I = i }.F
                 , new Size(i, null));
         });
@@ -788,33 +783,8 @@ namespace CsCheck
     {
         readonly Gen<T> gen;
         public GenArray(Gen<T> gen) => this.gen = gen;
-        public override (T[], Size) Generate(PCG pcg)
-        {
-            var l = pcg.Next() & 127U;
-            var vs = new T[l];
-            var ss = new Size[l];
-            for (int i = 0; i < vs.Length; i++)
-            {
-                var (v, s) = gen.Generate(pcg);
-                vs[i] = v;
-                ss[i] = s;
-            }
-            return (vs, new Size(l, ss));
-        }
-        public Gen<T[]> this[Gen<int> length] => new GenF<T[]>(pcg =>
-        {
-            var (l, sl) = length.Generate(pcg);
-            var vs = new T[l];
-            var ss = new Size[l];
-            for (int i = 0; i < vs.Length; i++)
-            {
-                var (v, s) = gen.Generate(pcg);
-                vs[i] = v;
-                ss[i] = s;
-            }
-            return (vs, new Size(sl.I, ss));
-        });
-        public Gen<T[]> this[int length] => new GenF<T[]>(pcg =>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        (T[], Size) Generate(PCG pcg, int length, ulong size)
         {
             var vs = new T[length];
             var ss = new Size[length];
@@ -824,17 +794,31 @@ namespace CsCheck
                 vs[i] = v;
                 ss[i] = s;
             }
-            return (vs, new Size(0L, ss));
+            return (vs, new Size(size, ss));
+        }
+        public override (T[], Size) Generate(PCG pcg)
+        {
+            var l = pcg.Next() & 127U;
+            return Generate(pcg, (int)l, l);
+        }
+        public Gen<T[]> this[Gen<int> length] => new GenF<T[]>(pcg =>
+        {
+            var (l, sl) = length.Generate(pcg);
+            return Generate(pcg, l, sl.I);
+        });
+        public Gen<T[]> this[int length] => new GenF<T[]>(pcg =>
+        {
+            return Generate(pcg, length, 0UL);
         });
         public Gen<T[]> this[int start, int finish] => this[Gen.Int[start, finish]];
-
     }
 
     public class GenArray2D<T> : Gen<T[,]>
     {
         readonly Gen<T> gen;
         public GenArray2D(Gen<T> gen) => this.gen = gen;
-        (T[,], Size) Generate(PCG pcg, uint length0, uint length1)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        (T[,], Size) Generate(PCG pcg, int length0, int length1, ulong size)
         {
             var vs = new T[length0, length1];
             for (int i = 0; i < length0; i++)
@@ -843,21 +827,23 @@ namespace CsCheck
                     var v = gen.Generate(pcg).Item1;
                     vs[i, j] = v;
                 }
-            return (vs, new Size(length0 + length1, null));
+            return (vs, new Size(size, null));
         }
         public override (T[,], Size) Generate(PCG pcg)
         {
-            return Generate(pcg, pcg.Next() & 127U, pcg.Next() & 127U);
+            var l0 = pcg.Next() & 127U;
+            var l1 = pcg.Next() & 127U;
+            return Generate(pcg, (int)l0, (int)l1, l0 * l1);
         }
         public Gen<T[,]> this[int length0, int length1] => new GenF<T[,]>(pcg =>
         {
-            return Generate(pcg, (uint)length0, (uint)length1);
+            return Generate(pcg, length0, length1, 0UL);
         });
         public Gen<T[,]> this[Gen<int> length0, Gen<int> length1] => new GenF<T[,]>(pcg =>
         {
-            var l0 = length0.Generate(pcg).Item1;
-            var l1 = length1.Generate(pcg).Item1;
-            return Generate(pcg, (uint)l0, (uint)l1);
+            var (l0, s0) = length0.Generate(pcg);
+            var (l1, s1) = length1.Generate(pcg);
+            return Generate(pcg, l0, l1, s0.I + s1.I);
         });
     }
 
@@ -865,33 +851,8 @@ namespace CsCheck
     {
         readonly Gen<T> gen;
         public GenList(Gen<T> gen) => this.gen = gen;
-        public override (List<T>, Size) Generate(PCG pcg)
-        {
-            var l = pcg.Next() & 127U;
-            var vs = new List<T>((int)l);
-            var ss = new Size[l];
-            for (int i = 0; i < ss.Length; i++)
-            {
-                var (v, s) = gen.Generate(pcg);
-                vs.Add(v);
-                ss[i] = s;
-            }
-            return (vs, new Size(l, ss));
-        }
-        public Gen<List<T>> this[Gen<int> length] => new GenF<List<T>>(pcg =>
-        {
-            var (l, sl) = length.Generate(pcg);
-            var vs = new List<T>(l);
-            var ss = new Size[l];
-            for (int i = 0; i < ss.Length; i++)
-            {
-                var (v, s) = gen.Generate(pcg);
-                vs.Add(v);
-                ss[i] = s;
-            }
-            return (vs, new Size(sl.I, ss));
-        });
-        public Gen<List<T>> this[int length] => new GenF<List<T>>(pcg =>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        (List<T>, Size) Generate(PCG pcg, int length, ulong size)
         {
             var vs = new List<T>(length);
             var ss = new Size[length];
@@ -901,8 +862,109 @@ namespace CsCheck
                 vs.Add(v);
                 ss[i] = s;
             }
-            return (vs, new Size(0L, ss));
+            return (vs, new Size(size, ss));
+        }
+        public override (List<T>, Size) Generate(PCG pcg)
+        {
+            uint l = pcg.Next() & 127U;
+            return Generate(pcg, (int)l, l);
+        }
+        public Gen<List<T>> this[Gen<int> length] => new GenF<List<T>>(pcg =>
+        {
+            var (l, sl) = length.Generate(pcg);
+            return Generate(pcg, l, sl.I);
+        });
+        public Gen<List<T>> this[int length] => new GenF<List<T>>(pcg =>
+        {
+            return Generate(pcg, length, 0UL);
         });
         public Gen<List<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
+    }
+
+    public class GenHashSet<T> : Gen<HashSet<T>>
+    {
+        readonly Gen<T> gen;
+        public GenHashSet(Gen<T> gen) => this.gen = gen;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        (HashSet<T>, Size) Generate(PCG pcg, int length, ulong size)
+        {
+            var vs = new HashSet<T>();
+            var ss = new Size[length];
+            var bad = 0;
+            while (length > 0)
+            {
+                var (v, s) = gen.Generate(pcg);
+                if (vs.Add(v))
+                {
+                    ss[--length] = s;
+                    bad = 0;
+                }
+                else if (++bad == 1000) throw new CsCheckException("Failing to add to HashSet");
+            }
+            return (vs, new Size(size, ss));
+        }
+        public override (HashSet<T>, Size) Generate(PCG pcg)
+        {
+            var l = pcg.Next() & 127U;
+            return Generate(pcg, (int)l, l);
+        }
+        public Gen<HashSet<T>> this[Gen<int> length] => new GenF<HashSet<T>>(pcg =>
+        {
+            var (l, sl) = length.Generate(pcg);
+            return Generate(pcg, l, sl.I);
+        });
+        public Gen<HashSet<T>> this[int length] => new GenF<HashSet<T>>(pcg =>
+        {
+            return Generate(pcg, length, 0UL);
+        });
+        public Gen<HashSet<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
+    }
+
+    public class GenDictionary<K, V> : Gen<Dictionary<K, V>>
+    {
+        readonly Gen<K> genK;
+        readonly Gen<V> genV;
+        public GenDictionary(Gen<K> genK, Gen<V> genV)
+        {
+            this.genK = genK;
+            this.genV = genV;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        (Dictionary<K, V>, Size) Generate(PCG pcg, int length, ulong size)
+        {
+            var vs = new Dictionary<K, V>(length);
+            var ss = new Size[length * 2];
+            var i = length;
+            var bad = 0;
+            while (i > 0)
+            {
+                var (k, sk) = genK.Generate(pcg);
+                if (!vs.ContainsKey(k))
+                {
+                    var (v, sv) = genV.Generate(pcg);
+                    vs.Add(k, v);
+                    ss[--i] = sk;
+                    ss[length + i] = sv;
+                    bad = 0;
+                }
+                else if (++bad == 1000) throw new CsCheckException("Failing to add to Dictionary");
+            }
+            return (vs, new Size(size, ss));
+        }
+        public override (Dictionary<K, V>, Size) Generate(PCG pcg)
+        {
+            var l = pcg.Next() & 127U;
+            return Generate(pcg, (int)l, l);
+        }
+        public Gen<Dictionary<K, V>> this[Gen<int> length] => new GenF<Dictionary<K, V>>(pcg =>
+        {
+            var (l, sl) = length.Generate(pcg);
+            return Generate(pcg, l, sl.I);
+        });
+        public Gen<Dictionary<K, V>> this[int length] => new GenF<Dictionary<K, V>>(pcg =>
+        {
+            return Generate(pcg, length, 0UL);
+        });
+        public Gen<Dictionary<K, V>> this[int start, int finish] => this[Gen.Int[start, finish]];
     }
 }

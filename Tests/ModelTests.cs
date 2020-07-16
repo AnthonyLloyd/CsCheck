@@ -11,7 +11,7 @@ namespace Tests
         public enum Country { DE, GB, US, CA };
         public class Instrument { public string Name; public Country Country; public Currency Currency; };
         public class Equity : Instrument { };
-        public class Bond : Instrument { public Dictionary<DateTime,double> Coupons; };
+        public class Bond : Instrument { public Dictionary<DateTime, double> Coupons; };
         public class Trade { public Instrument Instrument; public DateTime Date; public int Quantity; public double Cost; };
         public class Position { public Instrument Instrument; public int Quantity; public double Cost; public double Price; };
         public class Portfolio { public string Name; public Currency Currency; public Position[] Positions; };
@@ -23,7 +23,7 @@ namespace Tests
             public static Gen<Country> Country = Gen.Enum<Country>();
             public static Gen<Equity> Equity = Gen.Select(Name, Country, Currency,
                             (n, co, cu) => new Equity { Name = n, Country = co, Currency = cu });
-            public static Gen<Bond> Bond = Gen.Select(Name, Country, Currency, Gen.DateTime.Select(Gen.Double).Array.Dictionary(),
+            public static Gen<Bond> Bond = Gen.Select(Name, Country, Currency, Gen.Dictionary(Gen.DateTime, Gen.Double),
                             (n, co, cu, c) => new Bond { Name = n, Country = co, Currency = cu, Coupons = c });
             public static Gen<Instrument> Instrument = Gen.Frequency((2, Equity.Cast<Instrument>()), (1, Bond.Cast<Instrument>()));
             public static Gen<Trade> Trade = Gen.Select(Instrument, Gen.DateTime, Gen.Int, Gen.Double,
