@@ -295,39 +295,48 @@ namespace CsCheck
         });
         public static Gen<T> Frequency<T>(params (int, T)[] ts)
         {
-            ts = ((int, T)[])ts.Clone();
+            var tsAgg = new (int, T)[ts.Length];
             int total = 0;
             for (int i = 0; i < ts.Length; i++)
             {
-                total += ts[i].Item1;
-                ts[i].Item1 = total;
+                var (f, g) = ts[i];
+                total += f;
+                tsAgg[i] = (total, g);
             }
             return Int[1, total].Select(c =>
             {
-                for (int i = 0; i < ts.Length - 1; i++)
-                    if (c <= ts[i].Item1)
-                        return ts[i].Item2;
-                return ts[ts.Length - 1].Item2;
+                for (int i = 0; i < tsAgg.Length - 1; i++)
+                    if (c <= tsAgg[i].Item1)
+                        return tsAgg[i].Item2;
+                return tsAgg[tsAgg.Length - 1].Item2;
             });
         }
         public static Gen<T> Frequency<T>(params (int, Gen<T>)[] gens)
         {
-            gens = ((int, Gen<T>)[])gens.Clone();
+            var gensAgg = new (int, Gen<T>)[gens.Length];
             int total = 0;
             for (int i = 0; i < gens.Length; i++)
             {
-                total += gens[i].Item1;
-                gens[i].Item1 = total;
+                var (f, g) = gens[i];
+                total += f;
+                gensAgg[i] = (total, g);
             }
             return Int[1, total].SelectMany(c =>
             {
-                for (int i = 0; i < gens.Length - 1; i++)
-                    if (c <= gens[i].Item1)
-                        return gens[i].Item2;
-                return gens[gens.Length - 1].Item2;
+                for (int i = 0; i < gensAgg.Length - 1; i++)
+                    if (c <= gensAgg[i].Item1)
+                        return gensAgg[i].Item2;
+                return gensAgg[gensAgg.Length - 1].Item2;
             });
         }
-
+        public static Gen<Dictionary<K, V>> Dictionary<K, V>(this Gen<(K, V)[]> gen) => new GenF<Dictionary<K, V>>(pcg =>
+        {
+            var (a, s) = gen.Generate(pcg);
+            var d = new Dictionary<K, V>(a.Length);
+            foreach (var (k, v) in a)
+                d[k] = v;
+            return (d, s);
+        });
         public static readonly GenBool Bool = new GenBool();
         public static readonly GenSByte SByte = new GenSByte();
         public static readonly GenByte Byte = new GenByte();
@@ -769,6 +778,10 @@ namespace CsCheck
             Gen.Char.Array[start, finish].Select(i => new string(i));
         public Gen<string> this[Gen<char> gen, int start, int finish] =>
             gen.Array[start, finish].Select(i => new string(i));
+        public Gen<string> this[Gen<char> gen] =>
+            gen.Array.Select(i => new string(i));
+        public Gen<string> this[string chars] =>
+            Gen.Char[chars].Array.Select(i => new string(i));
     }
 
     public class GenArray<T> : Gen<T[]>
