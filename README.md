@@ -44,7 +44,7 @@ Sample test for long ranges.
 [Fact]
 public void Long_Range()
 {
-    (from t in Gen.Long.Select(Gen.Long)
+    (from t in Gen.Select(Gen.Long,Gen.Long)
      let start = Math.Min(t.V0, t.V1)
      let finish = Math.Max(t.V0, t.V1)
      from value in Gen.Long[start, finish]
