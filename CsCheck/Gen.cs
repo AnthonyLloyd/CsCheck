@@ -47,21 +47,12 @@ namespace CsCheck
         (object, Size) Generate(PCG pcg);
     }
 
-    public abstract class Gen<T> : IGen, IEnumerable<T>
+    public abstract class Gen<T> : IGen
     {
         public abstract (T, Size) Generate(PCG pcg);
-        (object, Size) IGen.Generate(PCG pcg)
-        {
-            return Generate(pcg);
-        }
-        IEnumerable<T> ToEnumerable()
-        {
-            var pcg = PCG.ThreadPCG;
-            while (true) yield return Generate(pcg).Item1;
-        }
-        public IEnumerator<T> GetEnumerator() => ToEnumerable().GetEnumerator();
-        IEnumerator IEnumerable.GetEnumerator() => ToEnumerable().GetEnumerator();
+        (object, Size) IGen.Generate(PCG pcg) => Generate(pcg);
         public GenArray<T> Array => new GenArray<T>(this);
+        public GenEnumerable<T> Enumerable => new GenEnumerable<T>(this);
         public GenArray2D<T> Array2D => new GenArray2D<T>(this);
         public GenList<T> List => new GenList<T>(this);
         public GenHashSet<T> HashSet => new GenHashSet<T>(this);
@@ -332,6 +323,12 @@ namespace CsCheck
             });
         }
         public static GenDictionary<K, V> Dictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new GenDictionary<K, V>(genK, genV);
+        public static GenSortedDictionary<K, V> SortedDictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new GenSortedDictionary<K, V>(genK, genV);
+        public static IEnumerable<T> ToEnumerable<T>(this Gen<T> gen)
+        {
+            var pcg = PCG.ThreadPCG;
+            while (true) yield return gen.Generate(pcg).Item1;
+        }
         public static readonly GenBool Bool = new GenBool();
         public static readonly GenSByte SByte = new GenSByte();
         public static readonly GenByte Byte = new GenByte();
@@ -813,6 +810,40 @@ namespace CsCheck
         public Gen<T[]> this[int start, int finish] => this[Gen.Int[start, finish]];
     }
 
+    public class GenEnumerable<T> : Gen<IEnumerable<T>>
+    {
+        readonly Gen<T> gen;
+        public GenEnumerable(Gen<T> gen) => this.gen = gen;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        (IEnumerable<T>, Size) Generate(PCG pcg, int length, ulong size)
+        {
+            var vs = new T[length];
+            var ss = new Size[length];
+            for (int i = 0; i < vs.Length; i++)
+            {
+                var (v, s) = gen.Generate(pcg);
+                vs[i] = v;
+                ss[i] = s;
+            }
+            return (vs, new Size(size, ss));
+        }
+        public override (IEnumerable<T>, Size) Generate(PCG pcg)
+        {
+            var l = pcg.Next() & 127U;
+            return Generate(pcg, (int)l, l);
+        }
+        public Gen<IEnumerable<T>> this[Gen<int> length] => new GenF<IEnumerable<T>>(pcg =>
+        {
+            var (l, sl) = length.Generate(pcg);
+            return Generate(pcg, l, sl.I);
+        });
+        public Gen<IEnumerable<T>> this[int length] => new GenF<IEnumerable<T>>(pcg =>
+        {
+            return Generate(pcg, length, 0UL);
+        });
+        public Gen<IEnumerable<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
+    }
+
     public class GenArray2D<T> : Gen<T[,]>
     {
         readonly Gen<T> gen;
@@ -966,5 +997,53 @@ namespace CsCheck
             return Generate(pcg, length, 0UL);
         });
         public Gen<Dictionary<K, V>> this[int start, int finish] => this[Gen.Int[start, finish]];
+    }
+
+    public class GenSortedDictionary<K, V> : Gen<SortedDictionary<K, V>>
+    {
+        readonly Gen<K> genK;
+        readonly Gen<V> genV;
+        public GenSortedDictionary(Gen<K> genK, Gen<V> genV)
+        {
+            this.genK = genK;
+            this.genV = genV;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        (SortedDictionary<K, V>, Size) Generate(PCG pcg, int length, ulong size)
+        {
+            var vs = new SortedDictionary<K, V>();
+            var ss = new Size[length * 2];
+            var i = length;
+            var bad = 0;
+            while (i > 0)
+            {
+                var (k, sk) = genK.Generate(pcg);
+                if (!vs.ContainsKey(k))
+                {
+                    var (v, sv) = genV.Generate(pcg);
+                    vs.Add(k, v);
+                    ss[--i] = sk;
+                    ss[length + i] = sv;
+                    bad = 0;
+                }
+                else if (++bad == 1000) throw new CsCheckException("Failing to add to SortedDictionary");
+            }
+            return (vs, new Size(size, ss));
+        }
+        public override (SortedDictionary<K, V>, Size) Generate(PCG pcg)
+        {
+            var l = pcg.Next() & 127U;
+            return Generate(pcg, (int)l, l);
+        }
+        public Gen<SortedDictionary<K, V>> this[Gen<int> length] => new GenF<SortedDictionary<K, V>>(pcg =>
+        {
+            var (l, sl) = length.Generate(pcg);
+            return Generate(pcg, l, sl.I);
+        });
+        public Gen<SortedDictionary<K, V>> this[int length] => new GenF<SortedDictionary<K, V>>(pcg =>
+        {
+            return Generate(pcg, length, 0UL);
+        });
+        public Gen<SortedDictionary<K, V>> this[int start, int finish] => this[Gen.Int[start, finish]];
     }
 }

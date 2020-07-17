@@ -391,6 +391,15 @@ namespace Tests
         }
 
         [Fact]
+        public void Enumerable()
+        {
+            Gen.UShort[1, 1000]
+            .Enumerable[10, 100]
+            .Sample(l => l.Count() >= 10 && l.Count() <= 100
+                      && l.All(i => i >= 1 && i <= 1000));
+        }
+
+        [Fact]
         public void HashSet()
         {
             Gen.ULong[1, 1000]
@@ -403,6 +412,14 @@ namespace Tests
         public void Dictionary()
         {
             Gen.Dictionary(Gen.UInt[1, 1000], Gen.Bool)[10, 100]
+            .Sample(i => i.Count >= 10 && i.Count <= 100
+                      && i.All(j => j.Key >= 1 && j.Key <= 1000));
+        }
+
+        [Fact]
+        public void SortedDictionary()
+        {
+            Gen.SortedDictionary(Gen.UInt[1, 1000], Gen.Bool)[10, 100]
             .Sample(i => i.Count >= 10 && i.Count <= 100
                       && i.All(j => j.Key >= 1 && j.Key <= 1000));
         }
