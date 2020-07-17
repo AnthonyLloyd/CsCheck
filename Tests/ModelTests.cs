@@ -11,18 +11,53 @@ namespace Tests
         public enum Currency { EUR, GBP, USD, CAD };
         public enum Country { DE, GB, US, CA };
         public enum Exchange { LMAX, EQTA, GLPS, XCNQ }
-        public class Instrument { public string Name; public Country Country; public Currency Currency; };
-        public class Equity : Instrument { public ISet<Exchange> Exchanges; };
-        public class Bond : Instrument { public SortedDictionary<DateTime, double> Coupons; };
-        public class Trade { public DateTime Date; public int Quantity; public double Cost; };
+        public class Instrument
+        {
+            public string Name { get; }
+            public Country Country { get; }
+            public Currency Currency { get; }
+            public Instrument(string name, Country country, Currency currency) { Name = name; Country = country; Currency = currency; }
+        };
+        public class Equity : Instrument
+        {
+            public IReadOnlyCollection<Exchange> Exchanges { get; }
+            public Equity(string name, Country country, Currency currency, IReadOnlyCollection<Exchange> exchanges) : base(name, country, currency)
+            {
+                Exchanges = exchanges;
+            }
+        };
+        public class Bond : Instrument
+        {
+            public IReadOnlyDictionary<DateTime, double> Coupons { get; }
+            public Bond(string name, Country country, Currency currency, IReadOnlyDictionary<DateTime, double> coupons) : base(name, country, currency)
+            {
+                Coupons = coupons;
+            }
+        };
+        public class Trade
+        {
+            public DateTime Date { get; }
+            public int Quantity { get; }
+            public double Cost { get; }
+            public Trade(DateTime date, int quantity, double cost) { Date = date; Quantity = quantity; Cost = cost; }
+        };
         public class Position
         {
-            public Instrument Instrument; public List<Trade> Trades; public double Price;
+            public Instrument Instrument { get; }
+            public IReadOnlyList<Trade> Trades { get; }
+            public double Price { get; }
+            public Position(Instrument instrument, IReadOnlyList<Trade> trades, double price) { Instrument = instrument; Trades = trades; Price = price; }
             public int Quantity => Trades.Sum(i => i.Quantity);
             public double Cost => Trades.Sum(i => i.Cost);
             public double Profit => Price * Quantity - Cost;
         };
-        public class Portfolio { public string Name; public Currency Currency; public Position[] Positions; };
+        public class Portfolio
+        {
+            public string Name { get; }
+            public Currency Currency { get; }
+            public IReadOnlyCollection<Position> Positions { get; }
+            public Portfolio(string name, Currency currency, IReadOnlyCollection<Position> positions) { Name = name; Currency = currency; Positions = positions; }
+        };
 
         public static class MyGen
         {
@@ -33,17 +68,12 @@ namespace Tests
             public static Gen<double> Coupon = Gen.Int[0, 100].Select(i => i * 0.125);
             public static Gen<double> Price = Gen.Int[0001, 9999].Select(i => i * 0.01);
             public static Gen<DateTime> Date = Gen.DateTime[new DateTime(2000, 1, 1), DateTime.Today].Select(i => i.Date);
-            public static Gen<Equity> Equity = Gen.Select(Name, Country, Currency, Gen.Enum<Exchange>().HashSet[1, 3],
-                            (n, co, cu, e) => new Equity { Name = n, Country = co, Currency = cu, Exchanges = e });
-            public static Gen<Bond> Bond = Gen.Select(Name, Country, Currency, Gen.SortedDictionary(Date, Coupon),
-                            (n, co, cu, c) => new Bond { Name = n, Country = co, Currency = cu, Coupons = c });
+            public static Gen<Equity> Equity = Gen.Select(Name, Country, Currency, Gen.Enum<Exchange>().HashSet[1, 3], (n, co, cu, e) => new Equity(n, co, cu, e));
+            public static Gen<Bond> Bond = Gen.Select(Name, Country, Currency, Gen.SortedDictionary(Date, Coupon), (n, co, cu, c) => new Bond(n, co, cu, c));
             public static Gen<Instrument> Instrument = Gen.Frequency((2, Equity.Cast<Instrument>()), (1, Bond.Cast<Instrument>()));
-            public static Gen<Trade> Trade = Gen.Select(Date, Quantity, Price,
-                            (dt, q, p) => new Trade { Date = dt, Quantity = q, Cost = q * p });
-            public static Gen<Position> Position = Gen.Select(Instrument, Trade.List, Price,
-                            (i, t, p) => new Position { Instrument = i, Trades = t, Price = p });
-            public static Gen<Portfolio> Portfolio = Gen.Select(Name, Currency, Position.Array,
-                            (n, c, p) => new Portfolio { Name = n, Currency = c, Positions = p });
+            public static Gen<Trade> Trade = Gen.Select(Date, Quantity, Price, (dt, q, p) => new Trade(dt, q, q * p));
+            public static Gen<Position> Position = Gen.Select(Instrument, Trade.List, Price, (i, t, p) => new Position(i, t, p));
+            public static Gen<Portfolio> Portfolio = Gen.Select(Name, Currency, Position.Array, (n, c, p) => new Portfolio(n, c, p));
         }
 
         [Fact]

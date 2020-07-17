@@ -40,6 +40,7 @@ namespace CsCheck
             var sigma = Environment.GetEnvironmentVariable("CsCheck_Sigma");
             if (!string.IsNullOrWhiteSpace(sigma)) Sigma = double.Parse(sigma);
         }
+        /// <summary>Sample the Gen calling the Action each time across multiple threads. Shrink any exceptions if necessary.</summary>
         public static void Sample<T>(this Gen<T> gen, Action<T> action, string seed = null, int size = -1, int threads = -1)
         {
             if (size == -1) size = Size;
@@ -104,87 +105,7 @@ namespace CsCheck
                 $"CsCheck_Seed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
         }
-
-        public static void SampleOne<T>(this Gen<T> gen, Action<T> action, string seed = null)
-        {
-            Sample(gen, action, seed, 1, 1);
-        }
-
-        public static void Sample<T1, T2>(Gen<T1> gen1, Action<T1> action1, Gen<T2> gen2, Action<T2> action2,
-            string seed = null, int size = -1, int threads = -1)
-        {
-            try
-            {
-                Sample(
-                    Gen.Bool.SelectMany(b => b ? gen1.Select(t => (b, (object)t))
-                                               : gen2.Select(t => (b, (object)t))),
-                    t => { if (t.b) action1((T1)t.Item2); else action2((T2)t.Item2); },
-                    seed, size, threads
-                );
-            }
-            catch(CsCheckException e)
-            {
-                throw e.InnerException; // remove seed info as it's not reproducible.
-            }
-        }
-
-        public static void Sample<T1, T2, T3>(Gen<T1> gen1, Action<T1> action1, Gen<T2> gen2, Action<T2> action2,
-            Gen<T3> gen3, Action<T3> action3, string seed = null, int size = -1, int threads = -1)
-        {
-            try
-            {
-                Sample(
-                    Gen.Int[0, 2].SelectMany(i => i == 0 ? gen1.Select(t => (i, (object)t))
-                                                : i == 1 ? gen2.Select(t => (i, (object)t))
-                                                : gen3.Select(t => (i, (object)t))),
-                    t =>
-                    {
-                        if (t.i == 0) action1((T1)t.Item2);
-                        else if (t.i == 1) action2((T2)t.Item2);
-                        else action3((T3)t.Item2);
-                    },
-                    seed, size, threads
-                );
-            }
-            catch(CsCheckException e)
-            {
-                throw e.InnerException; // remove seed info as it's not reproducible.
-            }
-        }
-
-        public static void Sample<T1, T2, T3, T4>(Gen<T1> gen1, Action<T1> action1, Gen<T2> gen2, Action<T2> action2,
-            Gen<T3> gen3, Action<T3> action3, Gen<T4> gen4, Action<T4> action4, string seed = null, int size = -1, int threads = -1)
-        {
-            try
-            {
-                Sample(
-                    Gen.Int.SelectMany(i =>
-                    {
-                        i &= 3;
-                        return i == 0 ? gen1.Select(t => (i, (object)t))
-                             : i == 1 ? gen2.Select(t => (i, (object)t))
-                             : i == 2 ? gen3.Select(t => (i, (object)t))
-                             : gen4.Select(t => (i, (object)t));
-                    }),
-                    t =>
-                    {
-                        switch (t.i & 3)
-                        {
-                            case 0: action1((T1)t.Item2); break;
-                            case 1: action2((T2)t.Item2); break;
-                            case 2: action3((T3)t.Item2); break;
-                            default: action4((T4)t.Item2); break;
-                        }
-                    },
-                    seed, size, threads
-                );
-            }
-            catch (CsCheckException e)
-            {
-                throw e.InnerException; // remove seed info as it's not reproducible.
-            }
-        }
-
+        /// <summary>Sample the Gen calling the test Func each time across multiple threads. Shrink any exceptions if necessary.</summary>
         public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, int size = -1, int threads = -1)
         {
             if (size == -1) size = Size;
@@ -267,12 +188,92 @@ namespace CsCheck
                 $"CsCheck_Seed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
         }
-
+        /// <summary>Sample the Gen once calling the Action.</summary>
+        public static void SampleOne<T>(this Gen<T> gen, Action<T> action, string seed = null)
+        {
+            Sample(gen, action, seed, 1, 1);
+        }
+        /// <summary>Sample the Gen once calling the test Func.</summary>
         public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null)
         {
             Sample(gen, predicate, seed, 1, 1);
         }
-
+        /// <summary>Sample the Gen and Action pairs each time across multiple threads. Useful for multithreading tests.</summary>
+        public static void Sample<T1, T2>(Gen<T1> gen1, Action<T1> action1, Gen<T2> gen2, Action<T2> action2,
+            string seed = null, int size = -1, int threads = -1)
+        {
+            try
+            {
+                Sample(
+                    Gen.Bool.SelectMany(b => b ? gen1.Select(t => (b, (object)t))
+                                               : gen2.Select(t => (b, (object)t))),
+                    t => { if (t.b) action1((T1)t.Item2); else action2((T2)t.Item2); },
+                    seed, size, threads
+                );
+            }
+            catch (CsCheckException e)
+            {
+                throw e.InnerException; // remove seed info as it's not reproducible.
+            }
+        }
+        /// <summary>Sample the Gen and Action pairs each time across multiple threads. Useful for multithreading tests.</summary>
+        public static void Sample<T1, T2, T3>(Gen<T1> gen1, Action<T1> action1, Gen<T2> gen2, Action<T2> action2,
+            Gen<T3> gen3, Action<T3> action3, string seed = null, int size = -1, int threads = -1)
+        {
+            try
+            {
+                Sample(
+                    Gen.Int[0, 2].SelectMany(i => i == 0 ? gen1.Select(t => (i, (object)t))
+                                                : i == 1 ? gen2.Select(t => (i, (object)t))
+                                                : gen3.Select(t => (i, (object)t))),
+                    t =>
+                    {
+                        if (t.i == 0) action1((T1)t.Item2);
+                        else if (t.i == 1) action2((T2)t.Item2);
+                        else action3((T3)t.Item2);
+                    },
+                    seed, size, threads
+                );
+            }
+            catch (CsCheckException e)
+            {
+                throw e.InnerException; // remove seed info as it's not reproducible.
+            }
+        }
+        /// <summary>Sample the Gen and Action pairs each time across multiple threads. Useful for multithreading tests.</summary>
+        public static void Sample<T1, T2, T3, T4>(Gen<T1> gen1, Action<T1> action1, Gen<T2> gen2, Action<T2> action2,
+            Gen<T3> gen3, Action<T3> action3, Gen<T4> gen4, Action<T4> action4, string seed = null, int size = -1, int threads = -1)
+        {
+            try
+            {
+                Sample(
+                    Gen.Int.SelectMany(i =>
+                    {
+                        i &= 3;
+                        return i == 0 ? gen1.Select(t => (i, (object)t))
+                             : i == 1 ? gen2.Select(t => (i, (object)t))
+                             : i == 2 ? gen3.Select(t => (i, (object)t))
+                             : gen4.Select(t => (i, (object)t));
+                    }),
+                    t =>
+                    {
+                        switch (t.i & 3)
+                        {
+                            case 0: action1((T1)t.Item2); break;
+                            case 1: action2((T2)t.Item2); break;
+                            case 2: action3((T3)t.Item2); break;
+                            default: action4((T4)t.Item2); break;
+                        }
+                    },
+                    seed, size, threads
+                );
+            }
+            catch (CsCheckException e)
+            {
+                throw e.InnerException; // remove seed info as it's not reproducible.
+            }
+        }
+        /// <summary>Assert actual is in line with expected using a chi-squared test to 6 sigma.</summary>
         public static void ChiSquared(int[] expected, int[] actual)
         {
             if (expected.Length != actual.Length) throw new CsCheckException("Expected and actual lengths need to be the same.");
@@ -291,6 +292,7 @@ namespace CsCheck
                 "Chi-squared standard deviation = " + Math.Sqrt(sigmaSquared).ToString("0.0"));
         }
 
+        /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6).</summary>
         public static FasterResult Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int timeout = -1)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
@@ -334,7 +336,7 @@ namespace CsCheck
             if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
             return r;
         }
-
+        /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6).</summary>
         public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Action<T, T> assertEqual = null,
             double sigma = -1.0, int threads = -1, int timeout = -1)
         {
@@ -401,7 +403,7 @@ namespace CsCheck
             if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
             return r;
         }
-
+        /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6) across a sampel of input data.</summary>
         public static FasterResult Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower,
             double sigma = -1.0, int threads = -1, int timeout = -1, string seed = null)
         {
@@ -454,7 +456,7 @@ namespace CsCheck
             if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
             return r;
         }
-
+        /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
         public static FasterResult Faster<T1, T2>(this Gen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower,
             Action<T2, T2> assertEqual = null, double sigma = -1.0, int threads = -1, int timeout = -1, string seed = null)
         {

@@ -90,7 +90,7 @@ public void Faster_Linq_Random()
 }
 ```
 
-Performance test of two different ways of multiplying a matrix for a range of matrix sizes checking the results are always the same.
+Performance test of two different ways of multiplying a matrix for a sample of matrix sizes checking the results are always the same.
 An external equal assert is used.
 ```csharp
 [Fact]
