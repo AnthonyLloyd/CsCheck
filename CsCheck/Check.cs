@@ -293,7 +293,7 @@ namespace CsCheck
         }
 
         /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6).</summary>
-        public static FasterResult Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int timeout = -1)
+        public static FasterResult Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int timeout = 60_000)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma;
@@ -320,9 +320,9 @@ namespace CsCheck
                             lock (r)
                             {
                                 r.Median.Add(e);
+                                if (tf < ts) r.Faster++;
+                                else if (tf > ts) r.Slower++;
                             }
-                            if (tf < ts) Interlocked.Increment(ref r.Faster);
-                            else if (tf > ts) Interlocked.Increment(ref r.Slower);
                             if (r.SigmaSquared >= sigma) mre.Set();
                         }
                     }
@@ -332,13 +332,13 @@ namespace CsCheck
                         mre.Set();
                     }
                 });
-            mre.Wait(timeout);
+            if (!mre.Wait(timeout)) throw new CsCheckException("Timeout! " + r.ToString());
             if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
             return r;
         }
         /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6).</summary>
         public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Action<T, T> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int timeout = -1)
+            double sigma = -1.0, int threads = -1, int timeout = 60_000)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma;
@@ -387,9 +387,9 @@ namespace CsCheck
                             lock (r)
                             {
                                 r.Median.Add(e);
+                                if (tf < ts) r.Faster++;
+                                else if (tf > ts) r.Slower++;
                             }
-                            if (tf < ts) Interlocked.Increment(ref r.Faster);
-                            else if (tf > ts) Interlocked.Increment(ref r.Slower);
                             if (r.SigmaSquared >= sigma) mre.Set();
                         }
                     }
@@ -399,13 +399,13 @@ namespace CsCheck
                         mre.Set();
                     }
                 });
-            mre.Wait(timeout);
+            if (!mre.Wait(timeout)) throw new CsCheckException("Timeout! " + r.ToString());
             if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
             return r;
         }
         /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6) across a sampel of input data.</summary>
         public static FasterResult Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower,
-            double sigma = -1.0, int threads = -1, int timeout = -1, string seed = null)
+            double sigma = -1.0, int threads = -1, int timeout = 60_000, string seed = null)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma; // using sigma as sigma squared now
@@ -438,9 +438,9 @@ namespace CsCheck
                             lock (r)
                             {
                                 r.Median.Add(e);
+                                if (tf < ts) r.Faster++;
+                                else if (tf > ts) r.Slower++;
                             }
-                            if (tf < ts) Interlocked.Increment(ref r.Faster);
-                            else if (tf > ts) Interlocked.Increment(ref r.Slower);
                             if (r.SigmaSquared >= sigma) mre.Set();
                         }
                     }
@@ -452,13 +452,13 @@ namespace CsCheck
                         mre.Set();
                     }
                 });
-            mre.Wait(timeout);
+            if (!mre.Wait(timeout)) throw new CsCheckException("Timeout! " + r.ToString());
             if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
             return r;
         }
         /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
         public static FasterResult Faster<T1, T2>(this Gen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower,
-            Action<T2, T2> assertEqual = null, double sigma = -1.0, int threads = -1, int timeout = -1, string seed = null)
+            Action<T2, T2> assertEqual = null, double sigma = -1.0, int threads = -1, int timeout = 60_000, string seed = null)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma; // using sigma as sigma squared now
@@ -516,9 +516,9 @@ namespace CsCheck
                             lock (r)
                             {
                                 r.Median.Add(e);
+                                if (tf < ts) r.Faster++;
+                                else if (tf > ts) r.Slower++;
                             }
-                            if (tf < ts) Interlocked.Increment(ref r.Faster);
-                            else if (tf > ts) Interlocked.Increment(ref r.Slower);
                             if (r.SigmaSquared >= sigma) mre.Set();
                         }
                     }
@@ -530,7 +530,7 @@ namespace CsCheck
                         mre.Set();
                     }
                 });
-            mre.Wait(timeout);
+            if (!mre.Wait(timeout)) throw new CsCheckException("Timeout! " + r.ToString());
             if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
             return r;
         }
@@ -591,32 +591,40 @@ namespace CsCheck
         }
         internal void Add(float s)
         {
-            N++;
-            if (N > 5)
+            switch (++N)
             {
-                if (s < q1) q1 = s;
-                if (s < q2) n2++;
-                if (s < q3) n3++;
-                if (s < q4) n4++;
-                if (s > q5) q5 = s;
-                Adjust(0.25, 1, ref n2, n3, q1, ref q2, q3);
-                Adjust(0.50, n2, ref n3, n4, q2, ref q3, q4);
-                Adjust(0.75, n2, ref n4, N, q3, ref q4, q5);
+                case 1:
+                    q1 = s;
+                    return;
+                case 2:
+                    q2 = s;
+                    return;
+                case 3:
+                    q3 = s;
+                    return;
+                case 4:
+                    q4 = s;
+                    return;
+                case 5:
+                    var a = new[] { q1, q2, q3, q4, s };
+                    Array.Sort(a);
+                    q1 = a[0];
+                    q2 = a[1];
+                    q3 = a[2];
+                    q4 = a[3];
+                    q5 = a[4];
+                    return;
+                default:
+                    if (s < q1) q1 = s;
+                    if (s < q2) n2++;
+                    if (s < q3) n3++;
+                    if (s < q4) n4++;
+                    if (s > q5) q5 = s;
+                    Adjust(0.25, 1, ref n2, n3, q1, ref q2, q3);
+                    Adjust(0.50, n2, ref n3, n4, q2, ref q3, q4);
+                    Adjust(0.75, n2, ref n4, N, q3, ref q4, q5);
+                    return;
             }
-            else if (N == 5)
-            {
-                var a = new[] { q1, q2, q3, q4, s };
-                Array.Sort(a);
-                q1 = a[0];
-                q2 = a[1];
-                q3 = a[2];
-                q4 = a[3];
-                q5 = a[4];
-            }
-            else if (N == 4) q4 = s;
-            else if (N == 3) q3 = s;
-            else if (N == 2) q2 = s;
-            else q1 = s;
         }
     }
 }
