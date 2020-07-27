@@ -6,6 +6,7 @@ using System.Threading;
 
 using Xunit;
 using CsCheck;
+using System.Buffers;
 
 namespace Tests
 {
@@ -18,11 +19,56 @@ namespace Tests
         public void ReverseComplement_Faster()
         {
             Check.Faster(
-                () => ReverseComplementOld.revcomp.NotMain(null),
+                () => ReverseComplementNew.RevComp.NotMain(null),
                 () => ReverseComplementOld.revcomp.NotMain(null),
                 threads: 1
             )
             .Output(writeLine);
+        }
+    }
+}
+
+namespace ReverseComplementNew
+{
+    public static class RevComp
+    {
+        const int BUFFER_SIZE = 1024 * 1024;
+        static int readCount = 0, canWriteCount = 0, lastPageSize = -1;
+        static int Read(Stream stream, Span<byte> span, int offset)
+        {
+            var bytesRead = stream.Read(span);
+            return bytesRead == span.Length ? offset + bytesRead
+                 : bytesRead == 0 ? offset
+                 : Read(stream, span.Slice(bytesRead), offset + bytesRead);
+        }
+
+        public static void NotMain(string[] args)
+        {
+            var pages = new List<IMemoryOwner<byte>>();
+            using var inStream = Console.OpenStandardInput();
+            int bytesRead;
+            do
+            {
+                var page = MemoryPool<byte>.Shared.Rent(BUFFER_SIZE);
+                bytesRead = Read(inStream, page.Memory.Span.Slice(BUFFER_SIZE), 0);
+                pages.Add(page);
+            } while (bytesRead == BUFFER_SIZE);
+
+            using var outStream = Console.OpenStandardOutput();
+
+            int writtenCount = 0;
+            while (true)
+            {
+                while (writtenCount == canWriteCount) Thread.MemoryBarrier();
+                var page = pages[writtenCount];
+                if (writtenCount + 1 == readCount && lastPageSize != -1)
+                {
+                    outStream.Write(page.Memory.Span.Slice(lastPageSize));
+                    break;
+                }
+                outStream.Write(page.Memory.Span.Slice(BUFFER_SIZE));
+                page.Dispose();
+            }
         }
     }
 }
