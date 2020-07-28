@@ -30,14 +30,13 @@ namespace ReverseComplementNew
     using System;
     using System.IO;
     using System.Threading;
-    using System.Buffers;
 
     public static class RevComp
     {
         public static int NotMain(string[] args)
         {
             const int PAGE_SIZE = 1024 * 1024;
-            var pages = new IMemoryOwner<byte>[1024];
+            var pages = new Memory<byte>[1024];
             int readCount = 0, canWriteCount = 0, lastPageID = -1, lastPageSize = PAGE_SIZE;
             new Thread(() =>
             {
@@ -51,9 +50,9 @@ namespace ReverseComplementNew
                 using var inStream = File.OpenRead(Utils.Fasta.Filename);//Console.OpenStandardInput();
                 while(true)
                 {
-                    var page = MemoryPool<byte>.Shared.Rent(PAGE_SIZE);
+                    var page = new byte[PAGE_SIZE];
                     pages[readCount] = page;
-                    lastPageSize = Read(inStream, page.Memory.Span[..PAGE_SIZE], 0);
+                    lastPageSize = Read(inStream, page, 0);
                     if(lastPageSize != PAGE_SIZE)
                     {
                         lastPageID = readCount++;
@@ -84,20 +83,20 @@ namespace ReverseComplementNew
                 void Reverse(int loPageID, int lo, int endPageID, int hi, Thread previous)
                 {
                     var hiPageID = endPageID;
-                    var loPage = pages[loPageID].Memory.Span;
-                    var hiPage = pages[hiPageID].Memory.Span;
+                    var loPage = pages[loPageID].Span;
+                    var hiPage = pages[hiPageID].Span;
                     while (true)
                     {
                         if (lo == PAGE_SIZE)
                         {
                             lo = 0;
-                            loPage = pages[++loPageID].Memory.Span;
+                            loPage = pages[++loPageID].Span;
                             if (previous == null || !previous.IsAlive) canWriteCount = loPageID;
                         }
                         if (hi == -1)
                         {
                             hi = PAGE_SIZE - 1;
-                            hiPage = pages[--hiPageID].Memory.Span;
+                            hiPage = pages[--hiPageID].Span;
                         }
                         if (loPageID > hiPageID || (loPageID == hiPageID && lo > hi)) break;
                         ref var loValue = ref loPage[lo];
@@ -130,7 +129,7 @@ namespace ReverseComplementNew
                     while (true) // skip header
                     {
                         while (pageID == readCount) Thread.MemoryBarrier();
-                        int i = pages[pageID].Memory.Span.Slice(index).IndexOf(LF);
+                        int i = pages[pageID].Span.Slice(index).IndexOf(LF);
                         if (i != -1)
                         {
                             index += i + 1;
@@ -145,7 +144,7 @@ namespace ReverseComplementNew
                     {
                         while (pageID == readCount) Thread.MemoryBarrier();
                         var thisPageSize = pageID == lastPageID ? lastPageSize : PAGE_SIZE;
-                        var i = pages[pageID].Memory.Span[index..thisPageSize].IndexOf(GT);
+                        var i = pages[pageID].Span[index..thisPageSize].IndexOf(GT);
                         if (i != -1)
                         {
                             index += i;
@@ -177,11 +176,10 @@ namespace ReverseComplementNew
                 var page = pages[writtenCount];
                 if (writtenCount++ == lastPageID)
                 {
-                    outStream.Write(page.Memory.Span[..lastPageSize]);
+                    outStream.Write(page.Span[..lastPageSize]);
                     return outStream.GetHashCode();
                 }
-                outStream.Write(page.Memory.Span[..PAGE_SIZE]);
-                page.Dispose(); //Try just new Memory
+                outStream.Write(page.Span);
             }
         }
     }
