@@ -1,27 +1,24 @@
-﻿using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.Threading;
-
-using Xunit;
-using CsCheck;
-using System.Buffers;
-
-namespace Tests
+﻿namespace Tests
 {
+    using System;
+    using System.IO;
+    using Xunit;
+    using CsCheck;
+
     public class ReverseComplementTests
     {
         readonly Action<string> writeLine;
         public ReverseComplementTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
 
-        //[Fact]
+        [Fact]
         public void ReverseComplement_Faster()
         {
+            if (!File.Exists(Utils.Fasta.Filename)) Utils.Fasta.NotMain(new[] { "25000000" });
+
             Check.Faster(
                 () => ReverseComplementNew.RevComp.NotMain(null),
-                () => ReverseComplementOld.revcomp.NotMain(null),
-                threads: 1
+                () => ReverseComplementOld.RevComp.NotMain(null),
+                threads: 1, timeout: 300_000
             )
             .Output(writeLine);
         }
@@ -30,44 +27,161 @@ namespace Tests
 
 namespace ReverseComplementNew
 {
+    using System;
+    using System.IO;
+    using System.Threading;
+    using System.Buffers;
+
     public static class RevComp
     {
-        const int BUFFER_SIZE = 1024 * 1024;
-        static int readCount = 0, canWriteCount = 0, lastPageSize = -1;
-        static int Read(Stream stream, Span<byte> span, int offset)
+        public static int NotMain(string[] args)
         {
-            var bytesRead = stream.Read(span);
-            return bytesRead == span.Length ? offset + bytesRead
-                 : bytesRead == 0 ? offset
-                 : Read(stream, span.Slice(bytesRead), offset + bytesRead);
-        }
-
-        public static void NotMain(string[] args)
-        {
-            var pages = new List<IMemoryOwner<byte>>();
-            using var inStream = Console.OpenStandardInput();
-            int bytesRead;
-            do
+            const int PAGE_SIZE = 1024 * 1024;
+            var pages = new IMemoryOwner<byte>[1024];
+            int readCount = 0, canWriteCount = 0, lastPageID = -1, lastPageSize = PAGE_SIZE;
+            new Thread(() =>
             {
-                var page = MemoryPool<byte>.Shared.Rent(BUFFER_SIZE);
-                bytesRead = Read(inStream, page.Memory.Span.Slice(BUFFER_SIZE), 0);
-                pages.Add(page);
-            } while (bytesRead == BUFFER_SIZE);
+                static int Read(Stream stream, Span<byte> span, int offset)
+                {
+                    var bytesRead = stream.Read(span);
+                    return bytesRead == span.Length ? offset + bytesRead
+                         : bytesRead == 0 ? offset
+                         : Read(stream, span.Slice(bytesRead), offset + bytesRead);
+                }
+                using var inStream = File.OpenRead(Utils.Fasta.Filename);//Console.OpenStandardInput();
+                while(true)
+                {
+                    var page = MemoryPool<byte>.Shared.Rent(PAGE_SIZE);
+                    pages[readCount] = page;
+                    lastPageSize = Read(inStream, page.Memory.Span[..PAGE_SIZE], 0);
+                    if(lastPageSize != PAGE_SIZE)
+                    {
+                        lastPageID = readCount++;
+                        break;
+                    }
+                    readCount++;
+                }
+            }).Start();
 
-            using var outStream = Console.OpenStandardOutput();
+            const byte LF = (byte)'\n', GT = (byte)'>';
+            new Thread(() =>
+            {
+                var map = new byte[256];
+                for (int b = 0; b < map.Length; b++) map[b] = (byte)b;
+                map['A'] = map['a'] = (byte)'T';
+                map['B'] = map['b'] = (byte)'V';
+                map['C'] = map['c'] = (byte)'G';
+                map['D'] = map['d'] = (byte)'H';
+                map['G'] = map['g'] = (byte)'C';
+                map['H'] = map['h'] = (byte)'D';
+                map['K'] = map['k'] = (byte)'M';
+                map['M'] = map['m'] = (byte)'K';
+                map['R'] = map['r'] = (byte)'Y';
+                map['T'] = map['t'] = (byte)'A';
+                map['V'] = map['v'] = (byte)'B';
+                map['Y'] = map['y'] = (byte)'R';
 
+                void Reverse(int loPageID, int lo, int endPageID, int hi, Thread previous)
+                {
+                    var hiPageID = endPageID;
+                    var loPage = pages[loPageID].Memory.Span;
+                    var hiPage = pages[hiPageID].Memory.Span;
+                    while (true)
+                    {
+                        if (lo == PAGE_SIZE)
+                        {
+                            lo = 0;
+                            loPage = pages[++loPageID].Memory.Span;
+                            if (previous == null || !previous.IsAlive) canWriteCount = loPageID;
+                        }
+                        if (hi == -1)
+                        {
+                            hi = PAGE_SIZE - 1;
+                            hiPage = pages[--hiPageID].Memory.Span;
+                        }
+                        if (loPageID > hiPageID || (loPageID == hiPageID && lo > hi)) break;
+                        ref var loValue = ref loPage[lo];
+                        ref var hiValue = ref hiPage[hi];
+                        if (loValue == LF)
+                        {
+                            lo++;
+                            if (hiValue == LF) hi--;
+                        }
+                        else if (hiValue == LF)
+                        {
+                            hi--;
+                        }
+                        else
+                        {
+                            var swap = map[loValue];
+                            loValue = map[hiValue];
+                            hiValue = swap;
+                            lo++;
+                            hi--;
+                        }
+                    }
+                    previous?.Join();
+                    canWriteCount = endPageID;
+                }
+
+                int pageID = 0, index = 0; Thread previous = null;
+                while (true)
+                {
+                    while (true) // skip header
+                    {
+                        while (pageID == readCount) Thread.MemoryBarrier();
+                        int i = pages[pageID].Memory.Span.Slice(index).IndexOf(LF);
+                        if (i != -1)
+                        {
+                            index += i + 1;
+                            break;
+                        }
+                        index = 0;
+                        pageID++;
+                    }
+                    var loPageID = pageID;
+                    var lo = index;
+                    while (true)
+                    {
+                        while (pageID == readCount) Thread.MemoryBarrier();
+                        var thisPageSize = pageID == lastPageID ? lastPageSize : PAGE_SIZE;
+                        var i = pages[pageID].Memory.Span[index..thisPageSize].IndexOf(GT);
+                        if (i != -1)
+                        {
+                            index += i;
+                            var loPageIDCopy = loPageID;
+                            var loCopy = lo;
+                            var hiPageID = pageID;
+                            var hi = index - 1;
+                            var prior = previous;
+                            (previous = new Thread(() => Reverse(loPageIDCopy, loCopy, hiPageID, hi, prior))).Start();
+                            break;
+                        }
+                        else if (pageID == lastPageID)
+                        {
+                            Reverse(loPageID, lo, pageID, lastPageSize - 1, previous);
+                            canWriteCount = readCount;
+                            return;
+                        }
+                        pageID++;
+                        index = 0;
+                    }
+                }
+            }).Start();
+
+            using var outStream = new Utils.HashStream(); //Console.OpenStandardOutput();
             int writtenCount = 0;
             while (true)
             {
                 while (writtenCount == canWriteCount) Thread.MemoryBarrier();
                 var page = pages[writtenCount];
-                if (writtenCount + 1 == readCount && lastPageSize != -1)
+                if (writtenCount++ == lastPageID)
                 {
-                    outStream.Write(page.Memory.Span.Slice(lastPageSize));
-                    break;
+                    outStream.Write(page.Memory.Span[..lastPageSize]);
+                    return outStream.GetHashCode();
                 }
-                outStream.Write(page.Memory.Span.Slice(BUFFER_SIZE));
-                page.Dispose();
+                outStream.Write(page.Memory.Span[..PAGE_SIZE]);
+                page.Dispose(); //Try just new Memory
             }
         }
     }
@@ -75,14 +189,20 @@ namespace ReverseComplementNew
 
 namespace ReverseComplementOld
 {
+    using System;
+    using System.IO;
+    using System.Collections.Generic;
+    using System.Collections.Concurrent;
+    using System.Threading;
+
     class RevCompSequence { public List<byte[]> Pages; public int StartHeader, EndExclusive; public Thread ReverseThread; }
 
-    public static class revcomp
+    public static class RevComp
     {
         const int READER_BUFFER_SIZE = 1024 * 1024;
         const byte LF = 10, GT = (byte)'>', SP = 32;
-        static BlockingCollection<byte[]> readQue = new BlockingCollection<byte[]>();
-        static BlockingCollection<RevCompSequence> writeQue = new BlockingCollection<RevCompSequence>();
+        static BlockingCollection<byte[]> readQue;
+        static BlockingCollection<RevCompSequence> writeQue;
         static byte[] map;
 
         static int read(Stream stream, byte[] buffer, int offset, int count)
@@ -94,7 +214,7 @@ namespace ReverseComplementOld
         }
         static void Reader()
         {
-            using (var stream = Console.OpenStandardInput())
+            using (var stream = File.OpenRead(Utils.Fasta.Filename))//Console.OpenStandardInput())
             {
                 int bytesRead;
                 do
@@ -119,7 +239,7 @@ namespace ReverseComplementOld
             // Set up complements map
             map = new byte[256];
             for (byte b = 0; b < 255; b++) map[b] = b;
-            map[(byte)'A'] = (byte)'T';
+            map[(byte)'A'] = (byte)'T'; map[(byte)'a'] = (byte)'T';
             map[(byte)'B'] = (byte)'V';
             map[(byte)'C'] = (byte)'G';
             map[(byte)'D'] = (byte)'H';
@@ -244,9 +364,9 @@ namespace ReverseComplementOld
             if (startIndex == endIndex) startBytes[startIndex] = map[startBytes[startIndex]];
         }
 
-        static void Writer()
+        static int Writer()
         {
-            using (var stream = Console.OpenStandardOutput())
+            using (var stream = new Utils.HashStream())// Console.OpenStandardOutput())
             {
                 bool first = true;
                 RevCompSequence sequence;
@@ -271,14 +391,201 @@ namespace ReverseComplementOld
                     }
                     stream.Write(pages[pages.Count - 1], startIndex, sequence.EndExclusive - startIndex);
                 }
+                return stream.GetHashCode();
             }
+        }
+
+        public static int NotMain(string[] args)
+        {
+            readQue = new BlockingCollection<byte[]>();
+            writeQue = new BlockingCollection<RevCompSequence>();
+            new Thread(Reader).Start();
+            new Thread(Grouper).Start();
+            return Writer();
+        }
+    }
+}
+
+namespace Utils
+{
+    using System;
+    using System.IO;
+    using System.Text;
+    using System.Buffers;
+    using System.Threading;
+    using System.Runtime.CompilerServices;
+
+    public class HashStream : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => true;
+        public override bool CanWrite => true;
+        public override long Length => 0;
+        public override long Position { get => 0; set { } }
+        public override void Flush() { }
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotImplementedException();
+        public override long Seek(long offset, SeekOrigin origin) => 0;
+        public override void SetLength(long value) { }
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            int h = hashCode;
+            foreach (byte b in buffer.AsSpan(offset, count))
+                h = (h ^ b) * 16777619;
+            hashCode = h;
+        }
+        int hashCode = -2128831035;
+        public override int GetHashCode() => hashCode;
+    }
+
+    public class Fasta
+    {
+        public const string Filename = "input25000000.txt";
+        const int Width = 60;
+        const int Width1 = 61;
+        const int LinesPerBlock = 2048;
+        const int BlockSize = Width * LinesPerBlock;
+        const int BlockSize1 = Width1 * LinesPerBlock;
+        const int IM = 139968;
+        const float FIM = 1F / 139968F;
+        const int IA = 3877;
+        const int IC = 29573;
+        const int SEED = 42;
+        static readonly ArrayPool<byte> bytePool = ArrayPool<byte>.Shared;
+        static readonly ArrayPool<int> intPool = ArrayPool<int>.Shared;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static byte[] Bytes(int i, int[] rnds, float[] ps, byte[] vs)
+        {
+            var a = bytePool.Rent(BlockSize1);
+            var s = a.AsSpan(0, i);
+            for (i = 1; i < s.Length; i++)
+            {
+                var p = rnds[i] * FIM;
+                int j = 0;
+                while (ps[j] < p) j++;
+                s[i] = vs[j];
+            }
+            return a;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int[] Rnds(int i, int j, ref int seed)
+        {
+            var a = intPool.Rent(BlockSize1);
+            var s = a.AsSpan(0, i);
+            s[0] = j;
+            for (i = 1, j = Width; i < s.Length; i++)
+            {
+                if (j-- == 0)
+                {
+                    j = Width;
+                    s[i] = IM * 3 / 2;
+                }
+                else
+                {
+                    s[i] = seed = (seed * IA + IC) % IM;
+                }
+            }
+            return a;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int WriteRandom(int n, int offset, int seed, byte[] vs, float[] ps,
+            Tuple<byte[], int>[] blocks)
+        {
+            // make cumulative
+            var total = ps[0];
+            for (int i = 1; i < ps.Length; i++)
+                ps[i] = total += ps[i];
+
+            void create(object o)
+            {
+                var rnds = (int[])o;
+                blocks[rnds[0]] =
+                    Tuple.Create(Bytes(BlockSize1, rnds, ps, vs), BlockSize1);
+                intPool.Return(rnds);
+            }
+
+            var createDel = (WaitCallback)create;
+
+            for (int i = offset; i < offset + (n - 1) / BlockSize; i++)
+            {
+                ThreadPool.QueueUserWorkItem(createDel,
+                    Rnds(BlockSize1, i, ref seed));
+            }
+
+            var remaining = (n - 1) % BlockSize + 1;
+            var l = remaining + (remaining - 1) / Width + 1;
+            ThreadPool.QueueUserWorkItem(o =>
+            {
+                var rnds = (int[])o;
+                blocks[rnds[0]] = Tuple.Create(Bytes(l, rnds, ps, vs), l);
+                intPool.Return(rnds);
+            }, Rnds(l, offset + (n - 1) / BlockSize, ref seed));
+
+            return seed;
         }
 
         public static void NotMain(string[] args)
         {
-            new Thread(Reader).Start();
-            new Thread(Grouper).Start();
-            Writer();
+            int n = args.Length == 0 ? 1000 : int.Parse(args[0]);
+            using var o = File.Create(Filename);//Console.OpenStandardOutput();
+            var blocks = new Tuple<byte[], int>[
+                (3 * n - 1) / BlockSize + (5 * n - 1) / BlockSize + 3];
+
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                var seed = WriteRandom(3 * n, 0, SEED,
+                    new[] { (byte)'a', (byte)'c', (byte)'g', (byte)'t',
+                    (byte)'B', (byte)'D', (byte)'H', (byte)'K', (byte)'M',
+                    (byte)'N', (byte)'R', (byte)'S', (byte)'V', (byte)'W',
+                    (byte)'Y', (byte)'\n' },
+                    new[] { 0.27F,0.12F,0.12F,0.27F,0.02F,0.02F,0.02F,0.02F,0.02F,
+                    0.02F,0.02F,0.02F,0.02F,0.02F,0.02F,1.00F }, blocks);
+
+                WriteRandom(5 * n, (3 * n - 1) / BlockSize + 2, seed,
+                    new byte[] { (byte)'a', (byte)'c', (byte)'g', (byte)'t',
+                    (byte)'\n' },
+                    new[] { 0.3029549426680F, 0.1979883004921F,
+                        0.1975473066391F, 0.3015094502008F,
+                        1.0F }, blocks);
+            });
+
+            o.Write(Encoding.ASCII.GetBytes(">ONE Homo sapiens alu"), 0, 21);
+            var table = Encoding.ASCII.GetBytes(
+                "GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGG" +
+                "GAGGCCGAGGCGGGCGGATCACCTGAGGTCAGGAGTTCGAGA" +
+                "CCAGCCTGGCCAACATGGTGAAACCCCGTCTCTACTAAAAAT" +
+                "ACAAAAATTAGCCGGGCGTGGTGGCGCGCGCCTGTAATCCCA" +
+                "GCTACTCGGGAGGCTGAGGCAGGAGAATCGCTTGAACCCGGG" +
+                "AGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCC" +
+                "AGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA");
+            var linesPerBlock = (LinesPerBlock / 287 + 1) * 287;
+            var repeatedBytes = bytePool.Rent(Width1 * linesPerBlock);
+            for (int i = 0; i <= linesPerBlock * Width - 1; i++)
+                repeatedBytes[1 + i + i / Width] = table[i % 287];
+            for (int i = 0; i <= (Width * linesPerBlock - 1) / Width; i++)
+                repeatedBytes[i * Width1] = (byte)'\n';
+            for (int i = 1; i <= (2 * n - 1) / (Width * linesPerBlock); i++)
+                o.Write(repeatedBytes, 0, Width1 * linesPerBlock);
+            var remaining = (2 * n - 1) % (Width * linesPerBlock) + 1;
+            o.Write(repeatedBytes, 0, remaining + (remaining - 1) / Width + 1);
+            bytePool.Return(repeatedBytes);
+            o.Write(Encoding.ASCII.GetBytes("\n>TWO IUB ambiguity codes"), 0, 25);
+
+            blocks[(3 * n - 1) / BlockSize + 1] = Tuple.Create
+                (Encoding.ASCII.GetBytes("\n>THREE Homo sapiens frequency"), 30);
+
+            for (int i = 0; i < blocks.Length; i++)
+            {
+                Tuple<byte[], int> t;
+                while ((t = blocks[i]) == null) Thread.Sleep(0);
+                t.Item1[0] = (byte)'\n';
+                o.Write(t.Item1, 0, t.Item2);
+                if (t.Item2 == BlockSize1) bytePool.Return(t.Item1);
+            }
+
+            o.WriteByte((byte)'\n');
         }
     }
 }
