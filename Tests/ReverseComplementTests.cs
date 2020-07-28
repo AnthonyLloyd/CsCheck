@@ -10,7 +10,7 @@
         readonly Action<string> writeLine;
         public ReverseComplementTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
 
-        [Fact]
+        //[Fact]
         public void ReverseComplement_Faster()
         {
             if (!File.Exists(Utils.Fasta.Filename)) Utils.Fasta.NotMain(new[] { "25000000" });
