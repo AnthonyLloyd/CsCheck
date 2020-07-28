@@ -36,16 +36,16 @@ namespace ReverseComplementNew
         public static int NotMain(string[] args)
         {
             const int PAGE_SIZE = 1024 * 1024;
-            var pages = new Memory<byte>[1024];
+            var pages = new byte[1024][];
             int readCount = 0, canWriteCount = 0, lastPageID = -1, lastPageSize = PAGE_SIZE;
             new Thread(() =>
             {
-                static int Read(Stream stream, Span<byte> span, int offset)
+                static int Read(Stream stream, byte[] bytes, int offset)
                 {
-                    var bytesRead = stream.Read(span);
-                    return bytesRead == span.Length ? offset + bytesRead
+                    var bytesRead = stream.Read(bytes, offset, PAGE_SIZE - offset);
+                    return bytesRead + offset == PAGE_SIZE ? PAGE_SIZE
                          : bytesRead == 0 ? offset
-                         : Read(stream, span.Slice(bytesRead), offset + bytesRead);
+                         : Read(stream, bytes, offset + bytesRead);
                 }
                 using var inStream = File.OpenRead(Utils.Fasta.Filename);//Console.OpenStandardInput();
                 while(true)
@@ -83,20 +83,20 @@ namespace ReverseComplementNew
                 void Reverse(int loPageID, int lo, int endPageID, int hi, Thread previous)
                 {
                     var hiPageID = endPageID;
-                    var loPage = pages[loPageID].Span;
-                    var hiPage = pages[hiPageID].Span;
+                    var loPage = pages[loPageID];
+                    var hiPage = pages[hiPageID];
                     while (true)
                     {
                         if (lo == PAGE_SIZE)
                         {
                             lo = 0;
-                            loPage = pages[++loPageID].Span;
+                            loPage = pages[++loPageID];
                             if (previous == null || !previous.IsAlive) canWriteCount = loPageID;
                         }
                         if (hi == -1)
                         {
                             hi = PAGE_SIZE - 1;
-                            hiPage = pages[--hiPageID].Span;
+                            hiPage = pages[--hiPageID];
                         }
                         if (loPageID > hiPageID || (loPageID == hiPageID && lo > hi)) break;
                         ref var loValue = ref loPage[lo];
@@ -129,10 +129,10 @@ namespace ReverseComplementNew
                     while (true) // skip header
                     {
                         while (pageID == readCount) Thread.MemoryBarrier();
-                        int i = pages[pageID].Span.Slice(index).IndexOf(LF);
+                        int i = Array.IndexOf(pages[pageID], LF, index);
                         if (i != -1)
                         {
-                            index += i + 1;
+                            index = i + 1;
                             break;
                         }
                         index = 0;
@@ -144,10 +144,10 @@ namespace ReverseComplementNew
                     {
                         while (pageID == readCount) Thread.MemoryBarrier();
                         var thisPageSize = pageID == lastPageID ? lastPageSize : PAGE_SIZE;
-                        var i = pages[pageID].Span[index..thisPageSize].IndexOf(GT);
+                        var i = Array.IndexOf(pages[pageID], GT, index, thisPageSize - index);
                         if (i != -1)
                         {
-                            index += i;
+                            index = i;
                             var loPageIDCopy = loPageID;
                             var loCopy = lo;
                             var hiPageID = pageID;
@@ -176,10 +176,10 @@ namespace ReverseComplementNew
                 var page = pages[writtenCount];
                 if (writtenCount++ == lastPageID)
                 {
-                    outStream.Write(page.Span[..lastPageSize]);
+                    outStream.Write(page, 0, lastPageSize);
                     return outStream.GetHashCode();
                 }
-                outStream.Write(page.Span);
+                outStream.Write(page, 0, PAGE_SIZE);
             }
         }
     }
