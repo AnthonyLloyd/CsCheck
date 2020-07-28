@@ -10,7 +10,7 @@
         readonly Action<string> writeLine;
         public ReverseComplementTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
 
-        //[Fact]
+        [Fact]
         public void ReverseComplement_Faster()
         {
             if (!File.Exists(Utils.Fasta.Filename)) Utils.Fasta.NotMain(new[] { "25000000" });
@@ -18,7 +18,7 @@
             Check.Faster(
                 () => ReverseComplementNew.RevComp.NotMain(null),
                 () => ReverseComplementOld.RevComp.NotMain(null),
-                threads: 1, timeout: 300_000
+                threads: 1, timeout: 300_000, sigma: 10
             )
             .Output(writeLine);
         }
@@ -28,6 +28,7 @@
 namespace ReverseComplementNew
 {
     using System;
+    using System.Buffers;
     using System.IO;
     using System.Threading;
 
@@ -48,23 +49,19 @@ namespace ReverseComplementNew
                          : Read(stream, bytes, offset + bytesRead);
                 }
                 using var inStream = File.OpenRead(Utils.Fasta.Filename);//Console.OpenStandardInput();
-                while(true)
+                do
                 {
-                    var page = new byte[PAGE_SIZE];
+                    var page = ArrayPool<byte>.Shared.Rent(PAGE_SIZE);
                     pages[readCount] = page;
                     lastPageSize = Read(inStream, page, 0);
-                    if(lastPageSize != PAGE_SIZE)
-                    {
-                        lastPageID = readCount++;
-                        break;
-                    }
                     readCount++;
-                }
+                } while (lastPageSize == PAGE_SIZE);
+                lastPageID = readCount - 1;
             }).Start();
 
-            const byte LF = (byte)'\n', GT = (byte)'>';
             new Thread(() =>
             {
+                const byte LF = (byte)'\n', GT = (byte)'>';
                 var map = new byte[256];
                 for (int b = 0; b < map.Length; b++) map[b] = (byte)b;
                 map['A'] = map['a'] = (byte)'T';
@@ -128,7 +125,7 @@ namespace ReverseComplementNew
                 {
                     while (true) // skip header
                     {
-                        while (pageID == readCount) Thread.MemoryBarrier();
+                        while (pageID == readCount) Thread.Sleep(0);
                         int i = Array.IndexOf(pages[pageID], LF, index);
                         if (i != -1)
                         {
@@ -142,12 +139,11 @@ namespace ReverseComplementNew
                     var lo = index;
                     while (true)
                     {
-                        while (pageID == readCount) Thread.MemoryBarrier();
-                        var thisPageSize = pageID == lastPageID ? lastPageSize : PAGE_SIZE;
-                        var i = Array.IndexOf(pages[pageID], GT, index, thisPageSize - index);
-                        if (i != -1)
+                        while (pageID == readCount) Thread.Sleep(0);
+                        index = Array.IndexOf(pages[pageID], GT, index,
+                            (pageID == lastPageID ? lastPageSize : PAGE_SIZE) - index);
+                        if (index != -1)
                         {
-                            index = i;
                             var loPageIDCopy = loPageID;
                             var loCopy = lo;
                             var hiPageID = pageID;
@@ -172,7 +168,7 @@ namespace ReverseComplementNew
             int writtenCount = 0;
             while (true)
             {
-                while (writtenCount == canWriteCount) Thread.MemoryBarrier();
+                while (writtenCount == canWriteCount) Thread.Sleep(0);
                 var page = pages[writtenCount];
                 if (writtenCount++ == lastPageID)
                 {
@@ -180,6 +176,7 @@ namespace ReverseComplementNew
                     return outStream.GetHashCode();
                 }
                 outStream.Write(page, 0, PAGE_SIZE);
+                ArrayPool<byte>.Shared.Return(page);
             }
         }
     }
