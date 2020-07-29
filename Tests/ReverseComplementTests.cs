@@ -18,7 +18,7 @@
             Check.Faster(
                 () => ReverseComplementNew.RevComp.NotMain(null),
                 () => ReverseComplementOld.RevComp.NotMain(null),
-                threads: 1, timeout: 300_000, sigma: 10
+                threads: 1, timeout: 1800_000, sigma: 35
             )
             .Output(writeLine);
         }
@@ -37,8 +37,8 @@ namespace ReverseComplementNew
         public static int NotMain(string[] args)
         {
             const int PAGE_SIZE = 1024 * 1024;
+            int readCount = 0, canWriteCount = 0, lastPageSize = PAGE_SIZE;
             var pages = new byte[1024][];
-            int readCount = 0, canWriteCount = 0, lastPageID = -1, lastPageSize = PAGE_SIZE;
             new Thread(() =>
             {
                 static int Read(Stream stream, byte[] bytes, int offset)
@@ -52,11 +52,10 @@ namespace ReverseComplementNew
                 do
                 {
                     var page = ArrayPool<byte>.Shared.Rent(PAGE_SIZE);
-                    pages[readCount] = page;
                     lastPageSize = Read(inStream, page, 0);
+                    pages[readCount] = page;
                     readCount++;
                 } while (lastPageSize == PAGE_SIZE);
-                lastPageID = readCount - 1;
             }).Start();
 
             new Thread(() =>
@@ -77,13 +76,32 @@ namespace ReverseComplementNew
                 map['V'] = map['v'] = (byte)'B';
                 map['Y'] = map['y'] = (byte)'R';
 
-                void Reverse(int loPageID, int lo, int endPageID, int hi, Thread previous)
+                void Reverse(object o) //do some edits here
                 {
-                    var hiPageID = endPageID;
+                    var (loPageID, lo, lastPageID, hi, previous) = ((int, int, int, int, Thread))o;
+                    var hiPageID = lastPageID;
+                    if (lo == PAGE_SIZE) { lo = 0; loPageID++; }
+                    if (hi == -1) { hi = PAGE_SIZE - 1; hiPageID--; }
                     var loPage = pages[loPageID];
                     var hiPage = pages[hiPageID];
-                    while (true)
+                    do
                     {
+                        ref var loValue = ref loPage[lo++];
+                        ref var hiValue = ref hiPage[hi--];
+                        if (loValue == LF)
+                        {
+                            if (hiValue != LF) hi++;
+                        }
+                        else if (hiValue == LF)
+                        {
+                            lo--;
+                        }
+                        else
+                        {
+                            var swap = map[loValue];
+                            loValue = map[hiValue];
+                            hiValue = swap;
+                        }
                         if (lo == PAGE_SIZE)
                         {
                             lo = 0;
@@ -95,29 +113,9 @@ namespace ReverseComplementNew
                             hi = PAGE_SIZE - 1;
                             hiPage = pages[--hiPageID];
                         }
-                        if (loPageID > hiPageID || (loPageID == hiPageID && lo > hi)) break;
-                        ref var loValue = ref loPage[lo];
-                        ref var hiValue = ref hiPage[hi];
-                        if (loValue == LF)
-                        {
-                            lo++;
-                            if (hiValue == LF) hi--;
-                        }
-                        else if (hiValue == LF)
-                        {
-                            hi--;
-                        }
-                        else
-                        {
-                            var swap = map[loValue];
-                            loValue = map[hiValue];
-                            hiValue = swap;
-                            lo++;
-                            hi--;
-                        }
-                    }
+                    } while (loPageID < hiPageID || (loPageID == hiPageID && lo <= hi));
                     previous?.Join();
-                    canWriteCount = endPageID;
+                    canWriteCount = lastPageID;
                 }
 
                 int pageID = 0, index = 0; Thread previous = null;
@@ -126,35 +124,28 @@ namespace ReverseComplementNew
                     while (true) // skip header
                     {
                         while (pageID == readCount) Thread.Sleep(0);
-                        int i = Array.IndexOf(pages[pageID], LF, index);
-                        if (i != -1)
-                        {
-                            index = i + 1;
-                            break;
-                        }
+                        index = Array.IndexOf(pages[pageID], LF, index);
+                        if (index != -1) break;
                         index = 0;
                         pageID++;
                     }
                     var loPageID = pageID;
-                    var lo = index;
+                    var lo = ++index;
                     while (true)
                     {
                         while (pageID == readCount) Thread.Sleep(0);
+                        var isLastPage = pageID + 1 == readCount && lastPageSize != PAGE_SIZE;
                         index = Array.IndexOf(pages[pageID], GT, index,
-                            (pageID == lastPageID ? lastPageSize : PAGE_SIZE) - index);
+                            (isLastPage ? lastPageSize : PAGE_SIZE) - index);
                         if (index != -1)
                         {
-                            var loPageIDCopy = loPageID;
-                            var loCopy = lo;
-                            var hiPageID = pageID;
-                            var hi = index - 1;
-                            var prior = previous;
-                            (previous = new Thread(() => Reverse(loPageIDCopy, loCopy, hiPageID, hi, prior))).Start();
+                            object o = (loPageID, lo, pageID, index - 1, previous);
+                            (previous = new Thread(Reverse)).Start(o);
                             break;
                         }
-                        else if (pageID == lastPageID)
+                        else if (isLastPage)
                         {
-                            Reverse(loPageID, lo, pageID, lastPageSize - 1, previous);
+                            Reverse((loPageID, lo, pageID, lastPageSize - 1, previous));
                             canWriteCount = readCount;
                             return;
                         }
@@ -169,8 +160,8 @@ namespace ReverseComplementNew
             while (true)
             {
                 while (writtenCount == canWriteCount) Thread.Sleep(0);
-                var page = pages[writtenCount];
-                if (writtenCount++ == lastPageID)
+                var page = pages[writtenCount++];
+                if (writtenCount == readCount && lastPageSize != PAGE_SIZE)
                 {
                     outStream.Write(page, 0, lastPageSize);
                     return outStream.GetHashCode();
