@@ -107,10 +107,10 @@ public void Faster_Linq_Random()
 
 The performance is raised in an exception if it fails but can also be output if it passes with the above output function.
 ```
- Tests.CheckTests.Faster_Linq_Random [27ms]
- Standard Output Messages:
- 32.2%[-3..+4] faster, sigma=50.0 (2,551 vs 17)
- ```
+Tests.CheckTests.Faster_Linq_Random [27ms]
+Standard Output Messages:
+32.2%[-3..+4] faster, sigma=50.0 (2,551 vs 17)
+```
 
  The first number is the estimated median performance improvement with the interquartile range in the square brackets.
  The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
@@ -149,6 +149,12 @@ public void ReverseComplement_Faster()
     )
     .Output(writeLine);
 }
+```
+
+```
+Tests.ReverseComplementTests.ReverseComplement_Faster [27s 870ms]
+Standard Output Messages:
+25.1%[-5..+6] faster, sigma=6.0 (36 vs 0)
 ```
 
 These tests are in xUnit but could equally be used in any testing framework.
