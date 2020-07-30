@@ -10,7 +10,7 @@ namespace Tests
         public static int[] ArrayRepeat(int x, int n)
         {
             var a = new int[n];
-            while (--n >= 0) a[n] = x;
+            Array.Fill(a, x);
             return a;
         }
 

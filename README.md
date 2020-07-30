@@ -53,6 +53,21 @@ public void Long_Range()
 }
 ```
 
+Sample test for int Gen value distribution.
+```csharp
+[Fact]
+public void Int_Distribution()
+{
+    var frequency = 10;
+    var buckets = 70;
+    var expected = ArrayRepeat(frequency, buckets);
+    Gen.Int[0, buckets - 1]
+    .Array[frequency * buckets]
+    .Select(i => Tally(buckets, i))
+    .SampleOne(actual => Check.ChiSquared(expected, actual));
+}
+```
+
 Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
 ```csharp
 [Fact]
@@ -90,6 +105,17 @@ public void Faster_Linq_Random()
 }
 ```
 
+The performance is raised in an exception if it fails but can also be output if it passes with the above output function.
+```
+ Tests.CheckTests.Faster_Linq_Random [27ms]
+ Standard Output Messages:
+ 32.2%[-3..+4] faster, sigma=50.0 (2,551 vs 17)
+ ```
+
+ The first number is the estimated median performance improvement with the interquartile range in the square brackets.
+ The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
+ distribution for the null hypothosis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
+
 Performance test of two different ways of multiplying a matrix for a sample of matrix sizes checking the results are always the same.
 An external equal assert is used.
 ```csharp
@@ -109,16 +135,21 @@ public void Faster_Matrix_Multiply_Range()
 }
 ```
 
-The performance is raised in an exception if it fails but can also be output if it passes with the above output function.
-```
- Tests.CheckTests.Faster_Linq_Random [27ms]
- Standard Output Messages:
- 32.2%[-3..+4] faster, sigma=50.0 (2,551 vs 17)
- ```
+Performance test of a new Benchmarks Game submission.
+```csharp
+[Fact]
+public void ReverseComplement_Faster()
+{
+    if (!File.Exists(Utils.Fasta.Filename)) Utils.Fasta.NotMain(new[] { "25000000" });
 
- The first number is the estimated median performance improvement with the interquartile range in the square brackets.
- The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
- distribution for the null hypothosis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
+    Check.Faster(
+        ReverseComplementNew.RevComp.NotMain,
+        ReverseComplementOld.RevComp.NotMain,
+        threads: 1, timeout: 600_000, sigma: 6
+    )
+    .Output(writeLine);
+}
+```
 
 These tests are in xUnit but could equally be used in any testing framework.
 
