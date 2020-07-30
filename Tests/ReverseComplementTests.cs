@@ -16,8 +16,8 @@
             if (!File.Exists(Utils.Fasta.Filename)) Utils.Fasta.NotMain(new[] { "25000000" });
 
             Check.Faster(
-                () => ReverseComplementNew.RevComp.NotMain(null),
-                () => ReverseComplementOld.RevComp.NotMain(null),
+                ReverseComplementNew.RevComp.NotMain,
+                ReverseComplementOld.RevComp.NotMain,
                 threads: 1, timeout: 600_000, sigma: 6
             )
             .Output(writeLine);
@@ -28,8 +28,8 @@
 namespace ReverseComplementNew
 {
     using System;
-    using System.Buffers;
     using System.IO;
+    using System.Buffers;
     using System.Threading;
 
     public static class RevComp
@@ -37,10 +37,11 @@ namespace ReverseComplementNew
         const int PAGE_SIZE = 1024 * 1024;
         const byte LF = (byte)'\n', GT = (byte)'>';
         static volatile int readCount = 0, lastPageSize = PAGE_SIZE, canWriteCount = 0;
-        public static int NotMain(string[] args)
+        static byte[][] pages;
+        public static int NotMain()
         {
             readCount = 0; lastPageSize = PAGE_SIZE; canWriteCount = 0; // not needed if not rerun
-            var pages = new byte[1024][];
+            pages = new byte[1024][];
             new Thread(() =>
             {
                 static int Read(Stream stream, byte[] bytes, int offset)
@@ -62,7 +63,7 @@ namespace ReverseComplementNew
 
             new Thread(() =>
             {
-                void Reverse(object o)
+                static void Reverse(object o)
                 {
                     Span<byte> map = stackalloc byte[256];
                     for (int b = 0; b < map.Length; b++) map[b] = (byte)b;
@@ -126,7 +127,7 @@ namespace ReverseComplementNew
                 {
                     while (true) // skip header
                     {
-                        while (pageID == readCount) ;
+                        while (pageID == readCount) Thread.Sleep(0);
                         index = Array.IndexOf(pages[pageID], LF, index);
                         if (index != -1) break;
                         index = 0;
@@ -136,7 +137,7 @@ namespace ReverseComplementNew
                     var lo = ++index;
                     while (true)
                     {
-                        while (pageID == readCount) ;
+                        while (pageID == readCount) Thread.Sleep(0);
                         var isLastPage = pageID + 1 == readCount && lastPageSize != PAGE_SIZE;
                         index = Array.IndexOf(pages[pageID], GT, index,
                             (isLastPage ? lastPageSize : PAGE_SIZE) - index);
@@ -162,7 +163,7 @@ namespace ReverseComplementNew
             int writtenCount = 0;
             while (true)
             {
-                while (writtenCount == canWriteCount) ;
+                while (writtenCount == canWriteCount) Thread.Sleep(0);
                 var page = pages[writtenCount++];
                 if (writtenCount == readCount && lastPageSize != PAGE_SIZE)
                 {
@@ -384,7 +385,7 @@ namespace ReverseComplementOld
             }
         }
 
-        public static int NotMain(string[] args)
+        public static int NotMain()
         {
             readQue = new BlockingCollection<byte[]>();
             writeQue = new BlockingCollection<RevCompSequence>();
