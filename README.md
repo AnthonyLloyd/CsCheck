@@ -53,7 +53,7 @@ public void Long_Range()
 }
 ```
 
-Sample test for int Gen value distribution.
+Sample test for int value distribution.
 ```csharp
 [Fact]
 public void Int_Distribution()
