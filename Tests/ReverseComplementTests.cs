@@ -34,10 +34,12 @@ namespace ReverseComplementNew
 
     public static class RevComp
     {
+        const int PAGE_SIZE = 1024 * 1024;
+        const byte LF = (byte)'\n', GT = (byte)'>';
+        static volatile int readCount = 0, lastPageSize = PAGE_SIZE, canWriteCount = 0;
         public static int NotMain(string[] args)
         {
-            const int PAGE_SIZE = 1024 * 1024;
-            int readCount = 0, lastPageSize = PAGE_SIZE, canWriteCount = 0;
+            readCount = 0; lastPageSize = PAGE_SIZE; canWriteCount = 0; // not needed if not rerun
             var pages = new byte[1024][];
             new Thread(() =>
             {
@@ -54,14 +56,12 @@ namespace ReverseComplementNew
                     var page = ArrayPool<byte>.Shared.Rent(PAGE_SIZE);
                     lastPageSize = Read(inStream, page, 0);
                     pages[readCount] = page;
-                    Volatile.Write(ref readCount, readCount + 1);
+                    readCount++;
                 } while (lastPageSize == PAGE_SIZE);
             }).Start();
 
             new Thread(() =>
             {
-                const byte LF = (byte)'\n', GT = (byte)'>';
-
                 void Reverse(object o)
                 {
                     Span<byte> map = stackalloc byte[256];
@@ -108,7 +108,7 @@ namespace ReverseComplementNew
                             lo = 0;
                             loPage = pages[++loPageID];
                             if (previous == null || !previous.IsAlive)
-                                Volatile.Write(ref canWriteCount, loPageID);
+                                canWriteCount = loPageID;
                         }
                         if (hi == -1)
                         {
@@ -118,7 +118,7 @@ namespace ReverseComplementNew
                     } while (loPageID < hiPageID
                          || (loPageID == hiPageID && lo <= hi));
                     previous?.Join();
-                    Volatile.Write(ref canWriteCount, lastPageID);
+                    canWriteCount = lastPageID;
                 }
 
                 int pageID = 0, index = 0; Thread previous = null;
@@ -126,7 +126,7 @@ namespace ReverseComplementNew
                 {
                     while (true) // skip header
                     {
-                        while (pageID == Volatile.Read(ref readCount)) ;
+                        while (pageID == readCount) ;
                         index = Array.IndexOf(pages[pageID], LF, index);
                         if (index != -1) break;
                         index = 0;
@@ -136,7 +136,7 @@ namespace ReverseComplementNew
                     var lo = ++index;
                     while (true)
                     {
-                        while (pageID == Volatile.Read(ref readCount)) ;
+                        while (pageID == readCount) ;
                         var isLastPage = pageID + 1 == readCount && lastPageSize != PAGE_SIZE;
                         index = Array.IndexOf(pages[pageID], GT, index,
                             (isLastPage ? lastPageSize : PAGE_SIZE) - index);
@@ -162,7 +162,7 @@ namespace ReverseComplementNew
             int writtenCount = 0;
             while (true)
             {
-                while (writtenCount == Volatile.Read(ref canWriteCount)) ;
+                while (writtenCount == canWriteCount) ;
                 var page = pages[writtenCount++];
                 if (writtenCount == readCount && lastPageSize != PAGE_SIZE)
                 {
