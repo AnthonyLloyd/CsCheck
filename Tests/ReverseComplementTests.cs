@@ -10,7 +10,7 @@
         readonly Action<string> writeLine;
         public ReverseComplementTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
 
-        //[Fact]
+        [Fact]
         public void ReverseComplement_Faster()
         {
             if (!File.Exists(Utils.Fasta.Filename)) Utils.Fasta.NotMain(new[] { "25000000" });
@@ -18,7 +18,7 @@
             Check.Faster(
                 () => ReverseComplementNew.RevComp.NotMain(null),
                 () => ReverseComplementOld.RevComp.NotMain(null),
-                threads: 1, timeout: 1800_000, sigma: 35
+                threads: 1, timeout: 600_000, sigma: 6
             )
             .Output(writeLine);
         }
@@ -37,7 +37,7 @@ namespace ReverseComplementNew
         public static int NotMain(string[] args)
         {
             const int PAGE_SIZE = 1024 * 1024;
-            int readCount = 0, canWriteCount = 0, lastPageSize = PAGE_SIZE;
+            int readCount = 0, lastPageSize = PAGE_SIZE, canWriteCount = 0;
             var pages = new byte[1024][];
             new Thread(() =>
             {
@@ -54,31 +54,32 @@ namespace ReverseComplementNew
                     var page = ArrayPool<byte>.Shared.Rent(PAGE_SIZE);
                     lastPageSize = Read(inStream, page, 0);
                     pages[readCount] = page;
-                    readCount++;
+                    Volatile.Write(ref readCount, readCount + 1);
                 } while (lastPageSize == PAGE_SIZE);
             }).Start();
 
             new Thread(() =>
             {
                 const byte LF = (byte)'\n', GT = (byte)'>';
-                var map = new byte[256];
-                for (int b = 0; b < map.Length; b++) map[b] = (byte)b;
-                map['A'] = map['a'] = (byte)'T';
-                map['B'] = map['b'] = (byte)'V';
-                map['C'] = map['c'] = (byte)'G';
-                map['D'] = map['d'] = (byte)'H';
-                map['G'] = map['g'] = (byte)'C';
-                map['H'] = map['h'] = (byte)'D';
-                map['K'] = map['k'] = (byte)'M';
-                map['M'] = map['m'] = (byte)'K';
-                map['R'] = map['r'] = (byte)'Y';
-                map['T'] = map['t'] = (byte)'A';
-                map['V'] = map['v'] = (byte)'B';
-                map['Y'] = map['y'] = (byte)'R';
 
-                void Reverse(object o) //do some edits here
+                void Reverse(object o)
                 {
-                    var (loPageID, lo, lastPageID, hi, previous) = ((int, int, int, int, Thread))o;
+                    Span<byte> map = stackalloc byte[256];
+                    for (int b = 0; b < map.Length; b++) map[b] = (byte)b;
+                    map['A'] = map['a'] = (byte)'T';
+                    map['B'] = map['b'] = (byte)'V';
+                    map['C'] = map['c'] = (byte)'G';
+                    map['D'] = map['d'] = (byte)'H';
+                    map['G'] = map['g'] = (byte)'C';
+                    map['H'] = map['h'] = (byte)'D';
+                    map['K'] = map['k'] = (byte)'M';
+                    map['M'] = map['m'] = (byte)'K';
+                    map['R'] = map['r'] = (byte)'Y';
+                    map['T'] = map['t'] = (byte)'A';
+                    map['V'] = map['v'] = (byte)'B';
+                    map['Y'] = map['y'] = (byte)'R';
+                    var (loPageID, lo, lastPageID, hi, previous) =
+                        ((int, int, int, int, Thread))o;
                     var hiPageID = lastPageID;
                     if (lo == PAGE_SIZE) { lo = 0; loPageID++; }
                     if (hi == -1) { hi = PAGE_SIZE - 1; hiPageID--; }
@@ -106,16 +107,18 @@ namespace ReverseComplementNew
                         {
                             lo = 0;
                             loPage = pages[++loPageID];
-                            if (previous == null || !previous.IsAlive) canWriteCount = loPageID;
+                            if (previous == null || !previous.IsAlive)
+                                Volatile.Write(ref canWriteCount, loPageID);
                         }
                         if (hi == -1)
                         {
                             hi = PAGE_SIZE - 1;
                             hiPage = pages[--hiPageID];
                         }
-                    } while (loPageID < hiPageID || (loPageID == hiPageID && lo <= hi));
+                    } while (loPageID < hiPageID
+                         || (loPageID == hiPageID && lo <= hi));
                     previous?.Join();
-                    canWriteCount = lastPageID;
+                    Volatile.Write(ref canWriteCount, lastPageID);
                 }
 
                 int pageID = 0, index = 0; Thread previous = null;
@@ -123,7 +126,7 @@ namespace ReverseComplementNew
                 {
                     while (true) // skip header
                     {
-                        while (pageID == readCount) Thread.Sleep(0);
+                        while (pageID == Volatile.Read(ref readCount)) ;
                         index = Array.IndexOf(pages[pageID], LF, index);
                         if (index != -1) break;
                         index = 0;
@@ -133,7 +136,7 @@ namespace ReverseComplementNew
                     var lo = ++index;
                     while (true)
                     {
-                        while (pageID == readCount) Thread.Sleep(0);
+                        while (pageID == Volatile.Read(ref readCount)) ;
                         var isLastPage = pageID + 1 == readCount && lastPageSize != PAGE_SIZE;
                         index = Array.IndexOf(pages[pageID], GT, index,
                             (isLastPage ? lastPageSize : PAGE_SIZE) - index);
@@ -159,7 +162,7 @@ namespace ReverseComplementNew
             int writtenCount = 0;
             while (true)
             {
-                while (writtenCount == canWriteCount) Thread.Sleep(0);
+                while (writtenCount == Volatile.Read(ref canWriteCount)) ;
                 var page = pages[writtenCount++];
                 if (writtenCount == readCount && lastPageSize != PAGE_SIZE)
                 {
