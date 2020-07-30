@@ -20,7 +20,7 @@ CsCheck also makes multithreading and performance testing simple and fast.
 
 ### Examples
 
-Sample test of the range of a unit single. The default sample size is 100.
+**1.** Sample test of the range of a unit single. The default sample size is 100.
 ```csharp
 [Fact]
 public void Single_Unit_Range()
@@ -29,7 +29,7 @@ public void Single_Unit_Range()
 }
 ```
 
-Sample test for chars taken from a string.
+**2.** Sample test for chars taken from a string.
 ```csharp
 [Fact]
 public void Char_Array()
@@ -39,7 +39,7 @@ public void Char_Array()
 }
 ```
 
-Sample test for long ranges.
+**3.** Sample test for long ranges.
 ```csharp
 [Fact]
 public void Long_Range()
@@ -53,7 +53,7 @@ public void Long_Range()
 }
 ```
 
-Sample test for int value distribution.
+**4.** Sample test for int value distribution.
 ```csharp
 [Fact]
 public void Int_Distribution()
@@ -68,7 +68,7 @@ public void Int_Distribution()
 }
 ```
 
-Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
+**5.** Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
 ```csharp
 [Fact]
 public void Multithreading_DictionarySlim()
@@ -91,7 +91,7 @@ public void Multithreading_DictionarySlim()
 }
 ```
 
-Performance test of linq expressions checking the results are always the same. The first expression is asserted to be faster than the second.
+**6.** Performance test of linq expressions checking the results are always the same. The first expression is asserted to be faster than the second.
 ```csharp
 [Fact]
 public void Faster_Linq_Random()
@@ -116,7 +116,7 @@ Standard Output Messages:
  The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
  distribution for the null hypothosis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
 
-Performance test of two different ways of multiplying a matrix for a sample of matrix sizes checking the results are always the same.
+**7.** Performance test of two different ways of multiplying a matrix for a sample of matrix sizes checking the results are always the same.
 An external equal assert is used.
 ```csharp
 [Fact]
@@ -135,7 +135,7 @@ public void Faster_Matrix_Multiply_Range()
 }
 ```
 
-Performance test of a new Benchmarks Game submission.
+**8.** Performance test of a new Benchmarks Game submission.
 ```csharp
 [Fact]
 public void ReverseComplement_Faster()
