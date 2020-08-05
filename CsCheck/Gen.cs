@@ -343,6 +343,8 @@ namespace CsCheck
         public static readonly GenDouble Double = new GenDouble();
         public static readonly GenDecimal Decimal = new GenDecimal();
         public static readonly GenDateTime DateTime = new GenDateTime();
+        public static readonly GenDateTimeOffset DateTimeOffset = new GenDateTimeOffset();
+        public static readonly GenGuid Guid = new GenGuid();
         public static readonly GenChar Char = new GenChar();
         public static readonly GenString String = new GenString();
     }
@@ -725,6 +727,32 @@ namespace CsCheck
                     return (new DateTime((long)i), new Size(i, null));
                 });
             }
+        }
+    }
+
+    public class GenDateTimeOffset : Gen<DateTimeOffset>
+    {
+        readonly Gen<DateTime> genDateTime = Gen.DateTime[new DateTime(1800, 1, 1), new DateTime(2200, 1, 1)];
+        readonly Gen<int> genOffset = Gen.Int[-14 * 60, 14 * 60];
+        public override (DateTimeOffset, Size) Generate(PCG pcg)
+        {
+            var (os,s1) = genOffset.Generate(pcg);
+            var (dt,s2) = genDateTime.Generate(pcg);
+            return (new DateTimeOffset(dt, TimeSpan.FromMinutes(os)), new Size(s1.I, new[] { s2 }));
+        }
+    }
+
+    public class GenGuid : Gen<Guid>
+    {
+        public override (Guid, Size) Generate(PCG pcg)
+        {
+            uint i0 = pcg.Next();
+            uint i1 = pcg.Next();
+            uint i2 = pcg.Next();
+            uint i3 = pcg.Next();
+            return (new Guid(i0, (ushort)(i1 >> 16), (ushort)i1, (byte)(i2 >> 24), (byte)(i2 >> 16), (byte)(i2 >> 8), (byte)i2,
+                                                                 (byte)(i3 >> 24), (byte)(i3 >> 16), (byte)(i3 >> 8), (byte)i3),
+                new Size(0, new[] { new Size(i0, null), new Size(i1, null), new Size(i2, null), new Size(i3, null) }));
         }
     }
 

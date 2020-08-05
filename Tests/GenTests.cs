@@ -351,6 +351,18 @@ namespace Tests
         }
 
         [Fact]
+        public void DateTimeOffset()
+        {
+            Gen.DateTimeOffset.Sample(i => { });
+        }
+
+        [Fact]
+        public void Guid()
+        {
+            Gen.Guid.Sample(i => { });
+        }
+
+        [Fact]
         public void Char_Range()
         {
             (from t in Gen.Char.Select(Gen.Char)
