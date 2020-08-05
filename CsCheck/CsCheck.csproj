@@ -8,7 +8,7 @@ It differs in that generation and shrinking are both based on PCG, a fast random
 This gives the following advantages:
 
 - Automatic shrinking. Gen classes are composable with no need for Arb classes. So less boilerplate.
-- Random testing and shrinking can run in parallel. This and PCG make it very fast.
+- Random testing and shrinking are parallelized. This and PCG make it very fast.
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be repeated to give simpler cases for high dimensional problems.
 
@@ -21,8 +21,8 @@ CsCheck also makes multithreading and performance testing simple and fast.
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>testing;quickcheck;random;performance;multithreading</PackageTags>
-        <Version>0.8.2</Version>
-        <PackageReleaseNotes>Added Enumerable and SortedDictionary</PackageReleaseNotes>
+        <Version>0.8.3</Version>
+        <PackageReleaseNotes>Added Guid and DateTimeOffset</PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <WarningLevel>4</WarningLevel>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

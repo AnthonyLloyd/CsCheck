@@ -12,7 +12,7 @@ It differs in that generation and shrinking are both based on [PCG](https://www.
 This gives the following advantages:
 
 - Automatic shrinking. Gen classes are composable with no need for Arb classes. So less boilerplate.
-- Random testing and shrinking can run in parallel. This and PCG make it very fast.
+- Random testing and shrinking are parallelized. This and PCG make it very fast.
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be repeated to give simpler cases for high dimensional problems.
 
