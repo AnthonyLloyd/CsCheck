@@ -17,7 +17,9 @@ namespace Tests
             public Country Country { get; }
             public Currency Currency { get; }
             public Instrument(string name, Country country, Currency currency) { Name = name; Country = country; Currency = currency; }
-        };
+            public override bool Equals(object o) => o is Instrument i && i.Name == Name && i.Country == Country && i.Currency == Currency;
+            public override int GetHashCode() => HashCode.Combine(Name, Country, Currency);
+        }
         public class Equity : Instrument
         {
             public IReadOnlyCollection<Exchange> Exchanges { get; }
@@ -25,7 +27,9 @@ namespace Tests
             {
                 Exchanges = exchanges;
             }
-        };
+            public override bool Equals(object o) => o is Equity i && base.Equals(i) && i.Exchanges.SequenceEqual(Exchanges);
+            public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Exchanges);
+        }
         public class Bond : Instrument
         {
             public IReadOnlyDictionary<DateTime, double> Coupons { get; }
@@ -33,14 +37,18 @@ namespace Tests
             {
                 Coupons = coupons;
             }
-        };
+            public override bool Equals(object o) => o is Bond i && base.Equals(i) && i.Coupons.SequenceEqual(Coupons);
+            public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Coupons);
+        }
         public class Trade
         {
             public DateTime Date { get; }
             public int Quantity { get; }
             public double Cost { get; }
             public Trade(DateTime date, int quantity, double cost) { Date = date; Quantity = quantity; Cost = cost; }
-        };
+            public override bool Equals(object o) => o is Trade i && i.Date == Date && i.Quantity == Quantity && i.Cost == Cost;
+            public override int GetHashCode() => HashCode.Combine(Date, Quantity, Cost);
+        }
         public class Position
         {
             public Instrument Instrument { get; }
@@ -50,16 +58,20 @@ namespace Tests
             public int Quantity => Trades.Sum(i => i.Quantity);
             public double Cost => Trades.Sum(i => i.Cost);
             public double Profit => Price * Quantity - Cost;
-        };
+            public override bool Equals(object o) => o is Position i && i.Instrument == Instrument && i.Trades.SequenceEqual(Trades) && i.Price == Price;
+            public override int GetHashCode() => HashCode.Combine(Instrument, Trades, Price);
+        }
         public class Portfolio
         {
             public string Name { get; }
             public Currency Currency { get; }
             public IReadOnlyCollection<Position> Positions { get; }
             public Portfolio(string name, Currency currency, IReadOnlyCollection<Position> positions) { Name = name; Currency = currency; Positions = positions; }
-        };
+            public override bool Equals(object o) => o is Portfolio i && i.Name == Name && i.Currency == Currency && i.Positions.SequenceEqual(Positions);
+            public override int GetHashCode() => HashCode.Combine(Name, Currency, Positions);
+        }
 
-        public static class MyGen
+        public static class ModelGen
         {
             public static Gen<string> Name = Gen.String["ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 "];
             public static Gen<Currency> Currency = Gen.Enum<Currency>();
@@ -79,7 +91,7 @@ namespace Tests
         [Fact]
         public void Model()
         {
-            MyGen.Portfolio.Sample(p => { });
+            ModelGen.Portfolio.Sample(p => { });
         }
     }
 }
