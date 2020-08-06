@@ -40,8 +40,8 @@ namespace CsCheck
             var sigma = Environment.GetEnvironmentVariable("CsCheck_Sigma");
             if (!string.IsNullOrWhiteSpace(sigma)) Sigma = double.Parse(sigma);
         }
-        /// <summary>Sample the Gen calling the Action each time across multiple threads. Shrink any exceptions if necessary.</summary>
-        public static void Sample<T>(this Gen<T> gen, Action<T> action, string seed = null, int size = -1, int threads = -1)
+        /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        public static void Sample<T>(this Gen<T> gen, Action<T> assert, string seed = null, int size = -1, int threads = -1)
         {
             if (size == -1) size = Size;
             PCG minPCG = null;
@@ -58,7 +58,7 @@ namespace CsCheck
                 {
                     var t = gen.Generate(pcg);
                     s = t.Item2;
-                    action(t.Item1);
+                    assert(t.Item1);
                 }
                 catch (Exception e)
                 {
@@ -67,6 +67,7 @@ namespace CsCheck
                     minSize = s;
                     minException = e;
                 }
+                size--;
             }
 
             var lockObj = new object();
@@ -81,7 +82,7 @@ namespace CsCheck
                     var t = gen.Generate(pcg);
                     s = t.Item2;
                     if (minSize is null || s.IsLessThan(minSize))
-                        action(t.Item1);
+                        assert(t.Item1);
                     else
                         skipped++;
                 }
@@ -105,7 +106,7 @@ namespace CsCheck
                 $"CsCheck_Seed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
         }
-        /// <summary>Sample the Gen calling the test Func each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
         public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, int size = -1, int threads = -1)
         {
             if (size == -1) size = Size;
@@ -137,6 +138,7 @@ namespace CsCheck
                     minSize = s;
                     minException = e;
                 }
+                size--;
             }
 
             var lockObj = new object();
@@ -188,18 +190,18 @@ namespace CsCheck
                 $"CsCheck_Seed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
         }
-        /// <summary>Sample the Gen once calling the Action.</summary>
-        public static void SampleOne<T>(this Gen<T> gen, Action<T> action, string seed = null)
+        /// <summary>Sample the gen once calling the assert.</summary>
+        public static void SampleOne<T>(this Gen<T> gen, Action<T> assert, string seed = null)
         {
-            Sample(gen, action, seed, 1, 1);
+            Sample(gen, assert, seed, 1, 1);
         }
-        /// <summary>Sample the Gen once calling the test Func.</summary>
+        /// <summary>Sample the gen once calling the predicate.</summary>
         public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null)
         {
             Sample(gen, predicate, seed, 1, 1);
         }
-        /// <summary>Sample the Gen and Action pairs each time across multiple threads. Useful for multithreading tests.</summary>
-        public static void Sample<T1, T2>(Gen<T1> gen1, Action<T1> action1, Gen<T2> gen2, Action<T2> action2,
+        /// <summary>Sample the gen and assert pairs each time across multiple threads. Useful for multithreading tests.</summary>
+        public static void Sample<T1, T2>(Gen<T1> gen1, Action<T1> assert1, Gen<T2> gen2, Action<T2> assert2,
             string seed = null, int size = -1, int threads = -1)
         {
             try
@@ -207,7 +209,7 @@ namespace CsCheck
                 Sample(
                     Gen.Bool.SelectMany(b => b ? gen1.Select(t => (b, (object)t))
                                                : gen2.Select(t => (b, (object)t))),
-                    t => { if (t.b) action1((T1)t.Item2); else action2((T2)t.Item2); },
+                    t => { if (t.b) assert1((T1)t.Item2); else assert2((T2)t.Item2); },
                     seed, size, threads
                 );
             }
@@ -216,9 +218,9 @@ namespace CsCheck
                 throw e.InnerException; // remove seed info as it's not reproducible.
             }
         }
-        /// <summary>Sample the Gen and Action pairs each time across multiple threads. Useful for multithreading tests.</summary>
-        public static void Sample<T1, T2, T3>(Gen<T1> gen1, Action<T1> action1, Gen<T2> gen2, Action<T2> action2,
-            Gen<T3> gen3, Action<T3> action3, string seed = null, int size = -1, int threads = -1)
+        /// <summary>Sample the gen and assert pairs each time across multiple threads. Useful for multithreading tests.</summary>
+        public static void Sample<T1, T2, T3>(Gen<T1> gen1, Action<T1> assert1, Gen<T2> gen2, Action<T2> assert2,
+            Gen<T3> gen3, Action<T3> assert3, string seed = null, int size = -1, int threads = -1)
         {
             try
             {
@@ -228,9 +230,9 @@ namespace CsCheck
                                                 : gen3.Select(t => (i, (object)t))),
                     t =>
                     {
-                        if (t.i == 0) action1((T1)t.Item2);
-                        else if (t.i == 1) action2((T2)t.Item2);
-                        else action3((T3)t.Item2);
+                        if (t.i == 0) assert1((T1)t.Item2);
+                        else if (t.i == 1) assert2((T2)t.Item2);
+                        else assert3((T3)t.Item2);
                     },
                     seed, size, threads
                 );
@@ -240,9 +242,9 @@ namespace CsCheck
                 throw e.InnerException; // remove seed info as it's not reproducible.
             }
         }
-        /// <summary>Sample the Gen and Action pairs each time across multiple threads. Useful for multithreading tests.</summary>
-        public static void Sample<T1, T2, T3, T4>(Gen<T1> gen1, Action<T1> action1, Gen<T2> gen2, Action<T2> action2,
-            Gen<T3> gen3, Action<T3> action3, Gen<T4> gen4, Action<T4> action4, string seed = null, int size = -1, int threads = -1)
+        /// <summary>Sample the gen and assert pairs each time across multiple threads. Useful for multithreading tests.</summary>
+        public static void Sample<T1, T2, T3, T4>(Gen<T1> gen1, Action<T1> assert1, Gen<T2> gen2, Action<T2> assert2,
+            Gen<T3> gen3, Action<T3> assert3, Gen<T4> gen4, Action<T4> assert4, string seed = null, int size = -1, int threads = -1)
         {
             try
             {
@@ -259,10 +261,10 @@ namespace CsCheck
                     {
                         switch (t.i & 3)
                         {
-                            case 0: action1((T1)t.Item2); break;
-                            case 1: action2((T2)t.Item2); break;
-                            case 2: action3((T3)t.Item2); break;
-                            default: action4((T4)t.Item2); break;
+                            case 0: assert1((T1)t.Item2); break;
+                            case 1: assert2((T2)t.Item2); break;
+                            case 2: assert3((T3)t.Item2); break;
+                            default: assert4((T4)t.Item2); break;
                         }
                     },
                     seed, size, threads
@@ -533,6 +535,13 @@ namespace CsCheck
             if (!mre.Wait(timeout)) throw new CsCheckException("Timeout! " + r.ToString());
             if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
             return r;
+        }
+        public static void Regression<T>(this Gen<T> gen, Func<T,bool> where, string seed = null, Func<T,bool> assert = null)
+        {
+            Sample(gen, t => {
+                if (!where(t)) throw new CsCheckException("where clause no longer satisfied");
+                return assert(t);
+            }, seed, 1);
         }
     }
 

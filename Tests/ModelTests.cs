@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CsCheck;
+using Microsoft.Win32.SafeHandles;
 using Xunit;
 
 namespace Tests
@@ -91,7 +92,10 @@ namespace Tests
         [Fact]
         public void Model()
         {
-            ModelGen.Portfolio.Sample(p => { });
+            MyGen.Portfolio.Regression(p => p.Positions.Count == 5,
+                "20c40eec8f1734032", p => p.Profit == -527_314_004.03999966);
         }
+
+        //VarInt perf
     }
 }
