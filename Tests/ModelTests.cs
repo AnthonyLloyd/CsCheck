@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
 using CsCheck;
 using Xunit;
 
@@ -88,13 +91,47 @@ namespace Tests
             public static Gen<Portfolio> Portfolio = Gen.Select(Name, Currency, Position.Array, (n, c, p) => new Portfolio(n, c, p));
         }
 
+
         [Fact]
         public void Model()
         {
             ModelGen.Portfolio.Regression(p => p.Positions.Count == 5,
-                "20c40eec8f1734032", p => p.Profit == -527_314_004.03999966);
+                "20c40eec8f1734032", p => p.Positions.Sum(i => i.Profit) == -527_314_004.03999966);
         }
 
-        //VarInt perf
+        // T -> (byte[],int) -> (byte[],int)
+        // Regression Gen tests, extension of HashCode? Where and codepath for examples
+        // HashStream
+        // Serial on type?
+    }
+    public struct Ser
+    {
+        public byte[] Bytes;
+        public int Position;
+        //public Ser()
+        //{
+        //    Bytes = ArrayPool<byte>.Shared.Rent(128);
+        //    Position = 0;
+        //}
+        public void Resize(int i)
+        {
+        }
+    }
+
+    public static class SerEx
+    {
+        public static Ser WriteInt(this ref Ser s, int x)
+        {
+            if(x < 0x80u)
+            {
+                s.Resize(1);
+                s.Bytes[s.Position++] = (byte)x;
+            }
+            return s;
+        }
+        public static int ReadInt(this ref Ser s)
+        {
+            return 1;
+        }
     }
 }
