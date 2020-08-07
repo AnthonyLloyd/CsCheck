@@ -536,12 +536,50 @@ namespace CsCheck
             if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
             return r;
         }
-        public static void Regression<T>(this Gen<T> gen, Func<T,bool> where, string seed = null, Func<T,bool> assert = null)
+        /// <summary>Generate an example that satisfies the predicate.</summary>
+        public static T Example<T>(this Gen<T> g, Func<T, bool> predicate, string seed = null, Action<string> output = null)
         {
-            Sample(gen, t => {
-                if (!where(t)) throw new CsCheckException("where clause no longer satisfied");
-                return assert(t);
-            }, seed, 1);
+            if (seed == null)
+            {
+                var mre = new ManualResetEventSlim();
+                T ret = default;
+                string message = null;
+                var threads = Environment.ProcessorCount;
+                while (threads-- > 0)
+                    Task.Run(() =>
+                    {
+                        var pcg = PCG.ThreadPCG;
+                        while (true)
+                        {
+                            if (mre.IsSet) return;
+                            var state = pcg.State;
+                            var t = g.Generate(pcg).Item1;
+                            if (predicate(t))
+                            {
+                                lock (mre)
+                                {
+                                    if (message == null)
+                                    {
+                                        message = $"Example {typeof(T).Name} seed = {pcg.ToString(state)}";
+                                        ret = t;
+                                        mre.Set();
+                                    }
+                                }
+
+                            }
+                        }
+                    });
+                mre.Wait();
+                if (output == null) throw new CsCheckException(message); else output(message);
+                return ret;
+            }
+            else
+            {
+                var pcg = PCG.Parse(seed);
+                var t = g.Generate(pcg).Item1;
+                if (!predicate(t)) throw new CsCheckException("where clause no longer satisfied");
+                return t;
+            }
         }
     }
 

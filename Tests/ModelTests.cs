@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net;
+using System.Collections.Generic;
 using CsCheck;
 using Xunit;
 
@@ -95,23 +92,25 @@ namespace Tests
         [Fact]
         public void Model()
         {
-            ModelGen.Portfolio.Regression(p => p.Positions.Count == 5,
-                "20c40eec8f1734032", p => p.Positions.Sum(i => i.Profit) == -527_314_004.03999966);
+            var portfolio = ModelGen.Portfolio.Example(p => p.Positions.Count == 5, "20c40eec8f1734032");
+            Assert.Equal(43_305_621.02, portfolio.Positions.Sum(i => i.Profit), 2);
         }
 
-        // T -> (byte[],int) -> (byte[],int)
-        // Regression Gen tests, extension of HashCode? Where and codepath for examples
+        // Say codepath when generating example.
+        // Extension of HashCode?
         // HashStream
         // Serial on type?
+        // T -> (byte[],int) -> (byte[],int)
+        // VarInt
     }
     public struct Ser
     {
         public byte[] Bytes;
         public int Position;
-        //public Ser()
         //{
         //    Bytes = ArrayPool<byte>.Shared.Rent(128);
         //    Position = 0;
+        //public Ser()
         //}
         public void Resize(int i)
         {
