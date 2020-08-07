@@ -92,7 +92,7 @@ namespace Tests
         [Fact]
         public void Model()
         {
-            var portfolio = ModelGen.Portfolio.Example(p => p.Positions.Count == 5, "20c40eec8f1734032");
+            var portfolio = ModelGen.Portfolio.Example(p => p.Positions.Count == 5, "0N0XIzNsQ0O2");
             Assert.Equal(43_305_621.02, portfolio.Positions.Sum(i => i.Profit), 2);
         }
 

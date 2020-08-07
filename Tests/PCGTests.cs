@@ -8,8 +8,8 @@ namespace Tests
         [Fact] // from the github https://github.com/imneme/pcg-c-basic minimal c implementation http://www.pcg-random.org/download.html#minimal-c-implementation
         public void PCG_Demo_1()
         {
-            var pcg = PCG.Parse("36185706b82c2e03f8");
-            Assert.Equal(54, pcg.Stream);
+            var pcg = PCG.Parse("1xn1HwIbwfUS");
+            Assert.Equal(54U, pcg.Stream);
             Assert.Equal(0x185706b82c2e03f8UL, pcg.State);
             Assert.Equal(0x7b47f409u, pcg.Next());
             Assert.Equal(0x2b47fed88766bb05UL, pcg.State);
@@ -34,8 +34,8 @@ namespace Tests
         [Fact]
         public void PCG_Demo_2()
         {
-            var pcg = PCG.Parse("1c04f77d504556f19");
-            Assert.Equal(1, pcg.Stream);
+            var pcg = PCG.Parse("c1ftZk4lmYp1");
+            Assert.Equal(1U, pcg.Stream);
             Assert.Equal(0xc04f77d504556f19UL, pcg.State);
             Assert.Equal(0x0d01e424u, pcg.Next());
             Assert.Equal(0x2680fbb23aaeee68UL, pcg.State);
@@ -60,8 +60,8 @@ namespace Tests
         [Fact]
         public void PCG_Demo_3()
         {
-            var pcg = PCG.Parse("05e64366ec2781f14");
-            Assert.Equal(0, pcg.Stream);
+            var pcg = PCG.Parse("5VAdCX2u1Yk0");
+            Assert.Equal(0U, pcg.Stream);
             Assert.Equal(0x5e64366ec2781f14UL, pcg.State);
             Assert.Equal(0x361c3e74u, pcg.Next());
             Assert.Equal(0x40e1e399cd2c6285UL, pcg.State);
@@ -106,7 +106,7 @@ namespace Tests
         }
 
         readonly Gen<PCG> genPCG =
-            Gen.Select(Gen.Int[0, int.MaxValue], Gen.ULong,
+            Gen.Select(Gen.UInt, Gen.ULong,
                 (stream, seed) => new PCG(stream, seed));
 
         [Fact]
@@ -169,6 +169,17 @@ namespace Tests
             Gen.ULong[1, ulong.MaxValue].Select(genPCG)
             .Select(t => (Max: t.V0, x: t.V1.Next64(t.V0)))
             .Sample(t => t.x >= 0UL && t.x <= t.Max);
+        }
+
+        [Fact]
+        public void SeedString_RoundTrip()
+        {
+            Gen.Select(Gen.ULong, Gen.UInt)
+            .Sample(t =>
+            {
+                var seed = SeedString.Create(t.V0, t.V1);
+                Assert.Equal(t, SeedString.Parse(seed));
+            });
         }
 
         [Fact]

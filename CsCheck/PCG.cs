@@ -14,7 +14,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Globalization;
 using System.Threading;
 
 namespace CsCheck
@@ -24,27 +23,21 @@ namespace CsCheck
         static int threadCount;
         [ThreadStatic]
         static PCG threadPCG;
-        internal static PCG ThreadPCG
-        {
-            get
-            {
-                return threadPCG ?? (threadPCG = new PCG(Interlocked.Increment(ref threadCount)));
-            }
-        }
-        public ulong Inc { get; }
+        internal static PCG ThreadPCG => threadPCG ?? (threadPCG = new PCG((uint)Interlocked.Increment(ref threadCount)));
+        readonly ulong Inc;
         public ulong State { get; private set; }
-        public int Stream => (int)(Inc >> 1);
+        public uint Stream => (uint)(Inc >> 1);
         PCG(ulong inc, ulong state)
         {
             Inc = inc;
             State = state;
         }
-        public PCG(int stream, ulong seed)
+        public PCG(uint stream, ulong seed)
         {
-            Inc = (ulong)(((long)stream << 1) | 1L);
+            Inc = (stream << 1) | 1UL;
             State = Inc + seed;
         }
-        public PCG(int stream) : this(stream, (ulong)Stopwatch.GetTimestamp()) { }
+        public PCG(uint stream) : this(stream, (ulong)Stopwatch.GetTimestamp()) { }
         public uint Next()
         {
             State = State * 6364136223846793005UL + Inc;
@@ -58,7 +51,7 @@ namespace CsCheck
             if (maxExclusive == 1U) return 0U;
             var threshold = ((uint)-(int)maxExclusive) % maxExclusive;
             uint n;
-            while ((n = Next()) < threshold) { };
+            while ((n = Next()) < threshold) ;
             return n % maxExclusive;
         }
         public ulong Next64(ulong maxExclusive)
@@ -66,16 +59,89 @@ namespace CsCheck
             if (maxExclusive <= uint.MaxValue) return Next((uint)maxExclusive);
             var threshold = ((ulong)-(long)maxExclusive) % maxExclusive;
             ulong n;
-            while ((n = Next64()) < threshold) { };
+            while ((n = Next64()) < threshold) ;
             return n % maxExclusive;
         }
-        public override string ToString() => (Inc >> 1).ToString("x") + State.ToString("x16");
-        public string ToString(ulong state) => (Inc >> 1).ToString("x") + state.ToString("x16");
-        public static PCG Parse(string s)
+        public override string ToString() => SeedString.Create(State, Stream);
+        public string ToString(ulong state) => SeedString.Create(state, Stream);
+        public static PCG Parse(string seed)
         {
-            var stream = uint.Parse(s.Substring(0, s.Length - 16), NumberStyles.HexNumber, null);
-            var state = ulong.Parse(s.Substring(s.Length - 16), NumberStyles.HexNumber, null);
-            return new PCG((ulong)(((long)stream << 1) | 1L), state);
+            var (state, stream) = SeedString.Parse(seed);
+            return new PCG((stream << 1) | 1UL, state);
+        }
+    }
+
+    public static class SeedString
+    {
+        static readonly char[] Chars64 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-".ToCharArray();
+        public static string Create(ulong i0, uint i1)
+        {
+            var chars = new char[i1 < 64 ? 12
+                               : i1 < 64 * 64 ? 13
+                               : i1 < 64 * 64 * 64 ? 14
+                               : i1 < 64 * 64 * 64 * 64 ? 15
+                               : i1 < 64 * 64 * 64 * 64 * 64 ? 16
+                               : 17];
+            chars[0] = Chars64[(int)((i0 >> 60) & 63)];
+            chars[1] = Chars64[(int)((i0 >> 54) & 63)];
+            chars[2] = Chars64[(int)((i0 >> 48) & 63)];
+            chars[3] = Chars64[(int)((i0 >> 42) & 63)];
+            chars[4] = Chars64[(int)((i0 >> 36) & 63)];
+            chars[5] = Chars64[(int)((i0 >> 30) & 63)];
+            chars[6] = Chars64[(int)((i0 >> 24) & 63)];
+            chars[7] = Chars64[(int)((i0 >> 18) & 63)];
+            chars[8] = Chars64[(int)((i0 >> 12) & 63)];
+            chars[9] = Chars64[(int)((i0 >> 6) & 63)];
+            chars[10] = Chars64[(int)(i0 & 63)];
+            chars[11] = Chars64[i1 & 63];
+            if (chars.Length > 12)
+            {
+                chars[12] = Chars64[(i1 >> 6) & 63];
+                if (chars.Length > 13)
+                {
+                    chars[13] = Chars64[(i1 >> 12) & 63];
+                    if (chars.Length > 14)
+                    {
+                        chars[14] = Chars64[(i1 >> 18) & 63];
+                        if (chars.Length > 15)
+                        {
+                            chars[15] = Chars64[(i1 >> 24) & 63];
+                            if (chars.Length > 16)
+                            {
+                                chars[16] = Chars64[(i1 >> 30) & 63];
+                            }
+                        }
+                    }
+                }
+            }
+            return new string(chars);
+        }
+        static int Index(char c)
+        {
+            for (int i = 0; i < Chars64.Length; i++)
+                if (Chars64[i] == c) return i;
+            throw new Exception("Invalid seed");
+        }
+        public static (ulong, uint) Parse(string seed)
+        {
+            var i = seed.Length == 12 ? Index(seed[11])
+                  : seed.Length == 13 ? Index(seed[11]) + (Index(seed[12]) << 6)
+                  : seed.Length == 14 ? Index(seed[11]) + (Index(seed[12]) << 6) + (Index(seed[13]) << 12)
+                  : seed.Length == 15 ? Index(seed[11]) + (Index(seed[12]) << 6) + (Index(seed[13]) << 12) + (Index(seed[14]) << 18)
+                  : seed.Length == 16 ? Index(seed[11]) + (Index(seed[12]) << 6) + (Index(seed[13]) << 12) + (Index(seed[14]) << 18) + (Index(seed[15]) << 24)
+                  : Index(seed[11]) + (Index(seed[12]) << 6) + (Index(seed[13]) << 12) + (Index(seed[14]) << 18) + (Index(seed[15]) << 24) + (Index(seed[16]) << 30);
+            return ((((((((((((((((((((
+                  (ulong)Index(seed[0]) << 6)
+                + (ulong)Index(seed[1])) << 6)
+                + (ulong)Index(seed[2])) << 6)
+                + (ulong)Index(seed[3])) << 6)
+                + (ulong)Index(seed[4])) << 6)
+                + (ulong)Index(seed[5])) << 6)
+                + (ulong)Index(seed[6])) << 6)
+                + (ulong)Index(seed[7])) << 6)
+                + (ulong)Index(seed[8])) << 6)
+                + (ulong)Index(seed[9])) << 6)
+                + (ulong)Index(seed[10]), (uint)i);
         }
     }
 }
