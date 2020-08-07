@@ -67,6 +67,8 @@ namespace Tests
             public Currency Currency { get; }
             public IReadOnlyCollection<Position> Positions { get; }
             public Portfolio(string name, Currency currency, IReadOnlyCollection<Position> positions) { Name = name; Currency = currency; Positions = positions; }
+            public double Profit(Func<Currency, double> fxRate) => Positions.Sum(i => i.Profit * fxRate(i.Instrument.Currency));
+            public double[] Risk(Func<Currency, double> fxRate) => Positions.Select(i => i.Profit * fxRate(i.Instrument.Currency)).ToArray();
             public override bool Equals(object o) => o is Portfolio i && i.Name == Name && i.Currency == Currency && i.Positions.SequenceEqual(Positions);
             public override int GetHashCode() => HashCode.Combine(Name, Currency, Positions);
         }
@@ -90,47 +92,44 @@ namespace Tests
 
 
         [Fact]
-        public void Model()
+        public void Portfolio_Mixed_Small_Profit_Example()
         {
-            var portfolio = ModelGen.Portfolio.Example(p => p.Positions.Count == 5, "0N0XIzNsQ0O2");
-            Assert.Equal(43_305_621.02, portfolio.Positions.Sum(i => i.Profit), 2);
+            var portfolio = ModelGen.Portfolio.Example(p =>
+                   p.Positions.Count == 5
+                && p.Positions.Any(i => i.Instrument is Bond)
+                && p.Positions.Any(i => i.Instrument is Equity)
+            , "0N0XIzNsQ0O2");
+            var currencies = portfolio.Positions.Select(i => i.Instrument.Currency).Distinct().ToArray();
+            var fxRates = ModelGen.Price.Array[currencies.Length].Example(a =>
+                a.All(i => i > 0.75 && i < 1.5)
+            , "ftXKwKhS6ec4");
+            double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
+            Assert.Equal(9_772_529.43, portfolio.Profit(fxRate), 2);
         }
 
-        // Say codepath when generating example.
-        // Extension of HashCode?
-        // HashStream
-        // Serial on type?
-        // T -> (byte[],int) -> (byte[],int)
-        // VarInt
-    }
-    public struct Ser
-    {
-        public byte[] Bytes;
-        public int Position;
-        //{
-        //    Bytes = ArrayPool<byte>.Shared.Rent(128);
-        //    Position = 0;
-        //public Ser()
-        //}
-        public void Resize(int i)
+        [Fact(Skip = "Failing due to randomness in HashCode, need to create own")]
+        public void Portfolio_Mixed_Small_Risk_Example()
         {
+            var portfolio = ModelGen.Portfolio.Example(p =>
+                   p.Positions.Count == 5
+                && p.Positions.Any(i => i.Instrument is Bond)
+                && p.Positions.Any(i => i.Instrument is Equity)
+            , "0N0XIzNsQ0O2");
+            var currencies = portfolio.Positions.Select(i => i.Instrument.Currency).Distinct().ToArray();
+            var fxRates = ModelGen.Price.Array[currencies.Length].Example(a =>
+                a.All(i => i > 0.75 && i < 1.5)
+            , "ftXKwKhS6ec4");
+            double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
+            var risk = portfolio.Risk(fxRate);
+            var hashCode = new HashCode();
+            foreach (var d in risk) hashCode.Add(d);
+            Assert.Equal(625790812, hashCode.ToHashCode());
         }
-    }
 
-    public static class SerEx
-    {
-        public static Ser WriteInt(this ref Ser s, int x)
-        {
-            if(x < 0x80u)
-            {
-                s.Resize(1);
-                s.Bytes[s.Position++] = (byte)x;
-            }
-            return s;
-        }
-        public static int ReadInt(this ref Ser s)
-        {
-            return 1;
-        }
+        // Regression - for release, say codepath when generating example.
+        // HashCode extensions - HashStream, IEnumerable? - in CsCheck
+
+        // VarInt example
+        // Serialization example
     }
 }
