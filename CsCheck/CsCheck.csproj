@@ -12,7 +12,7 @@ This gives the following advantages:
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be repeated to give simpler cases for high dimensional problems.
 
-CsCheck also makes multithreading and performance testing simple and fast.
+CsCheck also makes multithreading, performance and regression testing simple and fast.
         </Description>
         <Authors>Anthony Lloyd</Authors>
         <Owners>Anthony Lloyd</Owners>
@@ -20,9 +20,13 @@ CsCheck also makes multithreading and performance testing simple and fast.
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
-        <PackageTags>testing;quickcheck;random;performance;multithreading</PackageTags>
-        <Version>0.8.3</Version>
-        <PackageReleaseNotes>Added Guid and DateTimeOffset</PackageReleaseNotes>
+        <PackageTags>quickcheck;random;performance;multithreading;regression;testing</PackageTags>
+        <Version>0.9.0</Version>
+        <PackageReleaseNotes>
+Added TimeSpan, DateTimeOffset and Guid.
+Shortened seed string.
+Added Regression Testing - Example and Hash.
+        </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <WarningLevel>4</WarningLevel>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

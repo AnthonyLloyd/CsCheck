@@ -103,7 +103,7 @@ namespace CsCheck
             });
 
             if (minPCG != null) throw new CsCheckException(
-                $"CsCheck_Seed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
+                $"CsCheck_Seed = \"{minPCG.ToString(minState)}\" ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
         }
         /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -187,7 +187,7 @@ namespace CsCheck
             });
 
             if (minPCG != null) throw new CsCheckException(
-                $"CsCheck_Seed = '{minPCG.ToString(minState)}' ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
+                $"CsCheck_Seed = \"{minPCG.ToString(minState)}\" ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
         }
         /// <summary>Sample the gen once calling the assert.</summary>
@@ -450,7 +450,7 @@ namespace CsCheck
                     {
                         var tstring = t.ToString();
                         if (tstring.Length > 100) tstring = tstring.Substring(0, 100);
-                        exception = new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tstring}", e);
+                        exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tstring}", e);
                         mre.Set();
                     }
                 });
@@ -495,7 +495,7 @@ namespace CsCheck
                                 if (!vf.Equals(vs))
                                 {
                                     exception = new CsCheckException(
-                                        $"Return values differ: CsCheck_Seed={pcg.ToString(state)} faster={vf} slower={vs}");
+                                        $"Return values differ: CsCheck_Seed = \"{pcg.ToString(state)}\" faster={vf} slower={vs}");
                                     mre.Set();
                                     return;
                                 }
@@ -509,7 +509,7 @@ namespace CsCheck
                                 catch (Exception ex)
                                 {
                                     exception = new CsCheckException(
-                                        $"Return values differ: CsCheck_Seed=" + pcg.ToString(state), ex);
+                                        $"Return values differ: CsCheck_Seed = \"" + pcg.ToString(state) + "\"", ex);
                                     mre.Set();
                                     return;
                                 }
@@ -528,7 +528,7 @@ namespace CsCheck
                     {
                         var tstring = t.ToString();
                         if (tstring.Length > 100) tstring = tstring.Substring(0, 100);
-                        exception = new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tstring}", e);
+                        exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tstring}", e);
                         mre.Set();
                     }
                 });
@@ -560,7 +560,7 @@ namespace CsCheck
                                 {
                                     if (message == null)
                                     {
-                                        message = $"Example {typeof(T).Name} seed = {pcg.ToString(state)}";
+                                        message = $"Example {typeof(T).Name} seed = \"{pcg.ToString(state)}\"";
                                         ret = t;
                                         mre.Set();
                                     }

@@ -343,6 +343,7 @@ namespace CsCheck
         public static readonly GenDouble Double = new GenDouble();
         public static readonly GenDecimal Decimal = new GenDecimal();
         public static readonly GenDateTime DateTime = new GenDateTime();
+        public static readonly GenTimeSpan TimeSpan = new GenTimeSpan();
         public static readonly GenDateTimeOffset DateTimeOffset = new GenDateTimeOffset();
         public static readonly GenGuid Guid = new GenGuid();
         public static readonly GenChar Char = new GenChar();
@@ -537,18 +538,19 @@ namespace CsCheck
         }
     }
 
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct FloatConverter
+    {
+        [FieldOffset(0)] public uint I;
+        [FieldOffset(0)] public float F;
+    }
+
     public class GenFloat : Gen<float>
     {
-        [StructLayout(LayoutKind.Explicit)]
-        struct Converter
-        {
-            [FieldOffset(0)] public uint I;
-            [FieldOffset(0)] public float F;
-        }
         public override (float, Size) Generate(PCG pcg)
         {
             uint i = pcg.Next();
-            return (new Converter { I = i }.F, new Size(i, null));
+            return (new FloatConverter { I = i }.F, new Size(i, null));
         }
         public Gen<float> this[float start, float finish]
         {
@@ -559,7 +561,7 @@ namespace CsCheck
                 return new GenF<float>(pcg =>
                 {
                     uint i = pcg.Next() >> 9;
-                    return (new Converter { I = i | 0x3F800000 }.F * finish + start
+                    return (new FloatConverter { I = i | 0x3F800000 }.F * finish + start
                             , new Size(i, null));
                 });
             }
@@ -567,13 +569,13 @@ namespace CsCheck
         public Gen<float> Unit = new GenF<float>(pcg =>
         {
             uint i = pcg.Next() >> 9;
-            return (new Converter { I = i | 0x3F800000 }.F - 1f, new Size(i, null));
+            return (new FloatConverter { I = i | 0x3F800000 }.F - 1f, new Size(i, null));
         });
         public Gen<float> Normal = new GenF<float>(pcg =>
         {
             uint i = pcg.Next();
             return ((i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU))
-                    : new Converter { I = i }.F
+                    : new FloatConverter { I = i }.F
                 , new Size(i, null));
         });
         static float MakeSpecial(uint i)
@@ -602,7 +604,7 @@ namespace CsCheck
         {
             uint i = pcg.Next();
             return ((i & 0xF0U) == 0xD0U ? MakeSpecial(i)
-                    : new Converter { I = i }.F
+                    : new FloatConverter { I = i }.F
                 , new Size(i, null));
         });
     }
@@ -672,18 +674,19 @@ namespace CsCheck
         });
     }
 
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct DecimalConverter
+    {
+        [FieldOffset(0)] public ulong I0;
+        [FieldOffset(8)] public ulong I1;
+        [FieldOffset(0)] public decimal D;
+    }
+
     public class GenDecimal : Gen<decimal>
     {
-        [StructLayout(LayoutKind.Explicit)]
-        struct Converter
-        {
-            [FieldOffset(0)] public ulong I0;
-            [FieldOffset(8)] public ulong I1;
-            [FieldOffset(0)] public decimal D;
-        }
         public override (decimal, Size) Generate(PCG pcg)
         {
-            var c = new Converter { I0 = pcg.Next64(), I1 = pcg.Next64() };
+            var c = new DecimalConverter { I0 = pcg.Next64(), I1 = pcg.Next64() };
             return (c.D, new Size(c.I0, null));
         }
         public Gen<decimal> this[decimal start, decimal finish]
@@ -730,6 +733,27 @@ namespace CsCheck
         }
     }
 
+    public class GenTimeSpan : Gen<TimeSpan>
+    {
+        public override (TimeSpan, Size) Generate(PCG pcg)
+        {
+            ulong i = pcg.Next64();
+            return (new TimeSpan((long)i), new Size(i, null));
+        }
+        public Gen<TimeSpan> this[TimeSpan start, TimeSpan finish]
+        {
+            get
+            {
+                ulong l = (ulong)(finish.Ticks - start.Ticks) + 1ul;
+                return new GenF<TimeSpan>(pcg =>
+                {
+                    ulong i = (ulong)start.Ticks + pcg.Next64(l);
+                    return (new TimeSpan((long)i), new Size(i, null));
+                });
+            }
+        }
+    }
+
     public class GenDateTimeOffset : Gen<DateTimeOffset>
     {
         readonly Gen<DateTime> genDateTime = Gen.DateTime[new DateTime(1800, 1, 1), new DateTime(2200, 1, 1)];
@@ -742,17 +766,23 @@ namespace CsCheck
         }
     }
 
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct GuidConverter
+    {
+        [FieldOffset(0)] public uint I0;
+        [FieldOffset(4)] public uint I1;
+        [FieldOffset(8)] public uint I2;
+        [FieldOffset(12)] public uint I3;
+        [FieldOffset(0)] public Guid G;
+    }
+
     public class GenGuid : Gen<Guid>
     {
         public override (Guid, Size) Generate(PCG pcg)
         {
-            uint i0 = pcg.Next();
-            uint i1 = pcg.Next();
-            uint i2 = pcg.Next();
-            uint i3 = pcg.Next();
-            return (new Guid(i0, (ushort)(i1 >> 16), (ushort)i1, (byte)(i2 >> 24), (byte)(i2 >> 16), (byte)(i2 >> 8), (byte)i2,
-                                                                 (byte)(i3 >> 24), (byte)(i3 >> 16), (byte)(i3 >> 8), (byte)i3),
-                new Size(0, new[] { new Size(i0, null), new Size(i1, null), new Size(i2, null), new Size(i3, null) }));
+            var c = new GuidConverter { I0 = pcg.Next(), I1 = pcg.Next(), I2 = pcg.Next(), I3 = pcg.Next() };
+            return (c.G,
+                new Size(0, new[] { new Size(c.I0, null), new Size(c.I1, null), new Size(c.I2, null), new Size(c.I3, null) }));
         }
     }
 

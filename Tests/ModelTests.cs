@@ -90,9 +90,8 @@ namespace Tests
             public static Gen<Portfolio> Portfolio = Gen.Select(Name, Currency, Position.Array, (n, c, p) => new Portfolio(n, c, p));
         }
 
-
         [Fact]
-        public void Portfolio_Mixed_Small_Profit_Example()
+        public void Portfolio_Small_Mixed_Example()
         {
             var portfolio = ModelGen.Portfolio.Example(p =>
                    p.Positions.Count == 5
@@ -104,32 +103,15 @@ namespace Tests
                 a.All(i => i > 0.75 && i < 1.5)
             , "ftXKwKhS6ec4");
             double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
-            Assert.Equal(9_772_529.43, portfolio.Profit(fxRate), 2);
-        }
 
-        [Fact(Skip = "Failing due to randomness in HashCode, need to create own")]
-        public void Portfolio_Mixed_Small_Risk_Example()
-        {
-            var portfolio = ModelGen.Portfolio.Example(p =>
-                   p.Positions.Count == 5
-                && p.Positions.Any(i => i.Instrument is Bond)
-                && p.Positions.Any(i => i.Instrument is Equity)
-            , "0N0XIzNsQ0O2");
-            var currencies = portfolio.Positions.Select(i => i.Instrument.Currency).Distinct().ToArray();
-            var fxRates = ModelGen.Price.Array[currencies.Length].Example(a =>
-                a.All(i => i > 0.75 && i < 1.5)
-            , "ftXKwKhS6ec4");
-            double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
+            Assert.Equal(971_463_704.43, portfolio.Profit(fxRate), 2);
+
             var risk = portfolio.Risk(fxRate);
-            var hashCode = new HashCode();
-            foreach (var d in risk) hashCode.Add(d);
-            Assert.Equal(625790812, hashCode.ToHashCode());
+            var hash = new Hash();
+            foreach (var position in portfolio.Positions)
+                hash.Add(position.Profit, 2);
+            hash.Add(risk, 2);
+            Assert.Equal(-1484127032, hash.ToHashCode());
         }
-
-        // Regression - for release, say codepath when generating example.
-        // HashCode extensions - HashStream, IEnumerable? - in CsCheck
-
-        // VarInt example
-        // Serialization example
     }
 }

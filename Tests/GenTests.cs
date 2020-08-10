@@ -351,6 +351,17 @@ namespace Tests
         }
 
         [Fact]
+        public void TimeSpan_Range()
+        {
+            (from t in Gen.TimeSpan.Select(Gen.TimeSpan)
+             let start = t.V0 < t.V1 ? t.V0 : t.V1
+             let finish = t.V0 < t.V1 ? t.V1 : t.V0
+             from value in Gen.TimeSpan[start, finish]
+             select (value, start, finish))
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
+        }
+
+        [Fact]
         public void DateTimeOffset()
         {
             Gen.DateTimeOffset.Sample(i => { });

@@ -16,7 +16,7 @@ This gives the following advantages:
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be repeated to give simpler cases for high dimensional problems.
 
-CsCheck also makes multithreading and performance testing simple and fast.
+CsCheck also makes multithreading, performance and regression testing simple and fast.
 
 ### Examples
 
@@ -157,6 +157,33 @@ Standard Output Messages:
 25.1%[-5..+6] faster, sigma=6.0 (36 vs 0)
 ```
 
+**9.** Regression test. Examples can be found to make such that all codepaths are covered.
+```csharp
+[Fact]
+public void Portfolio_Small_Mixed_Example()
+{
+    var portfolio = ModelGen.Portfolio.Example(p =>
+            p.Positions.Count == 5
+        && p.Positions.Any(i => i.Instrument is Bond)
+        && p.Positions.Any(i => i.Instrument is Equity)
+    , "0N0XIzNsQ0O2");
+    var currencies = portfolio.Positions.Select(i => i.Instrument.Currency).Distinct().ToArray();
+    var fxRates = ModelGen.Price.Array[currencies.Length].Example(a =>
+        a.All(i => i > 0.75 && i < 1.5)
+    , "ftXKwKhS6ec4");
+    double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
+
+    Assert.Equal(971_463_704.43, portfolio.Profit(fxRate), 2);
+
+    var risk = portfolio.Risk(fxRate);
+    var hash = new Hash();
+    foreach (var position in portfolio.Positions)
+        hash.Add(position.Profit, 2);
+    hash.Add(risk, 2);
+    Assert.Equal(-1484127032, hash.ToHashCode());
+}
+```
+
 These tests are in xUnit but could equally be used in any testing framework.
 
 More to see in the [Tests](Tests).
@@ -168,7 +195,7 @@ Sample and Faster accept configuration parameters. Global defaults can also be s
 ```powershell
 $env:CsCheck_Size = 10000; dotnet test -c Release --filter Multithreading; rm env:CsCheck*
 
-$env:CsCheck_Seed = '0N0XIzNsQ0O2'; dotnet test -c Release --filter List; rm env:CsCheck*
+$env:CsCheck_Seed = "0N0XIzNsQ0O2"; dotnet test -c Release --filter List; rm env:CsCheck*
 
 $env:CsCheck_Sigma = 50; dotnet test -c Release -l 'console;verbosity=detailed' --filter Faster; rm env:CsCheck*
 ```

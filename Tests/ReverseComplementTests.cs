@@ -10,7 +10,7 @@
         readonly Action<string> writeLine;
         public ReverseComplementTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
 
-        [Fact(Skip="Long running")]
+        [Fact(Skip = "Long running test.")]
         public void ReverseComplement_Faster()
         {
             if (!File.Exists(Utils.Fasta.Filename)) Utils.Fasta.NotMain(new[] { "25000000" });
@@ -159,7 +159,7 @@ namespace ReverseComplementNew
                 }
             }).Start();
 
-            using var outStream = new Utils.HashStream(); //Console.OpenStandardOutput();
+            using var outStream = new CsCheck.HashStream(); //Console.OpenStandardOutput();
             int writtenCount = 0;
             while (true)
             {
@@ -168,7 +168,7 @@ namespace ReverseComplementNew
                 if (writtenCount == readCount && lastPageSize != PAGE_SIZE)
                 {
                     outStream.Write(page, 0, lastPageSize);
-                    return outStream.GetHashCode();
+                    return outStream.ToHashCode();
                 }
                 outStream.Write(page, 0, PAGE_SIZE);
                 ArrayPool<byte>.Shared.Return(page);
@@ -356,7 +356,7 @@ namespace ReverseComplementOld
 
         static int Writer()
         {
-            using (var stream = new Utils.HashStream())// Console.OpenStandardOutput())
+            using (var stream = new CsCheck.HashStream())// Console.OpenStandardOutput())
             {
                 bool first = true;
                 RevCompSequence sequence;
@@ -381,7 +381,7 @@ namespace ReverseComplementOld
                     }
                     stream.Write(pages[pages.Count - 1], startIndex, sequence.EndExclusive - startIndex);
                 }
-                return stream.GetHashCode();
+                return stream.ToHashCode();
             }
         }
 
@@ -404,28 +404,6 @@ namespace Utils
     using System.Buffers;
     using System.Threading;
     using System.Runtime.CompilerServices;
-
-    public class HashStream : Stream
-    {
-        public override bool CanRead => true;
-        public override bool CanSeek => true;
-        public override bool CanWrite => true;
-        public override long Length => 0;
-        public override long Position { get => 0; set { } }
-        public override void Flush() { }
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotImplementedException();
-        public override long Seek(long offset, SeekOrigin origin) => 0;
-        public override void SetLength(long value) { }
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            int h = hashCode;
-            foreach (byte b in buffer.AsSpan(offset, count))
-                h = (h ^ b) * 16777619;
-            hashCode = h;
-        }
-        int hashCode = -2128831035;
-        public override int GetHashCode() => hashCode;
-    }
 
     public class Fasta
     {
