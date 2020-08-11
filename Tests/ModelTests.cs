@@ -17,8 +17,6 @@ namespace Tests
             public Country Country { get; }
             public Currency Currency { get; }
             public Instrument(string name, Country country, Currency currency) { Name = name; Country = country; Currency = currency; }
-            public override bool Equals(object o) => o is Instrument i && i.Name == Name && i.Country == Country && i.Currency == Currency;
-            public override int GetHashCode() => HashCode.Combine(Name, Country, Currency);
         }
         public class Equity : Instrument
         {
@@ -27,8 +25,6 @@ namespace Tests
             {
                 Exchanges = exchanges;
             }
-            public override bool Equals(object o) => o is Equity i && base.Equals(i) && i.Exchanges.SequenceEqual(Exchanges);
-            public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Exchanges);
         }
         public class Bond : Instrument
         {
@@ -37,8 +33,6 @@ namespace Tests
             {
                 Coupons = coupons;
             }
-            public override bool Equals(object o) => o is Bond i && base.Equals(i) && i.Coupons.SequenceEqual(Coupons);
-            public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Coupons);
         }
         public class Trade
         {
@@ -46,8 +40,6 @@ namespace Tests
             public int Quantity { get; }
             public double Cost { get; }
             public Trade(DateTime date, int quantity, double cost) { Date = date; Quantity = quantity; Cost = cost; }
-            public override bool Equals(object o) => o is Trade i && i.Date == Date && i.Quantity == Quantity && i.Cost == Cost;
-            public override int GetHashCode() => HashCode.Combine(Date, Quantity, Cost);
         }
         public class Position
         {
@@ -58,8 +50,6 @@ namespace Tests
             public int Quantity => Trades.Sum(i => i.Quantity);
             public double Cost => Trades.Sum(i => i.Cost);
             public double Profit => Price * Quantity - Cost;
-            public override bool Equals(object o) => o is Position i && i.Instrument == Instrument && i.Trades.SequenceEqual(Trades) && i.Price == Price;
-            public override int GetHashCode() => HashCode.Combine(Instrument, Trades, Price);
         }
         public class Portfolio
         {
@@ -68,9 +58,7 @@ namespace Tests
             public IReadOnlyCollection<Position> Positions { get; }
             public Portfolio(string name, Currency currency, IReadOnlyCollection<Position> positions) { Name = name; Currency = currency; Positions = positions; }
             public double Profit(Func<Currency, double> fxRate) => Positions.Sum(i => i.Profit * fxRate(i.Instrument.Currency));
-            public double[] Risk(Func<Currency, double> fxRate) => Positions.Select(i => i.Profit * fxRate(i.Instrument.Currency)).ToArray();
-            public override bool Equals(object o) => o is Portfolio i && i.Name == Name && i.Currency == Currency && i.Positions.SequenceEqual(Positions);
-            public override int GetHashCode() => HashCode.Combine(Name, Currency, Positions);
+            public double[] RiskByPosition(Func<Currency, double> fxRate) => Positions.Select(i => i.Profit * fxRate(i.Instrument.Currency)).ToArray();
         }
 
         public static class ModelGen
@@ -81,7 +69,7 @@ namespace Tests
             public static Gen<int> Quantity = Gen.Int[-99, 99].Select(Gen.Int[0, 5]).Select(t => t.V0 * (int)Math.Pow(10, t.V1));
             public static Gen<double> Coupon = Gen.Int[0, 100].Select(i => i * 0.125);
             public static Gen<double> Price = Gen.Int[0001, 9999].Select(i => i * 0.01);
-            public static Gen<DateTime> Date = Gen.DateTime[new DateTime(2000, 1, 1), DateTime.Today].Select(i => i.Date);
+            public static Gen<DateTime> Date = Gen.DateTime[new DateTime(2000, 1, 1), new DateTime(2040, 1, 1)].Select(i => i.Date);
             public static Gen<Equity> Equity = Gen.Select(Name, Country, Currency, Gen.Enum<Exchange>().HashSet[1, 3], (n, co, cu, e) => new Equity(n, co, cu, e));
             public static Gen<Bond> Bond = Gen.Select(Name, Country, Currency, Gen.SortedDictionary(Date, Coupon), (n, co, cu, c) => new Bond(n, co, cu, c));
             public static Gen<Instrument> Instrument = Gen.Frequency((2, Equity.Cast<Instrument>()), (1, Bond.Cast<Instrument>()));
@@ -95,23 +83,18 @@ namespace Tests
         {
             var portfolio = ModelGen.Portfolio.Example(p =>
                    p.Positions.Count == 5
-                && p.Positions.Any(i => i.Instrument is Bond)
-                && p.Positions.Any(i => i.Instrument is Equity)
+                && p.Positions.Any(p => p.Instrument is Bond)
+                && p.Positions.Any(p => p.Instrument is Equity)
             , "0N0XIzNsQ0O2");
-            var currencies = portfolio.Positions.Select(i => i.Instrument.Currency).Distinct().ToArray();
+            var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
             var fxRates = ModelGen.Price.Array[currencies.Length].Example(a =>
-                a.All(i => i > 0.75 && i < 1.5)
+                a.All(p => p > 0.75 && p < 1.5)
             , "ftXKwKhS6ec4");
             double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
-
-            Assert.Equal(971_463_704.43, portfolio.Profit(fxRate), 2);
-
-            var risk = portfolio.Risk(fxRate);
-            var hash = new Hash();
-            foreach (var position in portfolio.Positions)
-                hash.Add(position.Profit, 2);
-            hash.Add(risk, 2);
-            Assert.Equal(-1484127032, hash.ToHashCode());
+            using var hash = Hash.Expected(1408762755);
+            hash.Add(portfolio.Positions.Select(p => p.Profit), 2);
+            hash.Add(portfolio.Profit(fxRate), 2);
+            hash.Add(portfolio.RiskByPosition(fxRate), 2);
         }
     }
 }

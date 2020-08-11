@@ -168,7 +168,7 @@ namespace ReverseComplementNew
                 if (writtenCount == readCount && lastPageSize != PAGE_SIZE)
                 {
                     outStream.Write(page, 0, lastPageSize);
-                    return outStream.ToHashCode();
+                    return outStream.GetHashCode();
                 }
                 outStream.Write(page, 0, PAGE_SIZE);
                 ArrayPool<byte>.Shared.Return(page);
@@ -195,29 +195,27 @@ namespace ReverseComplementOld
         static BlockingCollection<RevCompSequence> writeQue;
         static byte[] map;
 
-        static int read(Stream stream, byte[] buffer, int offset, int count)
+        static int Read(Stream stream, byte[] buffer, int offset, int count)
         {
             var bytesRead = stream.Read(buffer, offset, count);
             return bytesRead == count ? offset + count
                  : bytesRead == 0 ? offset
-                 : read(stream, buffer, offset + bytesRead, count - bytesRead);
+                 : Read(stream, buffer, offset + bytesRead, count - bytesRead);
         }
         static void Reader()
         {
-            using (var stream = File.OpenRead(Utils.Fasta.Filename))//Console.OpenStandardInput())
+            using var stream = File.OpenRead(Utils.Fasta.Filename);
+            int bytesRead;
+            do
             {
-                int bytesRead;
-                do
-                {
-                    var buffer = new byte[READER_BUFFER_SIZE];
-                    bytesRead = read(stream, buffer, 0, READER_BUFFER_SIZE);
-                    readQue.Add(buffer);
-                } while (bytesRead == READER_BUFFER_SIZE);
-                readQue.CompleteAdding();
-            }
+                var buffer = new byte[READER_BUFFER_SIZE];
+                bytesRead = Read(stream, buffer, 0, READER_BUFFER_SIZE);
+                readQue.Add(buffer);
+            } while (bytesRead == READER_BUFFER_SIZE);
+            readQue.CompleteAdding();
         }
 
-        static bool tryTake<T>(BlockingCollection<T> q, out T t) where T : class
+        static bool TryTake<T>(BlockingCollection<T> q, out T t) where T : class
         {
             t = null;
             while (!q.IsCompleted && !q.TryTake(out t)) Thread.SpinWait(0);
@@ -258,8 +256,7 @@ namespace ReverseComplementOld
             var i = 0;
             bool afterFirst = false;
             var data = new List<byte[]>();
-            byte[] bytes;
-            while (tryTake(readQue, out bytes))
+            while (TryTake(readQue, out byte[] bytes))
             {
                 data.Add(bytes);
                 while ((i = Array.IndexOf<byte>(bytes, GT, i + 1)) != -1)
@@ -280,13 +277,13 @@ namespace ReverseComplementOld
                     data = new List<byte[]> { bytes };
                 }
             }
-            i = Array.IndexOf<byte>(data[data.Count - 1], 0, 0);
+            i = Array.IndexOf<byte>(data[^1], 0, 0);
             var lastSequence = new RevCompSequence
             {
                 Pages = data
                 ,
                 StartHeader = startHeader,
-                EndExclusive = i == -1 ? data[data.Count - 1].Length : i
+                EndExclusive = i == -1 ? data[^1].Length : i
             };
             Reverse(lastSequence);
             writeQue.Add(lastSequence);
@@ -356,33 +353,30 @@ namespace ReverseComplementOld
 
         static int Writer()
         {
-            using (var stream = new CsCheck.HashStream())// Console.OpenStandardOutput())
+            using var stream = new CsCheck.HashStream();
+            bool first = true;
+            while (TryTake(writeQue, out RevCompSequence sequence))
             {
-                bool first = true;
-                RevCompSequence sequence;
-                while (tryTake(writeQue, out sequence))
+                var startIndex = sequence.StartHeader;
+                var pages = sequence.Pages;
+                if (first)
                 {
-                    var startIndex = sequence.StartHeader;
-                    var pages = sequence.Pages;
-                    if (first)
-                    {
-                        Reverse(sequence);
-                        first = false;
-                    }
-                    else
-                    {
-                        sequence.ReverseThread?.Join();
-                    }
-                    for (int i = 0; i < pages.Count - 1; i++)
-                    {
-                        var bytes = pages[i];
-                        stream.Write(bytes, startIndex, bytes.Length - startIndex);
-                        startIndex = 0;
-                    }
-                    stream.Write(pages[pages.Count - 1], startIndex, sequence.EndExclusive - startIndex);
+                    Reverse(sequence);
+                    first = false;
                 }
-                return stream.ToHashCode();
+                else
+                {
+                    sequence.ReverseThread?.Join();
+                }
+                for (int i = 0; i < pages.Count - 1; i++)
+                {
+                    var bytes = pages[i];
+                    stream.Write(bytes, startIndex, bytes.Length - startIndex);
+                    startIndex = 0;
+                }
+                stream.Write(pages[^1], startIndex, sequence.EndExclusive - startIndex);
             }
+            return stream.GetHashCode();
         }
 
         public static int NotMain()

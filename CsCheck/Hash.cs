@@ -1,116 +1,390 @@
 ﻿using System;
 using System.IO;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using System.Text;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Linq;
 
 namespace CsCheck
 {
-    public class Hash
+    public static class StreamSerializer
     {
-        const int Reading = 1, Writing = 2;
-        int status;
-        void Check<T>(T val)
+        public static void WriteBool(Stream stream, bool val)
         {
-            if (status == Writing)
+            stream.WriteByte(val ? (byte)1 : (byte)0);
+        }
+        public static bool ReadBool(Stream stream)
+        {
+            return stream.ReadByte() == 1;
+        }
+        public static void WriteSByte(Stream stream, sbyte val)
+        {
+            stream.WriteByte((byte)val);
+        }
+        public static sbyte ReadSByte(Stream stream)
+        {
+            return (sbyte)stream.ReadByte();
+        }
+        public static void WriteByte(Stream stream, byte val)
+        {
+            stream.WriteByte(val);
+        }
+        public static byte ReadByte(Stream stream)
+        {
+            return (byte)stream.ReadByte();
+        }
+        public static void WriteShort(Stream stream, short val)
+        {
+            stream.WriteByte((byte)val);
+            stream.WriteByte((byte)(val >> 8));
+        }
+        public static short ReadShort(Stream stream)
+        {
+            return (short)(stream.ReadByte() + (stream.ReadByte() << 8));
+        }
+        public static void WriteUShort(Stream stream, ushort val)
+        {
+            stream.WriteByte((byte)val);
+            stream.WriteByte((byte)(val >> 8));
+        }
+        public static ushort ReadUShort(Stream stream)
+        {
+            return (ushort)(stream.ReadByte() + (stream.ReadByte() << 8));
+        }
+        public static void WriteInt(Stream stream, int val)
+        {
+            stream.WriteByte((byte)val);
+            stream.WriteByte((byte)(val >> 8));
+            stream.WriteByte((byte)(val >> 16));
+            stream.WriteByte((byte)(val >> 24));
+        }
+        public static int ReadInt(Stream stream)
+        {
+            return stream.ReadByte()
+                + (stream.ReadByte() << 8)
+                + (stream.ReadByte() << 16)
+                + (stream.ReadByte() << 24);
+        }
+        public static void WriteUInt(Stream stream, uint val)
+        {
+            stream.WriteByte((byte)val);
+            stream.WriteByte((byte)(val >> 8));
+            stream.WriteByte((byte)(val >> 16));
+            stream.WriteByte((byte)(val >> 24));
+        }
+        public static uint ReadUInt(Stream stream)
+        {
+            return (uint)(stream.ReadByte()
+                + (stream.ReadByte() << 8)
+                + (stream.ReadByte() << 16)
+                + (stream.ReadByte() << 24));
+        }
+        public static void WriteLong(Stream stream, long val)
+        {
+            stream.WriteByte((byte)val);
+            stream.WriteByte((byte)(val >> 8));
+            stream.WriteByte((byte)(val >> 16));
+            stream.WriteByte((byte)(val >> 24));
+            stream.WriteByte((byte)(val >> 32));
+            stream.WriteByte((byte)(val >> 40));
+            stream.WriteByte((byte)(val >> 48));
+            stream.WriteByte((byte)(val >> 56));
+        }
+        public static long ReadLong(Stream stream)
+        {
+            return stream.ReadByte()
+                + ((long)stream.ReadByte() << 8)
+                + ((long)stream.ReadByte() << 16)
+                + ((long)stream.ReadByte() << 24)
+                + ((long)stream.ReadByte() << 32)
+                + ((long)stream.ReadByte() << 40)
+                + ((long)stream.ReadByte() << 48)
+                + ((long)stream.ReadByte() << 56);
+        }
+        public static void WriteULong(Stream stream, ulong val)
+        {
+            stream.WriteByte((byte)val);
+            stream.WriteByte((byte)(val >> 8));
+            stream.WriteByte((byte)(val >> 16));
+            stream.WriteByte((byte)(val >> 24));
+            stream.WriteByte((byte)(val >> 32));
+            stream.WriteByte((byte)(val >> 40));
+            stream.WriteByte((byte)(val >> 48));
+            stream.WriteByte((byte)(val >> 56));
+        }
+        public static ulong ReadULong(Stream stream)
+        {
+            return (ulong)stream.ReadByte()
+                + ((ulong)stream.ReadByte() << 8)
+                + ((ulong)stream.ReadByte() << 16)
+                + ((ulong)stream.ReadByte() << 24)
+                + ((ulong)stream.ReadByte() << 32)
+                + ((ulong)stream.ReadByte() << 40)
+                + ((ulong)stream.ReadByte() << 48)
+                + ((ulong)stream.ReadByte() << 56);
+        }
+        public static void WriteFloat(Stream stream, float val)
+        {
+            WriteUInt(stream, new FloatConverter { F = val }.I);
+        }
+        public static float ReadFloat(Stream stream)
+        {
+            return new FloatConverter { I = ReadUInt(stream) }.F;
+        }
+        public static void WriteDouble(Stream stream, double val)
+        {
+            WriteLong(stream, BitConverter.DoubleToInt64Bits(val));
+        }
+        public static double ReadDouble(Stream stream)
+        {
+            return BitConverter.Int64BitsToDouble(ReadLong(stream));
+        }
+        public static void WriteDecimal(Stream stream, decimal val)
+        {
+            var c = new DecimalConverter { D = val };
+            WriteULong(stream, c.I0);
+            WriteULong(stream, c.I1);
+        }
+        public static decimal ReadDecimal(Stream stream)
+        {
+            return new DecimalConverter { I0 = ReadULong(stream), I1 = ReadULong(stream) }.D;
+        }
+        public static void WriteDateTime(Stream stream, DateTime val)
+        {
+            WriteLong(stream, val.Ticks);
+        }
+        public static DateTime ReadDateTime(Stream stream)
+        {
+            return new DateTime(ReadLong(stream));
+        }
+        public static void WriteTimeSpan(Stream stream, TimeSpan val)
+        {
+            WriteLong(stream, val.Ticks);
+        }
+        public static TimeSpan ReadTimeSpan(Stream stream)
+        {
+            return new TimeSpan(ReadLong(stream));
+        }
+        public static void WriteDateTimeOffset(Stream stream, DateTimeOffset val)
+        {
+            WriteDateTime(stream, val.DateTime);
+            WriteTimeSpan(stream, val.Offset);
+        }
+        public static DateTimeOffset ReadDateTimeOffset(Stream stream)
+        {
+            return new DateTimeOffset(ReadDateTime(stream), ReadTimeSpan(stream));
+        }
+        public static void WriteGuid(Stream stream, Guid val)
+        {
+            var c = new GuidConverter { G = val };
+            WriteUInt(stream, c.I0);
+            WriteUInt(stream, c.I1);
+            WriteUInt(stream, c.I2);
+            WriteUInt(stream, c.I3);
+        }
+        public static Guid ReadGuid(Stream stream)
+        {
+            return new GuidConverter
             {
-
-            }
-            else if (status == Reading)
+                I0 = ReadUInt(stream),
+                I1 = ReadUInt(stream),
+                I2 = ReadUInt(stream),
+                I3 = ReadUInt(stream),
+            }.G;
+        }
+        public static void WriteChar(Stream stream, char val)
+        {
+            var bs = BitConverter.GetBytes(val);
+            stream.WriteByte((byte)bs.Length);
+            stream.Write(bs, 0, bs.Length);
+        }
+        public static char ReadChar(Stream stream)
+        {
+            var l = stream.ReadByte();
+            var bs = new byte[l];
+            int offset = 0, bytesRead;
+            do
             {
+                bytesRead = stream.Read(bs, offset, l - offset);
+                offset += bytesRead;
+            } while (offset != bs.Length && bytesRead != 0);
+            return BitConverter.ToChar(bs, 0);
+        }
+        public static void WriteString(Stream stream, string val)
+        {
+            var bs = Encoding.Unicode.GetBytes(val);
+            WriteInt(stream, bs.Length);
+            stream.Write(bs, 0, bs.Length);
+        }
+        public static string ReadString(Stream stream)
+        {
+            var l = ReadInt(stream);
+            var bs = new byte[l];
+            int offset = 0, bytesRead;
+            do
+            {
+                bytesRead = stream.Read(bs, offset, l - offset);
+                offset += bytesRead;
+            } while (offset != bs.Length && bytesRead != 0);
+            return Encoding.Unicode.GetString(bs);
+        }
+    }
 
+    public class Hash : IDisposable
+    {
+        static readonly string CacheDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
+        readonly int ExpectedHash;
+        readonly Stream stream;
+        readonly string filename;
+        readonly bool writing;
+        bool errorThrown;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void Stream<T>(Action<Stream, T> serialize, Func<Stream, T> deserialize, T val)
+        {
+            if (stream != null)
+            {
+                if (writing) serialize(stream, val);
+                else
+                {
+                    var val2 = deserialize(stream);
+                    if (!val.Equals(val2))
+                    {
+                        errorThrown = true;
+                        throw new CsCheckException($"Actual {val} but Expected {val2}");
+                    }
+                }
             }
         }
-        public Hash([CallerMemberName] string callerMemberName = "", [CallerFilePath] string callerFilePath = "")
+        public static Hash Expected(int? expectedHash,
+            [CallerMemberName] string callerMemberName = "", [CallerFilePath] string callerFilePath = "")
         {
-            //var store = System.IO.IsolatedStorage.IsolatedStorageFile.GetUserStoreForAssembly();
-            //var x = new StreamWriter(store.CreateFile(""));
-            //x.WriteLine();
-            status = 1;
+            return new Hash(expectedHash, callerMemberName, callerFilePath);
+        }
+        private Hash(int? expectedHash, string callerMemberName, string callerFilePath)
+        {
+            if (!expectedHash.HasValue) return;
+            filename = callerFilePath.Substring(Path.GetPathRoot(callerFilePath).Length);
+            filename = Path.Combine(CacheDir, Path.GetDirectoryName(filename),
+                        Path.GetFileNameWithoutExtension(filename) + "__" + callerMemberName + ".chs");
+            ExpectedHash = expectedHash.Value;
+            if (File.Exists(filename))
+            {
+                stream = File.Open(filename, FileMode.Open);
+                var fileHash = StreamSerializer.ReadInt(stream);
+                if (fileHash == ExpectedHash) return;
+                stream.Dispose();
+            }
+            var tempfile = Path.ChangeExtension(filename, "cht");
+            if (File.Exists(tempfile)) File.Delete(tempfile);
+            Directory.CreateDirectory(Path.GetDirectoryName(tempfile));
+            stream = File.Create(tempfile);
+            StreamSerializer.WriteInt(stream, ExpectedHash);
+            writing = true;
+        }
+        public void Dispose()
+        {
+            var actualHash = GetHashCode();
+            if (stream != null)
+            {
+                stream.Dispose();
+                if (writing)
+                {
+                    if (actualHash == ExpectedHash)
+                    {
+                        if (File.Exists(filename)) File.Delete(filename);
+                        File.Move(Path.ChangeExtension(filename, "cht"), filename);
+                    }
+                    else
+                        File.Delete(Path.ChangeExtension(filename, "cht"));
+                }
+            }
+            if (actualHash != ExpectedHash && !errorThrown)
+                throw new CsCheckException($"Actual hash {actualHash} but Expected {ExpectedHash}");
         }
         public void Add(bool val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteBool, StreamSerializer.ReadBool, val);
             AddPrivate(val ? 1 : 0);
         }
         public void Add(sbyte val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteSByte, StreamSerializer.ReadSByte, val);
             AddPrivate((uint)val);
         }
         public void Add(byte val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteByte, StreamSerializer.ReadByte, val);
             AddPrivate((uint)val);
         }
         public void Add(short val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteShort, StreamSerializer.ReadShort, val);
             AddPrivate((uint)val);
         }
         public void Add(ushort val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteUShort, StreamSerializer.ReadUShort, val);
             AddPrivate((uint)val);
         }
         public void Add(int val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteInt, StreamSerializer.ReadInt, val);
             AddPrivate((uint)val);
         }
         public void Add(uint val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteUInt, StreamSerializer.ReadUInt, val);
             AddPrivate(val);
         }
         public void Add(long val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteLong, StreamSerializer.ReadLong, val);
             AddPrivate((uint)val);
             AddPrivate((uint)(val >> 32));
         }
         public void Add(ulong val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteULong, StreamSerializer.ReadULong, val);
             AddPrivate((uint)val);
             AddPrivate((uint)(val >> 32));
         }
         public void Add(float val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteFloat, StreamSerializer.ReadFloat, val);
             AddPrivate(new FloatConverter { F = val }.I);
         }
         public void Add(double val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteDouble, StreamSerializer.ReadDouble, val);
             AddPrivate(BitConverter.DoubleToInt64Bits(val));
         }
         public void Add(decimal val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteDecimal, StreamSerializer.ReadDecimal, val);
             var c = new DecimalConverter { D = val };
             AddPrivate(c.I0);
             AddPrivate(c.I1);
         }
         public void Add(DateTime val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteDateTime, StreamSerializer.ReadDateTime, val);
             AddPrivate(val.Ticks);
         }
         public void Add(TimeSpan val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteTimeSpan, StreamSerializer.ReadTimeSpan, val);
             AddPrivate(val.Ticks);
         }
         public void Add(DateTimeOffset val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteDateTimeOffset, StreamSerializer.ReadDateTimeOffset, val);
             AddPrivate(val.DateTime.Ticks);
             AddPrivate(val.Offset.Ticks);
         }
         public void Add(Guid val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteGuid, StreamSerializer.ReadGuid, val);
             var c = new GuidConverter { G = val };
             AddPrivate(c.I0);
             AddPrivate(c.I1);
@@ -119,21 +393,45 @@ namespace CsCheck
         }
         public void Add(char val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteChar, StreamSerializer.ReadChar, val);
             AddPrivate((uint)val);
         }
         public void Add(string val)
         {
-            Check(val);
+            Stream(StreamSerializer.WriteString, StreamSerializer.ReadString, val);
             foreach (char c in val) AddPrivate((uint)c);
+        }
+        public void Add(float val, int decimals)
+        {
+            Add(Math.Round(val, decimals));
         }
         public void Add(double val, int decimals)
         {
             Add(Math.Round(val, decimals));
         }
+        public void Add(decimal val, int decimals)
+        {
+            Add(Math.Round(val, decimals));
+        }
+        public void Add(IEnumerable<float> vals, int decimals)
+        {
+            var array = vals as float[] ?? vals.ToArray();
+            Add(array.Length);
+            foreach (var val in array)
+                Add(val, decimals);
+        }
         public void Add(IEnumerable<double> vals, int decimals)
         {
-            foreach (var val in vals)
+            var array = vals as double[] ?? vals.ToArray();
+            Add(array.Length);
+            foreach (var val in array)
+                Add(val, decimals);
+        }
+        public void Add(IEnumerable<decimal> vals, int decimals)
+        {
+            var array = vals as decimal[] ?? vals.ToArray();
+            Add(array.Length);
+            foreach (var val in array)
                 Add(val, decimals);
         }
         #region xxHash implementation from framework HashCode
@@ -217,7 +515,7 @@ namespace CsCheck
         {
             return RotateLeft(hash + queuedValue * Prime3, 17) * Prime4;
         }
-        public int ToHashCode()
+        public override int GetHashCode()
         {
             uint length = _length;
             uint position = length % 4;
@@ -236,15 +534,6 @@ namespace CsCheck
             hash = MixFinal(hash);
             return (int)hash;
         }
-
-#pragma warning disable 0809
-        [Obsolete("Use ToHashCode", error: true)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override int GetHashCode() => throw new NotSupportedException();
-        [Obsolete("Not supported", error: true)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override bool Equals(object o) => throw new NotSupportedException();
-#pragma warning restore 0809
         #endregion
     }
 
@@ -259,7 +548,7 @@ namespace CsCheck
         public override int Read(byte[] buffer, int offset, int count) => throw new NotImplementedException();
         public override long Seek(long offset, SeekOrigin origin) => 0;
         public override void SetLength(long value) { }
-        Hash hash = new Hash();
+        readonly Hash hash = Hash.Expected(null);
         uint bytes;
         int position = 0;
         public override void Write(byte[] buffer, int offset, int count)
@@ -324,18 +613,10 @@ namespace CsCheck
                 }
             }
         }
-        public int ToHashCode()
+        public override int GetHashCode()
         {
             if (position > 0) hash.Add(bytes);
-            return hash.ToHashCode();
+            return hash.GetHashCode();
         }
-#pragma warning disable 0809
-        [Obsolete("Use ToHashCode", error: true)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override int GetHashCode() => throw new NotSupportedException();
-        [Obsolete("Not supported", error: true)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override bool Equals(object o) => throw new NotSupportedException();
-#pragma warning restore 0809
     }
 }

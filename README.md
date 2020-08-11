@@ -157,32 +157,31 @@ Standard Output Messages:
 25.1%[-5..+6] faster, sigma=6.0 (36 vs 0)
 ```
 
-**9.** Regression test. Examples can be found to make such that all codepaths are covered.
+**9.** Regression test of portfolio profit and risk.
 ```csharp
 [Fact]
 public void Portfolio_Small_Mixed_Example()
 {
     var portfolio = ModelGen.Portfolio.Example(p =>
-            p.Positions.Count == 5
-        && p.Positions.Any(i => i.Instrument is Bond)
-        && p.Positions.Any(i => i.Instrument is Equity)
+           p.Positions.Count == 5
+        && p.Positions.Any(p => p.Instrument is Bond)
+        && p.Positions.Any(p => p.Instrument is Equity)
     , "0N0XIzNsQ0O2");
-    var currencies = portfolio.Positions.Select(i => i.Instrument.Currency).Distinct().ToArray();
+    var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
     var fxRates = ModelGen.Price.Array[currencies.Length].Example(a =>
-        a.All(i => i > 0.75 && i < 1.5)
+        a.All(p => p > 0.75 && p < 1.5)
     , "ftXKwKhS6ec4");
     double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
-
-    Assert.Equal(971_463_704.43, portfolio.Profit(fxRate), 2);
-
-    var risk = portfolio.Risk(fxRate);
-    var hash = new Hash();
-    foreach (var position in portfolio.Positions)
-        hash.Add(position.Profit, 2);
-    hash.Add(risk, 2);
-    Assert.Equal(-1484127032, hash.ToHashCode());
+    using var hash = Hash.Expected(1408762755);
+    hash.Add(portfolio.Positions.Select(p => p.Profit), 2);
+    hash.Add(portfolio.Profit(fxRate), 2);
+    hash.Add(portfolio.RiskByPosition(fxRate), 2);
 }
 ```
+The Example method is used to find and pin a suitable generated example e.g. to cover a certain codepath.
+The Hash class can then be used to test a number of results.
+A cache of correct values is saved locally once on a passing run and compared each run asserting actual vs expected at the first point of any difference.
+Together Example and Hash eliminate the need to commit data files in regression testing.
 
 These tests are in xUnit but could equally be used in any testing framework.
 

@@ -20,7 +20,7 @@ CsCheck also makes multithreading, performance and regression testing simple and
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
-        <PackageTags>quickcheck;random;performance;multithreading;regression;testing</PackageTags>
+        <PackageTags>quickcheck;random;multithreading;performance;regression;testing</PackageTags>
         <Version>0.9.0</Version>
         <PackageReleaseNotes>
 Added TimeSpan, DateTimeOffset and Guid.
