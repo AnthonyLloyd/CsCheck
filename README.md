@@ -158,7 +158,7 @@ Standard Output Messages:
 ```
 
 **9.** Regression test of portfolio profit and risk.  
-**Example** method is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
+**Example** function is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
 **Hash** will save a cache of a number of results on a successful run and each subsequent run will fail with actual vs expected at the first point of any difference.  
 Together Example and Hash eliminate the need to commit data files in regression testing while also giving detailed information of any change.
 ```csharp
