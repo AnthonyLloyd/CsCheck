@@ -178,8 +178,8 @@ public void Portfolio_Small_Mixed_Example()
     hash.Add(portfolio.RiskByPosition(fxRate), 2);
 }
 ```
-The Example method is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.
-Hash will save a cache of a number of results on a successful run and each subsequent run will fail with actual vs expected at the first point of any difference.
+The Example method is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
+Hash will save a cache of a number of results on a successful run and each subsequent run will fail with actual vs expected at the first point of any difference.  
 Together Example and Hash eliminate the need to commit data files in regression testing while also giving detailed information of any change.
 
 These tests are in xUnit but could equally be used in any testing framework.
