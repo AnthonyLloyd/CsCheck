@@ -228,6 +228,86 @@ namespace CsCheck
             } while (offset != bs.Length && bytesRead != 0);
             return Encoding.Unicode.GetString(bs);
         }
+        public static void WriteVarInt(Stream stream, uint val)
+        {
+            if (val < 128u) stream.WriteByte((byte)val);
+            else if (val < 0x4000u)
+            {
+                stream.WriteByte((byte)((byte)(val >> 7) | 128u));
+                stream.WriteByte((byte)(val & 127u));
+            }
+            else if (val < 0x200000u)
+            {
+                stream.WriteByte((byte)((byte)(val >> 14) | 128u));
+                stream.WriteByte((byte)((byte)(val >> 7) | 128u));
+                stream.WriteByte((byte)(val & 127u));
+            }
+            else if (val < 0x10000000u)
+            {
+                stream.WriteByte((byte)((byte)(val >> 21) | 128u));
+                stream.WriteByte((byte)((byte)(val >> 14) | 128u));
+                stream.WriteByte((byte)((byte)(val >> 7) | 128u));
+                stream.WriteByte((byte)(val & 127u));
+            }
+            else
+            {
+                stream.WriteByte((byte)((byte)(val >> 28) | 128u));
+                stream.WriteByte((byte)((byte)(val >> 21) | 128u));
+                stream.WriteByte((byte)((byte)(val >> 14) | 128u));
+                stream.WriteByte((byte)((byte)(val >> 7) | 128u));
+                stream.WriteByte((byte)(val & 127u));
+            }
+        }
+        public static uint ReadVarInt(Stream stream)
+        {
+            uint i = 0;
+            while (true)
+            {
+                var b = (uint)stream.ReadByte();
+                if (b < 128u) return i + b;
+                i = (i + (b & 127u)) << 7;
+            }
+        }
+        public static void WriteVarInt2(Stream stream, uint val)
+        {
+            if (val < 128u) stream.WriteByte((byte)(val | 128u));
+            else if (val < 0x4000u)
+            {
+                stream.WriteByte((byte)((val >> 7) & 127u));
+                stream.WriteByte((byte)(val | 128u));
+            }
+            else if (val < 0x200000u)
+            {
+                stream.WriteByte((byte)((val >> 14) & 127u));
+                stream.WriteByte((byte)((val >>  7) & 127u));
+                stream.WriteByte((byte)(val | 128u));
+            }
+            else if (val < 0x10000000u)
+            {
+                stream.WriteByte((byte)((val >> 21) & 127u));
+                stream.WriteByte((byte)((val >> 14) & 127u));
+                stream.WriteByte((byte)((val >>  7) & 127u));
+                stream.WriteByte((byte)(val | 128u));
+            }
+            else
+            {
+                stream.WriteByte((byte)((val >> 28) & 127u));
+                stream.WriteByte((byte)((val >> 21) & 127u));
+                stream.WriteByte((byte)((val >> 14) & 127u));
+                stream.WriteByte((byte)((val >>  7) & 127u));
+                stream.WriteByte((byte)(val | 128u));
+            }
+        }
+        public static uint ReadVarInt2(Stream stream)
+        {
+            uint i = 0;
+            while (true)
+            {
+                var b = (uint)stream.ReadByte();
+                if (b >= 128u) return i | (b & 127u);
+                i = (i | b) << 7;
+            }
+        }
     }
 
     public class Hash : IDisposable

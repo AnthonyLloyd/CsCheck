@@ -3,6 +3,7 @@ using System.IO;
 using Xunit;
 using CsCheck;
 using System.Linq;
+using System.Threading;
 
 namespace Tests
 {
@@ -102,6 +103,32 @@ namespace Tests
         public void String()
         {
             TestRoundtrip(Gen.String, StreamSerializer.WriteString, StreamSerializer.ReadString);
+        }
+        [Fact]
+        public void VarInt()
+        {
+            TestRoundtrip(Gen.UInt, StreamSerializer.WriteVarInt, StreamSerializer.ReadVarInt);
+        }
+        [Fact(Skip = "WIP")]
+        public void VarInt_Perf()
+        {
+            var ms = new MemoryStream(10);
+            Gen.UInt.Faster(
+                i =>
+                {
+                    ms.Position = 0;
+                    StreamSerializer.WriteVarInt2(ms, i);
+                    ms.Position = 0;
+                    return StreamSerializer.ReadVarInt2(ms);
+                },
+                i =>
+                {
+                    ms.Position = 0;
+                    StreamSerializer.WriteVarInt(ms, i);
+                    ms.Position = 0;
+                    return StreamSerializer.ReadVarInt(ms);
+                }
+            , sigma: 20, threads: 1);
         }
     }
 
