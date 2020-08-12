@@ -157,7 +157,7 @@ Standard Output Messages:
 25.1%[-5..+6] faster, sigma=6.0 (36 vs 0)
 ```
 
-**9.** Regression test of portfolio profit and risk.
+**9.** Regression test of portfolio profit and risk.  
 The Example method is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
 Hash will save a cache of a number of results on a successful run and each subsequent run will fail with actual vs expected at the first point of any difference.  
 Together Example and Hash eliminate the need to commit data files in regression testing while also giving detailed information of any change.
