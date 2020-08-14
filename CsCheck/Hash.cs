@@ -228,7 +228,7 @@ namespace CsCheck
             } while (offset != bs.Length && bytesRead != 0);
             return Encoding.Unicode.GetString(bs);
         }
-        public static void WriteVarInt(Stream stream, uint val)
+        public static void WriteVarint(Stream stream, uint val)
         {
             if (val < 128u) stream.WriteByte((byte)val);
             else if (val < 0x4000u)
@@ -258,7 +258,7 @@ namespace CsCheck
                 stream.WriteByte((byte)(val & 127u));
             }
         }
-        public static uint ReadVarInt(Stream stream)
+        public static uint ReadVarint(Stream stream)
         {
             uint i = 0;
             while (true)
@@ -270,43 +270,26 @@ namespace CsCheck
         }
         public static void WriteVarInt2(Stream stream, uint val)
         {
-            if (val < 128u) stream.WriteByte((byte)(val | 128u));
-            else if (val < 0x4000u)
+            while(val > 127u)
             {
-                stream.WriteByte((byte)((val >> 7) & 127u));
                 stream.WriteByte((byte)(val | 128u));
+                val >>= 7;
             }
-            else if (val < 0x200000u)
-            {
-                stream.WriteByte((byte)((val >> 14) & 127u));
-                stream.WriteByte((byte)((val >>  7) & 127u));
-                stream.WriteByte((byte)(val | 128u));
-            }
-            else if (val < 0x10000000u)
-            {
-                stream.WriteByte((byte)((val >> 21) & 127u));
-                stream.WriteByte((byte)((val >> 14) & 127u));
-                stream.WriteByte((byte)((val >>  7) & 127u));
-                stream.WriteByte((byte)(val | 128u));
-            }
-            else
-            {
-                stream.WriteByte((byte)((val >> 28) & 127u));
-                stream.WriteByte((byte)((val >> 21) & 127u));
-                stream.WriteByte((byte)((val >> 14) & 127u));
-                stream.WriteByte((byte)((val >>  7) & 127u));
-                stream.WriteByte((byte)(val | 128u));
-            }
+            stream.WriteByte((byte)(val & 127u));
         }
         public static uint ReadVarInt2(Stream stream)
         {
-            uint i = 0;
-            while (true)
-            {
-                var b = (uint)stream.ReadByte();
-                if (b >= 128u) return i | (b & 127u);
-                i = (i | b) << 7;
-            }
+            var i = (uint)stream.ReadByte();
+            if (i < 128u) return i;
+            var b = (uint)stream.ReadByte();
+            if (b < 128u) return (i & 127u) | (b << 7);
+            i = (i & 127u) | ((b & 127u) << 7);
+            b = (uint)stream.ReadByte();
+            if (b < 128u) return i | (b << 14);
+            i |= (b & 127u) << 14;
+            b = (uint)stream.ReadByte();
+            if (b < 128u) return i | (b << 21);
+            return ((((uint)stream.ReadByte()) << 7) | (b & 127u)) << 21 | i;
         }
     }
 

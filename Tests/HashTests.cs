@@ -9,6 +9,9 @@ namespace Tests
 {
     public class StreamSerializerTests
     {
+        readonly Action<string> writeLine;
+        public StreamSerializerTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
+
         static void TestRoundtrip<T>(Gen<T> gen, Action<Stream, T> serialize, Func<Stream, T> deserialize)
         {
             gen.Sample(t =>
@@ -105,15 +108,15 @@ namespace Tests
             TestRoundtrip(Gen.String, StreamSerializer.WriteString, StreamSerializer.ReadString);
         }
         [Fact]
-        public void VarInt()
+        public void Varint()
         {
-            TestRoundtrip(Gen.UInt, StreamSerializer.WriteVarInt, StreamSerializer.ReadVarInt);
+            TestRoundtrip(Gen.UInt, StreamSerializer.WriteVarint, StreamSerializer.ReadVarint);
         }
-        [Fact(Skip = "WIP")]
-        public void VarInt_Perf()
+        [Fact(Skip ="WIP")]
+        public void Varint_Perf()
         {
             var ms = new MemoryStream(10);
-            Gen.UInt.Faster(
+            Gen.UInt.Power[10.0].Faster(
                 i =>
                 {
                     ms.Position = 0;
@@ -124,11 +127,12 @@ namespace Tests
                 i =>
                 {
                     ms.Position = 0;
-                    StreamSerializer.WriteVarInt(ms, i);
+                    StreamSerializer.WriteVarint(ms, i);
                     ms.Position = 0;
-                    return StreamSerializer.ReadVarInt(ms);
+                    return StreamSerializer.ReadVarint(ms);
                 }
-            , sigma: 20, threads: 1);
+            , sigma: 50, threads: 1)
+            .Output(writeLine);
         }
     }
 

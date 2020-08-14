@@ -469,6 +469,13 @@ namespace CsCheck
                 });
             }
         }
+        public class IntPower
+        {
+            public Gen<int> this[int start, int finish, float a] =>
+                Gen.Double.Select(u => (int)(Math.Pow(u, a) * (finish - start + 1) + start));
+        }
+        /// <summary>Skew the distribution to either end. The median becomes Math.Pow(0.5,a) of the range.</summary>
+        public IntPower Power = new IntPower();
     }
 
     public class GenUInt : Gen<uint>
@@ -490,6 +497,18 @@ namespace CsCheck
                 });
             }
         }
+        public class UIntPower
+        {
+            public Gen<uint> this[double a] => Gen.Double.Select(u =>
+            {
+                var ua = Math.Pow(u, a);
+                return (uint)(ua * uint.MaxValue + ua);
+            });
+            public Gen<uint> this[uint start, uint finish, double a] =>
+                Gen.Double.Select(u => (uint)(Math.Pow(u, a) * (finish - start + 1) + start));
+        }
+        /// <summary>Skew the distribution to either end. The median becomes Math.Pow(0.5,a) of the range.</summary>
+        public UIntPower Power = new UIntPower();
     }
 
     public class GenLong : Gen<long>
@@ -672,6 +691,13 @@ namespace CsCheck
                     : BitConverter.Int64BitsToDouble((long)i)
                 , new Size(i, null));
         });
+        public class DoublePower
+        {
+            public Gen<double> this[double start, double finish, double a] =>
+                Gen.Double.Unit.Select(u => Math.Pow(u, a) * (finish - start) + start);
+        }
+        /// <summary>Skew the distribution to either end. The median becomes Math.Pow(0.5,a) of the range.</summary>
+        public DoublePower Power = new DoublePower();
     }
 
     [StructLayout(LayoutKind.Explicit)]
