@@ -116,7 +116,7 @@ namespace Tests
         public void Varint_Perf()
         {
             var ms = new MemoryStream(10);
-            Gen.UInt.Power[10.0].Faster(
+            Gen.UInt.Skew[1.0].Faster(
                 i =>
                 {
                     ms.Position = 0;

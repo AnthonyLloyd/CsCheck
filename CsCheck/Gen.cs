@@ -469,13 +469,16 @@ namespace CsCheck
                 });
             }
         }
-        public class IntPower
+        public class IntSkew
         {
             public Gen<int> this[int start, int finish, float a] =>
-                Gen.Double.Select(u => (int)(Math.Pow(u, a) * (finish - start + 1) + start));
+                a >= 0.0 ? Gen.Double.Select(u => (int)(Math.Pow(u, a + 1.0) * (finish - start + 1) + start))
+                : Gen.Double.Select(u => (int)((1.0 - Math.Pow(u, 1.0 - a)) * (finish - start + 1) + start));
         }
-        /// <summary>Skew the distribution to either end. The median becomes Math.Pow(0.5,a) of the range.</summary>
-        public IntPower Power = new IntPower();
+        /// <summary>Skew the distribution towards either end.
+        /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(a+1.0) of the range.
+        /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
+        public IntSkew Skew = new IntSkew();
     }
 
     public class GenUInt : Gen<uint>
@@ -497,18 +500,21 @@ namespace CsCheck
                 });
             }
         }
-        public class UIntPower
+        public class UIntSkew
         {
             public Gen<uint> this[double a] => Gen.Double.Select(u =>
             {
-                var ua = Math.Pow(u, a);
+                var ua = Math.Pow(u, a + 1.0);
                 return (uint)(ua * uint.MaxValue + ua);
             });
             public Gen<uint> this[uint start, uint finish, double a] =>
-                Gen.Double.Select(u => (uint)(Math.Pow(u, a) * (finish - start + 1) + start));
+                a >= 0.0 ? Gen.Double.Select(u => (uint)(Math.Pow(u, a + 1.0) * (finish - start + 1) + start))
+                : Gen.Double.Select(u => (uint)((1.0 - Math.Pow(u, 1.0 - a)) * (finish - start + 1) + start));
         }
-        /// <summary>Skew the distribution to either end. The median becomes Math.Pow(0.5,a) of the range.</summary>
-        public UIntPower Power = new UIntPower();
+        /// <summary>Skew the distribution towards either end.
+        /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(a+1.0) of the range.
+        /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
+        public UIntSkew Skew = new UIntSkew();
     }
 
     public class GenLong : Gen<long>
@@ -585,11 +591,13 @@ namespace CsCheck
                 });
             }
         }
+        /// <summary>In the range 0.0f &lt;= x &lt; 1.0f.</summary>
         public Gen<float> Unit = new GenF<float>(pcg =>
         {
             uint i = pcg.Next() >> 9;
             return (new FloatConverter { I = i | 0x3F800000 }.F - 1f, new Size(i, null));
         });
+        /// <summary>Without special values nan and inf.</summary>
         public Gen<float> Normal = new GenF<float>(pcg =>
         {
             uint i = pcg.Next();
@@ -619,6 +627,7 @@ namespace CsCheck
                 default: return 0f;
             }
         }
+        /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
         public Gen<float> Special = new GenF<float>(pcg =>
         {
             uint i = pcg.Next();
@@ -649,12 +658,14 @@ namespace CsCheck
                 });
             }
         }
+        /// <summary>In the range 0.0 &lt;= x &lt; 1.0.</summary>
         public Gen<double> Unit = new GenF<double>(pcg =>
         {
             ulong i = pcg.Next64() >> 12;
             return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1.0
                     , new Size(i, null));
         });
+        /// <summary>Without special values nan and inf.</summary>
         public Gen<double> Normal = new GenF<double>(pcg =>
         {
             ulong i = pcg.Next64();
@@ -684,6 +695,7 @@ namespace CsCheck
                 default: return 0.0;
             }
         }
+        /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
         public Gen<double> Special = new GenF<double>(pcg =>
         {
             ulong i = pcg.Next64();
@@ -691,13 +703,16 @@ namespace CsCheck
                     : BitConverter.Int64BitsToDouble((long)i)
                 , new Size(i, null));
         });
-        public class DoublePower
+        public class DoubleSkew
         {
             public Gen<double> this[double start, double finish, double a] =>
-                Gen.Double.Unit.Select(u => Math.Pow(u, a) * (finish - start) + start);
+                a >= 0.0 ? Gen.Double.Unit.Select(u => Math.Pow(u, a + 1.0) * (finish - start) + start)
+                : Gen.Double.Unit.Select(u => (0.99999999999999978 - Math.Pow(u, 1.0 - a)) * (finish - start) + start);
         }
-        /// <summary>Skew the distribution to either end. The median becomes Math.Pow(0.5,a) of the range.</summary>
-        public DoublePower Power = new DoublePower();
+        /// <summary>Skew the distribution towards either end.
+        /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(a+1.0) of the range.
+        /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
+        public DoubleSkew Skew = new DoubleSkew();
     }
 
     [StructLayout(LayoutKind.Explicit)]
