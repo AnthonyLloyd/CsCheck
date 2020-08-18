@@ -471,12 +471,12 @@ namespace CsCheck
         }
         public class IntSkew
         {
-            public Gen<int> this[int start, int finish, float a] =>
-                a >= 0.0 ? Gen.Double.Select(u => (int)(Math.Pow(u, a + 1.0) * (finish - start + 1) + start))
-                : Gen.Double.Select(u => (int)((1.0 - Math.Pow(u, 1.0 - a)) * (finish - start + 1) + start));
+            public Gen<int> this[int start, int finish, double a] =>
+                a >= 0.0 ? Gen.Double.Unit.Select(u => start + (int)(Math.Pow(u, a + 1.0) * (1.0 + finish - start)))
+                : Gen.Double.Unit.Select(u => finish - (int)(Math.Pow(u, 1.0 - a) * (1.0 + finish - start)));
         }
         /// <summary>Skew the distribution towards either end.
-        /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(a+1.0) of the range.
+        /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
         /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
         public IntSkew Skew = new IntSkew();
     }
@@ -502,17 +502,17 @@ namespace CsCheck
         }
         public class UIntSkew
         {
-            public Gen<uint> this[double a] => Gen.Double.Select(u =>
+            public Gen<uint> this[double a] => Gen.Double.Unit.Select(u =>
             {
                 var ua = Math.Pow(u, a + 1.0);
                 return (uint)(ua * uint.MaxValue + ua);
             });
             public Gen<uint> this[uint start, uint finish, double a] =>
-                a >= 0.0 ? Gen.Double.Select(u => (uint)(Math.Pow(u, a + 1.0) * (finish - start + 1) + start))
-                : Gen.Double.Select(u => (uint)((1.0 - Math.Pow(u, 1.0 - a)) * (finish - start + 1) + start));
+                a >= 0.0 ? Gen.Double.Unit.Select(u => (uint)(start + Math.Pow(u, a + 1.0) * (1.0 + finish - start)))
+                : Gen.Double.Unit.Select(u => (uint)(finish - Math.Pow(u, 1.0 - a) * (1.0 + finish - start)));
         }
         /// <summary>Skew the distribution towards either end.
-        /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(a+1.0) of the range.
+        /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
         /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
         public UIntSkew Skew = new UIntSkew();
     }
@@ -706,11 +706,11 @@ namespace CsCheck
         public class DoubleSkew
         {
             public Gen<double> this[double start, double finish, double a] =>
-                a >= 0.0 ? Gen.Double.Unit.Select(u => Math.Pow(u, a + 1.0) * (finish - start) + start)
-                : Gen.Double.Unit.Select(u => (0.99999999999999978 - Math.Pow(u, 1.0 - a)) * (finish - start) + start);
+                a >= 0.0 ? Gen.Double.Unit.Select(u => start + Math.Pow(u, a + 1.0) * (finish - start))
+                : Gen.Double.Unit.Select(u => finish - Math.Pow(u, 1.0 - a) * (finish - start));
         }
         /// <summary>Skew the distribution towards either end.
-        /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(a+1.0) of the range.
+        /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
         /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
         public DoubleSkew Skew = new DoubleSkew();
     }

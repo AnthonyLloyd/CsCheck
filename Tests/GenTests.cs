@@ -152,6 +152,17 @@ namespace Tests
         }
 
         [Fact]
+        public void Int_Skew()
+        {
+            (from t in Gen.Int.Select(Gen.Int, Gen.Double[-10.0, 10.0])
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
+             from value in Gen.Int.Skew[start, finish, t.V2]
+             select (value, start, finish, t.V2))
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
+        }
+
+        [Fact]
         public void UInt_Range()
         {
             (from t in Gen.UInt.Select(Gen.UInt)
@@ -173,6 +184,17 @@ namespace Tests
             .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
+        }
+
+        [Fact]
+        public void UInt_Skew()
+        {
+            (from t in Gen.UInt.Select(Gen.UInt, Gen.Double[-10.0, 10.0])
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
+             from value in Gen.UInt.Skew[start, finish, t.V2]
+             select (value, start, finish))
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
@@ -294,6 +316,17 @@ namespace Tests
             .Array[frequency * buckets]
             .Select(i => Tally(buckets, i))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
+        }
+
+        [Fact]
+        public void Double_Skew()
+        {
+            (from t in Gen.Double.Unit.Select(Gen.Double.Unit, Gen.Double[-10.0, 10.0])
+             let start = Math.Min(t.V0, t.V1)
+             let finish = Math.Max(t.V0, t.V1)
+             from value in Gen.Double.Skew[start, finish, t.V2]
+             select (value, start, finish))
+            .Sample(i => i.value >= i.start && i.value <= i.finish);
         }
 
         [Fact]
