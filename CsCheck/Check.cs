@@ -295,7 +295,8 @@ namespace CsCheck
         }
 
         /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6).</summary>
-        public static FasterResult Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int timeout = 60_000)
+        public static FasterResult Faster(Action faster, Action slower,
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma;
@@ -311,10 +312,12 @@ namespace CsCheck
                         while (!mre.IsSet)
                         {
                             var tf = Stopwatch.GetTimestamp();
+                            for (int i = 1; i < repeat; i++) faster();
                             faster();
                             tf = Stopwatch.GetTimestamp() - tf;
                             if (mre.IsSet) return;
                             var ts = Stopwatch.GetTimestamp();
+                            for (int i = 1; i < repeat; i++) slower();
                             slower();
                             ts = Stopwatch.GetTimestamp() - ts;
                             if (mre.IsSet) return;
@@ -340,7 +343,7 @@ namespace CsCheck
         }
         /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6).</summary>
         public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Action<T, T> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int timeout = 60_000)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma;
@@ -356,10 +359,12 @@ namespace CsCheck
                         while (!mre.IsSet)
                         {
                             var tf = Stopwatch.GetTimestamp();
+                            for (int i = 1; i < repeat; i++) faster();
                             var vf = faster();
                             tf = Stopwatch.GetTimestamp() - tf;
                             if (mre.IsSet) return;
                             var ts = Stopwatch.GetTimestamp();
+                            for (int i = 1; i < repeat; i++) slower();
                             var vs = slower();
                             ts = Stopwatch.GetTimestamp() - ts;
                             if (mre.IsSet) return;
@@ -407,7 +412,7 @@ namespace CsCheck
         }
         /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6) across a sampel of input data.</summary>
         public static FasterResult Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower,
-            double sigma = -1.0, int threads = -1, int timeout = 60_000, string seed = null)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000, string seed = null)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma; // using sigma as sigma squared now
@@ -429,10 +434,12 @@ namespace CsCheck
                             state = pcg.State;
                             t = gen.Generate(pcg).Item1;
                             var tf = Stopwatch.GetTimestamp();
+                            for (int i = 1; i < repeat; i++) faster(t);
                             faster(t);
                             tf = Stopwatch.GetTimestamp() - tf;
                             if (mre.IsSet) return;
                             var ts = Stopwatch.GetTimestamp();
+                            for (int i = 1; i < repeat; i++) slower(t);
                             slower(t);
                             ts = Stopwatch.GetTimestamp() - ts;
                             if (mre.IsSet) return;
@@ -459,8 +466,8 @@ namespace CsCheck
             return r;
         }
         /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-        public static FasterResult Faster<T1, T2>(this Gen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower,
-            Action<T2, T2> assertEqual = null, double sigma = -1.0, int threads = -1, int timeout = 60_000, string seed = null)
+        public static FasterResult Faster<T1, T2>(this Gen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower, Action<T2, T2> assertEqual = null,
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000, string seed = null)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma; // using sigma as sigma squared now
@@ -483,10 +490,12 @@ namespace CsCheck
                             state = pcg.State;
                             t = gen.Generate(pcg).Item1;
                             var tf = Stopwatch.GetTimestamp();
+                            for (int i = 1; i < repeat; i++) faster(t);
                             var vf = faster(t);
                             tf = Stopwatch.GetTimestamp() - tf;
                             if (mre.IsSet) return;
                             var ts = Stopwatch.GetTimestamp();
+                            for (int i = 1; i < repeat; i++) slower(t);
                             var vs = slower(t);
                             ts = Stopwatch.GetTimestamp() - ts;
                             if (mre.IsSet) return;

@@ -1,9 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using Xunit;
 using CsCheck;
-using System.Linq;
-using System.Threading;
 
 namespace Tests
 {
@@ -111,28 +110,6 @@ namespace Tests
         public void Varint()
         {
             TestRoundtrip(Gen.UInt, StreamSerializer.WriteVarint, StreamSerializer.ReadVarint);
-        }
-        [Fact(Skip ="WIP")]
-        public void Varint_Perf()
-        {
-            var ms = new MemoryStream(10);
-            Gen.UInt.Skew[1.0].Faster(
-                i =>
-                {
-                    ms.Position = 0;
-                    StreamSerializer.WriteVarInt2(ms, i);
-                    ms.Position = 0;
-                    return StreamSerializer.ReadVarInt2(ms);
-                },
-                i =>
-                {
-                    ms.Position = 0;
-                    StreamSerializer.WriteVarint(ms, i);
-                    ms.Position = 0;
-                    return StreamSerializer.ReadVarint(ms);
-                }
-            , sigma: 50, threads: 1)
-            .Output(writeLine);
         }
     }
 
