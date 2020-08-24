@@ -50,29 +50,33 @@ namespace Tests
             });
         }
 
-        [Fact]
-        public void PrefixVarint_Perf()
+        void PrefixVarint_Faster(double skew)
         {
-            var bytes = new byte[9];
-            Gen.UInt.Faster(i =>
+            var bytes = new byte[8];
+            Gen.UInt.Skew[skew].Faster(i =>
             {
-                int pos = 1;
+                int pos = 0;
                 ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
-                pos = 1;
-                return ArraySerializer.ReadPrefixVarint(bytes, ref pos) == i;
+                pos = 0;
+                return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
             }
             , i =>
             {
-                int pos = 1;
+                int pos = 0;
                 ArraySerializer.WriteVarint(bytes, ref pos, i);
-                pos = 1;
-                return ArraySerializer.ReadVarint(bytes, ref pos) == i;
+                pos = 0;
+                return ArraySerializer.ReadVarint(bytes, ref pos);
             }, threads: 1, sigma: 50, repeat: 10_000)
             .Output(writeLine);
         }
+        [Fact]
+        public void PrefixVarint_Faster_NoSkew() => PrefixVarint_Faster(0);
+        [Fact]
+        public void PrefixVarint_Faster_Skew10() => PrefixVarint_Faster(10);
+
 
         [Fact]
-        public void SQLite_Perf()
+        public void SQLite_Faster()
         {
             var bytes = new byte[8];
             Gen.UInt.Faster(i =>
@@ -184,17 +188,17 @@ namespace Tests
 
         public static void WritePrefixVarint(byte[] bytes, ref int pos, uint val)
         {
-            var neededBytes = BitOperations.Log2(val) / 7;
-            Unsafe.WriteUnaligned(ref bytes[pos], (((ulong)val << 1) | 1UL) << neededBytes);
-            pos += neededBytes + 1;
+            var noBytes = BitOperations.Log2(val) / 7;
+            Unsafe.WriteUnaligned(ref bytes[pos], (((ulong)val << 1) | 1UL) << noBytes);
+            pos += noBytes + 1;
         }
 
         public static uint ReadPrefixVarint(byte[] bytes, ref int pos)
         {
             ulong result = Unsafe.ReadUnaligned<ulong>(ref bytes[pos]);
-            var bytesNeeded = BitOperations.TrailingZeroCount(result) + 1;
-            pos += bytesNeeded;
-            return (uint)(((1UL << (bytesNeeded * 7)) - 1UL) & (result >> bytesNeeded));
+            var noBytes = BitOperations.TrailingZeroCount(result) + 1;
+            pos += noBytes;
+            return (uint)(((1UL << (noBytes * 7)) - 1UL) & (result >> noBytes));
         }
     }
 }

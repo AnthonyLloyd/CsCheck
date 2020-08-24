@@ -451,7 +451,9 @@ namespace CsCheck
     public class GenInt : Gen<int>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static uint Zigzag(int i) => (uint)((i << 1) ^ (i >> 31));
+        public static uint Zigzag(int i) => (uint)((i << 1) ^ (i >> 31));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int Unzigzag(uint i) => ((int)(i >> 1)) ^ -((int)(i & 1U));
         public override (int, Size) Generate(PCG pcg)
         {
             int i = (int)pcg.Next();

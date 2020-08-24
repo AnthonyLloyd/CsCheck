@@ -163,6 +163,12 @@ namespace Tests
         }
 
         [Fact]
+        public void Int_Zigzag_Roundtrip()
+        {
+            Gen.Int.Sample(i => GenInt.Unzigzag(GenInt.Zigzag(i)) == i);
+        }
+
+        [Fact]
         public void UInt_Range()
         {
             (from t in Gen.UInt.Select(Gen.UInt)

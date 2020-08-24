@@ -157,7 +157,45 @@ Standard Output Messages:
 25.1%[-5..+6] faster, sigma=6.0 (36 vs 0)
 ```
 
-**9.** Regression test of portfolio profit and risk.  
+**9.** Performance test of PrefixVarint vs Varint for a given distribution skew.
+Repeat is used as the functions are very quick.
+```csharp
+void PrefixVarint_Faster(double skew)
+{
+    var bytes = new byte[8];
+    Gen.UInt.Skew[skew].Faster(i =>
+    {
+        int pos = 0;
+        ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
+        pos = 0;
+        return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
+    }
+    , i =>
+    {
+        int pos = 0;
+        ArraySerializer.WriteVarint(bytes, ref pos, i);
+        pos = 0;
+        return ArraySerializer.ReadVarint(bytes, ref pos);
+    }, threads: 1, sigma: 50, repeat: 10_000)
+    .Output(writeLine);
+}
+[Fact]
+public void PrefixVarint_Faster_NoSkew() => PrefixVarint_Faster(0);
+[Fact]
+public void PrefixVarint_Faster_Skew10() => PrefixVarint_Faster(10);
+```
+
+```
+Tests.ArraySerializerTests.PrefixVarint_Faster_Skew10 [1s 829ms]
+Standard Output Messages:
+25.5%[-26..+14] faster, sigma=50.0 (8,394 vs 3,046)
+
+Tests.ArraySerializerTests.PrefixVarint_Faster_NoSkew [483ms]
+Standard Output Messages:
+51.9%[-3..+3] faster, sigma=50.0 (2,539 vs 13)
+```
+
+**10.** Regression test of portfolio profit and risk.  
 **Example** function is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
 **Hash** will save a cache of a number of results on a successful run and each subsequent run will fail with actual vs expected at the first point of any difference.  
 Together Example and Hash eliminate the need to commit data files in regression testing while also giving detailed information of any change.

@@ -369,12 +369,13 @@ namespace CsCheck
         }
         public void Add(int val)
         {
-            Stream(StreamSerializer.WriteInt, StreamSerializer.ReadInt, val);
+            Stream((s, i) => StreamSerializer.WriteUInt(s, GenInt.Zigzag(i)),
+                   s => GenInt.Unzigzag(StreamSerializer.ReadUInt(s)), val);
             AddPrivate((uint)val);
         }
         public void Add(uint val)
         {
-            Stream(StreamSerializer.WriteUInt, StreamSerializer.ReadUInt, val);
+            Stream(StreamSerializer.WriteVarint, StreamSerializer.ReadVarint, val);
             AddPrivate(val);
         }
         public void Add(long val)
@@ -456,21 +457,21 @@ namespace CsCheck
         public void Add(IEnumerable<float> vals, int decimals)
         {
             var array = vals as float[] ?? vals.ToArray();
-            Add(array.Length);
+            Add((uint)array.Length);
             foreach (var val in array)
                 Add(val, decimals);
         }
         public void Add(IEnumerable<double> vals, int decimals)
         {
             var array = vals as double[] ?? vals.ToArray();
-            Add(array.Length);
+            Add((uint)array.Length);
             foreach (var val in array)
                 Add(val, decimals);
         }
         public void Add(IEnumerable<decimal> vals, int decimals)
         {
             var array = vals as decimal[] ?? vals.ToArray();
-            Add(array.Length);
+            Add((uint)array.Length);
             foreach (var val in array)
                 Add(val, decimals);
         }
