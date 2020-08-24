@@ -186,13 +186,13 @@ public void PrefixVarint_Faster_Skew10() => PrefixVarint_Faster(10);
 ```
 
 ```
-Tests.ArraySerializerTests.PrefixVarint_Faster_Skew10 [1s 829ms]
-Standard Output Messages:
-25.5%[-26..+14] faster, sigma=50.0 (8,394 vs 3,046)
-
 Tests.ArraySerializerTests.PrefixVarint_Faster_NoSkew [483ms]
 Standard Output Messages:
 51.9%[-3..+3] faster, sigma=50.0 (2,539 vs 13)
+
+Tests.ArraySerializerTests.PrefixVarint_Faster_Skew10 [1s 829ms]
+Standard Output Messages:
+25.5%[-26..+14] faster, sigma=50.0 (8,394 vs 3,046)
 ```
 
 **10.** Regression test of portfolio profit and risk.  
