@@ -29,7 +29,36 @@ public void Single_Unit_Range()
 }
 ```
 
-**2.** Sample roundtrip serialization testing.
+**2.** Sample test for long ranges.
+```csharp
+[Fact]
+public void Long_Range()
+{
+    (from t in Gen.Select(Gen.Long, Gen.Long)
+     let start = Math.Min(t.V0, t.V1)
+     let finish = Math.Max(t.V0, t.V1)
+     from value in Gen.Long[start, finish]
+     select (value, start, finish))
+    .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+}
+```
+
+**3.** Sample test for int value distribution.
+```csharp
+[Fact]
+public void Int_Distribution()
+{
+    var frequency = 10;
+    var buckets = 70;
+    var expected = ArrayRepeat(frequency, buckets);
+    Gen.Int[0, buckets - 1]
+    .Array[frequency * buckets]
+    .Select(i => Tally(buckets, i))
+    .SampleOne(actual => Check.ChiSquared(expected, actual));
+}
+```
+
+**4.** Sample roundtrip serialization testing.
 ```csharp
 static void TestRoundtrip<T>(Gen<T> gen, Action<Stream, T> serialize, Func<Stream, T> deserialize)
 {
@@ -55,35 +84,6 @@ public void Double()
 public void DateTime()
 {
     TestRoundtrip(Gen.DateTime, StreamSerializer.WriteDateTime, StreamSerializer.ReadDateTime);
-}
-```
-
-**3.** Sample test for long ranges.
-```csharp
-[Fact]
-public void Long_Range()
-{
-    (from t in Gen.Select(Gen.Long, Gen.Long)
-     let start = Math.Min(t.V0, t.V1)
-     let finish = Math.Max(t.V0, t.V1)
-     from value in Gen.Long[start, finish]
-     select (value, start, finish))
-    .Sample(i => Assert.InRange(i.value, i.start, i.finish));
-}
-```
-
-**4.** Sample test for int value distribution.
-```csharp
-[Fact]
-public void Int_Distribution()
-{
-    var frequency = 10;
-    var buckets = 70;
-    var expected = ArrayRepeat(frequency, buckets);
-    Gen.Int[0, buckets - 1]
-    .Array[frequency * buckets]
-    .Select(i => Tally(buckets, i))
-    .SampleOne(actual => Check.ChiSquared(expected, actual));
 }
 ```
 
