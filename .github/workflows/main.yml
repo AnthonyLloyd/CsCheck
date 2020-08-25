@@ -13,4 +13,6 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Test
-      run: dotnet test -c Release
+      run: dotnet test -c Release -l 'console;verbosity=detailed'
+      env:
+        DOTNET_CLI_TELEMETRY_OPTOUT: 1

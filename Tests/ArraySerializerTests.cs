@@ -56,9 +56,9 @@ namespace Tests
             }, threads: 1, sigma: 50, repeat: 10_000)
             .Output(writeLine);
         }
-        [Fact(Skip = "Ubuntu issue")]
+        [Fact]
         public void PrefixVarint_Faster_NoSkew() => PrefixVarint_Faster(0);
-        [Fact(Skip = "Ubuntu issue")]
+        [Fact]
         public void PrefixVarint_Faster_Skew10() => PrefixVarint_Faster(5);
     }
 
