@@ -29,13 +29,32 @@ public void Single_Unit_Range()
 }
 ```
 
-**2.** Sample test for chars taken from a string.
+**2.** Sample roundtrip serialization testing.
 ```csharp
-[Fact]
-public void Char_Array()
+static void TestRoundtrip<T>(Gen<T> gen, Action<Stream, T> serialize, Func<Stream, T> deserialize)
 {
-    var chars = "abcdefghijklmopqrstuvwxyz0123456789_/";
-    Gen.Char[chars].Sample(c => chars.Contains(c));
+    gen.Sample(t =>
+    {
+        using var ms = new MemoryStream();
+        serialize(ms, t);
+        ms.Position = 0;
+        return deserialize(ms).Equals(t);
+    });
+}
+[Fact]
+public void Varint()
+{
+    TestRoundtrip(Gen.UInt, StreamSerializer.WriteVarint, StreamSerializer.ReadVarint);
+}
+[Fact]
+public void Double()
+{
+    TestRoundtrip(Gen.Double, StreamSerializer.WriteDouble, StreamSerializer.ReadDouble);
+}
+[Fact]
+public void DateTime()
+{
+    TestRoundtrip(Gen.DateTime, StreamSerializer.WriteDateTime, StreamSerializer.ReadDateTime);
 }
 ```
 
