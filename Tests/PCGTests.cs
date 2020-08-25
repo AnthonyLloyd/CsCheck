@@ -117,7 +117,7 @@ namespace Tests
             .Array[20]
             .SampleOne(t =>
             {
-                var expected = GenTests.ArrayRepeat(10, 32);
+                var expected = GenTests.ArrayRepeat(32, 10);
                 var actual = new int[32];
                 foreach (var i in t)
                 {
@@ -140,7 +140,7 @@ namespace Tests
             .Array[20]
             .SampleOne(t =>
             {
-                var expected = GenTests.ArrayRepeat(10, 64);
+                var expected = GenTests.ArrayRepeat(64, 10);
                 var actual = new int[64];
                 foreach (var i in t)
                 {

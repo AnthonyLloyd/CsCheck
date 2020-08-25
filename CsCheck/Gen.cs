@@ -284,7 +284,7 @@ namespace CsCheck
         public static Gen<T> Cast<T>(this IGen gen) => new GenF<T>(pcg =>
         {
             var (o, s) = gen.Generate(pcg);
-            return ((T)o, s);
+            return ((o is T t) ? t : (T)Convert.ChangeType(o, typeof(T)), s);
         });
         public static Gen<T> Frequency<T>(params (int, T)[] ts)
         {
