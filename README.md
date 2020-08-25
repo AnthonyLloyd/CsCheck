@@ -48,12 +48,11 @@ public void Long_Range()
 [Fact]
 public void Int_Distribution()
 {
-    var frequency = 10;
     var buckets = 70;
-    var expected = ArrayRepeat(frequency, buckets);
-    Gen.Int[0, buckets - 1]
-    .Array[frequency * buckets]
-    .Select(i => Tally(buckets, i))
+    var frequency = 10;
+    var expected = ArrayRepeat(buckets, frequency);
+    Gen.Int[0, buckets - 1].Array[frequency * buckets]
+    .Select(sample => Tally(buckets, sample))
     .SampleOne(actual => Check.ChiSquared(expected, actual));
 }
 ```

@@ -7,7 +7,7 @@ namespace Tests
 {
     public class GenTests
     {
-        public static int[] ArrayRepeat(int x, int n)
+        public static int[] ArrayRepeat(int n, int x)
         {
             var a = new int[n];
             Array.Fill(a, x);
@@ -25,10 +25,9 @@ namespace Tests
         public void Bool_Distribution()
         {
             var frequency = 10;
-            var expected = ArrayRepeat(frequency, 2);
-            Gen.Bool.Select(i => i ? 1 : 0)
-            .Array[frequency * 2]
-            .Select(i => Tally(2, i))
+            var expected = ArrayRepeat(2, frequency);
+            Gen.Bool.Select(i => i ? 1 : 0).Array[frequency * 2]
+            .Select(sample => Tally(2, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -46,13 +45,12 @@ namespace Tests
         [Fact]
         public void SByte_Distribution()
         {
-            var frequency = 10;
             var buckets = 70;
-            var expected = ArrayRepeat(frequency, buckets);
+            var frequency = 10;
+            var expected = ArrayRepeat(buckets, frequency);
             Gen.SByte[0, (sbyte)(buckets - 1)]
-            .Select(i => (int)i)
-            .Array[frequency * buckets]
-            .Select(i => Tally(buckets, i))
+            .Cast<int>().Array[frequency * buckets]
+            .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -70,13 +68,12 @@ namespace Tests
         [Fact]
         public void Byte_Distribution()
         {
-            var frequency = 10;
             var buckets = 70;
-            var expected = ArrayRepeat(frequency, buckets);
+            var frequency = 10;
+            var expected = ArrayRepeat(buckets, frequency);
             Gen.Byte[0, (byte)(buckets - 1)]
-            .Select(i => (int)i)
-            .Array[frequency * buckets]
-            .Select(i => Tally(buckets, i))
+            .Cast<int>().Array[frequency * buckets]
+            .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -94,13 +91,12 @@ namespace Tests
         [Fact]
         public void Short_Distribution()
         {
-            var frequency = 10;
             var buckets = 70;
-            var expected = ArrayRepeat(frequency, buckets);
+            var frequency = 10;
+            var expected = ArrayRepeat(buckets, frequency);
             Gen.Short[0, (short)(buckets - 1)]
-            .Select(i => (int)i)
-            .Array[frequency * buckets]
-            .Select(i => Tally(buckets, i))
+            .Cast<int>().Array[frequency * buckets]
+            .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -118,13 +114,12 @@ namespace Tests
         [Fact]
         public void UShort_Distribution()
         {
-            var frequency = 10;
             var buckets = 70;
-            var expected = ArrayRepeat(frequency, buckets);
+            var frequency = 10;
+            var expected = ArrayRepeat(buckets, frequency);
             Gen.UShort[0, (ushort)(buckets - 1)]
-            .Select(i => (int)i)
-            .Array[frequency * buckets]
-            .Select(i => Tally(buckets, i))
+            .Cast<int>().Array[frequency * buckets]
+            .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -142,12 +137,11 @@ namespace Tests
         [Fact]
         public void Int_Distribution()
         {
-            var frequency = 10;
             var buckets = 70;
-            var expected = ArrayRepeat(frequency, buckets);
-            Gen.Int[0, buckets - 1]
-            .Array[frequency * buckets]
-            .Select(i => Tally(buckets, i))
+            var frequency = 10;
+            var expected = ArrayRepeat(buckets, frequency);
+            Gen.Int[0, buckets - 1].Array[frequency * buckets]
+            .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -182,13 +176,12 @@ namespace Tests
         [Fact]
         public void UInt_Distribution()
         {
-            var frequency = 10;
             var buckets = 70;
-            var expected = ArrayRepeat(frequency, buckets);
+            var frequency = 10;
+            var expected = ArrayRepeat(buckets, frequency);
             Gen.UInt[0, (uint)(buckets - 1)]
-            .Select(i => (int)i)
-            .Array[frequency * buckets]
-            .Select(i => Tally(buckets, i))
+            .Cast<int>().Array[frequency * buckets]
+            .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -217,13 +210,12 @@ namespace Tests
         [Fact]
         public void Long_Distribution()
         {
-            var frequency = 10;
             var buckets = 70;
-            var expected = ArrayRepeat(frequency, buckets);
+            var frequency = 10;
+            var expected = ArrayRepeat(buckets, frequency);
             Gen.Long[0, buckets - 1]
-            .Select(i => (int)i)
-            .Array[frequency * buckets]
-            .Select(i => Tally(buckets, i))
+            .Cast<int>().Array[frequency * buckets]
+            .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -241,13 +233,12 @@ namespace Tests
         [Fact]
         public void ULong_Distribution()
         {
-            var frequency = 10;
             var buckets = 70;
-            var expected = ArrayRepeat(frequency, buckets);
+            var frequency = 10;
+            var expected = ArrayRepeat(buckets, frequency);
             Gen.ULong[0, (ulong)(buckets - 1)]
-            .Select(i => (int)i)
-            .Array[frequency * buckets]
-            .Select(i => Tally(buckets, i))
+            .Cast<int>().Array[frequency * buckets]
+            .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -277,13 +268,13 @@ namespace Tests
         [Fact]
         public void Single_Distribution()
         {
-            var frequency = 10;
             var buckets = 70;
-            var expected = ArrayRepeat(frequency, buckets);
+            var frequency = 10;
+            var expected = ArrayRepeat(buckets, frequency);
             Gen.Single.Unit
             .Select(i => (int)(i * buckets))
             .Array[frequency * buckets]
-            .Select(i => Tally(buckets, i))
+            .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -314,13 +305,13 @@ namespace Tests
         [Fact]
         public void Double_Distribution()
         {
-            var frequency = 10;
             var buckets = 70;
-            var expected = ArrayRepeat(frequency, buckets);
+            var frequency = 10;
+            var expected = ArrayRepeat(buckets, frequency);
             Gen.Double.Unit
             .Select(i => (int)(i * buckets))
             .Array[frequency * buckets]
-            .Select(i => Tally(buckets, i))
+            .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -368,13 +359,13 @@ namespace Tests
         [Fact]
         public void Decimal_Distribution()
         {
-            var frequency = 10;
             var buckets = 70;
-            var expected = ArrayRepeat(frequency, buckets);
+            var frequency = 10;
+            var expected = ArrayRepeat(buckets, frequency);
             Gen.Decimal.Unit
             .Select(i => (int)(i * buckets))
             .Array[frequency * buckets]
-            .Select(i => Tally(buckets, i))
+            .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -426,13 +417,12 @@ namespace Tests
         [Fact]
         public void Char_Distribution()
         {
-            var frequency = 10;
             var buckets = 70;
-            var expected = ArrayRepeat(frequency, buckets);
+            var frequency = 10;
+            var expected = ArrayRepeat(buckets, frequency);
             Gen.Char[(char)0, (char)(buckets - 1)]
-            .Select(i => (int)i)
-            .Array[frequency * buckets]
-            .Select(i => Tally(buckets, i))
+            .Cast<int>().Array[frequency * buckets]
+            .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }
 
@@ -500,7 +490,7 @@ namespace Tests
              let expected = new[] { f.V0 * frequency, f.V1 * frequency, f.V2 * frequency }
              from actual in Gen.Frequency((f.V0, 0), (f.V1, 1), (f.V2, 2))
                             .Array[frequency * (f.V0 + f.V1 + f.V2)]
-                            .Select(i => Tally(3, i))
+                            .Select(sample => Tally(3, sample))
              select (expected, actual))
             .SampleOne(t => Check.ChiSquared(t.expected, t.actual));
         }
