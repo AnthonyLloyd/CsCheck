@@ -541,9 +541,10 @@ namespace CsCheck
                         mre.Set();
                     }
                 });
+            var completed = !mre.Wait(timeout);
             if (!noexception)
             {
-                if (!mre.Wait(timeout)) throw new CsCheckException("Timeout! " + r.ToString());
+                if (!completed) throw new CsCheckException("Timeout! " + r.ToString());
                 if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
             }
             return r;
