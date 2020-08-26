@@ -296,7 +296,7 @@ namespace CsCheck
 
         /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6).</summary>
         public static FasterResult Faster(Action faster, Action slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000, bool raiseexception = true)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma;
@@ -337,13 +337,17 @@ namespace CsCheck
                         mre.Set();
                     }
                 });
-            if (!mre.Wait(timeout)) throw new CsCheckException("Timeout! " + r.ToString());
-            if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+            bool completed = mre.Wait(timeout);
+            if (raiseexception)
+            {
+                if (!completed) throw new CsCheckException("Timeout! " + r.ToString());
+                if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+            }
             return r;
         }
         /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6).</summary>
         public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Action<T, T> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000, bool raiseexception = true)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma;
@@ -406,13 +410,17 @@ namespace CsCheck
                         mre.Set();
                     }
                 });
-            if (!mre.Wait(timeout)) throw new CsCheckException("Timeout! " + r.ToString());
-            if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+            bool completed = mre.Wait(timeout);
+            if (raiseexception)
+            {
+                if (!completed) throw new CsCheckException("Timeout! " + r.ToString());
+                if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+            }
             return r;
         }
         /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6) across a sampel of input data.</summary>
         public static FasterResult Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000, string seed = null)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000, string seed = null, bool raiseexception = true)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma; // using sigma as sigma squared now
@@ -461,13 +469,17 @@ namespace CsCheck
                         mre.Set();
                     }
                 });
-            if (!mre.Wait(timeout)) throw new CsCheckException("Timeout! " + r.ToString());
-            if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+            var completed = mre.Wait(timeout);
+            if (raiseexception)
+            {
+                if (!completed) throw new CsCheckException("Timeout! " + r.ToString());
+                if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+            }
             return r;
         }
         /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
         public static FasterResult Faster<T1, T2>(this Gen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower, Action<T2, T2> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000, string seed = null, bool noexception = false)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000, string seed = null, bool raiseexception = true)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma; // using sigma as sigma squared now
@@ -542,7 +554,7 @@ namespace CsCheck
                     }
                 });
             var completed = mre.Wait(timeout);
-            if (!noexception)
+            if (raiseexception)
             {
                 if (!completed) throw new CsCheckException("Timeout! " + r.ToString());
                 if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());

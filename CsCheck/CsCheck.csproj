@@ -21,10 +21,9 @@ CsCheck also makes multithreading, performance and regression testing simple and
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;multithreading;performance;regression;testing</PackageTags>
-        <Version>0.9.1</Version>
+        <Version>0.9.2</Version>
         <PackageReleaseNotes>
-Added Skew to UInt, Int and Double.
-Added repeat to Faster.
+Added raiseexception to Faster.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <WarningLevel>4</WarningLevel>
