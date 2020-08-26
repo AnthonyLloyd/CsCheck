@@ -467,7 +467,7 @@ namespace CsCheck
         }
         /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
         public static FasterResult Faster<T1, T2>(this Gen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower, Action<T2, T2> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000, string seed = null)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000, string seed = null, bool noexception = false)
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma; // using sigma as sigma squared now
@@ -541,8 +541,11 @@ namespace CsCheck
                         mre.Set();
                     }
                 });
-            if (!mre.Wait(timeout)) throw new CsCheckException("Timeout! " + r.ToString());
-            if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+            if (!noexception)
+            {
+                if (!mre.Wait(timeout)) throw new CsCheckException("Timeout! " + r.ToString());
+                if (exception != null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+            }
             return r;
         }
         /// <summary>Generate an example that satisfies the predicate.</summary>

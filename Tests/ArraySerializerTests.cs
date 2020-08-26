@@ -53,12 +53,12 @@ namespace Tests
                 ArraySerializer.WriteVarint(bytes, ref pos, i);
                 pos = 0;
                 return ArraySerializer.ReadVarint(bytes, ref pos);
-            }, threads: 1, sigma: 50, repeat: 10_000)
+            }, threads: 1, sigma: 50, repeat: 10_000, noexception: true)
             .Output(writeLine);
         }
-        [Fact(Skip = "Hmmm")]
+        [Fact]
         public void PrefixVarint_Faster_NoSkew() => PrefixVarint_Faster(0);
-        [Fact(Skip = "Hmmm")]
+        [Fact]
         public void PrefixVarint_Faster_Skew10() => PrefixVarint_Faster(5);
     }
 
