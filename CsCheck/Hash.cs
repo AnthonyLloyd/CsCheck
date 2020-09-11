@@ -11,7 +11,7 @@ namespace CsCheck
     {
         public static void WriteBool(Stream stream, bool val)
         {
-            stream.WriteByte(val ? (byte)1 : (byte)0);
+            stream.WriteByte((byte)(val ? 1 : 0));
         }
         public static bool ReadBool(Stream stream)
         {
@@ -275,6 +275,7 @@ namespace CsCheck
         static readonly string CacheDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
         readonly int ExpectedHash;
+        readonly double RoundOffset;
         readonly Stream stream;
         readonly string filename;
         readonly bool writing;
@@ -296,18 +297,19 @@ namespace CsCheck
                 }
             }
         }
-        public static Hash Expected(int? expectedHash,
+        public static Hash Expected(int? expectedHash, double roundOffset = 0.0,
             [CallerMemberName] string callerMemberName = "", [CallerFilePath] string callerFilePath = "")
         {
-            return new Hash(expectedHash, callerMemberName, callerFilePath);
+            return new Hash(expectedHash, roundOffset, callerMemberName, callerFilePath);
         }
-        private Hash(int? expectedHash, string callerMemberName, string callerFilePath)
+        private Hash(int? expectedHash, double roundOffset, string callerMemberName, string callerFilePath)
         {
             if (!expectedHash.HasValue) return;
             filename = callerFilePath.Substring(Path.GetPathRoot(callerFilePath).Length);
             filename = Path.Combine(CacheDir, Path.GetDirectoryName(filename),
                         Path.GetFileNameWithoutExtension(filename) + "__" + callerMemberName + ".chs");
             ExpectedHash = expectedHash.Value;
+            RoundOffset = roundOffset;
             if (File.Exists(filename))
             {
                 stream = File.Open(filename, FileMode.Open);
@@ -444,15 +446,15 @@ namespace CsCheck
         }
         public void Add(float val, int decimals)
         {
-            Add(Math.Round(val, decimals));
+            Add(Math.Round(val + RoundOffset, decimals));
         }
         public void Add(double val, int decimals)
         {
-            Add(Math.Round(val, decimals));
+            Add(Math.Round(val + RoundOffset, decimals));
         }
         public void Add(decimal val, int decimals)
         {
-            Add(Math.Round(val, decimals));
+            Add(Math.Round(val + (decimal)RoundOffset, decimals));
         }
         public void Add(IEnumerable<float> vals, int decimals)
         {

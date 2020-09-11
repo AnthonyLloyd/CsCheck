@@ -30,6 +30,6 @@ Added raiseexception to Faster.
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>
     <ItemGroup>
-        <None Include="CsCheck.png" Pack="true" PackagePath="\" />
+        <None Include="CsCheck.png" Pack="true" PackagePath="" />
     </ItemGroup>
 </Project>
