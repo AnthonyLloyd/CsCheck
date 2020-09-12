@@ -13,11 +13,10 @@
 // limitations under the License.
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace CsCheck
 {
@@ -30,7 +29,7 @@ namespace CsCheck
             I = i;
             Next = next;
         }
-        internal bool IsLessThan(Size s) => I == s.I ? IsLessThan(Next, s.Next) : I < s.I;
+        public bool IsLessThan(Size s) => I == s.I ? IsLessThan(Next, s.Next) : I < s.I;
         static bool IsLessThan(IEnumerable<Size> a, IEnumerable<Size> b)
         {
             if (a is null || b is null) return b is object;

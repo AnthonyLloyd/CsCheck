@@ -23,7 +23,7 @@ namespace CsCheck
         static int threadCount;
         [ThreadStatic]
         static PCG threadPCG;
-        internal static PCG ThreadPCG => threadPCG ?? (threadPCG = new PCG((uint)Interlocked.Increment(ref threadCount)));
+        public static PCG ThreadPCG => threadPCG ?? (threadPCG = new PCG((uint)Interlocked.Increment(ref threadCount)));
         readonly ulong Inc;
         public ulong State { get; private set; }
         public uint Stream => (uint)(Inc >> 1);
