@@ -660,7 +660,7 @@ namespace CsCheck
                 q2 = q;
             }
         }
-        public void Add(float s)
+        public void Add(double s)
         {
             switch (++N)
             {
