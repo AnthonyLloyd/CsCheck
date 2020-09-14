@@ -280,6 +280,7 @@ namespace CsCheck
         readonly string filename;
         readonly bool writing;
         bool errorThrown;
+        List<double> roundingFractions;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void Stream<T>(Action<Stream, T> serialize, Func<Stream, T> deserialize, T val)
         {
@@ -297,6 +298,11 @@ namespace CsCheck
                 }
             }
         }
+        /// <param name="roundOffset">Moves the point at which numbers are rounded up or down.
+        /// This is normally 0.5 but the offset can be set to -0.5 to 0.5.
+        /// This is only needed in the rare case there are rounding differences between machines causing failures.
+        /// Setting this to -1 will find an offset as far away from the data points as possible.
+        /// </param>
         public static Hash Expected(int? expectedHash, double roundOffset = 0.0,
             [CallerMemberName] string callerMemberName = "", [CallerFilePath] string callerFilePath = "")
         {
@@ -304,6 +310,12 @@ namespace CsCheck
         }
         private Hash(int? expectedHash, double roundOffset, string callerMemberName, string callerFilePath)
         {
+            if(roundOffset == -1)
+            {
+                RoundOffset = -1;
+                roundingFractions = new List<double>();
+                return;
+            }
             if (!expectedHash.HasValue) return;
             filename = callerFilePath.Substring(Path.GetPathRoot(callerFilePath).Length);
             filename = Path.Combine(CacheDir, Path.GetDirectoryName(filename),
@@ -324,8 +336,27 @@ namespace CsCheck
             StreamSerializer.WriteInt(stream, ExpectedHash);
             writing = true;
         }
+        public double BestRoundOffset()
+        {
+            roundingFractions.Sort();
+            var maxDiff = roundingFractions[0] + 1 - roundingFractions[roundingFractions.Count - 1];
+            var maxMid = roundingFractions[0] - 0.5 * maxDiff;
+            if (maxDiff < 0.5) maxMid += 1;
+            for (int i = 1; i < roundingFractions.Count; i++)
+            {
+                var diff = roundingFractions[i] - roundingFractions[i - 1];
+                if (diff > maxDiff)
+                {
+                    maxDiff = diff;
+                    maxMid = roundingFractions[i] - 0.5 * maxDiff;
+                }
+            }
+            return 0.5 - maxMid;
+        }
         public void Dispose()
         {
+            if (RoundOffset == -1)
+                throw new CsCheckException($"Best round offset = {BestRoundOffset()}");
             var actualHash = GetHashCode();
             if (stream != null)
             {
@@ -446,15 +477,28 @@ namespace CsCheck
         }
         public void Add(float val, int decimals)
         {
-            Add(Math.Round(val + RoundOffset, decimals));
+            Add((double)val, decimals);
         }
         public void Add(double val, int decimals)
         {
-            Add(Math.Round(val + RoundOffset, decimals));
+            if (RoundOffset == 0)
+                Add(Math.Round(val, decimals));
+            else if (RoundOffset == -1)
+            {
+                while (decimals-- > 0) val *= 10;
+                roundingFractions.Add(val - Math.Truncate(val));
+            }
+            else
+            {
+                var roundOffset = RoundOffset;
+                for (int i = 0; i < decimals; i++)
+                    roundOffset *= 0.1;
+                Add(Math.Round(val + roundOffset, decimals));
+            }
         }
         public void Add(decimal val, int decimals)
         {
-            Add(Math.Round(val + (decimal)RoundOffset, decimals));
+            Add((double)val, decimals);
         }
         public void Add(IEnumerable<float> vals, int decimals)
         {

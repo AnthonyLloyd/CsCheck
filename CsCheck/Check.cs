@@ -622,8 +622,7 @@ namespace CsCheck
             get
             {
                 float d = Faster - Slower;
-                d *= d;
-                return d / (Faster + Slower);
+                return d * d / (Faster + Slower);
             }
         }
         public override string ToString()
@@ -643,9 +642,9 @@ namespace CsCheck
     {
         int N, n2 = 2, n3 = 3, n4 = 4;
         double q1, q2, q3, q4, q5;
-        internal double Median => q3;
-        internal double MADless => q3 - q2;
-        internal double MADmore => q4 - q3;
+        public double Median => q3;
+        public double MADless => q3 - q2;
+        public double MADmore => q4 - q3;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void Adjust(double p, int n1, ref int n2, int n3, double q1, ref double q2, double q3)
         {
@@ -661,7 +660,7 @@ namespace CsCheck
                 q2 = q;
             }
         }
-        internal void Add(float s)
+        public void Add(float s)
         {
             switch (++N)
             {

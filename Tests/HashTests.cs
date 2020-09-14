@@ -158,5 +158,25 @@ namespace Tests
                 Assert.Equal(expected.GetHashCode(), actual.GetHashCode());
             });
         }
+
+        [Fact]
+        public void Hash_RoundOffset_Edge()
+        {
+            var h = Hash.Expected(null, -1);
+            h.Add(1.04, 1);
+            h.Add(1.06, 1);
+            h.Add(1.09, 1);
+            Assert.Equal(0.35, Math.Round(h.BestRoundOffset(), 9));
+        }
+
+        [Fact]
+        public void Hash_RoundOffset_Inner()
+        {
+            var h = Hash.Expected(null, -1);
+            h.Add(1.01, 1);
+            h.Add(1.03, 1);
+            h.Add(1.09, 1);
+            Assert.Equal(-0.1, Math.Round(h.BestRoundOffset(), 9));
+        }
     }
 }
