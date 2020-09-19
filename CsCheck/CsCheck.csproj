@@ -21,9 +21,9 @@ CsCheck also makes multithreading, performance and regression testing simple and
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;multithreading;performance;regression;testing</PackageTags>
-        <Version>0.9.4</Version>
+        <Version>0.9.5</Version>
         <PackageReleaseNotes>
-MedianEstimator float bug fix.
+Added NonNegative and NormalNonNegative to Single, Double and Decimal.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <WarningLevel>4</WarningLevel>

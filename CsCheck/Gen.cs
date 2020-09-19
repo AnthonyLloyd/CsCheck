@@ -592,6 +592,12 @@ namespace CsCheck
                 });
             }
         }
+        /// <summary>In the range 0.0 &lt;= x &lt;= max including special values.</summary>
+        public Gen<float> NonNegative = new GenF<float>(pcg =>
+        {
+            uint i = pcg.Next();
+            return (Math.Abs(new FloatConverter { I = i }.F), new Size(i, null));
+        });
         /// <summary>In the range 0.0f &lt;= x &lt; 1.0f.</summary>
         public Gen<float> Unit = new GenF<float>(pcg =>
         {
@@ -604,6 +610,14 @@ namespace CsCheck
             uint i = pcg.Next();
             return ((i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU))
                     : new FloatConverter { I = i }.F
+                , new Size(i, null));
+        });
+        /// <summary>In the range 0.0 &lt;= x &lt;= max without special values.</summary>
+        public Gen<float> NormalNonNegative = new GenF<float>(pcg =>
+        {
+            uint i = pcg.Next();
+            return (Math.Abs((i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU))
+                    : new FloatConverter { I = i }.F)
                 , new Size(i, null));
         });
         static float MakeSpecial(uint i)
@@ -659,6 +673,12 @@ namespace CsCheck
                 });
             }
         }
+        /// <summary>In the range 0.0 &lt;= x &lt;= max.</summary>
+        public Gen<double> NonNegative = new GenF<double>(pcg =>
+        {
+            ulong i = pcg.Next64();
+            return (Math.Abs(BitConverter.Int64BitsToDouble((long)i)), new Size(i, null));
+        });
         /// <summary>In the range 0.0 &lt;= x &lt; 1.0.</summary>
         public Gen<double> Unit = new GenF<double>(pcg =>
         {
@@ -672,6 +692,14 @@ namespace CsCheck
             ulong i = pcg.Next64();
             return ((i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL))
                   : BitConverter.Int64BitsToDouble((long)i)
+                , new Size(i, null));
+        });
+        /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
+        public Gen<double> NormalNonNegative = new GenF<double>(pcg =>
+        {
+            ulong i = pcg.Next64();
+            return (Math.Abs((i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL))
+                  : BitConverter.Int64BitsToDouble((long)i))
                 , new Size(i, null));
         });
         static double MakeSpecial(ulong i)
@@ -745,6 +773,11 @@ namespace CsCheck
                 });
             }
         }
+        public Gen<decimal> NonNegative = new GenF<decimal>(pcg =>
+        {
+            var c = new DecimalConverter { I0 = pcg.Next64(), I1 = pcg.Next64() };
+            return (Math.Abs(c.D), new Size(c.I0, null));
+        });
         public Gen<decimal> Unit = new GenF<decimal>(pcg =>
         {
             ulong i = pcg.Next64() >> 12;

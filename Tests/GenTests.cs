@@ -286,6 +286,13 @@ namespace Tests
         }
 
         [Fact]
+        public void Single_NormalNonNegative()
+        {
+            Gen.Single.NormalNonNegative
+            .Sample(f => !float.IsNaN(f) && !float.IsInfinity(f) && f >= 0.0f);
+        }
+
+        [Fact]
         public void Double_Unit_Range()
         {
             Gen.Double.Unit.Sample(f => f >= 0.0 && f <= 0.99999999999999978);
@@ -331,6 +338,13 @@ namespace Tests
         {
             Gen.Double.Normal
             .Sample(d => !double.IsNaN(d) && !double.IsInfinity(d));
+        }
+
+        [Fact]
+        public void Double_NormalNonNegative()
+        {
+            Gen.Double.NormalNonNegative
+            .Sample(d => !double.IsNaN(d) && !double.IsInfinity(d) && d >= 0.0);
         }
 
         [Fact]
