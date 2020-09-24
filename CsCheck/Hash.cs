@@ -2,8 +2,10 @@
 using System.IO;
 using System.Text;
 using System.Linq;
+using System.Threading;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Collections.Concurrent;
 
 namespace CsCheck
 {
@@ -278,9 +280,10 @@ namespace CsCheck
         readonly double RoundOffset;
         readonly Stream stream;
         readonly string filename;
+        readonly string threadId;
         readonly bool writing;
         bool errorThrown;
-        List<double> roundingFractions;
+        readonly List<double> roundingFractions;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void Stream<T>(Action<Stream, T> serialize, Func<Stream, T> deserialize, T val)
         {
@@ -324,12 +327,13 @@ namespace CsCheck
             RoundOffset = roundOffset;
             if (File.Exists(filename))
             {
-                stream = File.Open(filename, FileMode.Open);
+                stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
                 var fileHash = StreamSerializer.ReadInt(stream);
                 if (fileHash == ExpectedHash) return;
                 stream.Dispose();
             }
-            var tempfile = Path.ChangeExtension(filename, "cht");
+            threadId = Thread.CurrentThread.ManagedThreadId.ToString();
+            var tempfile = filename + threadId;
             if (File.Exists(tempfile)) File.Delete(tempfile);
             Directory.CreateDirectory(Path.GetDirectoryName(tempfile));
             stream = File.Create(tempfile);
@@ -365,16 +369,22 @@ namespace CsCheck
                 {
                     if (actualHash == ExpectedHash)
                     {
-                        if (File.Exists(filename)) File.Delete(filename);
-                        File.Move(Path.ChangeExtension(filename, "cht"), filename);
+                        lock (replaceLock.GetOrAdd(filename, _ => new object()))
+                        {
+                            if (File.Exists(filename)) File.Delete(filename);
+                            File.Move(filename + threadId, filename);
+                        }
                     }
                     else
-                        File.Delete(Path.ChangeExtension(filename, "cht"));
+                        File.Delete(filename + threadId);
                 }
             }
             if (actualHash != ExpectedHash && !errorThrown)
                 throw new CsCheckException($"Actual hash {actualHash} but Expected {ExpectedHash}");
         }
+
+        readonly ConcurrentDictionary<string, object> replaceLock = new ConcurrentDictionary<string, object>();
+
         public void Add(bool val)
         {
             Stream(StreamSerializer.WriteBool, StreamSerializer.ReadBool, val);
