@@ -24,7 +24,7 @@ CsCheck also makes multithreading, performance and regression testing simple and
         <Version>0.9.5</Version>
         <PackageReleaseNotes>
 Added NonNegative and NormalNonNegative to Single, Double and Decimal.
-Make Hash file caching thread safe.
+Make Hash file caching thread safe for parallel running.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <WarningLevel>4</WarningLevel>

@@ -274,6 +274,7 @@ namespace CsCheck
 
     public class Hash : IDisposable
     {
+        static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new ConcurrentDictionary<string, ReaderWriterLockSlim>();
         static readonly string CacheDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
         readonly int ExpectedHash;
@@ -325,6 +326,8 @@ namespace CsCheck
                         Path.GetFileNameWithoutExtension(filename) + "__" + callerMemberName + ".chs");
             ExpectedHash = expectedHash.Value;
             RoundOffset = roundOffset;
+            var rwLock = replaceLock.GetOrAdd(filename, _ => new ReaderWriterLockSlim());
+            rwLock.EnterUpgradeableReadLock();
             if (File.Exists(filename))
             {
                 stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -332,6 +335,7 @@ namespace CsCheck
                 if (fileHash == ExpectedHash) return;
                 stream.Dispose();
             }
+            rwLock.EnterWriteLock();
             threadId = Thread.CurrentThread.ManagedThreadId.ToString();
             var tempfile = filename + threadId;
             if (File.Exists(tempfile)) File.Delete(tempfile);
@@ -365,25 +369,23 @@ namespace CsCheck
             if (stream != null)
             {
                 stream.Dispose();
+
                 if (writing)
                 {
                     if (actualHash == ExpectedHash)
                     {
-                        lock (replaceLock.GetOrAdd(filename, _ => new object()))
-                        {
-                            if (File.Exists(filename)) File.Delete(filename);
-                            File.Move(filename + threadId, filename);
-                        }
+                        if (File.Exists(filename)) File.Delete(filename);
+                        File.Move(filename + threadId, filename);
                     }
                     else
                         File.Delete(filename + threadId);
+                    replaceLock[filename].ExitWriteLock();
                 }
+                replaceLock[filename].ExitUpgradeableReadLock();
             }
             if (actualHash != ExpectedHash && !errorThrown)
                 throw new CsCheckException($"Actual hash {actualHash} but Expected {ExpectedHash}");
         }
-
-        readonly ConcurrentDictionary<string, object> replaceLock = new ConcurrentDictionary<string, object>();
 
         public void Add(bool val)
         {
