@@ -491,12 +491,16 @@ namespace CsCheck
             if (Offset == -1)
             {
                 val *= Math.Pow(10, digits - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
-                roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                roundingFractions.Add(double.IsNaN(val) ? 0 : (int)((val - Math.Floor(val)) * OFFSET_SIZE));
             }
             else
             {
-                var scale = Math.Pow(10, digits - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
-                Add(Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale);
+                if (val == 0.0) Add(0.0);
+                else
+                {
+                    var scale = Math.Pow(10, digits - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
+                    Add(Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale);
+                }
             }
         }
 

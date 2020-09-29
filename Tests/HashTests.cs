@@ -220,5 +220,13 @@ namespace Tests
             h.AddSF(1.05, 2);
             Assert.Equal(200000001, h.BestOffset());
         }
+
+        [Fact]
+        public void Hash_Offset_SF_Zero()
+        {
+            var h = new Hash(null, -1);
+            h.AddSF(0.0, 2);
+            Assert.Equal(500000000, h.BestOffset());
+        }
     }
 }
