@@ -23,8 +23,9 @@ CsCheck also makes multithreading, performance and regression testing simple and
         <PackageTags>quickcheck;random;multithreading;performance;regression;testing</PackageTags>
         <Version>0.9.6</Version>
         <PackageReleaseNotes>
-Added to Hash rounding to significate figures as well as decimal places.
 Refactor of Hash to auto optimise rounding offset.
+Added to Hash rounding to significant figures as well as decimal places.
+Added OneTwo to Single and Double.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <WarningLevel>4</WarningLevel>

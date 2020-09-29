@@ -349,7 +349,7 @@ namespace CsCheck
             return OFFSET_SIZE - maxMid;
         }
 
-        public void Dispose()
+        public void Close()
         {
             var actualHash = GetHashCode();
             if (stream != null)

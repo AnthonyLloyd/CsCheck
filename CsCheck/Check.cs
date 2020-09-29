@@ -607,6 +607,7 @@ namespace CsCheck
             }
         }
 
+        /// <summary>Check a hash of a series of values. Cache values on a correct run and fail at first difference.</summary>
         public static void Hash(long expected, Action<Hash> action, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "")
         {
             if (expected == 0)
@@ -627,11 +628,11 @@ namespace CsCheck
                 var h = new Hash(expectedHash, offset, memberName, filePath);
                 action(h);
                 int hash = h.GetHashCode();
-                h.Dispose();
+                h.Close();
                 if (hash != expectedHash)
                 {
                     ulong actualHash = (((ulong)(uint)offset) << 32) + (uint)hash;
-                    throw new CsCheckException($"Actual hash {actualHash} but Expected {expected}");
+                    throw new CsCheckException($"Actual {actualHash} but expected {expected}");
                 }
             }
         }

@@ -604,6 +604,12 @@ namespace CsCheck
             uint i = pcg.Next() >> 9;
             return (new FloatConverter { I = i | 0x3F800000 }.F - 1f, new Size(i, null));
         });
+        /// <summary>In the range 1.0f &lt;= x &lt; 2.0f.</summary>
+        public Gen<float> OneTwo = new GenF<float>(pcg =>
+        {
+            uint i = pcg.Next() >> 9;
+            return (new FloatConverter { I = i | 0x3F800000 }.F, new Size(i, null));
+        });
         /// <summary>Without special values nan and inf.</summary>
         public Gen<float> Normal = new GenF<float>(pcg =>
         {
@@ -684,6 +690,13 @@ namespace CsCheck
         {
             ulong i = pcg.Next64() >> 12;
             return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1.0
+                    , new Size(i, null));
+        });
+        /// <summary>In the range 1.0 &lt;= x &lt; 2.0.</summary>
+        public Gen<double> OneTwo = new GenF<double>(pcg =>
+        {
+            ulong i = pcg.Next64() >> 12;
+            return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000)
                     , new Size(i, null));
         });
         /// <summary>Without special values nan and inf.</summary>
