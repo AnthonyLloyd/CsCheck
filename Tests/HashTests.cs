@@ -162,7 +162,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Hash_RoundOffset_Bottom()
+        public void Hash_Offset_DP_Bottom()
         {
             var h = new Hash(null, -1);
             h.AddDP(1.04, 1);
@@ -172,7 +172,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Hash_RoundOffset_Inner()
+        public void Hash_Offset_DP_Inner()
         {
             var h = new Hash(null, -1);
             h.AddDP(1.01, 1);
@@ -182,12 +182,42 @@ namespace Tests
         }
 
         [Fact]
-        public void Hash_RoundOffset_Top()
+        public void Hash_Offset_DP_Top()
         {
             var h = new Hash(null, -1);
             h.AddDP(1.01, 1);
             h.AddDP(1.03, 1);
             h.AddDP(1.05, 1);
+            Assert.Equal(200000001, h.BestOffset());
+        }
+
+        [Fact]
+        public void Hash_Offset_SF_Bottom()
+        {
+            var h = new Hash(null, -1);
+            h.AddSF(1.04e-7, 2);
+            h.AddSF(1.06e-7, 2);
+            h.AddSF(1.09e-7, 2);
+            Assert.Equal(850000000, h.BestOffset());
+        }
+
+        [Fact]
+        public void Hash_Offset_SF_Inner()
+        {
+            var h = new Hash(null, -1);
+            h.AddSF(1.01e5, 2);
+            h.AddSF(1.03e3, 2);
+            h.AddSF(1.09e-4, 2);
+            Assert.Equal(400000000, h.BestOffset());
+        }
+
+        [Fact]
+        public void Hash_Offset_SF_Top()
+        {
+            var h = new Hash(null, -1);
+            h.AddSF(1.01, 2);
+            h.AddSF(1.03, 2);
+            h.AddSF(1.05, 2);
             Assert.Equal(200000001, h.BestOffset());
         }
     }
