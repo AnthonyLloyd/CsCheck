@@ -276,7 +276,7 @@ namespace CsCheck
     {
         static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new ConcurrentDictionary<string, ReaderWriterLockSlim>();
         static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
-        const int OFFSET_SIZE = 1000000;
+        const int OFFSET_SIZE = 1000000000;
         readonly int Offset;
         readonly int ExpectedHash;
         readonly Stream stream;

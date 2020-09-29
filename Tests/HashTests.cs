@@ -162,13 +162,13 @@ namespace Tests
         }
 
         [Fact]
-        public void Hash_RoundOffset_Edge()
+        public void Hash_RoundOffset_Bottom()
         {
             var h = new Hash(null, -1);
             h.AddDP(1.04, 1);
             h.AddDP(1.06, 1);
             h.AddDP(1.09, 1);
-            Assert.Equal(850000, h.BestOffset());
+            Assert.Equal(850000000, h.BestOffset());
         }
 
         [Fact]
@@ -178,17 +178,17 @@ namespace Tests
             h.AddDP(1.01, 1);
             h.AddDP(1.03, 1);
             h.AddDP(1.09, 1);
-            Assert.Equal(400000, h.BestOffset());
+            Assert.Equal(400000000, h.BestOffset());
         }
 
         [Fact]
-        public void Hash_RoundOffset_Large_top_Edge()
+        public void Hash_RoundOffset_Top()
         {
             var h = new Hash(null, -1);
             h.AddDP(1.01, 1);
             h.AddDP(1.03, 1);
             h.AddDP(1.05, 1);
-            Assert.Equal(200001, h.BestOffset());
+            Assert.Equal(200000001, h.BestOffset());
         }
     }
 }
