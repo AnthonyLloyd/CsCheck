@@ -606,6 +606,35 @@ namespace CsCheck
                 return t;
             }
         }
+
+        public static void Hash(long expected, Action<Hash> action, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "")
+        {
+            if (expected == 0)
+            {
+                var h = new Hash(null, -1);
+                action(h);
+                int offset = h.BestOffset();
+                h = new Hash(null, offset);
+                action(h);
+                int hc = h.GetHashCode();
+                ulong hash = (((ulong)(uint)offset) << 32) + (uint)hc;
+                throw new CsCheckException($"Hash is {hash}");
+            }
+            else
+            {
+                int offset = (int)(uint)(((ulong)expected) >> 32);
+                int expectedHash = (int)(uint)(ulong)expected;
+                var h = new Hash(expectedHash, offset, memberName, filePath);
+                action(h);
+                int hash = h.GetHashCode();
+                h.Dispose();
+                if (hash != expectedHash)
+                {
+                    ulong actualHash = (((ulong)(uint)offset) << 32) + (uint)hash;
+                    throw new CsCheckException($"Actual hash {actualHash} but Expected {expected}");
+                }
+            }
+        }
     }
 
     public class FasterResult

@@ -119,28 +119,30 @@ namespace Tests
         public void Hash_Example()
         {
             var pcg = PCG.Parse("5a7zcxHI4Eg0");
-            using var hash = Hash.Expected(35072759);
-            for (int i = 0; i < 100; i++)
+            Check.Hash(35072759, hash =>
             {
-                hash.Add(Gen.Bool.Generate(pcg).Item1);
-                hash.Add(Gen.SByte.Generate(pcg).Item1);
-                hash.Add(Gen.Byte.Generate(pcg).Item1);
-                hash.Add(Gen.Short.Generate(pcg).Item1);
-                hash.Add(Gen.UShort.Generate(pcg).Item1);
-                hash.Add(Gen.Int.Generate(pcg).Item1);
-                hash.Add(Gen.UInt.Generate(pcg).Item1);
-                hash.Add(Gen.Long.Generate(pcg).Item1);
-                hash.Add(Gen.ULong.Generate(pcg).Item1);
-                hash.Add(Gen.Float.Generate(pcg).Item1);
-                hash.Add(Gen.Double.Generate(pcg).Item1);
-                hash.Add(Gen.Decimal.Generate(pcg).Item1);
-                hash.Add(Gen.DateTime.Generate(pcg).Item1);
-                hash.Add(Gen.TimeSpan.Generate(pcg).Item1);
-                hash.Add(Gen.DateTimeOffset.Generate(pcg).Item1);
-                hash.Add(Gen.Guid.Generate(pcg).Item1);
-                hash.Add(Gen.Char.Generate(pcg).Item1);
-                hash.Add(Gen.String.Generate(pcg).Item1);
-            }
+                for (int i = 0; i < 100; i++)
+                {
+                    hash.Add(Gen.Bool.Generate(pcg).Item1);
+                    hash.Add(Gen.SByte.Generate(pcg).Item1);
+                    hash.Add(Gen.Byte.Generate(pcg).Item1);
+                    hash.Add(Gen.Short.Generate(pcg).Item1);
+                    hash.Add(Gen.UShort.Generate(pcg).Item1);
+                    hash.Add(Gen.Int.Generate(pcg).Item1);
+                    hash.Add(Gen.UInt.Generate(pcg).Item1);
+                    hash.Add(Gen.Long.Generate(pcg).Item1);
+                    hash.Add(Gen.ULong.Generate(pcg).Item1);
+                    hash.Add(Gen.Float.Generate(pcg).Item1);
+                    hash.Add(Gen.Double.Generate(pcg).Item1);
+                    hash.Add(Gen.Decimal.Generate(pcg).Item1);
+                    hash.Add(Gen.DateTime.Generate(pcg).Item1);
+                    hash.Add(Gen.TimeSpan.Generate(pcg).Item1);
+                    hash.Add(Gen.DateTimeOffset.Generate(pcg).Item1);
+                    hash.Add(Gen.Guid.Generate(pcg).Item1);
+                    hash.Add(Gen.Char.Generate(pcg).Item1);
+                    hash.Add(Gen.String.Generate(pcg).Item1);
+                }
+            });
         }
 
         [Fact]
@@ -162,21 +164,31 @@ namespace Tests
         [Fact]
         public void Hash_RoundOffset_Edge()
         {
-            var h = Hash.Expected(null, -1);
+            var h = new Hash(null, -1);
             h.Add(1.04, 1);
             h.Add(1.06, 1);
             h.Add(1.09, 1);
-            Assert.Equal(0.35, Math.Round(h.BestRoundOffset(), 9));
+            Assert.Equal(850000, h.BestOffset());
         }
 
         [Fact]
         public void Hash_RoundOffset_Inner()
         {
-            var h = Hash.Expected(null, -1);
+            var h = new Hash(null, -1);
             h.Add(1.01, 1);
             h.Add(1.03, 1);
             h.Add(1.09, 1);
-            Assert.Equal(-0.1, Math.Round(h.BestRoundOffset(), 9));
+            Assert.Equal(400000, h.BestOffset());
+        }
+
+        [Fact]
+        public void Hash_RoundOffset_Large_top_Edge()
+        {
+            var h = new Hash(null, -1);
+            h.Add(1.01, 1);
+            h.Add(1.03, 1);
+            h.Add(1.05, 1);
+            Assert.Equal(200000, h.BestOffset());
         }
     }
 }

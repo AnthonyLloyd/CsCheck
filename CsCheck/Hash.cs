@@ -272,19 +272,18 @@ namespace CsCheck
         }
     }
 
-    public class Hash : IDisposable
+    public class Hash
     {
         static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new ConcurrentDictionary<string, ReaderWriterLockSlim>();
-        static readonly string CacheDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
+        static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
+        const int OFFSET_SIZE = 1000000;
+        readonly int Offset;
         readonly int ExpectedHash;
-        readonly double RoundOffset;
         readonly Stream stream;
         readonly string filename;
         readonly string threadId;
         readonly bool writing;
-        bool errorThrown;
-        readonly List<double> roundingFractions;
+        readonly List<int> roundingFractions;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void Stream<T>(Action<Stream, T> serialize, Func<Stream, T> deserialize, T val)
         {
@@ -295,37 +294,25 @@ namespace CsCheck
                 {
                     var val2 = deserialize(stream);
                     if (!val.Equals(val2))
-                    {
-                        errorThrown = true;
                         throw new CsCheckException($"Actual {val} but Expected {val2}");
-                    }
                 }
             }
         }
-        /// <param name="roundOffset">Moves the point at which numbers are rounded up or down.
-        /// This is normally 0.5 but the offset can be set to -0.5 to 0.5.
-        /// This is only needed in the rare case there are rounding differences between machines causing failures.
-        /// Setting this to -1 will find an offset as far away from the data points as possible.
-        /// </param>
-        public static Hash Expected(int? expectedHash, double roundOffset = 0.0,
-            [CallerMemberName] string callerMemberName = "", [CallerFilePath] string callerFilePath = "")
+
+
+        public Hash(int? expectedHash, int offset = 0, string memberName = "", string filePath = "")
         {
-            return new Hash(expectedHash, roundOffset, callerMemberName, callerFilePath);
-        }
-        private Hash(int? expectedHash, double roundOffset, string callerMemberName, string callerFilePath)
-        {
-            if(roundOffset == -1)
+            Offset = offset;
+            if (offset == -1)
             {
-                RoundOffset = -1;
-                roundingFractions = new List<double>();
+                roundingFractions = new List<int>();
                 return;
             }
             if (!expectedHash.HasValue) return;
-            filename = callerFilePath.Substring(Path.GetPathRoot(callerFilePath).Length);
-            filename = Path.Combine(CacheDir, Path.GetDirectoryName(filename),
-                        Path.GetFileNameWithoutExtension(filename) + "__" + callerMemberName + ".chs");
             ExpectedHash = expectedHash.Value;
-            RoundOffset = roundOffset;
+            filename = filePath.Substring(Path.GetPathRoot(filePath).Length);
+            filename = Path.Combine(CacheDir, Path.GetDirectoryName(filename),
+                        Path.GetFileNameWithoutExtension(filename) + "__" + memberName + ".chs");
             var rwLock = replaceLock.GetOrAdd(filename, _ => new ReaderWriterLockSlim());
             rwLock.EnterUpgradeableReadLock();
             if (File.Exists(filename))
@@ -344,27 +331,26 @@ namespace CsCheck
             StreamSerializer.WriteInt(stream, ExpectedHash);
             writing = true;
         }
-        public double BestRoundOffset()
+        public int BestOffset()
         {
             roundingFractions.Sort();
-            var maxDiff = roundingFractions[0] + 1 - roundingFractions[roundingFractions.Count - 1];
-            var maxMid = roundingFractions[0] - 0.5 * maxDiff;
-            if (maxDiff < 0.5) maxMid += 1;
+            var maxDiff = OFFSET_SIZE - roundingFractions[roundingFractions.Count - 1] + roundingFractions[0];
+            var maxMid = roundingFractions[roundingFractions.Count - 1] + maxDiff / 2;
+            if (maxMid >= OFFSET_SIZE) maxMid -= OFFSET_SIZE;
             for (int i = 1; i < roundingFractions.Count; i++)
             {
                 var diff = roundingFractions[i] - roundingFractions[i - 1];
                 if (diff > maxDiff)
                 {
                     maxDiff = diff;
-                    maxMid = roundingFractions[i] - 0.5 * maxDiff;
+                    maxMid = roundingFractions[i - 1] + maxDiff / 2;
                 }
             }
-            return 0.5 - maxMid;
+            return OFFSET_SIZE - maxMid;
         }
+
         public void Dispose()
         {
-            if (RoundOffset == -1)
-                throw new CsCheckException($"Best round offset = {BestRoundOffset()}");
             var actualHash = GetHashCode();
             if (stream != null)
             {
@@ -383,8 +369,6 @@ namespace CsCheck
                 }
                 replaceLock[filename].ExitUpgradeableReadLock();
             }
-            if (actualHash != ExpectedHash && !errorThrown)
-                throw new CsCheckException($"Actual hash {actualHash} but Expected {ExpectedHash}");
         }
 
         public void Add(bool val)
@@ -493,18 +477,17 @@ namespace CsCheck
         }
         public void Add(double val, int decimals)
         {
-            if (RoundOffset == 0)
-                Add(Math.Round(val, decimals));
-            else if (RoundOffset == -1)
+            if (Offset == -1)
             {
                 while (decimals-- > 0) val *= 10;
-                roundingFractions.Add(val - Math.Truncate(val));
+                int offset = (int)Math.Round((val - Math.Truncate(val)) * OFFSET_SIZE);
+                if (offset < 0) offset += OFFSET_SIZE;
+                roundingFractions.Add(offset);
             }
             else
             {
-                var roundOffset = RoundOffset;
-                for (int i = 0; i < decimals; i++)
-                    roundOffset *= 0.1;
+                var roundOffset = (double)Offset / OFFSET_SIZE - 0.5;
+                for (int i = 0; i < decimals; i++) roundOffset *= 0.1;
                 Add(Math.Round(val + roundOffset, decimals));
             }
         }
@@ -514,22 +497,22 @@ namespace CsCheck
         }
         public void Add(IEnumerable<float> vals, int decimals)
         {
-            var array = vals as float[] ?? vals.ToArray();
-            Add((uint)array.Length);
+            var array = vals as ICollection<float> ?? vals.ToArray();
+            Add((uint)array.Count);
             foreach (var val in array)
                 Add(val, decimals);
         }
         public void Add(IEnumerable<double> vals, int decimals)
         {
-            var array = vals as double[] ?? vals.ToArray();
-            Add((uint)array.Length);
+            var array = vals as ICollection<double> ?? vals.ToArray();
+            Add((uint)array.Count);
             foreach (var val in array)
                 Add(val, decimals);
         }
         public void Add(IEnumerable<decimal> vals, int decimals)
         {
-            var array = vals as decimal[] ?? vals.ToArray();
-            Add((uint)array.Length);
+            var array = vals as ICollection<decimal> ?? vals.ToArray();
+            Add((uint)array.Count);
             foreach (var val in array)
                 Add(val, decimals);
         }
@@ -647,7 +630,7 @@ namespace CsCheck
         public override int Read(byte[] buffer, int offset, int count) => throw new NotImplementedException();
         public override long Seek(long offset, SeekOrigin origin) => 0;
         public override void SetLength(long value) { }
-        readonly Hash hash = Hash.Expected(null);
+        readonly Hash hash = new Hash(null);
         uint bytes;
         int position = 0;
         public override void Write(byte[] buffer, int offset, int count)
