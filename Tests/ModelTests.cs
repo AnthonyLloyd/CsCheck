@@ -93,9 +93,9 @@ namespace Tests
             double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
             Check.Hash(1245547461968925, hash =>
             {
-                hash.Add(portfolio.Positions.Select(p => p.Profit), 2);
-                hash.Add(portfolio.Profit(fxRate), 2);
-                hash.Add(portfolio.RiskByPosition(fxRate), 2);
+                hash.AddDP(portfolio.Positions.Select(p => p.Profit), 2);
+                hash.AddDP(portfolio.Profit(fxRate), 2);
+                hash.AddDP(portfolio.RiskByPosition(fxRate), 2);
             });
         }
     }

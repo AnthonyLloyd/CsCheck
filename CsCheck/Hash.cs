@@ -471,51 +471,97 @@ namespace CsCheck
             Stream(StreamSerializer.WriteString, StreamSerializer.ReadString, val);
             foreach (char c in val) AddPrivate((uint)c);
         }
-        public void Add(float val, int decimals)
-        {
-            Add((double)val, decimals);
-        }
-        public void Add(double val, int decimals)
+
+        public void AddDP(double val, int digits)
         {
             if (Offset == -1)
             {
-                while (decimals-- > 0) val *= 10;
-                int offset = (int)Math.Round((val - Math.Truncate(val)) * OFFSET_SIZE);
-                if (offset < 0) offset += OFFSET_SIZE;
-                roundingFractions.Add(offset);
+                val *= Math.Pow(10, digits);
+                roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
             }
             else
             {
-                var roundOffset = (double)Offset / OFFSET_SIZE - 0.5;
-                for (int i = 0; i < decimals; i++) roundOffset *= 0.1;
-                Add(Math.Round(val + roundOffset, decimals));
+                var scale = Math.Pow(10, digits);
+                Add(Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale);
             }
         }
-        public void Add(decimal val, int decimals)
+
+        public void AddSF(double val, int digits)
         {
-            Add((double)val, decimals);
+            if (Offset == -1)
+            {
+                val *= Math.Pow(10, digits - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
+                roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+            }
+            else
+            {
+                var scale = Math.Pow(10, digits - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
+                Add(Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale);
+            }
         }
-        public void Add(IEnumerable<float> vals, int decimals)
+
+        public void AddDP(float val, int digits)
+        {
+            AddDP((double)val, digits);
+        }
+
+        public void AddDP(decimal val, int digits)
+        {
+            AddDP((double)val, digits);
+        }
+        public void AddDP(IEnumerable<float> vals, int digits)
         {
             var array = vals as ICollection<float> ?? vals.ToArray();
             Add((uint)array.Count);
             foreach (var val in array)
-                Add(val, decimals);
+                AddDP(val, digits);
         }
-        public void Add(IEnumerable<double> vals, int decimals)
+        public void AddDP(IEnumerable<double> vals, int digits)
         {
             var array = vals as ICollection<double> ?? vals.ToArray();
             Add((uint)array.Count);
             foreach (var val in array)
-                Add(val, decimals);
+                AddDP(val, digits);
         }
-        public void Add(IEnumerable<decimal> vals, int decimals)
+        public void AddDP(IEnumerable<decimal> vals, int digits)
         {
             var array = vals as ICollection<decimal> ?? vals.ToArray();
             Add((uint)array.Count);
             foreach (var val in array)
-                Add(val, decimals);
+                AddDP(val, digits);
         }
+
+        public void AddSF(float val, int digits)
+        {
+            AddSF((double)val, digits);
+        }
+
+        public void AddSF(decimal val, int digits)
+        {
+            AddSF((double)val, digits);
+        }
+        public void AddSF(IEnumerable<float> vals, int digits)
+        {
+            var array = vals as ICollection<float> ?? vals.ToArray();
+            Add((uint)array.Count);
+            foreach (var val in array)
+                AddSF(val, digits);
+        }
+        public void AddSF(IEnumerable<double> vals, int digits)
+        {
+            var array = vals as ICollection<double> ?? vals.ToArray();
+            Add((uint)array.Count);
+            foreach (var val in array)
+                AddSF(val, digits);
+        }
+        public void AddSF(IEnumerable<decimal> vals, int digits)
+        {
+            var array = vals as ICollection<decimal> ?? vals.ToArray();
+            Add((uint)array.Count);
+            foreach (var val in array)
+                AddSF(val, digits);
+        }
+
         #region xxHash implementation from framework HashCode
         const uint Prime1 = 2654435761U;
         const uint Prime2 = 2246822519U;
