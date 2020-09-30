@@ -607,32 +607,40 @@ namespace CsCheck
             }
         }
 
-        /// <summary>Check a hash of a series of values. Cache values on a correct run and fail at first difference.</summary>
+        /// <summary>Check a hash of a series of values. Cache values on a correct run and fail at first difference. Set expected to 0 to find the hash.</summary>
         public static void Hash(long expected, Action<Hash> action, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "")
         {
             if (expected == 0)
             {
-                var h = new Hash(null, -1);
-                action(h);
-                int offset = h.BestOffset();
-                h = new Hash(null, offset);
-                action(h);
-                int hc = h.GetHashCode();
-                ulong hash = (((ulong)(uint)offset) << 32) + (uint)hc;
-                throw new CsCheckException($"Hash is {hash}");
+                var hash = new Hash(null, -1);
+                action(hash);
+                int offset = hash.BestOffset();
+                hash = new Hash(null, offset);
+                action(hash);
+                var fullHashCode = CsCheck.Hash.FullHash(offset, hash.GetHashCode());
+                throw new CsCheckException($"Hash is {fullHashCode}");
             }
             else
             {
-                int offset = (int)(uint)(((ulong)expected) >> 32);
-                int expectedHash = (int)(uint)(ulong)expected;
-                var h = new Hash(expectedHash, offset, memberName, filePath);
-                action(h);
-                int hash = h.GetHashCode();
-                h.Close();
-                if (hash != expectedHash)
+                var (offset, expectedHashCode) = CsCheck.Hash.OffsetHash(expected);
+                var hash = new Hash(expectedHashCode, offset, memberName, filePath);
+                action(hash);
+                int actualHashCode = hash.GetHashCode();
+                hash.Close();
+                if (actualHashCode != expectedHashCode)
                 {
-                    ulong actualHash = (((ulong)(uint)offset) << 32) + (uint)hash;
-                    throw new CsCheckException($"Actual {actualHash} but expected {expected}");
+                    hash = new Hash(null, -1);
+                    action(hash);
+                    int offsetCheck = hash.BestOffset();
+                    if(offsetCheck != offset)
+                    {
+                        offset = offsetCheck;
+                        hash = new Hash(null, offset);
+                        action(hash);
+                        actualHashCode = hash.GetHashCode();
+                    }
+                    var actualFullHash = CsCheck.Hash.FullHash(offset, actualHashCode);
+                    throw new CsCheckException($"Actual {actualFullHash} but expected {expected}");
                 }
             }
         }

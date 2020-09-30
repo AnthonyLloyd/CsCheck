@@ -331,6 +331,17 @@ namespace CsCheck
             StreamSerializer.WriteInt(stream, ExpectedHash);
             writing = true;
         }
+
+        public static long FullHash(int offset, int hash)
+        {
+            return (((long)offset) << 32) + (uint)hash;
+        }
+
+        public static (int,int) OffsetHash(long fullHash)
+        {
+            return ((int)(fullHash >> 32), (int)fullHash);
+        }
+
         public int BestOffset()
         {
             roundingFractions.Sort();

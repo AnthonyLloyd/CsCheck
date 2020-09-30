@@ -228,5 +228,17 @@ namespace Tests
             h.AddSF(0.0, 2);
             Assert.Equal(500000000, h.BestOffset());
         }
+
+        [Fact]
+        public void Hash_Roundtrip()
+        {
+            Gen.Int[0, 1000000000 - 1].Select(Gen.Int)
+            .Sample(oh =>
+            {
+                var (offset, hash) = Hash.OffsetHash(Hash.FullHash(oh.V0, oh.V1));
+                Assert.Equal(oh.V0, offset);
+                Assert.Equal(oh.V1, hash);
+            });
+        }
     }
 }
