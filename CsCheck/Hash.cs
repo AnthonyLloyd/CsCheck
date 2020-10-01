@@ -300,9 +300,9 @@ namespace CsCheck
         }
 
 
-        public Hash(int? expectedHash, int offset = 0, string memberName = "", string filePath = "")
+        public Hash(int? expectedHash, int? offset = null, string memberName = "", string filePath = "")
         {
-            Offset = offset;
+            Offset = offset ?? -2;
             if (offset == -1)
             {
                 roundingFractions = new List<int>();
@@ -332,19 +332,21 @@ namespace CsCheck
             writing = true;
         }
 
-        public static long FullHash(int offset, int hash)
+        public static long FullHash(int? offset, int hash)
         {
-            return (((long)(offset | 0x40000000)) << 32) + (uint)hash;
+            return offset.HasValue ? (((long)(offset | 0x40000000)) << 32) + (uint)hash
+                : 0x100000000 & hash;
         }
 
-        public static (int,int) OffsetHash(long fullHash)
+        public static (int?,int) OffsetHash(long fullHash)
         {
-            return ((int)(fullHash >> 32) & 0x3FFFFFFF, (int)fullHash);
+            int offset = (int)(fullHash >> 32) & 0x3FFFFFFF;
+            return (offset == 1 ? (int?)null : offset, (int)fullHash);
         }
 
-        public int BestOffset()
+        public int? BestOffset()
         {
-            if (roundingFractions.Count == 0) return 1;
+            if (roundingFractions.Count == 0) return null;
             roundingFractions.Sort();
             var maxDiff = OFFSET_SIZE - roundingFractions[roundingFractions.Count - 1] + roundingFractions[0];
             var maxMid = roundingFractions[roundingFractions.Count - 1] + maxDiff / 2;

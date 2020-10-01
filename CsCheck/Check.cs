@@ -614,7 +614,7 @@ namespace CsCheck
             {
                 var hash = new Hash(null, -1);
                 action(hash);
-                int offset = hash.BestOffset();
+                var offset = hash.BestOffset();
                 hash = new Hash(null, offset);
                 action(hash);
                 var fullHashCode = CsCheck.Hash.FullHash(offset, hash.GetHashCode());
@@ -631,7 +631,7 @@ namespace CsCheck
                 {
                     hash = new Hash(null, -1);
                     action(hash);
-                    int offsetCheck = hash.BestOffset();
+                    var offsetCheck = hash.BestOffset();
                     if(offsetCheck != offset)
                     {
                         offset = offsetCheck;
