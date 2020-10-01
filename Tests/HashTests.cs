@@ -237,6 +237,12 @@ namespace Tests
         }
 
         [Fact]
+        public void Hash_No_Offset_Short()
+        {
+            Assert.Equal(0x100000000, Hash.FullHash(null, 0));
+        }
+
+        [Fact]
         public void Hash_Roundtrip()
         {
             Gen.Int[0, 1000000000 - 1].Select(Gen.Int)

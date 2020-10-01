@@ -335,7 +335,7 @@ namespace CsCheck
         public static long FullHash(int? offset, int hash)
         {
             return offset.HasValue ? (((long)(offset | 0x40000000)) << 32) + (uint)hash
-                : 0x100000000 & hash;
+                : 0x100000000 | (long)hash;
         }
 
         public static (int?,int) OffsetHash(long fullHash)
