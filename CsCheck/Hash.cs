@@ -344,6 +344,7 @@ namespace CsCheck
 
         public int BestOffset()
         {
+            if (roundingFractions.Count == 0) return OFFSET_SIZE / 2;
             roundingFractions.Sort();
             var maxDiff = OFFSET_SIZE - roundingFractions[roundingFractions.Count - 1] + roundingFractions[0];
             var maxMid = roundingFractions[roundingFractions.Count - 1] + maxDiff / 2;
@@ -483,6 +484,38 @@ namespace CsCheck
             foreach (char c in val) AddPrivate((uint)c);
         }
 
+        public void Add(IEnumerable<int> vals)
+        {
+            var col = vals as ICollection<int> ?? vals.ToArray();
+            Add((uint)col.Count);
+            foreach (var val in col)
+                Add(val);
+        }
+
+        public void Add(IEnumerable<long> vals)
+        {
+            var col = vals as ICollection<long> ?? vals.ToArray();
+            Add((uint)col.Count);
+            foreach (var val in col)
+                Add(val);
+        }
+
+        public void Add(IEnumerable<DateTime> vals)
+        {
+            var col = vals as ICollection<DateTime> ?? vals.ToArray();
+            Add((uint)col.Count);
+            foreach (var val in col)
+                Add(val);
+        }
+
+        public void Add(IEnumerable<byte> vals)
+        {
+            var col = vals as ICollection<byte> ?? vals.ToArray();
+            Add((uint)col.Count);
+            foreach (var val in col)
+                Add(val);
+        }
+
         public void AddDP(double val, int digits)
         {
             if (Offset == -1)
@@ -526,23 +559,23 @@ namespace CsCheck
         }
         public void AddDP(IEnumerable<float> vals, int digits)
         {
-            var array = vals as ICollection<float> ?? vals.ToArray();
-            Add((uint)array.Count);
-            foreach (var val in array)
+            var col = vals as ICollection<float> ?? vals.ToArray();
+            Add((uint)col.Count);
+            foreach (var val in col)
                 AddDP(val, digits);
         }
         public void AddDP(IEnumerable<double> vals, int digits)
         {
-            var array = vals as ICollection<double> ?? vals.ToArray();
-            Add((uint)array.Count);
-            foreach (var val in array)
+            var col = vals as ICollection<double> ?? vals.ToArray();
+            Add((uint)col.Count);
+            foreach (var val in col)
                 AddDP(val, digits);
         }
         public void AddDP(IEnumerable<decimal> vals, int digits)
         {
-            var array = vals as ICollection<decimal> ?? vals.ToArray();
-            Add((uint)array.Count);
-            foreach (var val in array)
+            var col = vals as ICollection<decimal> ?? vals.ToArray();
+            Add((uint)col.Count);
+            foreach (var val in col)
                 AddDP(val, digits);
         }
 
@@ -557,23 +590,23 @@ namespace CsCheck
         }
         public void AddSF(IEnumerable<float> vals, int digits)
         {
-            var array = vals as ICollection<float> ?? vals.ToArray();
-            Add((uint)array.Count);
-            foreach (var val in array)
+            var col = vals as ICollection<float> ?? vals.ToArray();
+            Add((uint)col.Count);
+            foreach (var val in col)
                 AddSF(val, digits);
         }
         public void AddSF(IEnumerable<double> vals, int digits)
         {
-            var array = vals as ICollection<double> ?? vals.ToArray();
-            Add((uint)array.Count);
-            foreach (var val in array)
+            var col = vals as ICollection<double> ?? vals.ToArray();
+            Add((uint)col.Count);
+            foreach (var val in col)
                 AddSF(val, digits);
         }
         public void AddSF(IEnumerable<decimal> vals, int digits)
         {
-            var array = vals as ICollection<decimal> ?? vals.ToArray();
-            Add((uint)array.Count);
-            foreach (var val in array)
+            var col = vals as ICollection<decimal> ?? vals.ToArray();
+            Add((uint)col.Count);
+            foreach (var val in col)
                 AddSF(val, digits);
         }
 

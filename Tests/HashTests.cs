@@ -162,6 +162,13 @@ namespace Tests
         }
 
         [Fact]
+        public void Hash_Offset_No_Rounding()
+        {
+            var h = new Hash(null, -1);
+            Assert.Equal(500000000, h.BestOffset());
+        }
+
+        [Fact]
         public void Hash_Offset_DP_Bottom()
         {
             var h = new Hash(null, -1);
