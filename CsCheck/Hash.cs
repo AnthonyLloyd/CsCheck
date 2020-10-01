@@ -334,17 +334,17 @@ namespace CsCheck
 
         public static long FullHash(int offset, int hash)
         {
-            return (((long)offset) << 32) + (uint)hash;
+            return (((long)(offset | 0x40000000)) << 32) + (uint)hash;
         }
 
         public static (int,int) OffsetHash(long fullHash)
         {
-            return ((int)(fullHash >> 32), (int)fullHash);
+            return ((int)(fullHash >> 32) & 0x3FFFFFFF, (int)fullHash);
         }
 
         public int BestOffset()
         {
-            if (roundingFractions.Count == 0) return OFFSET_SIZE / 2;
+            if (roundingFractions.Count == 0) return 1;
             roundingFractions.Sort();
             var maxDiff = OFFSET_SIZE - roundingFractions[roundingFractions.Count - 1] + roundingFractions[0];
             var maxMid = roundingFractions[roundingFractions.Count - 1] + maxDiff / 2;
