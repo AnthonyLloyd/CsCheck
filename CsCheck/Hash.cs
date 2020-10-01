@@ -276,7 +276,7 @@ namespace CsCheck
     {
         static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new ConcurrentDictionary<string, ReaderWriterLockSlim>();
         static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
-        const int OFFSET_SIZE = 1000000000;
+        public const int OFFSET_SIZE = 500_000_000;
         readonly int Offset;
         readonly int ExpectedHash;
         readonly Stream stream;
@@ -302,7 +302,7 @@ namespace CsCheck
 
         public Hash(int? expectedHash, int? offset = null, string memberName = "", string filePath = "")
         {
-            Offset = offset ?? -2;
+            Offset = offset ?? 0;
             if (offset == -1)
             {
                 roundingFractions = new List<int>();
@@ -332,16 +332,19 @@ namespace CsCheck
             writing = true;
         }
 
+
+        // The hashcode is stored in the lower 32 bits for both with and without offset.
+        // The 33rd bit is a flag for no offset. Meaning a range of values for no offset of (0x100000000,0x1FFFFFFFF) = (4_294_967_296,8_589_934_591) ie 10 digits always.
+        // The offset is shifted 33 bits and the bit above this set giving a range of (0x4000000000000000,(500_000_000 < 33) | 0x4000000000000000) | 0xFFFFFFFF)
+        // = (4_611_686_018_427_387_904,8_906_653_318_722_355_199)
         public static long FullHash(int? offset, int hash)
         {
-            return offset.HasValue ? (((long)(offset | 0x40000000)) << 32) + (uint)hash
-                : 0x100000000 | (long)hash;
+            return offset.HasValue ? ((((long)offset) << 33) | 0x4000000000000000) + (uint)hash : 0x100000000 | (uint)hash;
         }
 
         public static (int?,int) OffsetHash(long fullHash)
         {
-            int offset = (int)(fullHash >> 32) & 0x3FFFFFFF;
-            return (offset == 1 ? (int?)null : offset, (int)fullHash);
+            return ((fullHash & 0x100000000) == 0 ? (int?)((fullHash & 0x3FFFFFFE00000000) >> 33) : null, (int)fullHash);
         }
 
         public int? BestOffset()
@@ -536,17 +539,20 @@ namespace CsCheck
         {
             if (Offset == -1)
             {
-                val *= Math.Pow(10, digits - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
-                roundingFractions.Add(double.IsNaN(val) ? 0 : (int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                var scale = Math.Pow(10, digits - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
+                if (double.IsNaN(scale) || double.IsInfinity(scale)) roundingFractions.Add(0);
+                else
+                {
+                    val *= scale;
+                    roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                }
+
             }
             else
             {
-                if (val == 0.0) Add(0.0);
-                else
-                {
-                    var scale = Math.Pow(10, digits - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
-                    Add(Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale);
-                }
+                var scale = Math.Pow(10, digits - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
+                if (double.IsNaN(scale) || double.IsInfinity(scale)) Add(0.0);
+                else Add(Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale);
             }
         }
 

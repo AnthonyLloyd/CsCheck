@@ -118,9 +118,9 @@ namespace Tests
         [Fact]
         public void Hash_Example()
         {
-            var pcg = PCG.Parse("5a7zcxHI4Eg0");
-            Check.Hash(35072759, hash =>
+            Check.Hash(4330040055, hash =>
             {
+                var pcg = PCG.Parse("5a7zcxHI4Eg0");
                 for (int i = 0; i < 100; i++)
                 {
                     hash.Add(Gen.Bool.Generate(pcg).Item1);
@@ -175,7 +175,7 @@ namespace Tests
             h.AddDP(1.04, 1);
             h.AddDP(1.06, 1);
             h.AddDP(1.09, 1);
-            Assert.Equal(850000000, h.BestOffset());
+            Assert.Equal(425000000, h.BestOffset());
         }
 
         [Fact]
@@ -185,7 +185,7 @@ namespace Tests
             h.AddDP(1.01, 1);
             h.AddDP(1.03, 1);
             h.AddDP(1.09, 1);
-            Assert.Equal(400000000, h.BestOffset());
+            Assert.Equal(200000000, h.BestOffset());
         }
 
         [Fact]
@@ -195,7 +195,7 @@ namespace Tests
             h.AddDP(1.01, 1);
             h.AddDP(1.03, 1);
             h.AddDP(1.05, 1);
-            Assert.Equal(200000001, h.BestOffset());
+            Assert.Equal(100000001, h.BestOffset());
         }
 
         [Fact]
@@ -205,7 +205,7 @@ namespace Tests
             h.AddSF(1.04e-7, 2);
             h.AddSF(1.06e-7, 2);
             h.AddSF(1.09e-7, 2);
-            Assert.Equal(850000000, h.BestOffset());
+            Assert.Equal(425000000, h.BestOffset());
         }
 
         [Fact]
@@ -215,7 +215,7 @@ namespace Tests
             h.AddSF(1.01e5, 2);
             h.AddSF(1.03e3, 2);
             h.AddSF(1.09e-4, 2);
-            Assert.Equal(400000000, h.BestOffset());
+            Assert.Equal(200000000, h.BestOffset());
         }
 
         [Fact]
@@ -225,7 +225,7 @@ namespace Tests
             h.AddSF(1.01, 2);
             h.AddSF(1.03, 2);
             h.AddSF(1.05, 2);
-            Assert.Equal(200000001, h.BestOffset());
+            Assert.Equal(100000001, h.BestOffset());
         }
 
         [Fact]
@@ -233,7 +233,7 @@ namespace Tests
         {
             var h = new Hash(null, -1);
             h.AddSF(0.0, 2);
-            Assert.Equal(500000000, h.BestOffset());
+            Assert.Equal(250000000, h.BestOffset());
         }
 
         [Fact]
@@ -243,14 +243,26 @@ namespace Tests
         }
 
         [Fact]
-        public void Hash_Roundtrip()
+        public void Hash_Roundtrip_Offset()
         {
-            Gen.Int[0, 1000000000 - 1].Select(Gen.Int)
+            Gen.Int[0, Hash.OFFSET_SIZE - 1].Select(Gen.Int)
             .Sample(oh =>
             {
                 var (offset, hash) = Hash.OffsetHash(Hash.FullHash(oh.V0, oh.V1));
                 Assert.Equal(oh.V0, offset);
                 Assert.Equal(oh.V1, hash);
+            });
+        }
+
+        [Fact]
+        public void Hash_Roundtrip_No_Offset()
+        {
+            Gen.Int
+            .Sample(expectedHash =>
+            {
+                var (offset, hash) = Hash.OffsetHash(Hash.FullHash(null, expectedHash));
+                Assert.Null(offset);
+                Assert.Equal(expectedHash, hash);
             });
         }
     }
