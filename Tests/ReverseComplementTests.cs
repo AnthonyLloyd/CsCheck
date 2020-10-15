@@ -2,8 +2,8 @@
 {
     using System;
     using System.IO;
-    using Xunit;
     using CsCheck;
+    using Xunit;
 
     public class ReverseComplementTests
     {
@@ -28,8 +28,8 @@
 namespace ReverseComplementNew
 {
     using System;
-    using System.IO;
     using System.Buffers;
+    using System.IO;
     using System.Threading;
 
     public static class RevComp
@@ -180,9 +180,9 @@ namespace ReverseComplementNew
 namespace ReverseComplementOld
 {
     using System;
-    using System.IO;
-    using System.Collections.Generic;
     using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.IO;
     using System.Threading;
 
     class RevCompSequence { public List<byte[]> Pages; public int StartHeader, EndExclusive; public Thread ReverseThread; }
@@ -393,11 +393,11 @@ namespace ReverseComplementOld
 namespace Utils
 {
     using System;
-    using System.IO;
-    using System.Text;
     using System.Buffers;
-    using System.Threading;
+    using System.IO;
     using System.Runtime.CompilerServices;
+    using System.Text;
+    using System.Threading;
 
     public class Fasta
     {

@@ -1,7 +1,7 @@
 ﻿using System;
-using Xunit;
-using CsCheck;
 using System.Linq;
+using CsCheck;
+using Xunit;
 
 namespace Tests
 {

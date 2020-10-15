@@ -1,5 +1,5 @@
-﻿using Xunit;
-using CsCheck;
+﻿using CsCheck;
+using Xunit;
 
 namespace Tests
 {

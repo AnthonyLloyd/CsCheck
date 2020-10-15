@@ -13,10 +13,10 @@
 // limitations under the License.
 
 using System;
-using System.Linq;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace CsCheck
 {
@@ -848,8 +848,8 @@ namespace CsCheck
         readonly Gen<int> genOffset = Gen.Int[-14 * 60, 14 * 60];
         public override (DateTimeOffset, Size) Generate(PCG pcg)
         {
-            var (os,s1) = genOffset.Generate(pcg);
-            var (dt,s2) = genDateTime.Generate(pcg);
+            var (os, s1) = genOffset.Generate(pcg);
+            var (dt, s2) = genDateTime.Generate(pcg);
             return (new DateTimeOffset(dt, TimeSpan.FromMinutes(os)), new Size(s1.I, new[] { s2 }));
         }
     }

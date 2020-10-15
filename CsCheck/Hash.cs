@@ -13,13 +13,13 @@
 // limitations under the License.
 
 using System;
-using System.IO;
-using System.Text;
-using System.Linq;
-using System.Threading;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading;
 
 namespace CsCheck
 {
@@ -356,7 +356,7 @@ namespace CsCheck
             return offset.HasValue ? ((((long)offset) << 33) | 0x4000000000000000) + (uint)hash : 0x100000000 | (uint)hash;
         }
 
-        public static (int?,int) OffsetHash(long fullHash)
+        public static (int?, int) OffsetHash(long fullHash)
         {
             return ((fullHash & 0x100000000) == 0 ? (int?)((fullHash & 0x3FFFFFFE00000000) >> 33) : null, (int)fullHash);
         }

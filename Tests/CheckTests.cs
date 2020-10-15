@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using CsCheck;
 using Microsoft.Collections.Extensions;
@@ -229,7 +229,7 @@ namespace Tests
             var d = new ConcurrentDictionary<int, int>();
             Check.Sample(
                 Gen.Int[1, 10],
-                i => d.AddOrUpdate(i, 0, (_,v) => 1 -v),
+                i => d.AddOrUpdate(i, 0, (_, v) => 1 - v),
                 Gen.Int[1, 10],
                 i =>
                 {

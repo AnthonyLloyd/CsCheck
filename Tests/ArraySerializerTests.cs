@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using Xunit;
 using CsCheck;
+using Xunit;
 
 namespace Tests
 {

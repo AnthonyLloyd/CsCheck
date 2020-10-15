@@ -13,10 +13,10 @@
 // limitations under the License.
 
 using System;
-using System.Threading;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CsCheck
 {
@@ -632,7 +632,7 @@ namespace CsCheck
                     hash = new Hash(null, -1);
                     action(hash);
                     var offsetCheck = hash.BestOffset();
-                    if(offsetCheck != offset)
+                    if (offsetCheck != offset)
                     {
                         offset = offsetCheck;
                         hash = new Hash(null, offset);

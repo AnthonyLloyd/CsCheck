@@ -1,16 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using Xunit;
 using CsCheck;
+using Xunit;
 
 namespace Tests
 {
     public class StreamSerializerTests
     {
-        readonly Action<string> writeLine;
-        public StreamSerializerTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
-
         static void TestRoundtrip<T>(Gen<T> gen, Action<Stream, T> serialize, Func<Stream, T> deserialize)
         {
             gen.Sample(t =>
