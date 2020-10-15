@@ -521,7 +521,7 @@ namespace CsCheck
                 Add(val);
         }
 
-        public void AddDP(double val, int digits)
+        public void AddDecimalPlaces(int digits, double val)
         {
             if (Offset == -1)
             {
@@ -535,7 +535,7 @@ namespace CsCheck
             }
         }
 
-        public void AddSF(double val, int digits)
+        public void AddSignificantFigures(int digits, double val)
         {
             if (Offset == -1)
             {
@@ -556,66 +556,66 @@ namespace CsCheck
             }
         }
 
-        public void AddDP(float val, int digits)
+        public void AddDecimalPlaces(int digits, float val)
         {
-            AddDP((double)val, digits);
+            AddDecimalPlaces(digits, (double)val);
         }
 
-        public void AddDP(decimal val, int digits)
+        public void AddDecimalPlaces(int digits, decimal val)
         {
-            AddDP((double)val, digits);
+            AddDecimalPlaces(digits, (double)val);
         }
-        public void AddDP(IEnumerable<float> vals, int digits)
+        public void AddDecimalPlaces(int digits, IEnumerable<float> vals)
         {
             var col = vals as ICollection<float> ?? vals.ToArray();
             Add((uint)col.Count);
             foreach (var val in col)
-                AddDP(val, digits);
+                AddDecimalPlaces(digits, val);
         }
-        public void AddDP(IEnumerable<double> vals, int digits)
+        public void AddDecimalPlaces(int digits, IEnumerable<double> vals)
         {
             var col = vals as ICollection<double> ?? vals.ToArray();
             Add((uint)col.Count);
             foreach (var val in col)
-                AddDP(val, digits);
+                AddDecimalPlaces(digits, val);
         }
-        public void AddDP(IEnumerable<decimal> vals, int digits)
+        public void AddDecimalPlaces(int digits, IEnumerable<decimal> vals)
         {
             var col = vals as ICollection<decimal> ?? vals.ToArray();
             Add((uint)col.Count);
             foreach (var val in col)
-                AddDP(val, digits);
+                AddDecimalPlaces(digits, val);
         }
 
-        public void AddSF(float val, int digits)
+        public void AddSignificantFigures(int digits, float val)
         {
-            AddSF((double)val, digits);
+            AddSignificantFigures(digits, (double)val);
         }
 
-        public void AddSF(decimal val, int digits)
+        public void AddSignificantFigures(int digits, decimal val)
         {
-            AddSF((double)val, digits);
+            AddSignificantFigures(digits, (double)val);
         }
-        public void AddSF(IEnumerable<float> vals, int digits)
+        public void AddSignificantFigures(int digits, IEnumerable<float> vals)
         {
             var col = vals as ICollection<float> ?? vals.ToArray();
             Add((uint)col.Count);
             foreach (var val in col)
-                AddSF(val, digits);
+                AddSignificantFigures(digits, val);
         }
-        public void AddSF(IEnumerable<double> vals, int digits)
+        public void AddSignificantFigures(int digits, IEnumerable<double> vals)
         {
             var col = vals as ICollection<double> ?? vals.ToArray();
             Add((uint)col.Count);
             foreach (var val in col)
-                AddSF(val, digits);
+                AddSignificantFigures(digits, val);
         }
-        public void AddSF(IEnumerable<decimal> vals, int digits)
+        public void AddSignificantFigures(int digits, IEnumerable<decimal> vals)
         {
             var col = vals as ICollection<decimal> ?? vals.ToArray();
             Add((uint)col.Count);
             foreach (var val in col)
-                AddSF(val, digits);
+                AddSignificantFigures(digits, val);
         }
 
         #region xxHash implementation from framework HashCode

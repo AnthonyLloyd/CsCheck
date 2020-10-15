@@ -233,9 +233,9 @@ public void Portfolio_Small_Mixed_Example()
     double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
     Check.Hash(5857230471108592669, hash =>
     {
-        hash.AddDP(portfolio.Positions.Select(p => p.Profit), 2);
-        hash.AddDP(portfolio.Profit(fxRate), 2);
-        hash.AddDP(portfolio.RiskByPosition(fxRate), 2);
+        hash.AddDecimalPlaces(2, portfolio.Positions.Select(p => p.Profit));
+        hash.AddDecimalPlaces(2, portfolio.Profit(fxRate));
+        hash.AddDecimalPlaces(2, portfolio.RiskByPosition(fxRate));
     });
 }
 ```

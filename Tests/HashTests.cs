@@ -172,9 +172,9 @@ namespace Tests
         public void Hash_Offset_DP_Bottom()
         {
             var h = new Hash(null, -1);
-            h.AddDP(1.04, 1);
-            h.AddDP(1.06, 1);
-            h.AddDP(1.09, 1);
+            h.AddDecimalPlaces(1, 1.04);
+            h.AddDecimalPlaces(1, 1.06);
+            h.AddDecimalPlaces(1, 1.09);
             Assert.Equal(425000000, h.BestOffset());
         }
 
@@ -182,9 +182,9 @@ namespace Tests
         public void Hash_Offset_DP_Inner()
         {
             var h = new Hash(null, -1);
-            h.AddDP(1.01, 1);
-            h.AddDP(1.03, 1);
-            h.AddDP(1.09, 1);
+            h.AddDecimalPlaces(1, 1.01);
+            h.AddDecimalPlaces(1, 1.03);
+            h.AddDecimalPlaces(1, 1.09);
             Assert.Equal(200000000, h.BestOffset());
         }
 
@@ -192,9 +192,9 @@ namespace Tests
         public void Hash_Offset_DP_Top()
         {
             var h = new Hash(null, -1);
-            h.AddDP(1.01, 1);
-            h.AddDP(1.03, 1);
-            h.AddDP(1.05, 1);
+            h.AddDecimalPlaces(1, 1.01);
+            h.AddDecimalPlaces(1, 1.03);
+            h.AddDecimalPlaces(1, 1.05);
             Assert.Equal(100000001, h.BestOffset());
         }
 
@@ -202,9 +202,9 @@ namespace Tests
         public void Hash_Offset_SF_Bottom()
         {
             var h = new Hash(null, -1);
-            h.AddSF(1.04e-7, 2);
-            h.AddSF(1.06e-7, 2);
-            h.AddSF(1.09e-7, 2);
+            h.AddSignificantFigures(2, 1.04e-7);
+            h.AddSignificantFigures(2, 1.06e-7);
+            h.AddSignificantFigures(2, 1.09e-7);
             Assert.Equal(425000000, h.BestOffset());
         }
 
@@ -212,9 +212,9 @@ namespace Tests
         public void Hash_Offset_SF_Inner()
         {
             var h = new Hash(null, -1);
-            h.AddSF(1.01e5, 2);
-            h.AddSF(1.03e3, 2);
-            h.AddSF(1.09e-4, 2);
+            h.AddSignificantFigures(2, 1.01e5);
+            h.AddSignificantFigures(2, 1.03e3);
+            h.AddSignificantFigures(2, 1.09e-4);
             Assert.Equal(200000000, h.BestOffset());
         }
 
@@ -222,9 +222,9 @@ namespace Tests
         public void Hash_Offset_SF_Top()
         {
             var h = new Hash(null, -1);
-            h.AddSF(1.01, 2);
-            h.AddSF(1.03, 2);
-            h.AddSF(1.05, 2);
+            h.AddSignificantFigures(2, 1.01);
+            h.AddSignificantFigures(2, 1.03);
+            h.AddSignificantFigures(2, 1.05);
             Assert.Equal(100000001, h.BestOffset());
         }
 
@@ -232,7 +232,7 @@ namespace Tests
         public void Hash_Offset_SF_Zero()
         {
             var h = new Hash(null, -1);
-            h.AddSF(0.0, 2);
+            h.AddSignificantFigures(2, 0.0);
             Assert.Equal(250000000, h.BestOffset());
         }
 
