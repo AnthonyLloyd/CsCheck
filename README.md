@@ -43,7 +43,7 @@ public void Long_Range()
 }
 ```
 
-**3.** Sample test for int value distribution.
+**3.** Sample one test for int value distribution.
 ```csharp
 [Fact]
 public void Int_Distribution()
@@ -214,8 +214,9 @@ Standard Output Messages:
 ```
 
 **10.** Regression test of portfolio profit and risk.  
-**Example** function is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
-**Hash** will save a cache of a number of results on a successful run and each subsequent run will fail with actual vs expected at the first point of any difference.  
+**Example** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
+**Hash** is used to find a hash and continue to check a number of results.
+It saves a cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
 Together Example and Hash eliminate the need to commit data files in regression testing while also giving detailed information of any change.
 ```csharp
 [Fact]
