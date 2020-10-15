@@ -231,12 +231,12 @@ public void Portfolio_Small_Mixed_Example()
         a.All(p => p > 0.75 && p < 1.5)
     , "ftXKwKhS6ec4");
     double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
-    Check.Hash(5857230471108592669, hash =>
+    Check.Hash(h =>
     {
-        hash.AddDecimalPlaces(2, portfolio.Positions.Select(p => p.Profit));
-        hash.AddDecimalPlaces(2, portfolio.Profit(fxRate));
-        hash.AddDecimalPlaces(2, portfolio.RiskByPosition(fxRate));
-    });
+        h.AddDecimalPlaces(2, portfolio.Positions.Select(p => p.Profit));
+        h.AddDecimalPlaces(2, portfolio.Profit(fxRate));
+        h.AddDecimalPlaces(2, portfolio.RiskByPosition(fxRate));
+    }, 5857230471108592669);
 }
 ```
 

@@ -118,7 +118,7 @@ namespace Tests
         [Fact]
         public void Hash_Example()
         {
-            Check.Hash(4330040055, hash =>
+            Check.Hash(hash =>
             {
                 var pcg = PCG.Parse("5a7zcxHI4Eg0");
                 for (int i = 0; i < 100; i++)
@@ -142,7 +142,7 @@ namespace Tests
                     hash.Add(Gen.Char.Generate(pcg).Item1);
                     hash.Add(Gen.String.Generate(pcg).Item1);
                 }
-            });
+            }, 4330040055);
         }
 
         [Fact]

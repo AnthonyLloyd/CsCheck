@@ -607,8 +607,8 @@ namespace CsCheck
             }
         }
 
-        /// <summary>Check a hash of a series of values. Cache values on a correct run and fail at first difference. Set expected to 0 to find the hash.</summary>
-        public static void Hash(long expected, Action<Hash> action, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "")
+        /// <summary>Check a hash of a series of values. Cache values on a correct run and fail at first difference.</summary>
+        public static void Hash(Action<Hash> action, long expected = 0, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "")
         {
             if (expected == 0)
             {
