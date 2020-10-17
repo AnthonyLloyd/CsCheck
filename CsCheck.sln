@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{0C
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perf", "Perf\Perf.csproj", "{B7FAB23A-9C5D-4B44-AAF4-A15CC781C5F7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{18108C1F-9AF3-46DB-8879-03ACD2DF1D07}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{18108C1F-9AF3-46DB-8879-03ACD2DF1D07}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{18108C1F-9AF3-46DB-8879-03ACD2DF1D07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7FAB23A-9C5D-4B44-AAF4-A15CC781C5F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7FAB23A-9C5D-4B44-AAF4-A15CC781C5F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7FAB23A-9C5D-4B44-AAF4-A15CC781C5F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7FAB23A-9C5D-4B44-AAF4-A15CC781C5F7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

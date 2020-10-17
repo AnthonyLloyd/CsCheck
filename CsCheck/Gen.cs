@@ -22,22 +22,40 @@ namespace CsCheck
 {
     public class Size
     {
-        public ulong I { get; }
-        public Size[] Next { get; }
+        public static Size[] EmptyArray = new Size[0];
+        public readonly ulong I;
+        public readonly Size[] Next;
         public Size(ulong i, Size[] next)
         {
             I = i;
             Next = next;
         }
-        public bool IsLessThan(Size s) => I == s.I ? IsLessThan(Next, s.Next) : I < s.I;
-        static bool IsLessThan(IEnumerable<Size> a, IEnumerable<Size> b)
+        public Size(ulong i)
         {
-            if (a is null || b is null) return b is object;
-            ulong ta = a.Aggregate(0UL, (s, i) => s + i.I);
-            ulong tb = b.Aggregate(0UL, (s, i) => s + i.I);
-            return ta == tb ? IsLessThan(a.Where(i => i.Next != null).SelectMany(i => i.Next),
-                                         b.Where(i => i.Next != null).SelectMany(i => i.Next))
-                            : ta < tb;
+            I = i;
+            Next = EmptyArray;
+        }
+        public bool IsLessThan(Size s) => I < s.I || (I == s.I && IsLessThan(Next, s.Next));
+        static ulong Sum(Size[] a)
+        {
+            ulong t = 0UL;
+            foreach (var i in a) t += i.I + 1UL;
+            return t;
+        }
+        static bool IsLessThan(Size[] a, Size[] b)
+        {
+            ulong ta = Sum(a);
+            ulong tb = Sum(b);
+            return ta < tb || (ta == tb && ta != 0UL && IsLessThan(a.Select(i => i.Next), b.Select(i => i.Next)));
+        }
+        static bool IsLessThan(IEnumerable<Size[]> a, IEnumerable<Size[]> b)
+        {
+            ulong ta = 0UL;
+            foreach (var i in a) ta += Sum(i) + 1UL;
+            ulong tb = 0UL;
+            foreach (var i in b) tb += Sum(i) + 1UL;
+            return ta < tb || (ta == tb && ta != 0UL && IsLessThan(a.SelectMany(i => i.Select(j => j.Next)),
+                                                                   b.SelectMany(i => i.Select(j => j.Next))));
         }
     }
 
@@ -268,7 +286,7 @@ namespace CsCheck
             while (!predicate(t.Item1)) t = gen.Generate(pcg);
             return t;
         });
-        static readonly Size zero = new Size(0UL, null);
+        static readonly Size zero = new Size(0UL, Size.EmptyArray);
         public static Gen<T> Const<T>(T value) => new GenF<T>(_ => (value, zero));
         public static Gen<T> OneOf<T>(params T[] ts) => Int[0, ts.Length - 1].Select(i => ts[i]);
         public static Gen<T> OneOf<T>(params Gen<T>[] gens) => Int[0, gens.Length - 1].SelectMany(i => gens[i]);
@@ -354,7 +372,7 @@ namespace CsCheck
         public override (bool, Size) Generate(PCG pcg)
         {
             uint i = pcg.Next();
-            return ((i & 1u) == 1u, new Size(i, null));
+            return ((i & 1u) == 1u, new Size(i));
         }
     }
 
@@ -365,7 +383,7 @@ namespace CsCheck
         public override (sbyte, Size) Generate(PCG pcg)
         {
             sbyte i = (sbyte)(pcg.Next() & 255u);
-            return (i, new Size(Zigzag(i), null));
+            return (i, new Size(Zigzag(i)));
         }
         public Gen<sbyte> this[sbyte start, sbyte finish]
         {
@@ -375,7 +393,7 @@ namespace CsCheck
                 return new GenF<sbyte>(pcg =>
                 {
                     sbyte i = (sbyte)(start + pcg.Next(l));
-                    return (i, new Size(Zigzag(i), null));
+                    return (i, new Size(Zigzag(i)));
                 });
             }
         }
@@ -386,7 +404,7 @@ namespace CsCheck
         public override (byte, Size) Generate(PCG pcg)
         {
             byte i = (byte)(pcg.Next() & 255u);
-            return (i, new Size(i, null));
+            return (i, new Size(i));
         }
         public Gen<byte> this[byte start, byte finish]
         {
@@ -397,7 +415,7 @@ namespace CsCheck
                 return new GenF<byte>(pcg =>
                 {
                     byte i = (byte)(s + pcg.Next(l));
-                    return (i, new Size(i, null));
+                    return (i, new Size(i));
                 });
             }
         }
@@ -410,7 +428,7 @@ namespace CsCheck
         public override (short, Size) Generate(PCG pcg)
         {
             short i = (short)(pcg.Next() & 65535u);
-            return (i, new Size(Zigzag(i), null));
+            return (i, new Size(Zigzag(i)));
         }
         public Gen<short> this[short start, short finish]
         {
@@ -420,7 +438,7 @@ namespace CsCheck
                 return new GenF<short>(pcg =>
                 {
                     short i = (short)(start + pcg.Next(l));
-                    return (i, new Size(Zigzag(i), null));
+                    return (i, new Size(Zigzag(i)));
                 });
             }
         }
@@ -431,7 +449,7 @@ namespace CsCheck
         public override (ushort, Size) Generate(PCG pcg)
         {
             ushort i = (ushort)(pcg.Next() & 65535u);
-            return (i, new Size(i, null));
+            return (i, new Size(i));
         }
         public Gen<ushort> this[ushort start, ushort finish]
         {
@@ -441,7 +459,7 @@ namespace CsCheck
                 return new GenF<ushort>(pcg =>
                 {
                     ushort i = (ushort)(start + pcg.Next(l));
-                    return (i, new Size(i, null));
+                    return (i, new Size(i));
                 });
             }
         }
@@ -456,7 +474,7 @@ namespace CsCheck
         public override (int, Size) Generate(PCG pcg)
         {
             int i = (int)pcg.Next();
-            return (i, new Size(Zigzag(i), null));
+            return (i, new Size(Zigzag(i)));
         }
         public Gen<int> this[int start, int finish]
         {
@@ -466,7 +484,7 @@ namespace CsCheck
                 return new GenF<int>(pcg =>
                 {
                     int i = (int)(start + pcg.Next(l));
-                    return (i, new Size(Zigzag(i), null));
+                    return (i, new Size(Zigzag(i)));
                 });
             }
         }
@@ -487,7 +505,7 @@ namespace CsCheck
         public override (uint, Size) Generate(PCG pcg)
         {
             uint i = pcg.Next();
-            return (i, new Size(i, null));
+            return (i, new Size(i));
         }
         public Gen<uint> this[uint start, uint finish]
         {
@@ -497,7 +515,7 @@ namespace CsCheck
                 return new GenF<uint>(pcg =>
                 {
                     uint i = start + pcg.Next(l);
-                    return (i, new Size(i, null));
+                    return (i, new Size(i));
                 });
             }
         }
@@ -526,7 +544,7 @@ namespace CsCheck
         public override (long, Size) Generate(PCG pcg)
         {
             long i = (long)pcg.Next64();
-            return (i, new Size(Zigzag(i), null));
+            return (i, new Size(Zigzag(i)));
         }
         public Gen<long> this[long start, long finish]
         {
@@ -537,7 +555,7 @@ namespace CsCheck
                 return new GenF<long>(pcg =>
                 {
                     long i = start + (long)pcg.Next64(l);
-                    return (i, new Size(Zigzag(i), null));
+                    return (i, new Size(Zigzag(i)));
                 });
             }
         }
@@ -548,7 +566,7 @@ namespace CsCheck
         public override (ulong, Size) Generate(PCG pcg)
         {
             ulong i = pcg.Next64();
-            return (i, new Size(i, null));
+            return (i, new Size(i));
         }
         public Gen<ulong> this[ulong start, ulong finish]
         {
@@ -558,7 +576,7 @@ namespace CsCheck
                 return new GenF<ulong>(pcg =>
                 {
                     ulong i = start + pcg.Next64(l);
-                    return (i, new Size(i, null));
+                    return (i, new Size(i));
                 });
             }
         }
@@ -576,7 +594,7 @@ namespace CsCheck
         public override (float, Size) Generate(PCG pcg)
         {
             uint i = pcg.Next();
-            return (new FloatConverter { I = i }.F, new Size(i, null));
+            return (new FloatConverter { I = i }.F, new Size(i));
         }
         public Gen<float> this[float start, float finish]
         {
@@ -588,7 +606,7 @@ namespace CsCheck
                 {
                     uint i = pcg.Next() >> 9;
                     return (new FloatConverter { I = i | 0x3F800000 }.F * finish + start
-                            , new Size(i, null));
+                            , new Size(i));
                 });
             }
         }
@@ -596,19 +614,19 @@ namespace CsCheck
         public Gen<float> NonNegative = new GenF<float>(pcg =>
         {
             uint i = pcg.Next();
-            return (Math.Abs(new FloatConverter { I = i }.F), new Size(i, null));
+            return (Math.Abs(new FloatConverter { I = i }.F), new Size(i));
         });
         /// <summary>In the range 0.0f &lt;= x &lt; 1.0f.</summary>
         public Gen<float> Unit = new GenF<float>(pcg =>
         {
             uint i = pcg.Next() >> 9;
-            return (new FloatConverter { I = i | 0x3F800000 }.F - 1f, new Size(i, null));
+            return (new FloatConverter { I = i | 0x3F800000 }.F - 1f, new Size(i));
         });
         /// <summary>In the range 1.0f &lt;= x &lt; 2.0f.</summary>
         public Gen<float> OneTwo = new GenF<float>(pcg =>
         {
             uint i = pcg.Next() >> 9;
-            return (new FloatConverter { I = i | 0x3F800000 }.F, new Size(i, null));
+            return (new FloatConverter { I = i | 0x3F800000 }.F, new Size(i));
         });
         /// <summary>Without special values nan and inf.</summary>
         public Gen<float> Normal = new GenF<float>(pcg =>
@@ -616,7 +634,7 @@ namespace CsCheck
             uint i = pcg.Next();
             return ((i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU))
                     : new FloatConverter { I = i }.F
-                , new Size(i, null));
+                , new Size(i));
         });
         /// <summary>In the range 0.0 &lt;= x &lt;= max without special values.</summary>
         public Gen<float> NormalNonNegative = new GenF<float>(pcg =>
@@ -624,7 +642,7 @@ namespace CsCheck
             uint i = pcg.Next();
             return (Math.Abs((i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU))
                     : new FloatConverter { I = i }.F)
-                , new Size(i, null));
+                , new Size(i));
         });
         static float MakeSpecial(uint i)
         {
@@ -654,7 +672,7 @@ namespace CsCheck
             uint i = pcg.Next();
             return ((i & 0xF0U) == 0xD0U ? MakeSpecial(i)
                     : new FloatConverter { I = i }.F
-                , new Size(i, null));
+                , new Size(i));
         });
     }
 
@@ -663,7 +681,7 @@ namespace CsCheck
         public override (double, Size) Generate(PCG pcg)
         {
             ulong i = pcg.Next64();
-            return (BitConverter.Int64BitsToDouble((long)i), new Size(i, null));
+            return (BitConverter.Int64BitsToDouble((long)i), new Size(i));
         }
         public Gen<double> this[double start, double finish]
         {
@@ -675,7 +693,7 @@ namespace CsCheck
                 {
                     ulong i = pcg.Next64() >> 12;
                     return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * finish + start
-                            , new Size(i, null));
+                            , new Size(i));
                 });
             }
         }
@@ -683,21 +701,21 @@ namespace CsCheck
         public Gen<double> NonNegative = new GenF<double>(pcg =>
         {
             ulong i = pcg.Next64();
-            return (Math.Abs(BitConverter.Int64BitsToDouble((long)i)), new Size(i, null));
+            return (Math.Abs(BitConverter.Int64BitsToDouble((long)i)), new Size(i));
         });
         /// <summary>In the range 0.0 &lt;= x &lt; 1.0.</summary>
         public Gen<double> Unit = new GenF<double>(pcg =>
         {
             ulong i = pcg.Next64() >> 12;
             return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1.0
-                    , new Size(i, null));
+                    , new Size(i));
         });
         /// <summary>In the range 1.0 &lt;= x &lt; 2.0.</summary>
         public Gen<double> OneTwo = new GenF<double>(pcg =>
         {
             ulong i = pcg.Next64() >> 12;
             return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000)
-                    , new Size(i, null));
+                    , new Size(i));
         });
         /// <summary>Without special values nan and inf.</summary>
         public Gen<double> Normal = new GenF<double>(pcg =>
@@ -705,7 +723,7 @@ namespace CsCheck
             ulong i = pcg.Next64();
             return ((i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL))
                   : BitConverter.Int64BitsToDouble((long)i)
-                , new Size(i, null));
+                , new Size(i));
         });
         /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
         public Gen<double> NormalNonNegative = new GenF<double>(pcg =>
@@ -713,7 +731,7 @@ namespace CsCheck
             ulong i = pcg.Next64();
             return (Math.Abs((i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL))
                   : BitConverter.Int64BitsToDouble((long)i))
-                , new Size(i, null));
+                , new Size(i));
         });
         static double MakeSpecial(ulong i)
         {
@@ -743,7 +761,7 @@ namespace CsCheck
             ulong i = pcg.Next64();
             return ((i & 0xF0UL) == 0xD0UL ? MakeSpecial(i)
                     : BitConverter.Int64BitsToDouble((long)i)
-                , new Size(i, null));
+                , new Size(i));
         });
         public class DoubleSkew
         {
@@ -770,7 +788,7 @@ namespace CsCheck
         public override (decimal, Size) Generate(PCG pcg)
         {
             var c = new DecimalConverter { I0 = pcg.Next64(), I1 = pcg.Next64() };
-            return (c.D, new Size(c.I0, null));
+            return (c.D, new Size(c.I0));
         }
         public Gen<decimal> this[decimal start, decimal finish]
         {
@@ -782,20 +800,20 @@ namespace CsCheck
                 {
                     var i = pcg.Next64() >> 12;
                     return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * finish + start
-                            , new Size(i, null));
+                            , new Size(i));
                 });
             }
         }
         public Gen<decimal> NonNegative = new GenF<decimal>(pcg =>
         {
             var c = new DecimalConverter { I0 = pcg.Next64(), I1 = pcg.Next64() };
-            return (Math.Abs(c.D), new Size(c.I0, null));
+            return (Math.Abs(c.D), new Size(c.I0));
         });
         public Gen<decimal> Unit = new GenF<decimal>(pcg =>
         {
             ulong i = pcg.Next64() >> 12;
             return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1M
-                    , new Size(i, null));
+                    , new Size(i));
         });
     }
 
@@ -805,7 +823,7 @@ namespace CsCheck
         public override (DateTime, Size) Generate(PCG pcg)
         {
             ulong i = pcg.Next64(max);
-            return (new DateTime((long)i), new Size(i, null));
+            return (new DateTime((long)i), new Size(i));
         }
         public Gen<DateTime> this[DateTime start, DateTime finish]
         {
@@ -815,7 +833,7 @@ namespace CsCheck
                 return new GenF<DateTime>(pcg =>
                 {
                     ulong i = (ulong)start.Ticks + pcg.Next64(l);
-                    return (new DateTime((long)i), new Size(i, null));
+                    return (new DateTime((long)i), new Size(i));
                 });
             }
         }
@@ -826,7 +844,7 @@ namespace CsCheck
         public override (TimeSpan, Size) Generate(PCG pcg)
         {
             ulong i = pcg.Next64();
-            return (new TimeSpan((long)i), new Size(i, null));
+            return (new TimeSpan((long)i), new Size(i));
         }
         public Gen<TimeSpan> this[TimeSpan start, TimeSpan finish]
         {
@@ -836,7 +854,7 @@ namespace CsCheck
                 return new GenF<TimeSpan>(pcg =>
                 {
                     ulong i = (ulong)start.Ticks + pcg.Next64(l);
-                    return (new TimeSpan((long)i), new Size(i, null));
+                    return (new TimeSpan((long)i), new Size(i));
                 });
             }
         }
@@ -870,7 +888,7 @@ namespace CsCheck
         {
             var c = new GuidConverter { I0 = pcg.Next(), I1 = pcg.Next(), I2 = pcg.Next(), I3 = pcg.Next() };
             return (c.G,
-                new Size(0, new[] { new Size(c.I0, null), new Size(c.I1, null), new Size(c.I2, null), new Size(c.I3, null) }));
+                new Size(0, new[] { new Size(c.I0), new Size(c.I1), new Size(c.I2), new Size(c.I3) }));
         }
     }
 
@@ -879,7 +897,7 @@ namespace CsCheck
         public override (char, Size) Generate(PCG pcg)
         {
             var i = pcg.Next() & 127u;
-            return ((char)i, new Size(i, null));
+            return ((char)i, new Size(i));
         }
         public Gen<char> this[char start, char finish]
         {
@@ -890,7 +908,7 @@ namespace CsCheck
                 return new GenF<char>(pcg =>
                 {
                     var i = pcg.Next(l);
-                    return ((char)(s + i), new Size(i, null));
+                    return ((char)(s + i), new Size(i));
                 });
             }
         }
@@ -898,11 +916,10 @@ namespace CsCheck
         {
             get
             {
-                char[] charArray = chars.ToArray();
                 return new GenF<char>(pcg =>
                 {
-                    var i = pcg.Next((uint)charArray.Length);
-                    return (charArray[i], new Size(i, null));
+                    var i = pcg.Next((uint)chars.Length);
+                    return (chars[(int)i], new Size(i));
                 });
             }
         }
@@ -1004,7 +1021,7 @@ namespace CsCheck
                     var v = gen.Generate(pcg).Item1;
                     vs[i, j] = v;
                 }
-            return (vs, new Size(size, null));
+            return (vs, new Size(size));
         }
         public override (T[,], Size) Generate(PCG pcg)
         {
