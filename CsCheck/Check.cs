@@ -46,7 +46,7 @@ namespace CsCheck
             if (size == -1) size = Size;
             PCG minPCG = null;
             ulong minState = 0UL;
-            Size minSize = null;
+            Size minSize = CsCheck.Size.Max;
             Exception minException = null;
 
             if (seed != null || Seed != null)
@@ -81,7 +81,7 @@ namespace CsCheck
                 {
                     var t = gen.Generate(pcg);
                     s = t.Item2;
-                    if (minSize is null || s.IsLessThan(minSize))
+                    if (s.IsLessThan(minSize))
                         assert(t.Item1);
                     else
                         skipped++;
@@ -90,9 +90,9 @@ namespace CsCheck
                 {
                     lock (lockObj)
                     {
-                        if (minSize is null || s.IsLessThan(minSize))
+                        if (s.IsLessThan(minSize))
                         {
-                            if (minSize is object) shrinks++;
+                            shrinks++;
                             minPCG = pcg;
                             minState = state;
                             minSize = s;
@@ -101,7 +101,7 @@ namespace CsCheck
                     }
                 }
             });
-
+            shrinks = Math.Max(0, shrinks - 1);
             if (minPCG != null) throw new CsCheckException(
                 $"CsCheck_Seed = \"{minPCG.ToString(minState)}\" ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
@@ -112,7 +112,7 @@ namespace CsCheck
             if (size == -1) size = Size;
             PCG minPCG = null;
             ulong minState = 0UL;
-            Size minSize = null;
+            Size minSize = CsCheck.Size.Max;
             Exception minException = null;
 
             if (seed != null || Seed != null)
@@ -152,15 +152,15 @@ namespace CsCheck
                 {
                     var t = gen.Generate(pcg);
                     s = t.Item2;
-                    if (minSize is null || s.IsLessThan(minSize))
+                    if (s.IsLessThan(minSize))
                     {
                         if (!predicate(t.Item1))
                         {
                             lock (lockObj)
                             {
-                                if (minSize is null || s.IsLessThan(minSize))
+                                if (s.IsLessThan(minSize))
                                 {
-                                    if (minSize is object) shrinks++;
+                                    shrinks++;
                                     minPCG = pcg;
                                     minState = state;
                                     minSize = s;
@@ -174,9 +174,9 @@ namespace CsCheck
                 {
                     lock (lockObj)
                     {
-                        if (minSize is null || s.IsLessThan(minSize))
+                        if (s.IsLessThan(minSize))
                         {
-                            if (minSize is object) shrinks++;
+                            shrinks++;
                             minPCG = pcg;
                             minState = state;
                             minSize = s;
@@ -185,7 +185,7 @@ namespace CsCheck
                     }
                 }
             });
-
+            shrinks = Math.Max(0, shrinks - 1);
             if (minPCG != null) throw new CsCheckException(
                 $"CsCheck_Seed = \"{minPCG.ToString(minState)}\" ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);

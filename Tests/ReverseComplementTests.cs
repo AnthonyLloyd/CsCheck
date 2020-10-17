@@ -527,7 +527,7 @@ namespace Utils
             for (int i = 0; i <= linesPerBlock * Width - 1; i++)
                 repeatedBytes[1 + i + i / Width] = table[i % 287];
             for (int i = 0; i <= (Width * linesPerBlock - 1) / Width; i++)
-                repeatedBytes[i * Width1] = (byte)'\n';
+                repeatedBytes[Width1 * i] = (byte)'\n';
             for (int i = 1; i <= (2 * n - 1) / (Width * linesPerBlock); i++)
                 o.Write(repeatedBytes, 0, Width1 * linesPerBlock);
             var remaining = (2 * n - 1) % (Width * linesPerBlock) + 1;

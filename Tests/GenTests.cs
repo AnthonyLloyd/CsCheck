@@ -26,7 +26,7 @@ namespace Tests
         {
             var frequency = 10;
             var expected = ArrayRepeat(2, frequency);
-            Gen.Bool.Select(i => i ? 1 : 0).Array[frequency * 2]
+            Gen.Bool.Select(i => i ? 1 : 0).Array[2 * frequency]
             .Select(sample => Tally(2, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
         }

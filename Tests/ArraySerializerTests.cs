@@ -118,7 +118,7 @@ namespace Tests
             ulong result = Unsafe.ReadUnaligned<ulong>(ref bytes[pos]);
             var noBytes = BitOperations.TrailingZeroCount(result) + 1;
             pos += noBytes;
-            return (uint)(((1UL << (noBytes * 7)) - 1UL) & (result >> noBytes));
+            return (uint)(((1UL << (7 * noBytes)) - 1UL) & (result >> noBytes));
         }
     }
 }

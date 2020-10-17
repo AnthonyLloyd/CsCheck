@@ -21,6 +21,7 @@ namespace CsCheck
 {
     public class Size
     {
+        public static Size Max = new Size(ulong.MaxValue);
         public static Size[] EmptyArray = new Size[0];
         public readonly ulong I;
         public readonly Size[] Next;
@@ -282,7 +283,7 @@ namespace CsCheck
             while (!predicate(t.Item1)) t = gen.Generate(pcg);
             return t;
         });
-        static readonly Size zero = new Size(0UL, Size.EmptyArray);
+        static readonly Size zero = new Size(0UL);
         public static Gen<T> Const<T>(T value) => new GenF<T>(_ => (value, zero));
         public static Gen<T> OneOf<T>(params T[] ts) => Int[0, ts.Length - 1].Select(i => ts[i]);
         public static Gen<T> OneOf<T>(params Gen<T>[] gens) => Int[0, gens.Length - 1].SelectMany(i => gens[i]);
@@ -1123,7 +1124,7 @@ namespace CsCheck
         (Dictionary<K, V>, Size) Generate(PCG pcg, int length, ulong size)
         {
             var vs = new Dictionary<K, V>(length);
-            var ss = new Size[length * 2];
+            var ss = new Size[2 * length];
             var i = length;
             var bad = 0;
             while (i > 0)
@@ -1171,7 +1172,7 @@ namespace CsCheck
         (SortedDictionary<K, V>, Size) Generate(PCG pcg, int length, ulong size)
         {
             var vs = new SortedDictionary<K, V>();
-            var ss = new Size[length * 2];
+            var ss = new Size[2 * length];
             var i = length;
             var bad = 0;
             while (i > 0)

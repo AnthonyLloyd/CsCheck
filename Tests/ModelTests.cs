@@ -67,8 +67,8 @@ namespace Tests
             public static Gen<Currency> Currency = Gen.Enum<Currency>();
             public static Gen<Country> Country = Gen.Enum<Country>();
             public static Gen<int> Quantity = Gen.Int[-99, 99].Select(Gen.Int[0, 5]).Select(t => t.V0 * (int)Math.Pow(10, t.V1));
-            public static Gen<double> Coupon = Gen.Int[0, 100].Select(i => i * 0.125);
-            public static Gen<double> Price = Gen.Int[0001, 9999].Select(i => i * 0.01);
+            public static Gen<double> Coupon = Gen.Int[0, 100].Select(i => 0.125 * i);
+            public static Gen<double> Price = Gen.Int[0001, 9999].Select(i => 0.01 * i);
             public static Gen<DateTime> Date = Gen.DateTime[new DateTime(2000, 1, 1), new DateTime(2040, 1, 1)].Select(i => i.Date);
             public static Gen<Equity> Equity = Gen.Select(Name, Country, Currency, Gen.Enum<Exchange>().HashSet[1, 3], (n, co, cu, e) => new Equity(n, co, cu, e));
             public static Gen<Bond> Bond = Gen.Select(Name, Country, Currency, Gen.SortedDictionary(Date, Coupon), (n, co, cu, c) => new Bond(n, co, cu, c));
