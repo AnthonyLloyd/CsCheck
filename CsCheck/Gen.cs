@@ -14,7 +14,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -35,28 +34,25 @@ namespace CsCheck
             I = i;
             Next = EmptyArray;
         }
-        public bool IsLessThan(Size s) => I < s.I || (I == s.I && IsLessThan(Next, s.Next));
-        static ulong Sum(Size[] a)
+        static ulong Sum(Size[] a, int level)
         {
             ulong t = 0UL;
-            foreach (var i in a) t += i.I + 1UL;
+            if (level == 0)
+            {
+                foreach (var i in a) t += i.I + 1UL;
+                return t;
+            }
+            level--;
+            foreach (var i in a) t += Sum(i.Next, level);
             return t;
         }
-        static bool IsLessThan(Size[] a, Size[] b)
+        static bool IsLessThan(Size[] a, Size[] b, int level)
         {
-            ulong ta = Sum(a);
-            ulong tb = Sum(b);
-            return ta < tb || (ta == tb && ta != 0UL && IsLessThan(a.Select(i => i.Next), b.Select(i => i.Next)));
+            ulong ta = Sum(a, level);
+            ulong tb = Sum(b, level);
+            return ta < tb || (ta == tb && ta != 0UL && IsLessThan(a, b, level + 1));
         }
-        static bool IsLessThan(IEnumerable<Size[]> a, IEnumerable<Size[]> b)
-        {
-            ulong ta = 0UL;
-            foreach (var i in a) ta += Sum(i) + 1UL;
-            ulong tb = 0UL;
-            foreach (var i in b) tb += Sum(i) + 1UL;
-            return ta < tb || (ta == tb && ta != 0UL && IsLessThan(a.SelectMany(i => i.Select(j => j.Next)),
-                                                                   b.SelectMany(i => i.Select(j => j.Next))));
-        }
+        public bool IsLessThan(Size s) => I < s.I || (I == s.I && IsLessThan(Next, s.Next, 0));
     }
 
     public interface IGen
