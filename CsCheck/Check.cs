@@ -28,50 +28,55 @@ namespace CsCheck
 
     public static class Check
     {
-        public static string Seed;
         public static int Size = 100;
+        public static int Threads = -1;
+        public static string Seed;
         public static double Sigma;
+
         static Check()
         {
-            var seed = Environment.GetEnvironmentVariable("CsCheck_Seed");
-            if (!string.IsNullOrWhiteSpace(seed)) Seed = PCG.Parse(seed).ToString();
             var size = Environment.GetEnvironmentVariable("CsCheck_Size");
             if (!string.IsNullOrWhiteSpace(size)) Size = int.Parse(size);
+            var threads = Environment.GetEnvironmentVariable("CsCheck_Threads");
+            if (!string.IsNullOrWhiteSpace(threads)) Threads = int.Parse(threads);
+            var seed = Environment.GetEnvironmentVariable("CsCheck_Seed");
+            if (!string.IsNullOrWhiteSpace(seed)) Seed = PCG.Parse(seed).ToString();
             var sigma = Environment.GetEnvironmentVariable("CsCheck_Sigma");
             if (!string.IsNullOrWhiteSpace(sigma)) Sigma = double.Parse(sigma);
         }
         /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
         public static void Sample<T>(this Gen<T> gen, Action<T> assert, string seed = null, int size = -1, int threads = -1)
         {
-            if (size == -1) size = Size;
             PCG minPCG = null;
             ulong minState = 0UL;
             Size minSize = CsCheck.Size.Max;
             Exception minException = null;
-
+            int shrinks = -1;
+            if (size == -1) size = Size;
             if (seed != null || Seed != null)
             {
+                size--;
                 var pcg = PCG.Parse(seed ?? Seed);
                 ulong state = pcg.State;
                 Size s = null;
                 try
                 {
-                    var t = gen.Generate(pcg);
-                    s = t.Item2;
-                    assert(t.Item1);
+                    T t;
+                    (t, s) = gen.Generate(pcg);
+                    assert(t);
                 }
                 catch (Exception e)
                 {
+                    shrinks++;
                     minPCG = pcg;
                     minState = state;
                     minSize = s;
                     minException = e;
                 }
-                size--;
             }
-
             var lockObj = new object();
-            int shrinks = 0, skipped = 0;
+            int skipped = 0;
+            if (threads == -1) threads = Threads;
             Parallel.For(0, size, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
             {
                 var pcg = PCG.ThreadPCG;
@@ -79,10 +84,10 @@ namespace CsCheck
                 Size s = null;
                 try
                 {
-                    var t = gen.Generate(pcg);
-                    s = t.Item2;
+                    T t;
+                    (t, s) = gen.Generate(pcg);
                     if (s.IsLessThan(minSize))
-                        assert(t.Item1);
+                        assert(t);
                     else
                         skipped++;
                 }
@@ -101,7 +106,6 @@ namespace CsCheck
                     }
                 }
             });
-            shrinks = Math.Max(0, shrinks - 1);
             if (minPCG != null) throw new CsCheckException(
                 $"CsCheck_Seed = \"{minPCG.ToString(minState)}\" ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
@@ -109,23 +113,25 @@ namespace CsCheck
         /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
         public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, int size = -1, int threads = -1)
         {
-            if (size == -1) size = Size;
             PCG minPCG = null;
             ulong minState = 0UL;
             Size minSize = CsCheck.Size.Max;
             Exception minException = null;
-
+            int shrinks = -1;
+            if (size == -1) size = Size;
             if (seed != null || Seed != null)
             {
+                size--;
                 var pcg = PCG.Parse(seed ?? Seed);
                 ulong state = pcg.State;
                 Size s = null;
                 try
                 {
-                    var t = gen.Generate(pcg);
-                    s = t.Item2;
-                    if (!predicate(t.Item1))
+                    T t;
+                    (t, s) = gen.Generate(pcg);
+                    if (!predicate(t))
                     {
+                        shrinks++;
                         minPCG = pcg;
                         minState = state;
                         minSize = s;
@@ -133,16 +139,17 @@ namespace CsCheck
                 }
                 catch (Exception e)
                 {
+                    shrinks++;
                     minPCG = pcg;
                     minState = state;
                     minSize = s;
                     minException = e;
                 }
-                size--;
             }
 
             var lockObj = new object();
-            int shrinks = 0, skipped = 0;
+            int skipped = 0;
+            if (threads == -1) threads = Threads;
             Parallel.For(0, size, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
             {
                 var pcg = PCG.ThreadPCG;
@@ -150,11 +157,11 @@ namespace CsCheck
                 Size s = null;
                 try
                 {
-                    var t = gen.Generate(pcg);
-                    s = t.Item2;
+                    T t;
+                    (t, s) = gen.Generate(pcg);
                     if (s.IsLessThan(minSize))
                     {
-                        if (!predicate(t.Item1))
+                        if (!predicate(t))
                         {
                             lock (lockObj)
                             {
@@ -185,7 +192,6 @@ namespace CsCheck
                     }
                 }
             });
-            shrinks = Math.Max(0, shrinks - 1);
             if (minPCG != null) throw new CsCheckException(
                 $"CsCheck_Seed = \"{minPCG.ToString(minState)}\" ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
                     , minException);
@@ -300,6 +306,7 @@ namespace CsCheck
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma;
+            if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
@@ -351,6 +358,7 @@ namespace CsCheck
         {
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma;
+            if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
@@ -425,6 +433,7 @@ namespace CsCheck
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma; // using sigma as sigma squared now
             if (seed == null) seed = Seed;
+            if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
@@ -484,6 +493,7 @@ namespace CsCheck
             if (sigma == -1.0) sigma = Sigma == 0.0 ? 6.0 : Sigma;
             sigma *= sigma; // using sigma as sigma squared now
             if (seed == null) seed = Seed;
+            if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();

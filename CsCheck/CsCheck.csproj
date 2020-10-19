@@ -21,9 +21,11 @@ CsCheck also makes multithreading, performance and regression testing simple and
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;multithreading;performance;regression;testing</PackageTags>
-        <Version>0.9.8</Version>
+        <Version>1.0.0</Version>
         <PackageReleaseNotes>
-Bug fix for Hash. Breaking change for the hash code.
+Added CsCheck_Threads env configuration.
+Performance improvements.
+Hash change of signature for consistency and clarity. No change to hash algorithm.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <WarningLevel>4</WarningLevel>
