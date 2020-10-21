@@ -139,7 +139,7 @@ namespace Tests
         {
             var buckets = 70;
             var frequency = 10;
-            var expected = ArrayRepeat(buckets, frequency);
+            int[] expected = ArrayRepeat(buckets, frequency);
             Gen.Int[0, buckets - 1].Array[frequency * buckets]
             .Select(sample => Tally(buckets, sample))
             .SampleOne(actual => Check.ChiSquared(expected, actual));
