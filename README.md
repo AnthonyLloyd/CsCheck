@@ -255,4 +255,6 @@ $env:CsCheck_Size = 10000; dotnet test -c Release --filter Multithreading; rm en
 $env:CsCheck_Seed = "0N0XIzNsQ0O2"; dotnet test -c Release --filter List; rm env:CsCheck*
 
 $env:CsCheck_Sigma = 50; dotnet test -c Release -l 'console;verbosity=detailed' --filter Faster; rm env:CsCheck*
+
+$env:CsCheck_Threads = 1; dotnet test -c Release -l 'console;verbosity=detailed' --filter Perf; rm env:CsCheck*
 ```
