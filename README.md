@@ -48,8 +48,8 @@ public void Long_Range()
 [Fact]
 public void Int_Distribution()
 {
-    var buckets = 70;
-    var frequency = 10;
+    int buckets = 70;
+    int frequency = 10;
     int[] expected = ArrayRepeat(buckets, frequency);
     Gen.Int[0, buckets - 1].Array[frequency * buckets]
     .Select(sample => Tally(buckets, sample))
