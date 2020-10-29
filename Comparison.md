@@ -67,7 +67,7 @@ Standard Output Messages:
  Fail: 0.0.0
 ```
 
-Size is also a better representation of if one value is smaller than another e.g. for collection values.
+Size is also a better representation of if one value is smaller than another especially for collections.
 There are examples where increasing on one axis while decreasing on others can lead to smaller cases e.g. if Version fails for 2 * ma + mi + bu ≥ 255 * 2.
 CsCheck will be able to shrink to 255.0.0 but Hedgehog won't be able to.
 
