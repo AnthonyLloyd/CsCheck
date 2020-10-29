@@ -14,7 +14,7 @@ Shrinking for Hedgehog is simply exploring the tree and testing each one. Shrink
 
 There must be many pros and cons between them but there are a few reasons the Monte-Carlo approach is better.
 
-Firstly in the composed tree way you explore along axis to shrink and don't cover the whole space. Obviously you can't cover a very large space completely but even in a small space this axis exploration can miss some obvious shrinking. If you look at the Hedgehog [Version example](https://github.com/hedgehogqa/fsharp-hedgehog/blob/master/doc/tutorial.md#-integrated-shrinking-is-an-important-quality-of-hedgehog) it can't shrink if failures only happened when two or three numbers are equal. Size is also a better representation of if one value is smaller than another e.g. for collection values.
+Firstly in the composed tree way you explore along axis to shrink and don't cover the whole space. Obviously you can't cover a very large space completely but even in a small space this axis exploration can miss some obvious shrinking. If you look at the Hedgehog [Version example](https://github.com/hedgehogqa/fsharp-hedgehog/blob/master/doc/tutorial.md#-integrated-shrinking-is-an-important-quality-of-hedgehog) it can't shrink if failures only happened when two or three numbers are equal. CsCheck is the only random testing library that can shrink for this example.
 
 ```fsharp
 let version =
@@ -67,6 +67,8 @@ Standard Output Messages:
  Fail: 0.0.0
 ```
 
-For CsCheck it has to generate and check size in a loop. This has to be as quick as possible to be able to quickly create smaller values. This is why CsCheck uses a fast random generator (PCG) and good Size algorithm. It can shrink more complex spaces. It has the advantage over the tree way in that we know the seed for the shrunk case. It means you can repeat the shrinking later on your laptop after a CI failure. It is much better at shrinking more complex types, you just have to leave it shrinking for 5 mins.
+Size is also a better representation of if one value is smaller than another e.g. for collection values. There are examples where increasing on one axis while decreasing on others can lead to a smaller cases.
+
+For CsCheck it has to generate and check size in a loop. This has to be as quick as possible to be able to quickly create smaller values. This is why CsCheck uses a fast random generator (PCG) and good Size algorithm. It can shrink more complex spaces. It has the advantage over the tree way in that we know the seed for the shrunk case. It means you can repeat the shrinking later on your laptop after a CI failure. It is much better at shrinking more complex types, you just have to leave it shrinking for a short time.
 
 One outstanding issue for the Monte-Carlo way is that for very rare failures it can take a long time to find the next value and failure. It doesn't cut down the total space well (tree way cuts it too much). This can be worked around by once you know some dimensions of the failure you can limit the test to these and continue.
