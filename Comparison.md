@@ -14,7 +14,7 @@ Shrinking for Hedgehog is simply exploring the tree and testing each one. Shrink
 
 There must be many pros and cons between them but there are a few reasons the Monte-Carlo approach is better.
 
-Firstly in the composed tree way you explore along axis to shrink and don't cover the whole space. Obviously you can't cover a very large space completely but even in a small space this axis exploration can miss some obvious shrinking. If you look at the Hedgehog [Version example](https://github.com/hedgehogqa/fsharp-hedgehog/blob/master/doc/tutorial.md#-integrated-shrinking-is-an-important-quality-of-hedgehog) it can't shrink if failures only happened when two or three numbers are equal. CsCheck is the only random testing library that can shrink for this.
+Firstly in the composed tree way you explore along axes to shrink and don't cover the whole space. Obviously you can't cover a very large space completely but even in a small space this axis exploration can miss some obvious shrinking. If you look at the Hedgehog [Version example](https://github.com/hedgehogqa/fsharp-hedgehog/blob/master/doc/tutorial.md#-integrated-shrinking-is-an-important-quality-of-hedgehog) it can't shrink if failures only happened when two or three numbers are equal. CsCheck is the only random testing library that can shrink for this.
 
 ```fsharp
 let version =
@@ -67,7 +67,7 @@ Standard Output Messages:
  Fail: 0.0.0
 ```
 
-Size is also a better representation of comparison especially for collections or a number of axis.
+Size is also a better representation of comparison especially for collections or a number of axes.
 There are examples where increasing on one axis while decreasing on others can lead to smaller cases e.g. if Version fails for 2 * ma + mi + bu ≥ 255 * 2
 CsCheck will be able to shrink to 255.0.0 but Hedgehog won't.
 
