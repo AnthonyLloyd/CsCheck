@@ -68,7 +68,7 @@ Standard Output Messages:
 ```
 
 Size is also a better representation of if one value is smaller than another e.g. for collection values.
-There are examples where increasing on one axis while decreasing on others can lead to smaller cases e.g. if it fails for 2 * ma + mi + bu ≥ 255 * 2.
+There are examples where increasing on one axis while decreasing on others can lead to smaller cases e.g. if Version fails for 2 * ma + mi + bu ≥ 255 * 2.
 
 For CsCheck it has to generate and check size in a loop. This has to be as quick as possible to be able to quickly create smaller values. This is why CsCheck uses a fast random generator (PCG) and good Size algorithm. It can shrink more complex spaces. It has the advantage over the tree way in that we know the seed for the shrunk case. It means you can repeat the shrinking later on your laptop after a CI failure. It is much better at shrinking more complex types, you just have to leave it shrinking for a short time.
 
