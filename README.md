@@ -16,6 +16,8 @@ This gives the following advantages:
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be repeated to give simpler cases for high dimensional problems.
 
+See the [comparison](Comparison.md) with other random testing libraries.
+
 CsCheck also makes multithreading, performance and regression testing simple and fast.
 
 ### Examples
