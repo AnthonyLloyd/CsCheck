@@ -246,7 +246,7 @@ public void Portfolio_Small_Mixed_Example()
 
 These tests are in xUnit but could equally be used in any testing framework.
 
-More to see in the [Tests](Tests). 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests) also.
+More to see in the [Tests](Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
 
 ### Configuration
 
