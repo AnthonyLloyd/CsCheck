@@ -10,9 +10,9 @@ The problem with Arb and shrinkers in general is that they don't compose. Compos
 But you have to manually write the code to shrink a composed type.
 People don't write this code and that is why [FsCheck](https://github.com/fscheck/FsCheck) is not good at shrinking composed types.
 
-## Shrinking
+## Integrated shrinking
 
-Now the shrinking algorithm. [Hedgehog](https://github.com/hedgehogqa) creates not just a value but a tree of values (lazy) and you can compose trees.
+Now the shrinking algorithms. [Hedgehog](https://github.com/hedgehogqa) creates not just a value but a tree of values (lazy) and you can compose trees.
 CsCheck creates a value and Size tuple. The Size is a comparison proxy for the value (it's an int64 tree). This also composes.
 
 Shrinking for [Hedgehog](https://github.com/hedgehogqa) is simply exploring the tree and testing each one.
@@ -79,7 +79,7 @@ Standard Output Messages:
 
 Size is also a better representation of comparison especially for collections or a number of axes.
 There are examples where increasing on one axis while decreasing on others can lead to smaller cases e.g. if Version fails for `2 * ma + mi + bu ≥ 255 * 2`
-CsCheck will be able to shrink to `255.0.0` but Hedgehog won't.
+CsCheck will be able to shrink to `255.0.0` but [Hedgehog](https://github.com/hedgehogqa) won't.
 
 For CsCheck it has to generate and check size in a loop. This has to be as quick as possible to be able to quickly create smaller values.
 This is why CsCheck uses a fast random generator ([PCG](https://www.pcg-random.org)) and good Size algorithm. It can shrink more complex spaces.
