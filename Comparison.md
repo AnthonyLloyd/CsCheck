@@ -2,19 +2,29 @@
 
 ## Arbitrary
 
-Arb is basically the generator and the shrinker. You only have this when the shrinker is not integrated (automatic). So FsCheck has Arb but Hedgehog doesn't. No downside to not have it apart from you need an algorithm to automatically shrink.
+Arb is basically the generator and the shrinker. You only have this when the shrinker is not integrated (automatic).
+So [FsCheck](https://github.com/fscheck/FsCheck) has Arb but [Hedgehog](https://github.com/hedgehogqa) doesn't.
+No downside to not have it apart from you need an algorithm to automatically shrink.
 
-The problem with Arb and shrinkers in general is that they don't compose. Composing types and Gens is easy. But you have to manually write the code to shrink a composed type. People don't write this code and that is why FsCheck is not good at shrinking composed types.
+The problem with Arb and shrinkers in general is that they don't compose. Composing types and Gens is easy.
+But you have to manually write the code to shrink a composed type.
+People don't write this code and that is why [FsCheck](https://github.com/fscheck/FsCheck) is not good at shrinking composed types.
 
 ## Shrinking
 
-Now the shrinking algorithm. Hedgehog creates not just a value but a tree of values (lazy) and you can compose trees. CsCheck creates a value and Size tuple. The Size is a comparison proxy for the value (it's an int64 tree). This also composes.
+Now the shrinking algorithm. [Hedgehog](https://github.com/hedgehogqa) creates not just a value but a tree of values (lazy) and you can compose trees.
+CsCheck creates a value and Size tuple. The Size is a comparison proxy for the value (it's an int64 tree). This also composes.
 
-Shrinking for Hedgehog is simply exploring the tree and testing each one. Shrinking for CsCheck is a process of generating a new value, checking its size is less than the current failing case and if so testing. You can think of it more as a Monte-Carlo shrinker than a path explorer shrinker.
+Shrinking for [Hedgehog](https://github.com/hedgehogqa) is simply exploring the tree and testing each one.
+Shrinking for CsCheck is a process of generating a new value, checking its size is less than the current failing case and if so testing.
+You can think of it more as a Monte-Carlo shrinker than a path explorer shrinker.
 
 There must be many pros and cons between them but there are a few reasons the Monte-Carlo approach is better.
 
-Firstly in the composed tree way you explore along axes to shrink and don't cover the whole space. Obviously you can't cover a very large space completely but even in a small space this axis exploration can miss some obvious shrinking. If you look at the Hedgehog [Version example](https://github.com/hedgehogqa/fsharp-hedgehog/blob/master/doc/tutorial.md#-integrated-shrinking-is-an-important-quality-of-hedgehog) it can't shrink if failures only happened when two or three numbers are equal. CsCheck is the only random testing library that can shrink for this.
+Firstly in the composed tree way you explore along axes to shrink and don't cover the whole space.
+Obviously you can't cover a very large space completely but even in a small space this axis exploration can miss some obvious shrinking.
+If you look at the Hedgehog [Version example](https://github.com/hedgehogqa/fsharp-hedgehog/blob/master/doc/tutorial.md#-integrated-shrinking-is-an-important-quality-of-hedgehog)
+it can't shrink if failures only happened when two or three numbers are equal. CsCheck is the only random testing library that can shrink for cases like this.
 
 ```fsharp
 let version =
@@ -68,9 +78,14 @@ Standard Output Messages:
 ```
 
 Size is also a better representation of comparison especially for collections or a number of axes.
-There are examples where increasing on one axis while decreasing on others can lead to smaller cases e.g. if Version fails for 2 * ma + mi + bu ≥ 255 * 2
+There are examples where increasing on one axis while decreasing on others can lead to smaller cases e.g. if Version fails for `2 * ma + mi + bu ≥ 255 * 2`
 CsCheck will be able to shrink to 255.0.0 but Hedgehog won't.
 
-For CsCheck it has to generate and check size in a loop. This has to be as quick as possible to be able to quickly create smaller values. This is why CsCheck uses a fast random generator (PCG) and good Size algorithm. It can shrink more complex spaces. It has the advantage over the tree way in that we know the seed for the shrunk case. It means you can repeat the shrinking later on your laptop after a CI failure. It is much better at shrinking more complex types, you just have to leave it shrinking for a short time.
+For CsCheck it has to generate and check size in a loop. This has to be as quick as possible to be able to quickly create smaller values.
+This is why CsCheck uses a fast random generator ([PCG](https://www.pcg-random.org)) and good Size algorithm. It can shrink more complex spaces.
+It has the advantage over the tree way in that we know the seed for the shrunk case. It means you can repeat the shrinking later on your laptop after a CI failure.
+It is much better at shrinking more complex types, you just have to leave it shrinking for a short time.
 
-One outstanding issue for the Monte-Carlo way is that for very rare failures it can take a long time to find the next value and failure. It doesn't cut down the total space well (tree way cuts it too much). This can be worked around by once you know some dimensions of the failure you can limit the test to these and continue.
+One outstanding issue for the Monte-Carlo way is that for very rare failures it can take a long time to find the next value and failure.
+It doesn't cut down the total space well (tree way cuts it too much).
+This can be worked around by once you know some dimensions of the failure you can limit the test to these and continue.
