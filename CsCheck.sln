@@ -9,11 +9,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Tests\Tests.csproj
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{0C4A4C2E-40FA-4FC8-863E-D15CA18A9A4D}"
 	ProjectSection(SolutionItems) = preProject
+		Comparison.md = Comparison.md
 		.github\workflows\main.yml = .github\workflows\main.yml
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perf", "Perf\Perf.csproj", "{B7FAB23A-9C5D-4B44-AAF4-A15CC781C5F7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Perf", "Perf\Perf.csproj", "{B7FAB23A-9C5D-4B44-AAF4-A15CC781C5F7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

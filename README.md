@@ -17,7 +17,7 @@ This gives the following advantages:
 - Shrinking can be repeated to give simpler cases for high dimensional problems.
 
 See the [comparison](Comparison.md) with other random testing libraries.
-The low ceremony Generators make CsCheck a good choice for C#, but the superior automatic shrinking and performance also makes it a good choice for other languages.
+The low ceremony Generators make CsCheck a good choice for C#, but the superior automatic shrinking and performance will make it a good choice for other languages too.
 
 CsCheck also has functionality to make multithreading, performance and regression testing simple and fast.
 
@@ -246,7 +246,7 @@ public void Portfolio_Small_Mixed_Example()
 
 These tests are in xUnit but could equally be used in any testing framework.
 
-More to see in the [Tests](Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
+More to see in the [Tests](Tests). 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests) also.
 
 ### Configuration
 
