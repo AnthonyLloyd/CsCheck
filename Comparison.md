@@ -79,7 +79,7 @@ Standard Output Messages:
 
 Size is also a better representation of comparison especially for collections or a number of axes.
 There are examples where increasing on one axis while decreasing on others can lead to smaller cases e.g. if Version fails for `2 * ma + mi + bu ≥ 255 * 2`
-CsCheck will be able to shrink to 255.0.0 but Hedgehog won't.
+CsCheck will be able to shrink to `255.0.0` but Hedgehog won't.
 
 For CsCheck it has to generate and check size in a loop. This has to be as quick as possible to be able to quickly create smaller values.
 This is why CsCheck uses a fast random generator ([PCG](https://www.pcg-random.org)) and good Size algorithm. It can shrink more complex spaces.
