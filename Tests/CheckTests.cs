@@ -13,7 +13,7 @@ namespace Tests
         readonly Action<string> writeLine;
         public CheckTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
 
-        void Assert_Commutative<T, R>(Gen<T> gen, Func<T, T, R> operation)
+        static void Assert_Commutative<T, R>(Gen<T> gen, Func<T, T, R> operation)
         {
             Gen.Select(gen, gen)
             .Sample(t => Assert.Equal(operation(t.V0, t.V1), operation(t.V1, t.V0)));
@@ -49,7 +49,7 @@ namespace Tests
             Assert_Commutative(Gen.Double, (x, y) => x * y);
         }
 
-        void Assert_Associative<T>(Gen<T> gen, Func<T, T, T> operation)
+        static void Assert_Associative<T>(Gen<T> gen, Func<T, T, T> operation)
         {
             Gen.Select(gen, gen, gen)
             .Sample(t => Assert.Equal(operation(t.V0, operation(t.V1, t.V2)),
@@ -74,7 +74,7 @@ namespace Tests
             Assert_Associative(Gen.Long, (x, y) => x * y);
         }
 
-        double[,] MulIJK(double[,] a, double[,] b)
+        static double[,] MulIJK(double[,] a, double[,] b)
         {
             int I = a.GetLength(0), J = a.GetLength(1), K = b.GetLength(1);
             var c = new double[I, K];
@@ -85,7 +85,7 @@ namespace Tests
             return c;
         }
 
-        double[,] MulIKJ(double[,] a, double[,] b)
+        static double[,] MulIKJ(double[,] a, double[,] b)
         {
             int I = a.GetLength(0), J = a.GetLength(1), K = b.GetLength(1);
             var c = new double[I, K];

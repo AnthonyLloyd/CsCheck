@@ -28,7 +28,8 @@ Hash change of function signature for consistency and clarity. No change to the 
 Performance improvements.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <WarningLevel>4</WarningLevel>
+        <LangVersion>9.0</LangVersion>
+        <WarningLevel>5</WarningLevel>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>
     <ItemGroup>

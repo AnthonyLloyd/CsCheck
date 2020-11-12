@@ -5,7 +5,7 @@ namespace Perf
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             var output = new FakeOutputHelper();
             RunTests(new ArraySerializerTests(output));

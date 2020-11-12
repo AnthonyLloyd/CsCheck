@@ -21,7 +21,7 @@ namespace CsCheck
 {
     public class Size
     {
-        public static Size Max = new Size(ulong.MaxValue);
+        public static Size Max = new(ulong.MaxValue);
         public static Size[] EmptyArray = new Size[0];
         public readonly ulong I;
         public readonly Size[] Next;
@@ -65,11 +65,11 @@ namespace CsCheck
     {
         public abstract (T, Size) Generate(PCG pcg);
         (object, Size) IGen.Generate(PCG pcg) => Generate(pcg);
-        public GenArray<T> Array => new GenArray<T>(this);
-        public GenEnumerable<T> Enumerable => new GenEnumerable<T>(this);
-        public GenArray2D<T> Array2D => new GenArray2D<T>(this);
-        public GenList<T> List => new GenList<T>(this);
-        public GenHashSet<T> HashSet => new GenHashSet<T>(this);
+        public GenArray<T> Array => new(this);
+        public GenEnumerable<T> Enumerable => new(this);
+        public GenArray2D<T> Array2D => new(this);
+        public GenList<T> List => new(this);
+        public GenHashSet<T> HashSet => new(this);
     }
 
     class GenF<T> : Gen<T>
@@ -283,7 +283,7 @@ namespace CsCheck
             while (!predicate(t.Item1)) t = gen.Generate(pcg);
             return t;
         });
-        static readonly Size zero = new Size(0UL);
+        static readonly Size zero = new(0UL);
         public static Gen<T> Const<T>(T value) => new GenF<T>(_ => (value, zero));
         public static Gen<T> OneOf<T>(params T[] ts) => Int[0, ts.Length - 1].Select(i => ts[i]);
         public static Gen<T> OneOf<T>(params Gen<T>[] gens) => Int[0, gens.Length - 1].SelectMany(i => gens[i]);
@@ -336,32 +336,32 @@ namespace CsCheck
                 return gensAgg[gensAgg.Length - 1].Item2;
             });
         }
-        public static GenDictionary<K, V> Dictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new GenDictionary<K, V>(genK, genV);
-        public static GenSortedDictionary<K, V> SortedDictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new GenSortedDictionary<K, V>(genK, genV);
+        public static GenDictionary<K, V> Dictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new(genK, genV);
+        public static GenSortedDictionary<K, V> SortedDictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new(genK, genV);
         public static IEnumerable<T> ToEnumerable<T>(this Gen<T> gen)
         {
             var pcg = PCG.ThreadPCG;
             while (true) yield return gen.Generate(pcg).Item1;
         }
-        public static readonly GenBool Bool = new GenBool();
-        public static readonly GenSByte SByte = new GenSByte();
-        public static readonly GenByte Byte = new GenByte();
-        public static readonly GenShort Short = new GenShort();
-        public static readonly GenUShort UShort = new GenUShort();
-        public static readonly GenInt Int = new GenInt();
-        public static readonly GenUInt UInt = new GenUInt();
-        public static readonly GenLong Long = new GenLong();
-        public static readonly GenULong ULong = new GenULong();
-        public static readonly GenFloat Float = new GenFloat();
+        public static readonly GenBool Bool = new();
+        public static readonly GenSByte SByte = new();
+        public static readonly GenByte Byte = new();
+        public static readonly GenShort Short = new();
+        public static readonly GenUShort UShort = new();
+        public static readonly GenInt Int = new();
+        public static readonly GenUInt UInt = new();
+        public static readonly GenLong Long = new();
+        public static readonly GenULong ULong = new();
+        public static readonly GenFloat Float = new();
         public static readonly GenFloat Single = Float;
-        public static readonly GenDouble Double = new GenDouble();
-        public static readonly GenDecimal Decimal = new GenDecimal();
-        public static readonly GenDateTime DateTime = new GenDateTime();
-        public static readonly GenTimeSpan TimeSpan = new GenTimeSpan();
-        public static readonly GenDateTimeOffset DateTimeOffset = new GenDateTimeOffset();
-        public static readonly GenGuid Guid = new GenGuid();
-        public static readonly GenChar Char = new GenChar();
-        public static readonly GenString String = new GenString();
+        public static readonly GenDouble Double = new();
+        public static readonly GenDecimal Decimal = new();
+        public static readonly GenDateTime DateTime = new();
+        public static readonly GenTimeSpan TimeSpan = new();
+        public static readonly GenDateTimeOffset DateTimeOffset = new();
+        public static readonly GenGuid Guid = new();
+        public static readonly GenChar Char = new();
+        public static readonly GenString String = new();
     }
 
     public class GenBool : Gen<bool>
@@ -494,7 +494,7 @@ namespace CsCheck
         /// <summary>Skew the distribution towards either end.
         /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
         /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
-        public IntSkew Skew = new IntSkew();
+        public IntSkew Skew = new();
     }
 
     public class GenUInt : Gen<uint>
@@ -530,7 +530,7 @@ namespace CsCheck
         /// <summary>Skew the distribution towards either end.
         /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
         /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
-        public UIntSkew Skew = new UIntSkew();
+        public UIntSkew Skew = new();
     }
 
     public class GenLong : Gen<long>
@@ -643,25 +643,25 @@ namespace CsCheck
         });
         static float MakeSpecial(uint i)
         {
-            switch (i & 0xFU)
+            return (i & 0xFU) switch
             {
-                case 0x0U: return float.NaN;
-                case 0x1U: return float.PositiveInfinity;
-                case 0x2U: return float.NegativeInfinity;
-                case 0x3U: return float.MaxValue;
-                case 0x4U: return float.MinValue;
-                case 0x5U: return float.Epsilon;
-                case 0x6U: return -float.Epsilon;
-                case 0x7U: return 1f;
-                case 0x8U: return -1f;
-                case 0x9U: return 2f;
-                case 0xAU: return -2f;
-                case 0xBU: return 3f;
-                case 0xCU: return -3f;
-                case 0xDU: return 4f;
-                case 0xEU: return -4f;
-                default: return 0f;
-            }
+                0x0U => float.NaN,
+                0x1U => float.PositiveInfinity,
+                0x2U => float.NegativeInfinity,
+                0x3U => float.MaxValue,
+                0x4U => float.MinValue,
+                0x5U => float.Epsilon,
+                0x6U => -float.Epsilon,
+                0x7U => 1f,
+                0x8U => -1f,
+                0x9U => 2f,
+                0xAU => -2f,
+                0xBU => 3f,
+                0xCU => -3f,
+                0xDU => 4f,
+                0xEU => -4f,
+                _ => 0f,
+            };
         }
         /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
         public Gen<float> Special = new GenF<float>(pcg =>
@@ -732,25 +732,25 @@ namespace CsCheck
         });
         static double MakeSpecial(ulong i)
         {
-            switch (i & 0xFUL)
+            return (i & 0xFUL) switch
             {
-                case 0x0UL: return double.NaN;
-                case 0x1UL: return double.PositiveInfinity;
-                case 0x2UL: return double.NegativeInfinity;
-                case 0x3UL: return double.MaxValue;
-                case 0x4UL: return double.MinValue;
-                case 0x5UL: return double.Epsilon;
-                case 0x6UL: return -double.Epsilon;
-                case 0x7UL: return 1.0;
-                case 0x8UL: return -1.0;
-                case 0x9UL: return 2.0;
-                case 0xAUL: return -2.0;
-                case 0xBUL: return 3.0;
-                case 0xCUL: return -3.0;
-                case 0xDUL: return 4.0;
-                case 0xEUL: return -4.0;
-                default: return 0.0;
-            }
+                0x0UL => double.NaN,
+                0x1UL => double.PositiveInfinity,
+                0x2UL => double.NegativeInfinity,
+                0x3UL => double.MaxValue,
+                0x4UL => double.MinValue,
+                0x5UL => double.Epsilon,
+                0x6UL => -double.Epsilon,
+                0x7UL => 1.0,
+                0x8UL => -1.0,
+                0x9UL => 2.0,
+                0xAUL => -2.0,
+                0xBUL => 3.0,
+                0xCUL => -3.0,
+                0xDUL => 4.0,
+                0xEUL => -4.0,
+                _ => 0.0,
+            };
         }
         /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
         public Gen<double> Special = new GenF<double>(pcg =>
@@ -769,7 +769,7 @@ namespace CsCheck
         /// <summary>Skew the distribution towards either end.
         /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
         /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
-        public DoubleSkew Skew = new DoubleSkew();
+        public DoubleSkew Skew = new();
     }
 
     [StructLayout(LayoutKind.Explicit)]
