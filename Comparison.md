@@ -81,7 +81,7 @@ Size is also a better representation of comparison especially for collections or
 There are examples where increasing on one axis while decreasing on others can lead to smaller cases e.g. if Version fails for `2 * ma + mi + bu ≥ 255 * 2`
 CsCheck will be able to shrink to `255.0.0` but [Hedgehog](https://github.com/hedgehogqa) won't.
 
-For CsCheck it has to generate and check size in a loop. This has to be as quick as possible to be able to quickly create smaller values.
+For CsCheck it has to generate and check size in a loop. This has to be as fast as possible to be able to quickly create smaller values.
 This is why CsCheck uses a fast random generator ([PCG](https://www.pcg-random.org)) and good Size algorithm. It can shrink more complex spaces.
 It has the advantage over the tree way in that we know the seed for the shrunk case. It means you can repeat the shrinking later on your laptop after a CI failure.
 It is much better at shrinking more complex types, you just have to leave it shrinking for a short time.
