@@ -53,10 +53,10 @@ namespace CsCheck
             Exception minException = null;
             int shrinks = -1;
             if (size == -1) size = Size;
-            if (seed != null || Seed != null)
+            if (seed is null) seed = Seed;
+            if (seed is not null)
             {
-                size--;
-                var pcg = PCG.Parse(seed ?? Seed);
+                var pcg = PCG.Parse(seed);
                 ulong state = pcg.State;
                 Size s = null;
                 try
@@ -77,7 +77,7 @@ namespace CsCheck
             var lockObj = new object();
             int skipped = 0;
             if (threads == -1) threads = Threads;
-            Parallel.For(0, size, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
+            Parallel.For(0, seed is null ? size : size - 1, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
@@ -119,10 +119,11 @@ namespace CsCheck
             Exception minException = null;
             int shrinks = -1;
             if (size == -1) size = Size;
-            if (seed != null || Seed != null)
+            if (seed is null) seed = Seed;
+            if (seed is not null)
             {
                 size--;
-                var pcg = PCG.Parse(seed ?? Seed);
+                var pcg = PCG.Parse(seed);
                 ulong state = pcg.State;
                 Size s = null;
                 try
@@ -150,7 +151,7 @@ namespace CsCheck
             var lockObj = new object();
             int skipped = 0;
             if (threads == -1) threads = Threads;
-            Parallel.For(0, size, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
+            Parallel.For(0, seed is null ? size : size - 1, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
