@@ -12,7 +12,7 @@ namespace Tests
         readonly Action<string> writeLine;
         public IMToolsTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
 
-        [Fact]
+        [Fact(Skip ="Experimental")]
         public void AddOrUpdate_random_items_and_randomly_checking()
         {
             const int upperBound = 100000;
@@ -32,14 +32,14 @@ namespace Tests
             Assert.Equal(0, m.GetValueOrDefault(-1));
         }
 
-        [Fact]
+        [Fact(Skip = "Experimental")]
         public void AddOrUpdate_random_items_and_randomly_checking_CsCheck()
         {
             const int upperBound = 11966;
             Gen.Int[0, upperBound].Array[1, 12].Sample(ints =>
             {
                 var m = ImHashMap234<int, int>.Empty;
-                foreach(var n in ints)
+                foreach (var n in ints)
                 {
                     m = m.AddOrUpdate(n, n);
                     Assert.Equal(n, m.GetValueOrDefault(n));
@@ -60,7 +60,7 @@ namespace Tests
                 }));
 
 
-        [Fact]
+        [Fact(Skip = "Experimental")]
         public void AddOrUpdate_random_items_and_randomly_checking_metamorphic()
         {
             const int upperBound = 100000;
