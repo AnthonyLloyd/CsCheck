@@ -70,6 +70,7 @@ namespace CsCheck
         public GenArray2D<T> Array2D => new(this);
         public GenList<T> List => new(this);
         public GenHashSet<T> HashSet => new(this);
+        public GenUnique<T> ArrayUnique => new(this);
     }
 
     class GenF<T> : Gen<T>
@@ -950,6 +951,48 @@ namespace CsCheck
                 var (v, s) = gen.Generate(pcg);
                 vs[i] = v;
                 ss[i] = s;
+            }
+            return (vs, new Size(size, ss));
+        }
+        public override (T[], Size) Generate(PCG pcg)
+        {
+            var l = pcg.Next() & 127U;
+            return Generate(pcg, (int)l, l);
+        }
+        public Gen<T[]> this[Gen<int> length] => new GenF<T[]>(pcg =>
+        {
+            var (l, sl) = length.Generate(pcg);
+            return Generate(pcg, l, sl.I);
+        });
+        public Gen<T[]> this[int length] => new GenF<T[]>(pcg =>
+        {
+            return Generate(pcg, length, 0UL);
+        });
+        public Gen<T[]> this[int start, int finish] => this[Gen.Int[start, finish]];
+    }
+
+    public class GenUnique<T> : Gen<T[]>
+    {
+        readonly Gen<T> gen;
+        public GenUnique(Gen<T> gen) => this.gen = gen;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        (T[], Size) Generate(PCG pcg, int length, ulong size)
+        {
+            var vs = new T[length];
+            var ss = new Size[length];
+            var hs = new HashSet<T>();
+            int i = 0;
+            while(i < length)
+            {
+
+                var (v, s) = gen.Generate(pcg);
+                var bad = 0;
+                if (hs.Add(v))
+                {
+                    vs[i] = v;
+                    ss[i++] = s;
+                }
+                else if (++bad == 1000) throw new CsCheckException("Failing to add to Unique");
             }
             return (vs, new Size(size, ss));
         }

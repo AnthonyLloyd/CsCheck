@@ -13,10 +13,13 @@
 // limitations under the License.
 
 using System;
+using System.Collections;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace CsCheck
 {
@@ -45,11 +48,12 @@ namespace CsCheck
             if (!string.IsNullOrWhiteSpace(sigma)) Sigma = double.Parse(sigma);
         }
         /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-        public static void Sample<T>(this Gen<T> gen, Action<T> assert, string seed = null, int size = -1, int threads = -1)
+        public static void Sample<T>(this Gen<T> gen, Action<T> assert, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
         {
             PCG minPCG = null;
             ulong minState = 0UL;
             Size minSize = CsCheck.Size.Max;
+            T minT = default;
             Exception minException = null;
             int shrinks = -1;
             if (size == -1) size = Size;
@@ -59,9 +63,9 @@ namespace CsCheck
                 var pcg = PCG.Parse(seed);
                 ulong state = pcg.State;
                 Size s = null;
+                T t = default;
                 try
                 {
-                    T t;
                     (t, s) = gen.Generate(pcg);
                     assert(t);
                 }
@@ -71,6 +75,7 @@ namespace CsCheck
                     minPCG = pcg;
                     minState = state;
                     minSize = s;
+                    minT = t;
                     minException = e;
                 }
             }
@@ -82,9 +87,9 @@ namespace CsCheck
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
                 Size s = null;
+                T t = default;
                 try
                 {
-                    T t;
                     (t, s) = gen.Generate(pcg);
                     if (s.IsLessThan(minSize))
                         assert(t);
@@ -101,21 +106,29 @@ namespace CsCheck
                             minPCG = pcg;
                             minState = state;
                             minSize = s;
+                            minT = t;
                             minException = e;
                         }
                     }
                 }
             });
-            if (minPCG != null) throw new CsCheckException(
-                $"CsCheck_Seed = \"{minPCG.ToString(minState)}\" ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
+            if (minPCG != null)
+            {
+                var seedString = minPCG.ToString(minState);
+                var tString = print is null ? Print(minT) : print(minT);
+                if (tString.Length > 500) tString = tString.Substring(0, 500) + " ...";
+                throw new CsCheckException(
+                    $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)\nSample: {tString}"
                     , minException);
+            }
         }
         /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-        public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, int size = -1, int threads = -1)
+        public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
         {
             PCG minPCG = null;
             ulong minState = 0UL;
             Size minSize = CsCheck.Size.Max;
+            T minT = default;
             Exception minException = null;
             int shrinks = -1;
             if (size == -1) size = Size;
@@ -126,9 +139,9 @@ namespace CsCheck
                 var pcg = PCG.Parse(seed);
                 ulong state = pcg.State;
                 Size s = null;
+                T t = default;
                 try
                 {
-                    T t;
                     (t, s) = gen.Generate(pcg);
                     if (!predicate(t))
                     {
@@ -136,6 +149,7 @@ namespace CsCheck
                         minPCG = pcg;
                         minState = state;
                         minSize = s;
+                        minT = t;
                     }
                 }
                 catch (Exception e)
@@ -144,6 +158,7 @@ namespace CsCheck
                     minPCG = pcg;
                     minState = state;
                     minSize = s;
+                    minT = t;
                     minException = e;
                 }
             }
@@ -156,9 +171,9 @@ namespace CsCheck
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
                 Size s = null;
+                T t;
                 try
                 {
-                    T t;
                     (t, s) = gen.Generate(pcg);
                     if (s.IsLessThan(minSize))
                     {
@@ -172,6 +187,7 @@ namespace CsCheck
                                     minPCG = pcg;
                                     minState = state;
                                     minSize = s;
+                                    minT = t;
                                 }
                             }
                         }
@@ -193,9 +209,15 @@ namespace CsCheck
                     }
                 }
             });
-            if (minPCG != null) throw new CsCheckException(
-                $"CsCheck_Seed = \"{minPCG.ToString(minState)}\" ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)"
+            if (minPCG != null)
+            {
+                var seedString = minPCG.ToString(minState);
+                var tString = print is null ? Print(minT) : print(minT);
+                if (tString.Length > 500) tString = tString.Substring(0, 500) + " ...";
+                throw new CsCheckException(
+                    $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)\nSample: {tString}"
                     , minException);
+            }
         }
         /// <summary>Sample the gen once calling the assert.</summary>
         public static void SampleOne<T>(this Gen<T> gen, Action<T> assert, string seed = null)
@@ -655,6 +677,14 @@ namespace CsCheck
                 }
             }
         }
+
+        static string Print(object o) => o switch
+        {
+            IList { Count: <= 12 } l => $"L={l.Count} [{string.Join(", ", l.Cast<object>().Select(Print))}]",
+            IList l => $"L={l.Count} [{Print(l[0])}, {Print(l[1])}, {Print(l[2])} ... {Print(l[l.Count - 2])}, {Print(l[l.Count - 1])}]",
+            IEnumerable e => Print(e.Cast<object>().Take(999).ToList()) ,
+            _ => o.ToString(),
+        };
     }
 
     public class FasterResult
