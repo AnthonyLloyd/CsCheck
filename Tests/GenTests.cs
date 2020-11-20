@@ -519,5 +519,18 @@ namespace Tests
              select (expected, actual))
             .SampleOne(t => Check.ChiSquared(t.expected, t.actual));
         }
+
+        [Fact]
+        public void Shuffle()
+        {
+            Gen.Int.Array.SelectMany(a1 => Gen.Const(a1).Shuffle().Select(a2 => (a1, a2)))
+            .Sample(t =>
+            {
+                var (a1, a2) = t;
+                Array.Sort(a1);
+                Array.Sort(a2);
+                Assert.Equal(a1, a2);
+            });
+        }
     }
 }
