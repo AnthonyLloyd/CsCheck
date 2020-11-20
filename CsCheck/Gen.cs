@@ -344,6 +344,36 @@ namespace CsCheck
             var pcg = PCG.ThreadPCG;
             while (true) yield return gen.Generate(pcg).Item1;
         }
+        public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen) => new GenF<T[]>(pcg =>
+        {
+            var (a, s) = gen.Generate(pcg);
+            for (int i = a.Length - 1; i > 0; i--)
+            {
+                int j = (int)pcg.Next((uint)(i + 1));
+                if (i != j)
+                {
+                    var temp = a[j];
+                    a[j] = a[i];
+                    a[i] = temp;
+                }
+            }
+            return (a, s);
+        });
+        public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => new GenF<List<T>>(pcg =>
+        {
+            var (a, s) = gen.Generate(pcg);
+            for (int i = a.Count - 1; i > 0; i--)
+            {
+                int j = (int)pcg.Next((uint)(i + 1));
+                if (i != j)
+                {
+                    var temp = a[j];
+                    a[j] = a[i];
+                    a[i] = temp;
+                }
+            }
+            return (a, s);
+        });
         public static readonly GenBool Bool = new();
         public static readonly GenSByte SByte = new();
         public static readonly GenByte Byte = new();
