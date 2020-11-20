@@ -36,6 +36,10 @@ namespace CsCheck
             I = i;
             Next = EmptyArray;
         }
+        public Size(params Size[] next)
+        {
+            Next = next;
+        }
         static ulong Sum(Size[] a, int level)
         {
             ulong t = 0UL;
@@ -55,6 +59,14 @@ namespace CsCheck
             return ta < tb || (ta == tb && ta != 0UL && IsLessThan(a, b, level + 1));
         }
         public bool IsLessThan(Size s) => I < s.I || (I == s.I && IsLessThan(Next, s.Next, 0));
+        public Size Append(Size s)
+        {
+            if (Next == EmptyArray) return new Size(I, new[] { s });
+            var next = new Size[Next.Length];
+            for (int i = 0; i < next.Length; i++)
+                next[i] = Next[i].Append(s);
+            return new Size(I, next);
+        }
     }
 
     public interface IGen
@@ -94,7 +106,7 @@ namespace CsCheck
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
-            return (selector(v1, v2), new Size(0UL, new[] { s1, s2 }));
+            return (selector(v1, v2), new Size(s1, s2));
         });
         public static Gen<R> Select<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
             Func<T1, T2, T3, R> selector) => new GenF<R>(pcg =>
@@ -102,7 +114,7 @@ namespace CsCheck
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
             var (v3, s3) = gen3.Generate(pcg);
-            return (selector(v1, v2, v3), new Size(0UL, new[] { s1, s2, s3 }));
+            return (selector(v1, v2, v3), new Size(s1, s2, s3));
         });
         public static Gen<R> Select<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Func<T1, T2, T3, T4, R> selector) => new GenF<R>(pcg =>
@@ -111,7 +123,7 @@ namespace CsCheck
             var (v2, s2) = gen2.Generate(pcg);
             var (v3, s3) = gen3.Generate(pcg);
             var (v4, s4) = gen4.Generate(pcg);
-            return (selector(v1, v2, v3, v4), new Size(0UL, new[] { s1, s2, s3, s4 }));
+            return (selector(v1, v2, v3, v4), new Size(s1, s2, s3, s4));
         });
         public static Gen<R> Select<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Gen<T5> gen5, Func<T1, T2, T3, T4, T5, R> selector) => new GenF<R>(pcg =>
@@ -121,7 +133,7 @@ namespace CsCheck
             var (v3, s3) = gen3.Generate(pcg);
             var (v4, s4) = gen4.Generate(pcg);
             var (v5, s5) = gen5.Generate(pcg);
-            return (selector(v1, v2, v3, v4, v5), new Size(0UL, new[] { s1, s2, s3, s4, s5 }));
+            return (selector(v1, v2, v3, v4, v5), new Size(s1, s2, s3, s4, s5));
         });
         public static Gen<R> Select<T1, T2, T3, T4, T5, T6, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, R> selector) => new GenF<R>(pcg =>
@@ -132,7 +144,7 @@ namespace CsCheck
             var (v4, s4) = gen4.Generate(pcg);
             var (v5, s5) = gen5.Generate(pcg);
             var (v6, s6) = gen6.Generate(pcg);
-            return (selector(v1, v2, v3, v4, v5, v6), new Size(0UL, new[] { s1, s2, s3, s4, s5, s6 }));
+            return (selector(v1, v2, v3, v4, v5, v6), new Size(s1, s2, s3, s4, s5, s6));
         });
         public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) => new GenF<R>(pcg =>
@@ -144,7 +156,7 @@ namespace CsCheck
             var (v5, s5) = gen5.Generate(pcg);
             var (v6, s6) = gen6.Generate(pcg);
             var (v7, s7) = gen7.Generate(pcg);
-            return (selector(v1, v2, v3, v4, v5, v6, v7), new Size(0UL, new[] { s1, s2, s3, s4, s5, s6, s7 }));
+            return (selector(v1, v2, v3, v4, v5, v6, v7), new Size(s1, s2, s3, s4, s5, s6, s7));
         });
         public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector) => new GenF<R>(pcg =>
@@ -157,7 +169,7 @@ namespace CsCheck
             var (v6, s6) = gen6.Generate(pcg);
             var (v7, s7) = gen7.Generate(pcg);
             var (v8, s8) = gen8.Generate(pcg);
-            return (selector(v1, v2, v3, v4, v5, v6, v7, v8), new Size(0UL, new[] { s1, s2, s3, s4, s5, s6, s7, s8 }));
+            return (selector(v1, v2, v3, v4, v5, v6, v7, v8), new Size(s1, s2, s3, s4, s5, s6, s7, s8));
         });
         public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9,
@@ -172,7 +184,7 @@ namespace CsCheck
             var (v7, s7) = gen7.Generate(pcg);
             var (v8, s8) = gen8.Generate(pcg);
             var (v9, s9) = gen9.Generate(pcg);
-            return (selector(v1, v2, v3, v4, v5, v6, v7, v8, v9), new Size(0UL, new[] { s1, s2, s3, s4, s5, s6, s7, s8, s9 }));
+            return (selector(v1, v2, v3, v4, v5, v6, v7, v8, v9), new Size(s1, s2, s3, s4, s5, s6, s7, s8, s9));
         });
         public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
             Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
@@ -188,13 +200,13 @@ namespace CsCheck
             var (v8, s8) = gen8.Generate(pcg);
             var (v9, s9) = gen9.Generate(pcg);
             var (v10, s10) = gen10.Generate(pcg);
-            return (selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10), new Size(0UL, new[] { s1, s2, s3, s4, s5, s6, s7, s8, s9, s10 }));
+            return (selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10), new Size(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10));
         });
         public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen0, Gen<T1> gen1) => new GenF<(T0, T1)>(pcg =>
         {
             var (v0, s0) = gen0.Generate(pcg);
             var (v1, s1) = gen1.Generate(pcg);
-            return ((v0, v1), new Size(0UL, new[] { s0, s1 }));
+            return ((v0, v1), new Size(s0, s1));
         });
         public static Gen<(T0 V0, T1 V1, T2 V2)> Select<T0, T1, T2>(this Gen<T0> gen0, Gen<T1> gen1, Gen<T2> gen2)
             => new GenF<(T0, T1, T2)>(pcg =>
@@ -202,7 +214,7 @@ namespace CsCheck
             var (v0, s0) = gen0.Generate(pcg);
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
-            return ((v0, v1, v2), new Size(0UL, new[] { s0, s1, s2 }));
+            return ((v0, v1, v2), new Size(s0, s1, s2));
         });
         public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> Select<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1,
             Gen<T2> gen2, Gen<T3> gen3) => new GenF<(T0, T1, T2, T3)>(pcg =>
@@ -211,7 +223,7 @@ namespace CsCheck
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
             var (v3, s3) = gen3.Generate(pcg);
-            return ((v0, v1, v2, v3), new Size(0UL, new[] { s0, s1, s2, s3 }));
+            return ((v0, v1, v2, v3), new Size(s0, s1, s2, s3));
         });
         public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3, T4 V4)> Select<T0, T1, T2, T3, T4>(this Gen<T0> gen0, Gen<T1> gen1,
             Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4) => new GenF<(T0, T1, T2, T3, T4)>(pcg =>
@@ -221,14 +233,14 @@ namespace CsCheck
             var (v2, s2) = gen2.Generate(pcg);
             var (v3, s3) = gen3.Generate(pcg);
             var (v4, s4) = gen4.Generate(pcg);
-            return ((v0, v1, v2, v3, v4), new Size(0UL, new[] { s0, s1, s2, s3, s4 }));
+            return ((v0, v1, v2, v3, v4), new Size(s0, s1, s2, s3, s4));
         });
         public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, Gen<R>> selector) => new GenF<R>(pcg =>
         {
             var (v1, s1) = gen.Generate(pcg);
             var genR = selector(v1);
             var (vR, sR) = genR.Generate(pcg);
-            return (vR, new Size(s1.I, new[] { sR }));
+            return (vR, s1.Append(sR));
         });
         public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, Gen<R>> selector) => new GenF<R>(pcg =>
         {
@@ -236,7 +248,7 @@ namespace CsCheck
             var (v2, s2) = gen2.Generate(pcg);
             var genR = selector(v1, v2);
             var (vR, sR) = genR.Generate(pcg);
-            return (vR, new Size(s1.I + s2.I, new[] { sR }));
+            return (vR, new Size(s1.Append(sR), s2.Append(sR)));
         });
         public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
             Func<T1, T2, T3, Gen<R>> selector) => new GenF<R>(pcg =>
@@ -246,7 +258,7 @@ namespace CsCheck
             var (v3, s3) = gen3.Generate(pcg);
             var genR = selector(v1, v2, v3);
             var (vR, sR) = genR.Generate(pcg);
-            return (vR, new Size(s1.I + s2.I + s3.I, new[] { sR }));
+            return (vR, new Size(s1.Append(sR), s2.Append(sR), s3.Append(sR)));
         });
         public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Func<T1, T2, T3, T4, Gen<R>> selector) => new GenF<R>(pcg =>
@@ -257,7 +269,7 @@ namespace CsCheck
             var (v4, s4) = gen4.Generate(pcg);
             var genR = selector(v1, v2, v3, v4);
             var (vR, sR) = genR.Generate(pcg);
-            return (vR, new Size(s1.I + s2.I + s3.I + s4.I, new[] { sR }));
+            return (vR, new Size(s1.Append(sR), s2.Append(sR), s3.Append(sR), s4.Append(sR)));
         });
         public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector) => new GenF<R>(pcg =>
@@ -269,7 +281,7 @@ namespace CsCheck
             var (v5, s5) = gen5.Generate(pcg);
             var genR = selector(v1, v2, v3, v4, v5);
             var (vR, sR) = genR.Generate(pcg);
-            return (vR, new Size(s1.I + s2.I + s3.I + s4.I + s5.I, new[] { sR }));
+            return (vR, new Size(s1.Append(sR), s2.Append(sR), s3.Append(sR), s4.Append(sR), s5.Append(sR)));
         });
         public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Func<T1, Gen<T2>> genSelector, Func<T1, T2, R> resultSelector)
             => new GenF<R>(pcg =>
@@ -277,7 +289,7 @@ namespace CsCheck
             var (v1, s1) = gen1.Generate(pcg);
             var gen2 = genSelector(v1);
             var (v2, s2) = gen2.Generate(pcg);
-            return (resultSelector(v1, v2), new Size(s1.I, new[] { s2 }));
+            return (resultSelector(v1, v2), s1.Append(s2));
         });
         public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => new GenF<T>(pcg =>
         {
@@ -344,9 +356,10 @@ namespace CsCheck
             var pcg = PCG.ThreadPCG;
             while (true) yield return gen.Generate(pcg).Item1;
         }
-        static void Shuffle<T>(IList<T> a, PCG pcg)
+
+        static void Shuffle<T>(IList<T> a, PCG pcg, int lower)
         {
-            for (int i = a.Count - 1; i > 0; i--)
+            for (int i = a.Count - 1; i > lower; i--)
             {
                 int j = (int)pcg.Next((uint)(i + 1));
                 if (i != j)
@@ -357,84 +370,73 @@ namespace CsCheck
                 }
             }
         }
+
         public static Gen<T[]> Shuffle<T>(T[] a) => new GenF<T[]>(pcg =>
         {
-            Shuffle(a, pcg);
+            Shuffle(a, pcg, 0);
             return (a, Size.Zero);
         });
+
         public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen) => new GenF<T[]>(pcg =>
         {
             var (a, s) = gen.Generate(pcg);
-            Shuffle(a, pcg);
+            Shuffle(a, pcg, 0);
             return (a, s);
         });
+
         public static Gen<T[]> Shuffle<T>(T[] a, int length) => new GenF<T[]>(pcg =>
         {
-            Shuffle(a, pcg);
-            if (length < a.Length) Array.Resize(ref a, length);
-            return (a, Size.Zero);
+            int lower = Math.Max(a.Length - length, 0);
+            Shuffle(a, pcg, lower);
+            if (lower == 0) return (a, Size.Zero);
+            var r = new T[length];
+            for (int i = 0; i < r.Length; i++)
+                r[i] = a[i + lower];
+            return (r, Size.Zero);
         });
-        public static Gen<T[]> Shuffle<T>(T[] a, int start, int finish) => new GenF<T[]>(pcg =>
-        {
-            var (length, s) = Int[start, finish].Generate(pcg);
-            Shuffle(a, pcg);
-            if (length < a.Length) Array.Resize(ref a, length);
-            return (a, s);
-        });
-        public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen, int length) => new GenF<T[]>(pcg =>
-        {
-            var (a, s) = gen.Generate(pcg);
-            Shuffle(a, pcg);
-            if (length < a.Length) Array.Resize(ref a, length);
-            return (a, s);
-        });
-        public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen, int start, int finish) => new GenF<T[]>(pcg =>
-        {
-            var (length, sl) = Int[start, finish].Generate(pcg);
-            var (a, s) = gen.Generate(pcg);
-            Shuffle(a, pcg);
-            if (length < a.Length) Array.Resize(ref a, length);
-            return (a, new Size(sl.I, new[] { s }));
-        });
+
+        public static Gen<T[]> Shuffle<T>(T[] a, int start, int finish) =>
+            Int[start, finish].SelectMany(i => Shuffle(a, i));
+
+        public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen, int length) =>
+            SelectMany(gen, a => Shuffle(a, length));
+
+        public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen, int start, int finish) =>
+            SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
+
         public static Gen<List<T>> Shuffle<T>(List<T> a) => new GenF<List<T>>(pcg =>
         {
-            Shuffle(a, pcg);
+            Shuffle(a, pcg, 0);
             return (a, Size.Zero);
         });
+
         public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => new GenF<List<T>>(pcg =>
         {
             var (a, s) = gen.Generate(pcg);
-            Shuffle(a, pcg);
+            Shuffle(a, pcg, 0);
             return (a, s);
         });
+
         public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => new GenF<List<T>>(pcg =>
         {
-            Shuffle(a, pcg);
-            if (length < a.Count) a.RemoveRange(length, a.Count - length);
-            return (a, Size.Zero);
+            int lower = Math.Max(a.Count - length, 0);
+            Shuffle(a, pcg, lower);
+            if (lower == 0) return (a, Size.Zero);
+            var r = new List<T>(length);
+            for (int i = 0; i < length; i++)
+                r.Add(a[i + lower]);
+            return (r, Size.Zero);
         });
-        public static Gen<List<T>> Shuffle<T>(List<T> a, int start, int finish) => new GenF<List<T>>(pcg =>
-        {
-            var (length, s) = Int[start, finish].Generate(pcg);
-            Shuffle(a, pcg);
-            if (length < a.Count) a.RemoveRange(length, a.Count - length);
-            return (a, s);
-        });
-        public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int length) => new GenF<List<T>>(pcg =>
-        {
-            var (a, s) = gen.Generate(pcg);
-            Shuffle(a, pcg);
-            if (length < a.Count) a.RemoveRange(length, a.Count - length);
-            return (a, s);
-        });
-        public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int start, int finish) => new GenF<List<T>>(pcg =>
-        {
-            var (length, sl) = Int[start, finish].Generate(pcg);
-            var (a, s) = gen.Generate(pcg);
-            Shuffle(a, pcg);
-            if (length < a.Count) a.RemoveRange(length, a.Count - length);
-            return (a, new Size(sl.I, new[] { s }));
-        });
+
+        public static Gen<List<T>> Shuffle<T>(List<T> a, int start, int finish) =>
+            SelectMany(Int[start, finish], l => Shuffle(a, l));
+
+        public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int length) =>
+            SelectMany(gen, a => Shuffle(a, length));
+
+        public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int start, int finish) =>
+            SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
+
         public static readonly GenBool Bool = new();
         public static readonly GenSByte SByte = new();
         public static readonly GenByte Byte = new();
@@ -1001,7 +1003,7 @@ namespace CsCheck
         {
             var c = new GuidConverter { I0 = pcg.Next(), I1 = pcg.Next(), I2 = pcg.Next(), I3 = pcg.Next() };
             return (c.G,
-                new Size(0, new[] { new Size(c.I0), new Size(c.I1), new Size(c.I2), new Size(c.I3) }));
+                new Size(new Size(c.I0), new Size(c.I1), new Size(c.I2), new Size(c.I3)));
         }
     }
 

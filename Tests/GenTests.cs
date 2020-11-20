@@ -523,7 +523,7 @@ namespace Tests
         [Fact]
         public void Shuffle()
         {
-            Gen.Int.Array.SelectMany(a1 => Gen.Const(a1).Shuffle().Select(a2 => (a1, a2)))
+            Gen.Int.Array.SelectMany(a1 => Gen.Shuffle(a1).Select(a2 => (a1, a2)))
             .Sample(t =>
             {
                 var (a1, a2) = t;

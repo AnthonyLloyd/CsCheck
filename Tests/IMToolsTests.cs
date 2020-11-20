@@ -12,7 +12,7 @@ namespace Tests
         readonly Action<string> writeLine;
         public IMToolsTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
 
-        [Fact(Skip ="Experimental")]
+        [Fact(Skip = "Experiment")]
         public void AddOrUpdate_random_items_and_randomly_checking()
         {
             const int upperBound = 100000;
@@ -32,7 +32,7 @@ namespace Tests
             Assert.Equal(0, m.GetValueOrDefault(-1));
         }
 
-        [Fact(Skip = "Experimental")]
+        [Fact(Skip = "Experiment")]
         public void AddOrUpdate_random_items_and_randomly_checking_CsCheck()
         {
             const int upperBound = 11966;
@@ -46,7 +46,7 @@ namespace Tests
                 }
                 Assert.Equal(0, m.GetValueOrDefault(upperBound + 1));
                 Assert.Equal(0, m.GetValueOrDefault(-1));
-            }, size: 1_000_000_000/*, seed: "2Tt3UJ9PI4Hs3"*/);
+            }, size: 1_000/*, seed: "2Tt3UJ9PI4Hs3"*/);
         }
 
         static Gen<ImHashMap234<int, int>> GenMap(int upperBound) =>
@@ -59,8 +59,7 @@ namespace Tests
                     return m;
                 }));
 
-
-        [Fact(Skip = "Experimental")]
+        [Fact(Skip = "Experiment")]
         public void AddOrUpdate_random_items_and_randomly_checking_metamorphic()
         {
             const int upperBound = 100000;
@@ -74,7 +73,7 @@ namespace Tests
                 var s2 = m2.Enumerate().OrderBy(i => i.Key);
                 Assert.Equal(s1.Select(i => i.Key), s2.Select(i => i.Key));
                 Assert.Equal(s1.Select(i => i.Value), s2.Select(i => i.Value));
-            }, size: 1_000_000);
+            }, size: 1_000);
         }
     }
 }

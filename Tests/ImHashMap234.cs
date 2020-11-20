@@ -1,9 +1,11 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 
 namespace ImTools.Experimental
 {
@@ -14,7 +16,7 @@ namespace ImTools.Experimental
         public static readonly ImHashMap234<K, V> Empty = new ImHashMap234<K, V>();
 
         /// <summary>Hide the constructor to prevent the multiple Empty trees creation</summary>
-        protected ImHashMap234() { }
+        protected ImHashMap234() { } // todo: @perf - does it hurt the perf or the call to the empty constructor is erased?
 
         /// Pretty-prints
         public override string ToString() => "empty " + typeof(ImHashMap234<K, V>).Name;
@@ -31,10 +33,6 @@ namespace ImTools.Experimental
         /// <summary>Returns the map without the entry with the specified hash and key if it is found in the map</summary>
         public virtual ImHashMap234<K, V> RemoveEntry(int hash, K key) => this;
 
-        // todo: @perf - optimize
-        /// <summary>Enumerates the entries</summary>
-        public virtual IEnumerable<ValueEntry> Enumerate() => Enumerable.Empty<ValueEntry>();
-
         /// <summary>The base entry for the Value and for the ConflictingValues entries, contains the Hash and Key</summary>
         public abstract class Entry : ImHashMap234<K, V>
         {
@@ -42,7 +40,7 @@ namespace ImTools.Experimental
             public readonly int Hash;
 
             /// <summary>Constructs the entry with the default Key</summary>
-            protected Entry(int hash) => Hash = hash;
+            protected Entry(int hash) => Hash = hash; // todo: @perf think of the way to remove the base Entry constructor call - move to the inheriting classes, e.g. ValueEntry
 
             /// <inheritdoc />
             public sealed override Entry GetEntryOrDefault(int hash) => hash == Hash ? this : null;
@@ -73,7 +71,7 @@ namespace ImTools.Experimental
             }
 
             /// <inheritdoc />
-            public override string ToString() => "[" + Hash + "]" + Key + ": " + Value;
+            public override string ToString() => "[" + Hash + "]" + Key + ":" + Value;
 
             internal override Entry Update(ValueEntry entry) =>
                 Key.Equals(entry.Key) ? entry : (Entry)new ConflictsEntry(Hash, this, entry);
@@ -99,12 +97,6 @@ namespace ImTools.Experimental
             /// <inheritdoc />
             public override ImHashMap234<K, V> RemoveEntry(int hash, K key) =>
                 hash == Hash ? TryRemove(key) ?? Empty : this;
-
-            /// <inheritdoc />
-            public override IEnumerable<ValueEntry> Enumerate()
-            {
-                yield return this;
-            }
         }
 
         /// <summary>Entry containing the Array of conflicting Value entries.
@@ -218,9 +210,6 @@ namespace ImTools.Experimental
             /// <inheritdoc />
             public override ImHashMap234<K, V> RemoveEntry(int hash, K key) =>
                 hash == Hash ? TryRemove(key) : this;
-
-            /// <inheritdoc />
-            public override IEnumerable<ValueEntry> Enumerate() => Conflicts;
         }
 
         /// <summary>Leaf with 2 entries</summary>
@@ -232,14 +221,15 @@ namespace ImTools.Experimental
             public readonly Entry Entry1;
 
             /// <summary>Constructs the leaf</summary>
-            public Leaf2(Entry entry0, Entry entry1)
+            public Leaf2(Entry e0, Entry e1)
             {
-                Entry0 = entry0;
-                Entry1 = entry1;
+                Debug.Assert(e0.Hash < e1.Hash);
+                Entry0 = e0;
+                Entry1 = e1;
             }
 
             /// <inheritdoc />
-            public override string ToString() => "leaf2>> " + Entry0 + "; " + Entry1;
+            public override string ToString() => "leaf2{" + Entry0 + "; " + Entry1 + "}";
 
             /// <inheritdoc />
             public override Entry GetEntryOrDefault(int hash) =>
@@ -284,19 +274,6 @@ namespace ImTools.Experimental
                     return (e1 = e1.TryRemove(key)) == Entry1 ? this : e1 == null ? e0 : (ImHashMap234<K, V>)new Leaf2(e0, e1);
                 return this;
             }
-
-            /// <inheritdoc />
-            public override IEnumerable<ValueEntry> Enumerate()
-            {
-                if (Entry0 is ValueEntry v0)
-                    yield return v0;
-                else foreach (var x in ((ConflictsEntry)Entry0).Conflicts)
-                        yield return x;
-                if (Entry1 is ValueEntry v1)
-                    yield return v1;
-                else foreach (var x in ((ConflictsEntry)Entry1).Conflicts)
-                        yield return x;
-            }
         }
 
         /// <summary>Leaf with 3 entries</summary>
@@ -310,11 +287,13 @@ namespace ImTools.Experimental
             public readonly Entry Entry2;
 
             /// <summary>Constructs the leaf</summary>
-            public Leaf3(Entry entry0, Entry entry1, Entry entry2)
+            public Leaf3(Entry e0, Entry e1, Entry e2)
             {
-                Entry0 = entry0;
-                Entry1 = entry1;
-                Entry2 = entry2;
+                Debug.Assert(e0.Hash < e1.Hash);
+                Debug.Assert(e1.Hash < e2.Hash);
+                Entry0 = e0;
+                Entry1 = e1;
+                Entry2 = e2;
             }
 
             /// <inheritdoc />
@@ -367,23 +346,6 @@ namespace ImTools.Experimental
                     return (e2 = e2.TryRemove(key)) == Entry2 ? this : e2 == null ? new Leaf2(e0, e1) : (ImHashMap234<K, V>)new Leaf3(e0, e1, e2);
                 return this;
             }
-
-            /// <inheritdoc />
-            public override IEnumerable<ValueEntry> Enumerate()
-            {
-                if (Entry0 is ValueEntry v0)
-                    yield return v0;
-                else foreach (var x in ((ConflictsEntry)Entry0).Conflicts)
-                        yield return x;
-                if (Entry1 is ValueEntry v1)
-                    yield return v1;
-                else foreach (var x in ((ConflictsEntry)Entry1).Conflicts)
-                        yield return x;
-                if (Entry2 is ValueEntry v2)
-                    yield return v2;
-                else foreach (var x in ((ConflictsEntry)Entry2).Conflicts)
-                        yield return x;
-            }
         }
 
         /// <summary>Leaf with 3 + 1 entries</summary>
@@ -402,7 +364,7 @@ namespace ImTools.Experimental
             }
 
             /// <inheritdoc />
-            public override string ToString() => "leaf3+1{" + Plus + " ++ " + L3 + "}";
+            public override string ToString() => "leaf3+1{" + Plus + " + " + L3 + "}";
 
             /// <inheritdoc />
             public override Entry GetEntryOrDefault(int hash)
@@ -592,67 +554,6 @@ namespace ImTools.Experimental
                                        new Leaf3(e0, e1, p);
                 return this;
             }
-
-            /// <inheritdoc />
-            public override IEnumerable<ValueEntry> Enumerate()
-            {
-                var p = Plus;
-                var ph = p.Hash;
-                var l = L3;
-                var e0 = l.Entry0;
-                var e1 = l.Entry1;
-                var e2 = l.Entry2;
-
-                if (ph < e0.Hash)
-                {
-                    if (p is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)p).Conflicts)
-                            yield return x;
-                }
-                else
-                {
-                    if (e0 is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)e0).Conflicts)
-                            yield return x;
-                }
-
-                if (ph < e1.Hash)
-                {
-                    if (p is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)p).Conflicts)
-                            yield return x;
-                }
-                else
-                {
-                    if (e1 is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)e1).Conflicts)
-                            yield return x;
-                }
-
-                if (ph < e2.Hash)
-                {
-                    if (p is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)e2).Conflicts)
-                            yield return x;
-                }
-                else
-                {
-                    if (e2 is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)e2).Conflicts)
-                            yield return x;
-
-                    if (p is ValueEntry pv)
-                        yield return pv;
-                    else foreach (var x in ((ConflictsEntry)p).Conflicts)
-                            yield return x;
-                }
-            }
         }
 
         /// <summary>Leaf with 5 entries</summary>
@@ -670,13 +571,17 @@ namespace ImTools.Experimental
             public readonly Entry Entry4;
 
             /// <summary>Constructs the leaf</summary>
-            public Leaf5(Entry entry0, Entry entry1, Entry entry2, Entry entry3, Entry entry4)
+            public Leaf5(Entry e0, Entry e1, Entry e2, Entry e3, Entry e4)
             {
-                Entry0 = entry0;
-                Entry1 = entry1;
-                Entry2 = entry2;
-                Entry3 = entry3;
-                Entry4 = entry4;
+                Debug.Assert(e0.Hash < e1.Hash);
+                Debug.Assert(e1.Hash < e2.Hash);
+                Debug.Assert(e2.Hash < e3.Hash);
+                Debug.Assert(e3.Hash < e4.Hash);
+                Entry0 = e0;
+                Entry1 = e1;
+                Entry2 = e2;
+                Entry3 = e3;
+                Entry4 = e4;
             }
 
             /// <inheritdoc />
@@ -703,7 +608,7 @@ namespace ImTools.Experimental
                     hash == e0.Hash ? new Leaf5(e0.Update(entry), e1, e2, e3, e4) :
                     hash == e1.Hash ? new Leaf5(e0, e1.Update(entry), e2, e3, e4) :
                     hash == e2.Hash ? new Leaf5(e0, e1, e2.Update(entry), e3, e4) :
-                    hash == e3.Hash ? new Leaf5(e0, e1, e3, e2.Update(entry), e4) :
+                    hash == e3.Hash ? new Leaf5(e0, e1, e2, e3.Update(entry), e4) :
                     hash == e4.Hash ? new Leaf5(e0, e1, e2, e3, e4.Update(entry)) :
                     (ImHashMap234<K, V>)new Leaf5Plus1(entry, this);
             }
@@ -745,31 +650,6 @@ namespace ImTools.Experimental
                     return (e4 = e4.TryRemove(key)) == Entry4 ? this : e4 == null ? new Leaf3Plus1(e3, new Leaf3(e0, e1, e2)) : (ImHashMap234<K, V>)new Leaf5(e0, e1, e2, e3, e4);
                 return this;
             }
-
-            /// <inheritdoc />
-            public override IEnumerable<ValueEntry> Enumerate()
-            {
-                if (Entry0 is ValueEntry v0)
-                    yield return v0;
-                else foreach (var x in ((ConflictsEntry)Entry0).Conflicts)
-                        yield return x;
-                if (Entry1 is ValueEntry v1)
-                    yield return v1;
-                else foreach (var x in ((ConflictsEntry)Entry1).Conflicts)
-                        yield return x;
-                if (Entry2 is ValueEntry v2)
-                    yield return v2;
-                else foreach (var x in ((ConflictsEntry)Entry2).Conflicts)
-                        yield return x;
-                if (Entry3 is ValueEntry v3)
-                    yield return v3;
-                else foreach (var x in ((ConflictsEntry)Entry3).Conflicts)
-                        yield return x;
-                if (Entry4 is ValueEntry v4)
-                    yield return v4;
-                else foreach (var x in ((ConflictsEntry)Entry4).Conflicts)
-                        yield return x;
-            }
         }
 
         /// <summary>Splittable cases: Leaf5Plus1 or Branch3
@@ -799,7 +679,7 @@ namespace ImTools.Experimental
             }
 
             /// <inheritdoc />
-            public override string ToString() => "leaf5+1{" + Plus + "++" + L5 + "}";
+            public override string ToString() => "leaf5+1{" + Plus + " + " + L5 + "}";
 
             /// <inheritdoc />
             public override Entry GetEntryOrDefault(int hash)
@@ -937,21 +817,22 @@ namespace ImTools.Experimental
                     hash == e0.Hash ? new Leaf5Plus1(p, new Leaf5(e0.Update(entry), e1, e2, e3, e4)) :
                     hash == e1.Hash ? new Leaf5Plus1(p, new Leaf5(e0, e1.Update(entry), e2, e3, e4)) :
                     hash == e2.Hash ? new Leaf5Plus1(p, new Leaf5(e0, e1, e2.Update(entry), e3, e4)) :
-                    hash == e3.Hash ? new Leaf5Plus1(p, new Leaf5(e0, e1, e3, e2.Update(entry), e4)) :
-                    (ImHashMap234<K, V>)new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4.Update(entry)));
+                    hash == e3.Hash ? new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3.Update(entry), e4)) :
+                                      new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4.Update(entry)));
             }
 
             /// <inheritdoc />
             internal override ImHashMap234<K, V> AddOrUpdateOrSplitEntry(int hash, ValueEntry entry, out Entry popEntry, out ImHashMap234<K, V> popRight)
             {
                 // todo: @perf look at what the results popEntry is set to and may be use the popEntry instead of the one of the vars above, then don't forget to use popRight on the consumer side, and remove the `popEntry = null` below
-                popEntry = null;
-                popRight = null;
-
                 var p = Plus;
                 var ph = p.Hash;
                 if (ph == hash)
+                {
+                    popEntry = null;
+                    popRight = null;
                     return new Leaf5Plus1(p.Update(entry), L5);
+                }
 
                 var l = L5;
                 var e0 = l.Entry0;
@@ -1098,12 +979,14 @@ namespace ImTools.Experimental
                     return new Leaf3(e0, e1, e2);
                 }
 
+                popEntry = null;
+                popRight = null;
                 return
-                    hash == e0.Hash ? new Leaf5(e0.Update(entry), e1, e2, e3, e4) :
-                    hash == e1.Hash ? new Leaf5(e0, e1.Update(entry), e2, e3, e4) :
-                    hash == e2.Hash ? new Leaf5(e0, e1, e2.Update(entry), e3, e4) :
-                    hash == e3.Hash ? new Leaf5(e0, e1, e3, e2.Update(entry), e4) :
-                                      new Leaf5(e0, e1, e2, e3, e4.Update(entry));
+                    hash == e0.Hash ? new Leaf5Plus1(p, new Leaf5(e0.Update(entry), e1, e2, e3, e4)) :
+                    hash == e1.Hash ? new Leaf5Plus1(p, new Leaf5(e0, e1.Update(entry), e2, e3, e4)) :
+                    hash == e2.Hash ? new Leaf5Plus1(p, new Leaf5(e0, e1, e2.Update(entry), e3, e4)) :
+                    hash == e3.Hash ? new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3.Update(entry), e4)) :
+                                      new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4.Update(entry)));
             }
 
             /// <inheritdoc />
@@ -1228,20 +1111,21 @@ namespace ImTools.Experimental
                     hash == e1.Hash ? ((e1 = e1.Keep(entry)) == l5.Entry1 ? this : new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4))) :
                     hash == e2.Hash ? ((e2 = e2.Keep(entry)) == l5.Entry2 ? this : new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4))) :
                     hash == e3.Hash ? ((e3 = e3.Keep(entry)) == l5.Entry3 ? this : new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4))) :
-                    (ImHashMap234<K, V>)((e4 = e4.Keep(entry)) == l5.Entry4 ? this : new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4)));
+                                      ((e4 = e4.Keep(entry)) == l5.Entry4 ? this : new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4)));
             }
 
             /// <inheritdoc />
             internal override ImHashMap234<K, V> AddOrKeepOrSplitEntry(int hash, ValueEntry entry,
                 out Entry popEntry, out ImHashMap234<K, V> popRight)
             {
-                popEntry = null;
-                popRight = null;
-
                 var p = Plus;
                 var ph = p.Hash;
                 if (ph == hash)
-                    return (p = p.Keep(entry)) == Plus ? this : (ImHashMap234<K, V>)new Leaf5Plus1(p, L5);
+                {
+                    popEntry = null;
+                    popRight = null;
+                    return (p = p.Keep(entry)) == Plus ? this : new Leaf5Plus1(p, L5);
+                }
 
                 var l5 = L5;
                 var e0 = l5.Entry0;
@@ -1388,12 +1272,14 @@ namespace ImTools.Experimental
                     return new Leaf3(e0, e1, e2);
                 }
 
+                popEntry = null;
+                popRight = null;
                 return
                     hash == e0.Hash ? ((e0 = e0.Keep(entry)) == l5.Entry0 ? this : new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4))) :
                     hash == e1.Hash ? ((e1 = e1.Keep(entry)) == l5.Entry1 ? this : new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4))) :
                     hash == e2.Hash ? ((e2 = e2.Keep(entry)) == l5.Entry2 ? this : new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4))) :
                     hash == e3.Hash ? ((e3 = e3.Keep(entry)) == l5.Entry3 ? this : new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4))) :
-                    (ImHashMap234<K, V>)((e4 = e4.Keep(entry)) == l5.Entry4 ? this : new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4)));
+                                      ((e4 = e4.Keep(entry)) == l5.Entry4 ? this : new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4)));
             }
 
             /// <inheritdoc />
@@ -1445,118 +1331,23 @@ namespace ImTools.Experimental
 
                 return this;
             }
-
-            /// <inheritdoc />
-            public override IEnumerable<ValueEntry> Enumerate()
-            {
-                var p = Plus;
-                var ph = p.Hash;
-
-                var l = L5;
-                var e0 = l.Entry0;
-                var e1 = l.Entry1;
-                var e2 = l.Entry2;
-                var e3 = l.Entry3;
-                var e4 = l.Entry4;
-
-                if (ph < e0.Hash)
-                {
-                    if (p is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)p).Conflicts)
-                            yield return x;
-                }
-                else
-                {
-                    if (e0 is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)e0).Conflicts)
-                            yield return x;
-                }
-
-                if (ph < e1.Hash)
-                {
-                    if (p is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)p).Conflicts)
-                            yield return x;
-                }
-                else
-                {
-                    if (e1 is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)e1).Conflicts)
-                            yield return x;
-                }
-
-                if (ph < e2.Hash)
-                {
-                    if (p is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)p).Conflicts)
-                            yield return x;
-                }
-                else
-                {
-                    if (e2 is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)e2).Conflicts)
-                            yield return x;
-                }
-
-                if (ph < e3.Hash)
-                {
-                    if (p is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)p).Conflicts)
-                            yield return x;
-                }
-                else
-                {
-                    if (e3 is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)e3).Conflicts)
-                            yield return x;
-                }
-
-                if (ph < e4.Hash)
-                {
-                    if (p is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)p).Conflicts)
-                            yield return x;
-                }
-                else
-                {
-                    if (e4 is ValueEntry v)
-                        yield return v;
-                    else foreach (var x in ((ConflictsEntry)e4).Conflicts)
-                            yield return x;
-
-                    if (p is ValueEntry pv)
-                        yield return pv;
-                    else foreach (var x in ((ConflictsEntry)p).Conflicts)
-                            yield return x;
-                }
-            }
         }
 
-        /// <summary>Branch of 2 leafs or branches - 
-        /// it will never split itself but may produce the Branch of 3 if the lower branches are split</summary>
+        /// <summary>Branch of 2 leafs or branches</summary>
         public sealed class Branch2 : ImHashMap234<K, V>
         {
-            /// <summary>Entry in the middle</summary>
-            public readonly Entry Entry0;
-
             /// <summary>Left branch</summary>
             public readonly ImHashMap234<K, V> Left;
+            /// <summary>Entry in the middle</summary>
+            public readonly Entry Entry0;
             /// <summary>Right branch</summary>
             public readonly ImHashMap234<K, V> Right;
 
             /// <summary>Constructs</summary>
-            public Branch2(ImHashMap234<K, V> left, Entry entry0, ImHashMap234<K, V> right)
+            public Branch2(ImHashMap234<K, V> left, Entry e, ImHashMap234<K, V> right)
             {
-                Entry0 = entry0;
+                // todo: @incomplete add invariant check for the left and right both are either leafs or branches and not empty or entries
+                Entry0 = e;
                 Left = left;
                 Right = right;
             }
@@ -1578,13 +1369,12 @@ namespace ImTools.Experimental
                 var e0 = Entry0;
                 if (hash > e0.Hash)
                 {
-                    // The only two cases where to expect the split: Leaf5 or Branch3
                     if (Right is Leaf5Plus1OrBranch3 x)
                     {
-                        var newRight = x.AddOrUpdateOrSplitEntry(hash, entry, out var popEntry, out var popRight);
+                        var newBranch = x.AddOrUpdateOrSplitEntry(hash, entry, out var popEntry, out var popRight);
                         if (popRight != null)
-                            return new Branch3(Left, e0, newRight, popEntry, popRight);
-                        return new Branch2(Left, e0, newRight);
+                            return new Branch3(Left, e0, newBranch, popEntry, popRight);
+                        return new Branch2(Left, e0, newBranch);
                     }
 
                     return new Branch2(Left, e0, Right.AddOrUpdateEntry(hash, entry));
@@ -1594,10 +1384,10 @@ namespace ImTools.Experimental
                 {
                     if (Left is Leaf5Plus1OrBranch3 x)
                     {
-                        var newLeft = x.AddOrUpdateOrSplitEntry(hash, entry, out var popEntry, out var popRight);
+                        var newBranch = x.AddOrUpdateOrSplitEntry(hash, entry, out var popEntry, out var popRight);
                         if (popRight != null)
-                            return new Branch3(newLeft, popEntry, popRight, e0, Right);
-                        return new Branch2(newLeft, e0, Right);
+                            return new Branch3(newBranch, popEntry, popRight, e0, Right);
+                        return new Branch2(newBranch, e0, Right);
                     }
 
                     return new Branch2(Left.AddOrUpdateEntry(hash, entry), e0, Right);
@@ -1612,36 +1402,36 @@ namespace ImTools.Experimental
                 var e0 = Entry0;
                 if (hash > e0.Hash)
                 {
-                    ImHashMap234<K, V> newRight;
+                    ImHashMap234<K, V> newBranch;
                     if (Right is Leaf5Plus1OrBranch3 x)
                     {
-                        newRight = x.AddOrKeepOrSplitEntry(hash, entry, out var popEntry, out var popRight);
-                        if (newRight == x)
+                        newBranch = x.AddOrKeepOrSplitEntry(hash, entry, out var popEntry, out var popRight);
+                        if (newBranch == x)
                             return this;
                         if (popRight != null)
-                            return new Branch3(Left, e0, newRight, popEntry, popRight);
-                        return new Branch2(Left, e0, newRight);
+                            return new Branch3(Left, e0, newBranch, popEntry, popRight);
+                        return new Branch2(Left, e0, newBranch);
                     }
 
-                    newRight = Right.AddOrKeepEntry(hash, entry);
-                    return newRight == Right ? this : new Branch2(Left, e0, newRight);
+                    newBranch = Right.AddOrKeepEntry(hash, entry);
+                    return newBranch == Right ? this : new Branch2(Left, e0, newBranch);
                 }
 
                 if (hash < e0.Hash)
                 {
-                    ImHashMap234<K, V> newLeft;
+                    ImHashMap234<K, V> newBranch;
                     if (Left is Leaf5Plus1OrBranch3 x)
                     {
-                        newLeft = x.AddOrUpdateOrSplitEntry(hash, entry, out var popEntry, out var popRight);
-                        if (newLeft == x)
+                        newBranch = x.AddOrKeepOrSplitEntry(hash, entry, out var popEntry, out var popRight);
+                        if (newBranch == x)
                             return this;
                         if (popRight != null)
-                            return new Branch3(newLeft, popEntry, popRight, e0, Right);
-                        return new Branch2(newLeft, e0, Right);
+                            return new Branch3(newBranch, popEntry, popRight, e0, Right);
+                        return new Branch2(newBranch, e0, Right);
                     }
 
-                    newLeft = Left.AddOrKeepEntry(hash, entry);
-                    return newLeft == Left ? this : new Branch2(newLeft, e0, Right);
+                    newBranch = Left.AddOrKeepEntry(hash, entry);
+                    return newBranch == Left ? this : new Branch2(newBranch, e0, Right);
                 }
 
                 return (e0 = e0.Keep(entry)) == Entry0 ? this : new Branch2(Left, e0, Right);
@@ -1790,21 +1580,21 @@ namespace ImTools.Experimental
         /// <summary>Branch of 3 leafs or branches and two entries</summary>
         public sealed class Branch3 : Leaf5Plus1OrBranch3
         {
-            /// <summary>Left entry</summary>
-            public readonly Entry Entry0;
-            /// <summary>Right entry</summary>
-            public readonly Entry Entry1;
-
             /// <summary>Left branch</summary>
             public readonly ImHashMap234<K, V> Left;
+            /// <summary>Left entry</summary>
+            public readonly Entry Entry0;
             /// <summary>Middle branch</summary>
             public readonly ImHashMap234<K, V> Middle;
+            /// <summary>Right entry</summary>
+            public readonly Entry Entry1;
             /// <summary>Rightmost branch</summary>
             public readonly ImHashMap234<K, V> Right;
 
             /// <summary>Constructs the branch</summary>
             public Branch3(ImHashMap234<K, V> left, Entry entry0, ImHashMap234<K, V> middle, Entry entry1, ImHashMap234<K, V> right)
             {
+                // todo: @incomplete add invariant check for the left and right both are either leafs or branches and not empty or entries
                 Entry0 = entry0;
                 Entry1 = entry1;
                 Left = left;
@@ -1820,91 +1610,94 @@ namespace ImTools.Experimental
             /// <inheritdoc />
             public override Entry GetEntryOrDefault(int hash)
             {
-                var e0 = Entry0;
-                var e1 = Entry1;
+                var h0 = Entry0.Hash;
+                var h1 = Entry1.Hash;
                 return
-                    hash == e0.Hash ? e0 :
-                    hash == e1.Hash ? e1 :
-                    hash > e1.Hash ? Right.GetEntryOrDefault(hash) :
-                    hash < e0.Hash ? Left.GetEntryOrDefault(hash) :
+                    hash > h1 ? Right.GetEntryOrDefault(hash) :
+                    hash < h0 ? Left.GetEntryOrDefault(hash) :
+                    hash == h0 ? Entry0 :
+                    hash == h1 ? Entry1 :
                     Middle.GetEntryOrDefault(hash);
             }
 
             /// <inheritdoc />
             public override ImHashMap234<K, V> AddOrUpdateEntry(int hash, ValueEntry entry)
             {
-                var e0 = Entry0;
-                var e1 = Entry1;
+                var h0 = Entry0.Hash;
+                var h1 = Entry1.Hash;
 
-                if (hash > e1.Hash)
+                if (hash > h1)
                 {
                     // No need to call the Split method because we won't destruct the result branch
-                    var newRight = Right.AddOrUpdateEntry(hash, entry);
-                    if (newRight is Branch2 && Right is Leaf5Plus1OrBranch3)
-                        return new Branch2(new Branch2(Left, e0, Middle), e1, newRight);
-                    return new Branch3(Left, e0, Middle, e1, newRight);
+                    var newBranch = Right.AddOrUpdateEntry(hash, entry);
+                    if (newBranch is Branch2 && Right is Leaf5Plus1OrBranch3)
+                        return new Branch2(new Branch2(Left, Entry0, Middle), Entry1, newBranch);
+                    return new Branch3(Left, Entry0, Middle, Entry1, newBranch);
                 }
 
-                if (hash < e0.Hash)
+                if (hash < h0)
                 {
-                    var newLeft = Left.AddOrUpdateEntry(hash, entry);
-                    if (newLeft is Branch2 && Left is Leaf5Plus1OrBranch3)
-                        return new Branch2(newLeft, e0, new Branch2(Middle, e1, Right));
-                    return new Branch3(newLeft, e0, Middle, e1, Right);
+                    var newBranch = Left.AddOrUpdateEntry(hash, entry);
+                    if (newBranch is Branch2 && Left is Leaf5Plus1OrBranch3)
+                        return new Branch2(newBranch, Entry0, new Branch2(Middle, Entry1, Right));
+                    return new Branch3(newBranch, Entry0, Middle, Entry1, Right);
                 }
 
-                if (hash > e0.Hash && hash < e1.Hash)
+                if (hash > h0 && hash < h1)
                 {
                     if (Middle is Leaf5Plus1OrBranch3 x)
                     {
                         var newMiddle = x.AddOrUpdateOrSplitEntry(hash, entry, out var popEntry, out var popRight);
                         if (popRight != null)
-                            return new Branch2(new Branch2(Left, e0, newMiddle), popEntry, new Branch2(popRight, e1, Right));
-                        return new Branch3(Left, e0, newMiddle, e1, Right);
+                            return new Branch2(new Branch2(Left, Entry0, newMiddle), popEntry, new Branch2(popRight, Entry1, Right));
+                        return new Branch3(Left, Entry0, newMiddle, Entry1, Right);
                     }
 
-                    return new Branch3(Left, e0, Middle.AddOrUpdateEntry(hash, entry), e1, Right);
+                    return new Branch3(Left, Entry0, Middle.AddOrUpdateEntry(hash, entry), Entry1, Right);
                 }
 
-                return hash == e0.Hash
-                    ? new Branch3(Left, e0.Update(entry), Middle, e1, Right)
-                    : new Branch3(Left, e0, Middle, e1.Update(entry), Right);
+                return hash == h0
+                    ? new Branch3(Left, Entry0.Update(entry), Middle, Entry1, Right)
+                    : new Branch3(Left, Entry0, Middle, Entry1.Update(entry), Right);
             }
 
             internal override ImHashMap234<K, V> AddOrUpdateOrSplitEntry(int hash, ValueEntry entry,
                 out Entry popEntry, out ImHashMap234<K, V> popRight)
             {
-                var e0 = Entry0;
-                var e1 = Entry1;
+                var h0 = Entry0.Hash;
+                var h1 = Entry1.Hash;
 
-                popEntry = null;
-                popRight = null;
-
-                if (hash > e1.Hash)
+                if (hash > h1)
                 {
                     var newRight = Right.AddOrUpdateEntry(hash, entry);
                     if (newRight is Branch2 && Right is Leaf5Plus1OrBranch3)
                     {
-                        popEntry = e1;
+                        popEntry = Entry1;
                         popRight = newRight;
-                        return new Branch2(Left, e0, Middle);
+                        return new Branch2(Left, Entry0, Middle);
                     }
-                    return new Branch3(Left, e0, Middle, e1, newRight);
+
+                    popEntry = null;
+                    popRight = null;
+                    return new Branch3(Left, Entry0, Middle, Entry1, newRight);
                 }
 
-                if (hash < e0.Hash)
+                if (hash < h0)
                 {
                     var newLeft = Left.AddOrUpdateEntry(hash, entry);
                     if (newLeft is Branch2 && Left is Leaf5Plus1OrBranch3)
                     {
-                        popEntry = e0;
-                        popRight = new Branch2(Middle, e1, Right);
+                        popEntry = Entry0;
+                        popRight = new Branch2(Middle, Entry1, Right);
                         return newLeft;
                     }
-                    return new Branch3(newLeft, e0, Middle, e1, Right);
+
+                    popEntry = null;
+                    popRight = null;
+                    return new Branch3(newLeft, Entry0, Middle, Entry1, Right);
                 }
 
-                if (hash > e0.Hash && hash < e1.Hash)
+                if (hash > h0 && hash < h1)
                 {
                     if (Middle is Leaf5Plus1OrBranch3 x)
                     {
@@ -1915,18 +1708,25 @@ namespace ImTools.Experimental
                             //       [2, 7]            [2]         [7]
                             // [1]  [3,4,5]  [8] => [1]  [3]  [5,6]    [8]
                             // and adding 6
-                            popRight = new Branch2(popRightBelow, e1, Right);
-                            return new Branch2(Left, e0, newMiddle);
+                            popRight = new Branch2(popRightBelow, Entry1, Right);
+                            return new Branch2(Left, Entry0, newMiddle);
                         }
-                        return new Branch3(Left, e0, newMiddle, e1, Right);
+
+                        popEntry = null;
+                        popRight = null;
+                        return new Branch3(Left, Entry0, newMiddle, Entry1, Right);
                     }
 
-                    return new Branch3(Left, e0, Middle.AddOrUpdateEntry(hash, entry), e1, Right);
+                    popEntry = null;
+                    popRight = null;
+                    return new Branch3(Left, Entry0, Middle.AddOrUpdateEntry(hash, entry), Entry1, Right);
                 }
 
-                return hash == e0.Hash
-                    ? new Branch3(Left, e0.Update(entry), Middle, e1, Right)
-                    : new Branch3(Left, e0, Middle, e1.Update(entry), Right);
+                popEntry = null;
+                popRight = null;
+                return hash == h0
+                    ? new Branch3(Left, Entry0.Update(entry), Middle, Entry1, Right)
+                    : new Branch3(Left, Entry0, Middle, Entry1.Update(entry), Right);
             }
 
             /// <inheritdoc />
@@ -1937,22 +1737,22 @@ namespace ImTools.Experimental
 
                 if (hash > e1.Hash)
                 {
-                    var newRight = Right.AddOrKeepEntry(hash, entry);
-                    if (newRight == Right)
+                    var newBranch = Right.AddOrKeepEntry(hash, entry);
+                    if (newBranch == Right)
                         return this;
-                    if (newRight is Branch2 && Right is Leaf5Plus1OrBranch3)
-                        return new Branch2(new Branch2(Left, e0, Middle), e1, newRight);
-                    return new Branch3(Left, e0, Middle, e1, newRight);
+                    if (newBranch is Branch2 && Right is Leaf5Plus1OrBranch3)
+                        return new Branch2(new Branch2(Left, e0, Middle), e1, newBranch);
+                    return new Branch3(Left, e0, Middle, e1, newBranch);
                 }
 
                 if (hash < e0.Hash)
                 {
-                    var newLeft = Left.AddOrKeepEntry(hash, entry);
-                    if (newLeft == Left)
+                    var newBranch = Left.AddOrKeepEntry(hash, entry);
+                    if (newBranch == Left)
                         return this;
-                    if (newLeft is Branch2 && Left is Leaf5Plus1OrBranch3)
-                        return new Branch2(newLeft, e0, new Branch2(Middle, e1, Right));
-                    return new Branch3(newLeft, e0, Middle, e1, Right);
+                    if (newBranch is Branch2 && Left is Leaf5Plus1OrBranch3)
+                        return new Branch2(newBranch, e0, new Branch2(Middle, e1, Right));
+                    return new Branch3(newBranch, e0, Middle, e1, Right);
                 }
 
                 if (hash > e0.Hash && hash < e1.Hash)
@@ -1988,30 +1788,30 @@ namespace ImTools.Experimental
 
                 if (hash > e1.Hash)
                 {
-                    var newRight = Right.AddOrKeepEntry(hash, entry);
-                    if (newRight == Right)
+                    var newBranch = Right.AddOrKeepEntry(hash, entry);
+                    if (newBranch == Right)
                         return this;
-                    if (newRight is Branch2 && Right is Leaf5Plus1OrBranch3)
+                    if (newBranch is Branch2 && Right is Leaf5Plus1OrBranch3)
                     {
                         popEntry = e1;
-                        popRight = newRight;
+                        popRight = newBranch;
                         return new Branch2(Left, e0, Middle);
                     }
-                    return new Branch3(Left, e0, Middle, e1, newRight);
+                    return new Branch3(Left, e0, Middle, e1, newBranch);
                 }
 
                 if (hash < e0.Hash)
                 {
-                    var newLeft = Left.AddOrKeepEntry(hash, entry);
-                    if (newLeft == Left)
+                    var newBranch = Left.AddOrKeepEntry(hash, entry);
+                    if (newBranch == Left)
                         return this;
-                    if (newLeft is Branch2 && Left is Leaf5Plus1OrBranch3)
+                    if (newBranch is Branch2 && Left is Leaf5Plus1OrBranch3)
                     {
                         popEntry = e0;
                         popRight = new Branch2(Middle, e1, Right);
-                        return newLeft;
+                        return newBranch;
                     }
-                    return new Branch3(newLeft, e0, Middle, e1, Right);
+                    return new Branch3(newBranch, e0, Middle, e1, Right);
                 }
 
                 if (hash > e0.Hash && hash < e1.Hash)
@@ -2314,5 +2114,331 @@ namespace ImTools.Experimental
         public static ImHashMap234<K, V> Remove<K, V>(this ImHashMap234<K, V> map, K key) =>
             // it make sense to have the condition here to prevent the probably costly `GetHashCode()` for the empty map.
             map == ImHashMap234<K, V>.Empty ? map : map.RemoveEntry(key.GetHashCode(), key);
+
+        // todo: @wip incomplete, does not consider Conflicts yet
+        /// <summary>
+        /// Enumerates all the map nodes from the left to the right and from the bottom to top
+        /// You may pass `parentStacks` to reuse the array memory.
+        /// NOTE: the length of `parentStack` should be at least of map (height - 2) - the stack want be used for 0, 1, 2 height maps,
+        /// the content of the stack is not important and could be erased.
+        /// </summary>
+        public static IEnumerable<ImHashMap234<K, V>.ValueEntry> Enumerate<K, V>(this ImHashMap234<K, V> map, List<ImHashMap234<K, V>> parentStack = null)
+        {
+            if (map == ImHashMap234<K, V>.Empty)
+                yield break;
+            if (map is ImHashMap234<K, V>.Entry e)
+            {
+                if (e is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)e).Conflicts) yield return c;
+                yield break;
+            }
+            // todo: @perf add a single check for the branch to prevent multiple checks for the leafs in case of bug tree
+            {
+                if (map is ImHashMap234<K, V>.Leaf2 l2)
+                {
+                    if (l2.Entry0 is ImHashMap234<K, V>.ValueEntry v0) yield return v0;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l2.Entry0).Conflicts) yield return c;
+                    if (l2.Entry1 is ImHashMap234<K, V>.ValueEntry v1) yield return v1;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l2.Entry1).Conflicts) yield return c;
+                    yield break;
+                }
+                if (map is ImHashMap234<K, V>.Leaf3 l3)
+                {
+                    if (l3.Entry0 is ImHashMap234<K, V>.ValueEntry v0) yield return v0;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l3.Entry0).Conflicts) yield return c;
+                    if (l3.Entry1 is ImHashMap234<K, V>.ValueEntry v1) yield return v1;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l3.Entry1).Conflicts) yield return c;
+                    if (l3.Entry2 is ImHashMap234<K, V>.ValueEntry v2) yield return v2;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l3.Entry2).Conflicts) yield return c;
+                    yield break;
+                }
+                if (map is ImHashMap234<K, V>.Leaf3Plus1 l31)
+                {
+                    var p = l31.Plus;
+                    var l = l31.L3;
+                    if (p.Hash < l.Entry0.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                        if (l.Entry0 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry0).Conflicts) yield return c;
+                    if (p.Hash < l.Entry1.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                        if (l.Entry1 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry1).Conflicts) yield return c;
+                    if (p.Hash < l.Entry2.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                    {
+                        if (l.Entry2 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry2).Conflicts) yield return c;
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    }
+                    yield break;
+                }
+                if (map is ImHashMap234<K, V>.Leaf5 l5)
+                {
+                    if (l5.Entry0 is ImHashMap234<K, V>.ValueEntry v0) yield return v0;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l5.Entry0).Conflicts) yield return c;
+                    if (l5.Entry1 is ImHashMap234<K, V>.ValueEntry v1) yield return v1;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l5.Entry1).Conflicts) yield return c;
+                    if (l5.Entry2 is ImHashMap234<K, V>.ValueEntry v2) yield return v2;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l5.Entry2).Conflicts) yield return c;
+                    if (l5.Entry3 is ImHashMap234<K, V>.ValueEntry v3) yield return v3;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l5.Entry3).Conflicts) yield return c;
+                    if (l5.Entry4 is ImHashMap234<K, V>.ValueEntry v4) yield return v4;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l5.Entry4).Conflicts) yield return c;
+                    yield break;
+                }
+                if (map is ImHashMap234<K, V>.Leaf5Plus1 l51)
+                {
+                    var p = l51.Plus;
+                    var l = l51.L5;
+                    if (p.Hash < l.Entry0.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                        if (l.Entry0 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry0).Conflicts) yield return c;
+                    if (p.Hash < l.Entry1.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                        if (l.Entry1 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry1).Conflicts) yield return c;
+                    if (p.Hash < l.Entry2.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                        if (l.Entry2 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry2).Conflicts) yield return c;
+                    if (p.Hash < l.Entry3.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                        if (l.Entry3 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry3).Conflicts) yield return c;
+                    if (p.Hash < l.Entry4.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                    {
+                        if (l.Entry4 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry4).Conflicts) yield return c;
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    }
+                    yield break;
+                }
+            }
+            var parentIndex = -1;
+            while (true)
+            {
+                if (map is ImHashMap234<K, V>.Branch2 b2)
+                {
+                    var lb = b2.Left;
+                    if (lb is ImHashMap234<K, V>.Branch2 || lb is ImHashMap234<K, V>.Branch3)
+                    {
+                        if (parentStack == null)
+                            parentStack = new List<ImHashMap234<K, V>>();
+                        if (parentStack.Count > ++parentIndex)
+                            parentStack[parentIndex] = map;
+                        else
+                            parentStack.Add(map);
+                        map = lb;
+                    }
+                }
+                else if (map is ImHashMap234<K, V>.Branch3 b3)
+                {
+                    var lb = b3.Left;
+                    if (lb is ImHashMap234<K, V>.Branch2 || lb is ImHashMap234<K, V>.Branch3)
+                    {
+                        if (parentStack == null)
+                            parentStack = new List<ImHashMap234<K, V>>();
+                        if (parentStack.Count > ++parentIndex)
+                            parentStack[parentIndex] = map;
+                        else
+                            parentStack.Add(map);
+                        map = lb;
+                    }
+                }
+
+                if (map is ImHashMap234<K, V>.Leaf2 l2)
+                {
+                    if (l2.Entry0 is ImHashMap234<K, V>.ValueEntry v0) yield return v0;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l2.Entry0).Conflicts) yield return c;
+                    if (l2.Entry1 is ImHashMap234<K, V>.ValueEntry v1) yield return v1;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l2.Entry1).Conflicts) yield return c;
+                }
+                else if (map is ImHashMap234<K, V>.Leaf3 l3)
+                {
+                    if (l3.Entry0 is ImHashMap234<K, V>.ValueEntry v0) yield return v0;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l3.Entry0).Conflicts) yield return c;
+                    if (l3.Entry1 is ImHashMap234<K, V>.ValueEntry v1) yield return v1;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l3.Entry1).Conflicts) yield return c;
+                    if (l3.Entry2 is ImHashMap234<K, V>.ValueEntry v2) yield return v2;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l3.Entry2).Conflicts) yield return c;
+                }
+                else if (map is ImHashMap234<K, V>.Leaf3Plus1 l31)
+                {
+                    var p = l31.Plus;
+                    var l = l31.L3;
+                    if (p.Hash < l.Entry0.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                        if (l.Entry0 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry0).Conflicts) yield return c;
+                    if (p.Hash < l.Entry1.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                        if (l.Entry1 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry1).Conflicts) yield return c;
+                    if (p.Hash < l.Entry2.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                    {
+                        if (l.Entry2 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry2).Conflicts) yield return c;
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    }
+                }
+                else if (map is ImHashMap234<K, V>.Leaf5 l5)
+                {
+                    if (l5.Entry0 is ImHashMap234<K, V>.ValueEntry v0) yield return v0;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l5.Entry0).Conflicts) yield return c;
+                    if (l5.Entry1 is ImHashMap234<K, V>.ValueEntry v1) yield return v1;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l5.Entry1).Conflicts) yield return c;
+                    if (l5.Entry2 is ImHashMap234<K, V>.ValueEntry v2) yield return v2;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l5.Entry2).Conflicts) yield return c;
+                    if (l5.Entry3 is ImHashMap234<K, V>.ValueEntry v3) yield return v3;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l5.Entry3).Conflicts) yield return c;
+                    if (l5.Entry4 is ImHashMap234<K, V>.ValueEntry v4) yield return v4;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l5.Entry4).Conflicts) yield return c;
+                    yield break;
+                }
+                else if (map is ImHashMap234<K, V>.Leaf5Plus1 l51)
+                {
+                    var p = l51.Plus;
+                    var l = l51.L5;
+                    if (p.Hash < l.Entry0.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                        if (l.Entry0 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry0).Conflicts) yield return c;
+                    if (p.Hash < l.Entry1.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                        if (l.Entry1 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry1).Conflicts) yield return c;
+                    if (p.Hash < l.Entry2.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                        if (l.Entry2 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry2).Conflicts) yield return c;
+                    if (p.Hash < l.Entry3.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                        if (l.Entry3 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry3).Conflicts) yield return c;
+                    if (p.Hash < l.Entry4.Hash)
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    else
+                    {
+                        if (l.Entry4 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)l.Entry4).Conflicts) yield return c;
+                        if (p is ImHashMap234<K, V>.ValueEntry pv) yield return pv;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)p).Conflicts) yield return c;
+                    }
+                }
+
+                if (parentIndex == -1)
+                    break; // we yield the leaf and there is nothing in stack - we are done!
+
+                var child = map;
+                map = parentStack[parentIndex]; // otherwise get the parent
+                if (map is ImHashMap234<K, V>.Branch2 pb2)
+                {
+                    if (pb2.Entry0 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                    else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)pb2.Entry0).Conflicts) yield return c;
+                    map = pb2.Right;
+                    --parentIndex; // we done with the this level handled the Left (previously) and the Right (now)
+                }
+                else
+                {
+                    var pb3 = (ImHashMap234<K, V>.Branch3)map;
+                    if (child == pb3.Left)
+                    {
+                        if (pb3.Entry0 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)pb3.Entry0).Conflicts) yield return c;
+                        map = pb3.Middle; // we don't modify parentIndex here because we are not done with this level yet - there is still a Right branch
+                    }
+                    else
+                    {
+                        if (pb3.Entry1 is ImHashMap234<K, V>.ValueEntry v) yield return v;
+                        else foreach (var c in ((ImHashMap234<K, V>.ConflictsEntry)pb3.Entry1).Conflicts) yield return c;
+                        map = pb3.Right;
+                        --parentIndex; // we done with the this level handled the Left and the Middle (previously) and the Right (now)
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The fixed array of maps (partitions) where the first key bits are used to locate the partion to lookup into.
+    /// Note: The partition array is NOT immutable and operates by swapping the updated partition (map) with the new one.
+    /// The default partitions count it "carefully selected" to be 16:
+    /// - Not too big to waste the space for the small collection and to fit (hopefully) into the cache line (16 of 4 byte pointer = 64 bytes)
+    /// - Not too short to diminish the benifits of partioning
+    /// </summary>
+    public static class PartitionedHashMap234
+    {
+        /// <summary>Default number of partions</summary>
+        public const int PART_COUNT_POWER_OF_TWO = 16;
+
+        /// <summary>The default mask to partition the key</summary>
+        public const int PART_HASH_MASK = PART_COUNT_POWER_OF_TWO - 1;
+
+        /// <summary>Creates the new collection with the empty partions</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static ImHashMap234<K, V>[] CreateEmpty<K, V>(int partCountPowerOfTwo = PART_COUNT_POWER_OF_TWO)
+        {
+            var parts = new ImHashMap234<K, V>[partCountPowerOfTwo];
+            for (var i = 0; i < parts.Length; ++i)
+                parts[i] = ImHashMap234<K, V>.Empty;
+            return parts;
+        }
+
+        /// <summary>Returns THE SAME partitioned map BUT with updated partion</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static void AddOrUpdate<K, V>(this ImHashMap234<K, V>[] parts, int hash, K key, V value, int partHashMask = PART_HASH_MASK)
+        {
+            ref var part = ref parts[hash & partHashMask];
+            var p = part;
+            if (Interlocked.CompareExchange(ref part, p.AddOrUpdate(hash, key, value), p) != p)
+                RefAddOrUpdatePart(ref part, hash, key, value);
+        }
+
+        /// <summary>Returns THE SAME partitioned map BUT with updated partion</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static void AddOrUpdate<K, V>(this ImHashMap234<K, V>[] parts, K key, V value, int partHashMask = PART_HASH_MASK) =>
+            parts.AddOrUpdate(key.GetHashCode(), key, value, partHashMask);
+
+        /// <summary>Updates the ref to the part with the new version and retries if the someone changed the part in between</summary>
+        public static void RefAddOrUpdatePart<K, V>(ref ImHashMap234<K, V> part, int hash, K key, V value) =>
+            Ref.Swap(ref part, hash, key, value, (x, h, k, v) => x.AddOrUpdate(h, k, v));
     }
 }
