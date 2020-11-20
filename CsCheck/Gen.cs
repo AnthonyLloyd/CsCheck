@@ -70,7 +70,7 @@ namespace CsCheck
         public GenArray2D<T> Array2D => new(this);
         public GenList<T> List => new(this);
         public GenHashSet<T> HashSet => new(this);
-        public GenUnique<T> ArrayUnique => new(this);
+        public GenArrayUnique<T> ArrayUnique => new(this);
     }
 
     class GenF<T> : Gen<T>
@@ -387,6 +387,7 @@ namespace CsCheck
         public static readonly GenFloat Single = Float;
         public static readonly GenDouble Double = new();
         public static readonly GenDecimal Decimal = new();
+        public static readonly GenDate Date = new();
         public static readonly GenDateTime DateTime = new();
         public static readonly GenTimeSpan TimeSpan = new();
         public static readonly GenDateTimeOffset DateTimeOffset = new();
@@ -867,6 +868,29 @@ namespace CsCheck
         }
     }
 
+    public class GenDate : Gen<DateTime>
+    {
+        readonly uint max = (uint)(DateTime.MaxValue.Ticks / TimeSpan.TicksPerDay);
+        public override (DateTime, Size) Generate(PCG pcg)
+        {
+            uint i = pcg.Next(max);
+            return (new DateTime(i * TimeSpan.TicksPerDay), new Size(i));
+        }
+        public Gen<DateTime> this[DateTime start, DateTime finish]
+        {
+            get
+            {
+                uint s = (uint)(start.Ticks / TimeSpan.TicksPerDay);
+                uint l = (uint)((finish.Ticks - start.Ticks) / TimeSpan.TicksPerDay) + 1u;
+                return new GenF<DateTime>(pcg =>
+                {
+                    uint i = s + pcg.Next(l);
+                    return (new DateTime(i * TimeSpan.TicksPerDay), new Size(i));
+                });
+            }
+        }
+    }
+
     public class GenTimeSpan : Gen<TimeSpan>
     {
         public override (TimeSpan, Size) Generate(PCG pcg)
@@ -1001,10 +1025,10 @@ namespace CsCheck
         public Gen<T[]> this[int start, int finish] => this[Gen.Int[start, finish]];
     }
 
-    public class GenUnique<T> : Gen<T[]>
+    public class GenArrayUnique<T> : Gen<T[]>
     {
         readonly Gen<T> gen;
-        public GenUnique(Gen<T> gen) => this.gen = gen;
+        public GenArrayUnique(Gen<T> gen) => this.gen = gen;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         (T[], Size) Generate(PCG pcg, int length, ulong size)
         {
@@ -1022,7 +1046,7 @@ namespace CsCheck
                     vs[i] = v;
                     ss[i++] = s;
                 }
-                else if (++bad == 1000) throw new CsCheckException("Failing to add to Unique");
+                else if (++bad == 1000) throw new CsCheckException("Failing to add to ArrayUnique");
             }
             return (vs, new Size(size, ss));
         }

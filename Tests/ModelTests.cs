@@ -69,7 +69,7 @@ namespace Tests
             public static Gen<int> Quantity = Gen.Int[-99, 99].Select(Gen.Int[0, 5]).Select(t => t.V0 * (int)Math.Pow(10, t.V1));
             public static Gen<double> Coupon = Gen.Int[0, 100].Select(i => 0.125 * i);
             public static Gen<double> Price = Gen.Int[0001, 9999].Select(i => 0.01 * i);
-            public static Gen<DateTime> Date = Gen.DateTime[new DateTime(2000, 1, 1), new DateTime(2040, 1, 1)].Select(i => i.Date);
+            public static Gen<DateTime> Date = Gen.Date[new DateTime(2000, 1, 1), new DateTime(2040, 1, 1)];
             public static Gen<Equity> Equity = Gen.Select(Name, Country, Currency, Gen.Enum<Exchange>().HashSet[1, 3], (n, co, cu, e) => new Equity(n, co, cu, e));
             public static Gen<Bond> Bond = Gen.Select(Name, Country, Currency, Gen.SortedDictionary(Date, Coupon), (n, co, cu, c) => new Bond(n, co, cu, c));
             public static Gen<Instrument> Instrument = Gen.Frequency((2, Equity.Cast<Instrument>()), (1, Bond.Cast<Instrument>()));
@@ -85,7 +85,7 @@ namespace Tests
                    p.Positions.Count == 5
                 && p.Positions.Any(p => p.Instrument is Bond)
                 && p.Positions.Any(p => p.Instrument is Equity)
-            , "0N0XIzNsQ0O2");
+            , "e2v0jI554Uya");
             var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
             var fxRates = ModelGen.Price.Array[currencies.Length].Example(a =>
                 a.All(p => p > 0.75 && p < 1.5)
@@ -96,7 +96,7 @@ namespace Tests
                 h.AddDecimalPlaces(2, portfolio.Positions.Select(p => p.Profit));
                 h.AddDecimalPlaces(2, portfolio.Profit(fxRate));
                 h.AddDecimalPlaces(2, portfolio.RiskByPosition(fxRate));
-            }, 5857230471108592669);
+            }, 6329654411345187086);
         }
     }
 }
