@@ -21,6 +21,7 @@ namespace CsCheck
 {
     public class Size
     {
+        public static Size Zero = new(0UL);
         public static Size Max = new(ulong.MaxValue);
         public static Size[] EmptyArray = new Size[0];
         public readonly ulong I;
@@ -284,8 +285,7 @@ namespace CsCheck
             while (!predicate(t.Item1)) t = gen.Generate(pcg);
             return t;
         });
-        static readonly Size zero = new(0UL);
-        public static Gen<T> Const<T>(T value) => new GenF<T>(_ => (value, zero));
+        public static Gen<T> Const<T>(T value) => new GenF<T>(_ => (value, Size.Zero));
         public static Gen<T> OneOf<T>(params T[] ts) => Int[0, ts.Length - 1].Select(i => ts[i]);
         public static Gen<T> OneOf<T>(params Gen<T>[] gens) => Int[0, gens.Length - 1].SelectMany(i => gens[i]);
         public static Gen<T> Enum<T>() where T : Enum
@@ -344,24 +344,8 @@ namespace CsCheck
             var pcg = PCG.ThreadPCG;
             while (true) yield return gen.Generate(pcg).Item1;
         }
-        public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen) => new GenF<T[]>(pcg =>
+        static void Shuffle<T>(IList<T> a, PCG pcg)
         {
-            var (a, s) = gen.Generate(pcg);
-            for (int i = a.Length - 1; i > 0; i--)
-            {
-                int j = (int)pcg.Next((uint)(i + 1));
-                if (i != j)
-                {
-                    var temp = a[j];
-                    a[j] = a[i];
-                    a[i] = temp;
-                }
-            }
-            return (a, s);
-        });
-        public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => new GenF<List<T>>(pcg =>
-        {
-            var (a, s) = gen.Generate(pcg);
             for (int i = a.Count - 1; i > 0; i--)
             {
                 int j = (int)pcg.Next((uint)(i + 1));
@@ -372,7 +356,84 @@ namespace CsCheck
                     a[i] = temp;
                 }
             }
+        }
+        public static Gen<T[]> Shuffle<T>(T[] a) => new GenF<T[]>(pcg =>
+        {
+            Shuffle(a, pcg);
+            return (a, Size.Zero);
+        });
+        public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen) => new GenF<T[]>(pcg =>
+        {
+            var (a, s) = gen.Generate(pcg);
+            Shuffle(a, pcg);
             return (a, s);
+        });
+        public static Gen<T[]> Shuffle<T>(T[] a, int length) => new GenF<T[]>(pcg =>
+        {
+            Shuffle(a, pcg);
+            if (length < a.Length) Array.Resize(ref a, length);
+            return (a, Size.Zero);
+        });
+        public static Gen<T[]> Shuffle<T>(T[] a, int start, int finish) => new GenF<T[]>(pcg =>
+        {
+            var (length, s) = Int[start, finish].Generate(pcg);
+            Shuffle(a, pcg);
+            if (length < a.Length) Array.Resize(ref a, length);
+            return (a, s);
+        });
+        public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen, int length) => new GenF<T[]>(pcg =>
+        {
+            var (a, s) = gen.Generate(pcg);
+            Shuffle(a, pcg);
+            if (length < a.Length) Array.Resize(ref a, length);
+            return (a, s);
+        });
+        public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen, int start, int finish) => new GenF<T[]>(pcg =>
+        {
+            var (length, sl) = Int[start, finish].Generate(pcg);
+            var (a, s) = gen.Generate(pcg);
+            Shuffle(a, pcg);
+            if (length < a.Length) Array.Resize(ref a, length);
+            return (a, new Size(sl.I, new[] { s }));
+        });
+        public static Gen<List<T>> Shuffle<T>(List<T> a) => new GenF<List<T>>(pcg =>
+        {
+            Shuffle(a, pcg);
+            return (a, Size.Zero);
+        });
+        public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => new GenF<List<T>>(pcg =>
+        {
+            var (a, s) = gen.Generate(pcg);
+            Shuffle(a, pcg);
+            return (a, s);
+        });
+        public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => new GenF<List<T>>(pcg =>
+        {
+            Shuffle(a, pcg);
+            if (length < a.Count) a.RemoveRange(length, a.Count - length);
+            return (a, Size.Zero);
+        });
+        public static Gen<List<T>> Shuffle<T>(List<T> a, int start, int finish) => new GenF<List<T>>(pcg =>
+        {
+            var (length, s) = Int[start, finish].Generate(pcg);
+            Shuffle(a, pcg);
+            if (length < a.Count) a.RemoveRange(length, a.Count - length);
+            return (a, s);
+        });
+        public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int length) => new GenF<List<T>>(pcg =>
+        {
+            var (a, s) = gen.Generate(pcg);
+            Shuffle(a, pcg);
+            if (length < a.Count) a.RemoveRange(length, a.Count - length);
+            return (a, s);
+        });
+        public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int start, int finish) => new GenF<List<T>>(pcg =>
+        {
+            var (length, sl) = Int[start, finish].Generate(pcg);
+            var (a, s) = gen.Generate(pcg);
+            Shuffle(a, pcg);
+            if (length < a.Count) a.RemoveRange(length, a.Count - length);
+            return (a, new Size(sl.I, new[] { s }));
         });
         public static readonly GenBool Bool = new();
         public static readonly GenSByte SByte = new();
