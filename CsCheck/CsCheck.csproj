@@ -21,11 +21,12 @@ CsCheck also makes multithreading, performance and regression testing simple and
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;multithreading;performance;regression;testing</PackageTags>
-        <Version>1.0.0</Version>
+        <Version>1.1.0</Version>
         <PackageReleaseNotes>
-Added CsCheck_Threads environment configuration.
-Hash change of function signature for consistency and clarity. No change to the hash algorithm.
-Performance improvements.
+Added Date, ArrayUnique and Shuffle including picking r from n permutations.
+Added clearer seed use message in exception.
+Added shrunk sample exception message for simple types and print optional parameter to write your own.
+Bug fix for total run count when using a seed.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>9.0</LangVersion>
