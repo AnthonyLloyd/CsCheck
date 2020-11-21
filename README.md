@@ -21,9 +21,9 @@ The low ceremony generators make CsCheck a good choice for C#, but the superior 
 
 CsCheck also has functionality to make multithreading, performance and regression testing simple and fast.
 
-### Examples
+## Examples
 
-**1.** Sample test of the range of a unit single. The default sample size is 100.
+### **1.** Sample test of the range of a unit single. The default sample size is 100.
 ```csharp
 [Fact]
 public void Single_Unit_Range()
@@ -32,7 +32,7 @@ public void Single_Unit_Range()
 }
 ```
 
-**2.** Sample test for long ranges.
+### **2.** Sample test for long ranges.
 ```csharp
 [Fact]
 public void Long_Range()
@@ -46,7 +46,7 @@ public void Long_Range()
 }
 ```
 
-**3.** Sample one test for int value distribution.
+### **3.** Sample one test for int value distribution.
 ```csharp
 [Fact]
 public void Int_Distribution()
@@ -60,7 +60,7 @@ public void Int_Distribution()
 }
 ```
 
-**4.** Sample roundtrip serialization testing.
+### **4.** Sample roundtrip serialization testing.
 ```csharp
 static void TestRoundtrip<T>(Gen<T> gen, Action<Stream, T> serialize, Func<Stream, T> deserialize)
 {
@@ -89,7 +89,7 @@ public void DateTime()
 }
 ```
 
-**5.** Sample Map AddOrUpdate test.
+### **5.** Sample Map AddOrUpdate test.
 ```csharp
 static Gen<ImHashMap234<int, int>> GenMap(int upperBound) =>
     Gen.Int[0, upperBound].ArrayUnique.SelectMany(ks =>
@@ -147,7 +147,7 @@ Actual:   SelectIPartitionIterator<ValueEntry<Int32, Int32>, ValueTuple<Int32, I
    at CsCheck.Check.<>c__DisplayClass5_0`1.<Sample>b__0(Int32 _) in C:\Users\Ant\src\CsCheck\CsCheck\Check.cs:line 113
 ```
 
-**6.** Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
+### **6.** Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
 ```csharp
 [Fact]
 public void Multithreading_DictionarySlim()
@@ -170,7 +170,7 @@ public void Multithreading_DictionarySlim()
 }
 ```
 
-**7.** Performance test of linq expressions checking the results are always the same. The first expression is asserted to be faster than the second.
+### **7.** Performance test of linq expressions checking the results are always the same. The first expression is asserted to be faster than the second.
 ```csharp
 [Fact]
 public void Faster_Linq_Random()
@@ -195,7 +195,7 @@ Standard Output Messages:
  The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
  distribution for the null hypothosis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
 
-**8.** Performance test of two different ways of multiplying a matrix for a sample of matrix sizes checking the results are always the same.
+### **8.** Performance test of two different ways of multiplying a matrix for a sample of matrix sizes checking the results are always the same.
 An external equal assert is used.
 ```csharp
 [Fact]
@@ -214,7 +214,7 @@ public void Faster_Matrix_Multiply_Range()
 }
 ```
 
-**9.** Performance test of a new Benchmarks Game submission.
+### **9.** Performance test of a new Benchmarks Game submission.
 ```csharp
 [Fact]
 public void ReverseComplement_Faster()
@@ -236,7 +236,7 @@ Standard Output Messages:
 25.1%[-5..+6] faster, sigma=6.0 (36 vs 0)
 ```
 
-**10.** Performance test of PrefixVarint vs Varint for a given distribution skew.
+### **10.** Performance test of PrefixVarint vs Varint for a given distribution skew.
 Repeat is used as the functions are very quick.
 ```csharp
 void PrefixVarint_Faster(double skew)
@@ -274,7 +274,7 @@ Standard Output Messages:
 25.5%[-26..+14] faster, sigma=50.0 (8,394 vs 3,046)
 ```
 
-**11.** Regression test of portfolio profit and risk.  
+### **11.** Regression test of portfolio profit and risk.  
 **Example** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
 **Hash** is used to find and check a hash for a number of results.
 It saves a cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
@@ -306,7 +306,7 @@ These tests are in xUnit but could equally be used in any testing framework.
 
 More to see in the [Tests](Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
 
-### Configuration
+## Configuration
 
 Sample and Faster functions accept configuration optional parameters e.g. size: 100_000, seed: "0N0XIzNsQ0O2", print: t => string.Join(", ", t).
 
