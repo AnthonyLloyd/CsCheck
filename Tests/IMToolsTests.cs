@@ -4,6 +4,7 @@ using ImTools.Experimental;
 using Xunit;
 using CsCheck;
 using System.Linq;
+using ImTools;
 
 namespace Tests
 {
@@ -76,6 +77,26 @@ namespace Tests
             , size: 100_000
             , print: t => t + "\n" + string.Join("\n", t.V0.Enumerate())
             , seed: "42ChASl6qJI5");
+        }
+
+        [Fact(Skip = "Experiment")]
+        public void AddOrUpdate_ModelBased()
+        {
+            const int upperBound = 100000;
+            Gen.SelectMany(GenMap(upperBound), m =>
+                Gen.Select(Gen.Const(m), Gen.Int[0, upperBound], Gen.Int))
+            .Sample(t =>
+            {
+                var dic1 = new Dictionary<int, int>();
+                foreach (var entry in t.V0.Enumerate()) dic1.Add(entry.Key, entry.Value);
+                dic1[t.V1] = t.V2;
+                var dic2 = new Dictionary<int, int>();
+                foreach (var entry in t.V0.AddOrUpdate(t.V1, t.V2).Enumerate())
+                    dic2.Add(entry.Key, entry.Value);
+                Assert.Equal(dic1, dic2);
+            }
+            , size: 100_000
+            , print: t => t + "\n" + string.Join("\n", t.V0.Enumerate()));
         }
     }
 }

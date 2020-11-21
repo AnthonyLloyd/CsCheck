@@ -147,6 +147,30 @@ Actual:   SelectIPartitionIterator<ValueEntry<Int32, Int32>, ValueTuple<Int32, I
    at CsCheck.Check.<>c__DisplayClass5_0`1.<Sample>b__0(Int32 _) in C:\Users\Ant\src\CsCheck\CsCheck\Check.cs:line 113
 ```
 
+For this case there is also a very good Model-based approach. This gives the best coverage but it is not always possible to find a model that is not just a reimplementation.
+
+```csharp
+[Fact]
+public void AddOrUpdate_ModelBased()
+{
+    const int upperBound = 100000;
+    Gen.SelectMany(GenMap(upperBound), m =>
+        Gen.Select(Gen.Const(m), Gen.Int[0, upperBound], Gen.Int))
+    .Sample(t =>
+    {
+        var dic1 = new Dictionary<int, int>();
+        foreach (var entry in t.V0.Enumerate()) dic1.Add(entry.Key, entry.Value);
+        dic1[t.V1] = t.V2;
+        var dic2 = new Dictionary<int, int>();
+        foreach (var entry in t.V0.AddOrUpdate(t.V1, t.V2).Enumerate())
+            dic2.Add(entry.Key, entry.Value);
+        Assert.Equal(dic1, dic2);
+    }
+    , size: 100_000
+    , print: t => t + "\n" + string.Join("\n", t.V0.Enumerate()));
+}
+```
+
 ### **6.** Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
 ```csharp
 [Fact]
