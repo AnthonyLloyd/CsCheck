@@ -60,20 +60,22 @@ namespace Tests
                 }));
 
         [Fact(Skip = "Experiment")]
-        public void AddOrUpdate_random_items_and_randomly_checking_metamorphic()
+        public void AddOrUpdate_Metamorphic()
         {
             const int upperBound = 100000;
-            Gen.Select(GenMap(upperBound), Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int)
+            Gen.SelectMany(GenMap(upperBound), m =>
+                Gen.Select(Gen.Const(m), Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int))
             .Sample(t =>
             {
-                var (m, k1, v1, k2, v2) = t;
-                var m1 = m.AddOrUpdate(k1, v1).AddOrUpdate(k2, v2);
-                var m2 = k1 == k2 ? m.AddOrUpdate(k2, v2) : m.AddOrUpdate(k2, v2).AddOrUpdate(k1, v1);
-                var s1 = m1.Enumerate().OrderBy(i => i.Key);
-                var s2 = m2.Enumerate().OrderBy(i => i.Key);
-                Assert.Equal(s1.Select(i => i.Key), s2.Select(i => i.Key));
-                Assert.Equal(s1.Select(i => i.Value), s2.Select(i => i.Value));
-            }, size: 1_000);
+                var map1 = t.V0.AddOrUpdate(t.V1, t.V2).AddOrUpdate(t.V3, t.V4);
+                var map2 = t.V1 == t.V3 ? t.V0.AddOrUpdate(t.V3, t.V4) : t.V0.AddOrUpdate(t.V3, t.V4).AddOrUpdate(t.V1, t.V2);
+                var seq1 = map1.Enumerate().OrderBy(i => i.Key).Select(i => (i.Key, i.Value));
+                var seq2 = map2.Enumerate().OrderBy(i => i.Key).Select(i => (i.Key, i.Value));
+                Assert.Equal(seq1, seq2);
+            }
+            , size: 100_000
+            , print: t => t + "\n" + string.Join("\n", t.V0.Enumerate())
+            , seed: "42ChASl6qJI5");
         }
     }
 }

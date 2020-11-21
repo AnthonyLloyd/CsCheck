@@ -89,7 +89,64 @@ public void DateTime()
 }
 ```
 
-**5.** Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
+**5.** Map AddOrUpdate test.
+```csharp
+static Gen<ImHashMap234<int, int>> GenMap(int upperBound) =>
+    Gen.Int[0, upperBound].ArrayUnique.SelectMany(ks =>
+        Gen.Int.Array[ks.Length].Select(vs =>
+        {
+            var m = ImHashMap234<int, int>.Empty;
+            for (int i = 0; i < ks.Length; i++)
+                m = m.AddOrUpdate(ks[i], vs[i]);
+            return m;
+        }));
+
+[Fact]
+public void AddOrUpdate_Metamorphic()
+{
+    const int upperBound = 100000;
+    Gen.SelectMany(GenMap(upperBound), m =>
+        Gen.Select(Gen.Const(m), Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int))
+    .Sample(t =>
+    {
+        var map1 = t.V0.AddOrUpdate(t.V1, t.V2).AddOrUpdate(t.V3, t.V4);
+        var map2 = t.V1 == t.V3 ? t.V0.AddOrUpdate(t.V3, t.V4) : t.V0.AddOrUpdate(t.V3, t.V4).AddOrUpdate(t.V1, t.V2);
+        var seq1 = map1.Enumerate().OrderBy(i => i.Key).Select(i => (i.Key, i.Value));
+        var seq2 = map2.Enumerate().OrderBy(i => i.Key).Select(i => (i.Key, i.Value));
+        Assert.Equal(seq1, seq2);
+    }
+    , size: 100_000
+    , print: t => t + "\n" + string.Join("\n", t.V0.Enumerate())
+    , seed: "42ChASl6qJI5");
+}
+```
+
+This test compares the items in a Map after two key values are added in an opposite order.
+It shows the use of configuration parameters including print to override the display of the shrunk sample.
+Note how `SelectMany` was used to raise the priority of the Map for shrinking over the keys and values.
+
+This is an example of a metamorphic test which provides very good coverage of functionality.
+More can be learnt about metamorphic tests here [How to specify it!](https://youtu.be/G0NUOst-53U?t=1639).
+
+```
+Failed Tests.IMToolsTests.AddOrUpdate_Metamorphic [45 s]
+Error Message:
+   CsCheck.CsCheckException : Set seed: "2sGfeoVz3gUh" or $env:CsCheck_Seed = "2sGfeoVz3gUh" to reproduce (5 shrinks, 98,371 skipped, 100,000 total)
+Sample: (leaf2{[637]637:591741395; [811]811:49258608}, 42626, 143418877, 70259, -2062982101)
+[637]637:591741395
+[811]811:49258608
+---- Assert.Equal() Failure
+Expected: SelectIPartitionIterator<ValueEntry<Int32, Int32>, ValueTuple<Int32, Int32>> [(637, 591741395), (811, 49258608), (42626, 143418877), (70259, -2062982101)]
+Actual:   SelectIPartitionIterator<ValueEntry<Int32, Int32>, ValueTuple<Int32, Int32>> [(637, 591741395), (811, 49258608), (42626, 143418877)]
+  Stack Trace:
+     at CsCheck.Check.Sample[T](Gen`1 gen, Action`1 assert, String seed, Int32 size, Int32 threads, Func`2 print) in C:\Users\Ant\src\CsCheck\CsCheck\Check.cs:line 119
+   at Tests.IMToolsTests.AddOrUpdate_Metamorphic() in C:\Users\Ant\src\CsCheck\Tests\IMToolsTests.cs:line 66
+----- Inner Stack Trace -----
+   at Tests.IMToolsTests.<>c.<AddOrUpdate_Metamorphic>b__5_1(ValueTuple`5 t) in C:\Users\Ant\src\CsCheck\Tests\IMToolsTests.cs:line 70
+   at CsCheck.Check.<>c__DisplayClass5_0`1.<Sample>b__0(Int32 _) in C:\Users\Ant\src\CsCheck\CsCheck\Check.cs:line 113
+```
+
+**6.** Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
 ```csharp
 [Fact]
 public void Multithreading_DictionarySlim()
@@ -112,7 +169,7 @@ public void Multithreading_DictionarySlim()
 }
 ```
 
-**6.** Performance test of linq expressions checking the results are always the same. The first expression is asserted to be faster than the second.
+**7.** Performance test of linq expressions checking the results are always the same. The first expression is asserted to be faster than the second.
 ```csharp
 [Fact]
 public void Faster_Linq_Random()
@@ -137,7 +194,7 @@ Standard Output Messages:
  The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
  distribution for the null hypothosis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
 
-**7.** Performance test of two different ways of multiplying a matrix for a sample of matrix sizes checking the results are always the same.
+**8.** Performance test of two different ways of multiplying a matrix for a sample of matrix sizes checking the results are always the same.
 An external equal assert is used.
 ```csharp
 [Fact]
@@ -156,7 +213,7 @@ public void Faster_Matrix_Multiply_Range()
 }
 ```
 
-**8.** Performance test of a new Benchmarks Game submission.
+**9.** Performance test of a new Benchmarks Game submission.
 ```csharp
 [Fact]
 public void ReverseComplement_Faster()
@@ -178,7 +235,7 @@ Standard Output Messages:
 25.1%[-5..+6] faster, sigma=6.0 (36 vs 0)
 ```
 
-**9.** Performance test of PrefixVarint vs Varint for a given distribution skew.
+**10.** Performance test of PrefixVarint vs Varint for a given distribution skew.
 Repeat is used as the functions are very quick.
 ```csharp
 void PrefixVarint_Faster(double skew)
@@ -216,7 +273,7 @@ Standard Output Messages:
 25.5%[-26..+14] faster, sigma=50.0 (8,394 vs 3,046)
 ```
 
-**10.** Regression test of portfolio profit and risk.  
+**11.** Regression test of portfolio profit and risk.  
 **Example** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
 **Hash** is used to find and check a hash for a number of results.
 It saves a cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
@@ -250,7 +307,9 @@ More to see in the [Tests](Tests). There are also 1,000+ F# tests using CsCheck 
 
 ### Configuration
 
-Sample and Faster accept configuration parameters. Global defaults can also be set via environment variables.
+Sample and Faster functions accept configuration optional parameters e.g. size: 100_000, seed: "0N0XIzNsQ0O2", print: t => string.Join(", ", t).
+
+Global defaults can also be set via environment variables.
 
 ```powershell
 $env:CsCheck_Size = 10000; dotnet test -c Release --filter Multithreading; rm env:CsCheck*

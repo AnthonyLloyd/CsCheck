@@ -15,11 +15,10 @@
 using System;
 using System.Collections;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace CsCheck
 {
@@ -682,7 +681,7 @@ namespace CsCheck
         {
             IList { Count: <= 12 } l => $"L={l.Count} [{string.Join(", ", l.Cast<object>().Select(Print))}]",
             IList l => $"L={l.Count} [{Print(l[0])}, {Print(l[1])}, {Print(l[2])} ... {Print(l[l.Count - 2])}, {Print(l[l.Count - 1])}]",
-            IEnumerable e => Print(e.Cast<object>().Take(999).ToList()) ,
+            IEnumerable e => Print(e.Cast<object>().Take(999).ToList()),
             _ => o.ToString(),
         };
     }
