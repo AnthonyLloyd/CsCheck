@@ -89,7 +89,7 @@ public void DateTime()
 }
 ```
 
-**5.** Map AddOrUpdate test.
+**5.** Sample Map AddOrUpdate test.
 ```csharp
 static Gen<ImHashMap234<int, int>> GenMap(int upperBound) =>
     Gen.Int[0, upperBound].ArrayUnique.SelectMany(ks =>
@@ -110,7 +110,8 @@ public void AddOrUpdate_Metamorphic()
     .Sample(t =>
     {
         var map1 = t.V0.AddOrUpdate(t.V1, t.V2).AddOrUpdate(t.V3, t.V4);
-        var map2 = t.V1 == t.V3 ? t.V0.AddOrUpdate(t.V3, t.V4) : t.V0.AddOrUpdate(t.V3, t.V4).AddOrUpdate(t.V1, t.V2);
+        var map2 = t.V1 == t.V3 ? t.V0.AddOrUpdate(t.V3, t.V4)
+                                : t.V0.AddOrUpdate(t.V3, t.V4).AddOrUpdate(t.V1, t.V2);
         var seq1 = map1.Enumerate().OrderBy(i => i.Key).Select(i => (i.Key, i.Value));
         var seq2 = map2.Enumerate().OrderBy(i => i.Key).Select(i => (i.Key, i.Value));
         Assert.Equal(seq1, seq2);
@@ -121,12 +122,12 @@ public void AddOrUpdate_Metamorphic()
 }
 ```
 
-This test compares the items in a Map after two key values are added in an opposite order.
+This test compares the items in a Map after two key values are added in opposite order.
 It shows the use of configuration parameters including print to override the display of the shrunk sample.
-Note how `SelectMany` was used to raise the priority of the Map for shrinking over the keys and values.
+Note how `SelectMany` was used to raise the priority of the Map size for shrinking over the keys and values.
 
 This is an example of a metamorphic test which provides very good coverage of functionality.
-More can be learnt about metamorphic tests here [How to specify it!](https://youtu.be/G0NUOst-53U?t=1639).
+More about how useful metamorphic tests can be here: [How to specify it!](https://youtu.be/G0NUOst-53U?t=1639).
 
 ```
 Failed Tests.IMToolsTests.AddOrUpdate_Metamorphic [45 s]
