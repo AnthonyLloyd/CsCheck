@@ -1074,12 +1074,12 @@ namespace CsCheck
         public override (T[], Size) Generate(PCG pcg)
         {
             var l = pcg.Next() & 127U;
-            return Generate(pcg, (int)l, l);
+            return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
         public Gen<T[]> this[Gen<int> length] => new GenF<T[]>(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
-            return Generate(pcg, l, sl.I);
+            return Generate(pcg, l, sl.I << 32);
         });
         public Gen<T[]> this[int length] => new GenF<T[]>(pcg =>
         {
@@ -1116,12 +1116,12 @@ namespace CsCheck
         public override (T[], Size) Generate(PCG pcg)
         {
             var l = pcg.Next() & 127U;
-            return Generate(pcg, (int)l, l);
+            return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
         public Gen<T[]> this[Gen<int> length] => new GenF<T[]>(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
-            return Generate(pcg, l, sl.I);
+            return Generate(pcg, l, sl.I << 32);
         });
         public Gen<T[]> this[int length] => new GenF<T[]>(pcg =>
         {
@@ -1150,12 +1150,12 @@ namespace CsCheck
         public override (IEnumerable<T>, Size) Generate(PCG pcg)
         {
             var l = pcg.Next() & 127U;
-            return Generate(pcg, (int)l, l);
+            return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
         public Gen<IEnumerable<T>> this[Gen<int> length] => new GenF<IEnumerable<T>>(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
-            return Generate(pcg, l, sl.I);
+            return Generate(pcg, l, sl.I << 32);
         });
         public Gen<IEnumerable<T>> this[int length] => new GenF<IEnumerable<T>>(pcg =>
         {
@@ -1184,7 +1184,7 @@ namespace CsCheck
         {
             var l0 = pcg.Next() & 127U;
             var l1 = pcg.Next() & 127U;
-            return Generate(pcg, (int)l0, (int)l1, l0 * l1);
+            return Generate(pcg, (int)l0, (int)l1, ((ulong)(l0 * l1)) << 32);
         }
         public Gen<T[,]> this[int length0, int length1] => new GenF<T[,]>(pcg =>
         {
@@ -1194,7 +1194,7 @@ namespace CsCheck
         {
             var (l0, s0) = length0.Generate(pcg);
             var (l1, s1) = length1.Generate(pcg);
-            return Generate(pcg, l0, l1, s0.I + s1.I);
+            return Generate(pcg, l0, l1, (s0.I + s1.I) << 32);
         });
     }
 
@@ -1218,12 +1218,12 @@ namespace CsCheck
         public override (List<T>, Size) Generate(PCG pcg)
         {
             uint l = pcg.Next() & 127U;
-            return Generate(pcg, (int)l, l);
+            return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
         public Gen<List<T>> this[Gen<int> length] => new GenF<List<T>>(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
-            return Generate(pcg, l, sl.I);
+            return Generate(pcg, l, sl.I << 32);
         });
         public Gen<List<T>> this[int length] => new GenF<List<T>>(pcg =>
         {
@@ -1257,12 +1257,12 @@ namespace CsCheck
         public override (HashSet<T>, Size) Generate(PCG pcg)
         {
             var l = pcg.Next() & 127U;
-            return Generate(pcg, (int)l, l);
+            return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
         public Gen<HashSet<T>> this[Gen<int> length] => new GenF<HashSet<T>>(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
-            return Generate(pcg, l, sl.I);
+            return Generate(pcg, l, sl.I << 32);
         });
         public Gen<HashSet<T>> this[int length] => new GenF<HashSet<T>>(pcg =>
         {
@@ -1305,12 +1305,12 @@ namespace CsCheck
         public override (Dictionary<K, V>, Size) Generate(PCG pcg)
         {
             var l = pcg.Next() & 127U;
-            return Generate(pcg, (int)l, l);
+            return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
         public Gen<Dictionary<K, V>> this[Gen<int> length] => new GenF<Dictionary<K, V>>(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
-            return Generate(pcg, l, sl.I);
+            return Generate(pcg, l, sl.I << 32);
         });
         public Gen<Dictionary<K, V>> this[int length] => new GenF<Dictionary<K, V>>(pcg =>
         {
@@ -1353,12 +1353,12 @@ namespace CsCheck
         public override (SortedDictionary<K, V>, Size) Generate(PCG pcg)
         {
             var l = pcg.Next() & 127U;
-            return Generate(pcg, (int)l, l);
+            return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
         public Gen<SortedDictionary<K, V>> this[Gen<int> length] => new GenF<SortedDictionary<K, V>>(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
-            return Generate(pcg, l, sl.I);
+            return Generate(pcg, l, sl.I << 32);
         });
         public Gen<SortedDictionary<K, V>> this[int length] => new GenF<SortedDictionary<K, V>>(pcg =>
         {

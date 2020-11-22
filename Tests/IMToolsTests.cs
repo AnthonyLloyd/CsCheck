@@ -64,8 +64,7 @@ namespace Tests
         public void AddOrUpdate_Metamorphic()
         {
             const int upperBound = 100000;
-            Gen.SelectMany(GenMap(upperBound), m =>
-                Gen.Select(Gen.Const(m), Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int))
+            Gen.Select(GenMap(upperBound), Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int)
             .Sample(t =>
             {
                 var map1 = t.V0.AddOrUpdate(t.V1, t.V2).AddOrUpdate(t.V3, t.V4);
@@ -83,8 +82,7 @@ namespace Tests
         public void AddOrUpdate_ModelBased()
         {
             const int upperBound = 100000;
-            Gen.SelectMany(GenMap(upperBound), m =>
-                Gen.Select(Gen.Const(m), Gen.Int[0, upperBound], Gen.Int))
+            Gen.Select(GenMap(upperBound), Gen.Int[0, upperBound], Gen.Int)
             .Sample(t =>
             {
                 var dic1 = new Dictionary<int, int>();
