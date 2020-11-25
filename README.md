@@ -105,8 +105,7 @@ static Gen<ImHashMap234<int, int>> GenMap(int upperBound) =>
 public void AddOrUpdate_Metamorphic()
 {
     const int upperBound = 100000;
-    Gen.SelectMany(GenMap(upperBound), m =>
-        Gen.Select(Gen.Const(m), Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int))
+    Gen.Select(GenMap(upperBound), Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int)
     .Sample(t =>
     {
         var map1 = t.V0.AddOrUpdate(t.V1, t.V2).AddOrUpdate(t.V3, t.V4);
@@ -124,7 +123,6 @@ public void AddOrUpdate_Metamorphic()
 
 This test compares the items in a Map after two key values are added in opposite order.
 It shows the use of configuration parameters including print to override the display of the shrunk sample.
-Note how `SelectMany` was used to raise the priority of the Map size for shrinking over the keys and values.
 
 This is an example of a metamorphic test which provides very good coverage of functionality.
 More about how useful metamorphic tests can be here: [How to specify it!](https://youtu.be/G0NUOst-53U?t=1639).
@@ -154,8 +152,7 @@ For this case there is also a very good Model-based approach. This gives the bes
 public void AddOrUpdate_ModelBased()
 {
     const int upperBound = 100000;
-    Gen.SelectMany(GenMap(upperBound), m =>
-        Gen.Select(Gen.Const(m), Gen.Int[0, upperBound], Gen.Int))
+    Gen.Select(GenMap(upperBound), Gen.Int[0, upperBound], Gen.Int)
     .Sample(t =>
     {
         var dic1 = new Dictionary<int, int>();

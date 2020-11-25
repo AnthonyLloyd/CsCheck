@@ -736,28 +736,26 @@ namespace CsCheck
                     : new FloatConverter { I = i }.F)
                 , new Size(i));
         });
-        static float MakeSpecial(uint i)
+        static float MakeSpecial(uint i) => (i & 0xFU) switch
         {
-            return (i & 0xFU) switch
-            {
-                0x0U => float.NaN,
-                0x1U => float.PositiveInfinity,
-                0x2U => float.NegativeInfinity,
-                0x3U => float.MaxValue,
-                0x4U => float.MinValue,
-                0x5U => float.Epsilon,
-                0x6U => -float.Epsilon,
-                0x7U => 1f,
-                0x8U => -1f,
-                0x9U => 2f,
-                0xAU => -2f,
-                0xBU => 3f,
-                0xCU => -3f,
-                0xDU => 4f,
-                0xEU => -4f,
-                _ => 0f,
-            };
-        }
+            0x0U => float.NaN,
+            0x1U => float.PositiveInfinity,
+            0x2U => float.NegativeInfinity,
+            0x3U => float.MaxValue,
+            0x4U => float.MinValue,
+            0x5U => float.Epsilon,
+            0x6U => -float.Epsilon,
+            0x7U => 1f,
+            0x8U => -1f,
+            0x9U => 2f,
+            0xAU => -2f,
+            0xBU => 3f,
+            0xCU => -3f,
+            0xDU => 4f,
+            0xEU => -4f,
+            _ => 0f,
+        };
+
         /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
         public Gen<float> Special = new GenF<float>(pcg =>
         {
@@ -825,28 +823,25 @@ namespace CsCheck
                   : BitConverter.Int64BitsToDouble((long)i))
                 , new Size(i));
         });
-        static double MakeSpecial(ulong i)
+        static double MakeSpecial(ulong i) => (i & 0xFUL) switch
         {
-            return (i & 0xFUL) switch
-            {
-                0x0UL => double.NaN,
-                0x1UL => double.PositiveInfinity,
-                0x2UL => double.NegativeInfinity,
-                0x3UL => double.MaxValue,
-                0x4UL => double.MinValue,
-                0x5UL => double.Epsilon,
-                0x6UL => -double.Epsilon,
-                0x7UL => 1.0,
-                0x8UL => -1.0,
-                0x9UL => 2.0,
-                0xAUL => -2.0,
-                0xBUL => 3.0,
-                0xCUL => -3.0,
-                0xDUL => 4.0,
-                0xEUL => -4.0,
-                _ => 0.0,
-            };
-        }
+            0x0UL => double.NaN,
+            0x1UL => double.PositiveInfinity,
+            0x2UL => double.NegativeInfinity,
+            0x3UL => double.MaxValue,
+            0x4UL => double.MinValue,
+            0x5UL => double.Epsilon,
+            0x6UL => -double.Epsilon,
+            0x7UL => 1.0,
+            0x8UL => -1.0,
+            0x9UL => 2.0,
+            0xAUL => -2.0,
+            0xBUL => 3.0,
+            0xCUL => -3.0,
+            0xDUL => 4.0,
+            0xEUL => -4.0,
+            _ => 0.0,
+        };
         /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
         public Gen<double> Special = new GenF<double>(pcg =>
         {
