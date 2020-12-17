@@ -209,7 +209,7 @@ The performance is raised in an exception if it fails but can also be output if 
 ```
 Tests.CheckTests.Faster_Linq_Random [27ms]
 Standard Output Messages:
-32.2%[-3..+4] faster, sigma=50.0 (2,551 vs 17)
+32.2%[29.4%..36.5%] faster, sigma=50.0 (2,551 vs 17)
 ```
 
  The first number is the estimated median performance improvement with the interquartile range in the square brackets.
@@ -254,7 +254,7 @@ public void ReverseComplement_Faster()
 ```
 Tests.ReverseComplementTests.ReverseComplement_Faster [27s 870ms]
 Standard Output Messages:
-25.1%[-5..+6] faster, sigma=6.0 (36 vs 0)
+25.1%[20.5%..31.6%] faster, sigma=6.0 (36 vs 0)
 ```
 
 ### **10.** Performance test of PrefixVarint vs Varint for a given distribution skew.
@@ -288,11 +288,11 @@ public void PrefixVarint_Faster_Skew10() => PrefixVarint_Faster(10);
 ```
 Tests.ArraySerializerTests.PrefixVarint_Faster_NoSkew [483ms]
 Standard Output Messages:
-51.9%[-3..+3] faster, sigma=50.0 (2,539 vs 13)
+51.9%[48.7%..54.9%] faster, sigma=50.0 (2,539 vs 13)
 
 Tests.ArraySerializerTests.PrefixVarint_Faster_Skew10 [1s 829ms]
 Standard Output Messages:
-25.5%[-26..+14] faster, sigma=50.0 (8,394 vs 3,046)
+25.5%[-1.1%..+39.6%] faster, sigma=50.0 (8,394 vs 3,046)
 ```
 
 ### **11.** Regression test of portfolio profit and risk.  

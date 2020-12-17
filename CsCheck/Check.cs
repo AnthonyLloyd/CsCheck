@@ -705,7 +705,7 @@ namespace CsCheck
         }
         public override string ToString()
         {
-            var result = $"%[-{Median.MADless * 100.0:#0}..+{Median.MADmore * 100.0:#0}]";
+            var result = $"%[{Median.LowerQuartile * 100.0:#0.0}%..{Median.UpperQuartile * 100.0:#0.0}%]";
             result = Median.Median >= 0.0 ? (Median.Median * 100.0).ToString("#0.0") + result + " faster"
                 : (Median.Median * 100.0 / (-1.0 - Median.Median)).ToString("#0.0") + result + " slower";
             return result + $", sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
@@ -720,24 +720,11 @@ namespace CsCheck
     {
         int N, n2 = 2, n3 = 3, n4 = 4;
         double q1, q2, q3, q4, q5;
+        public double Minimum => q1;
+        public double LowerQuartile => q2;
         public double Median => q3;
-        public double MADless => q3 - q2;
-        public double MADmore => q4 - q3;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Adjust(double p, int n1, ref int n2, int n3, double q1, ref double q2, double q3)
-        {
-            double d = N * p - n2;
-            if ((d >= 1.0 && n3 - n2 > 1) || (d <= -1.0 && n1 - n2 < -1))
-            {
-                int ds = Math.Sign(d);
-                double q = q2 + (double)ds / (n3 - n1) * ((n2 - n1 + ds) * (q3 - q2) / (n3 - n2) + (n3 - n2 - ds) * (q2 - q1) / (n2 - n1));
-                q = q1 < q && q < q3 ? q :
-                    ds == 1 ? q2 + (q3 - q2) / (n3 - n2) :
-                    q2 - (q1 - q2) / (n1 - n2);
-                n2 += ds;
-                q2 = q;
-            }
-        }
+        public double UpperQuartile => q4;
+        public double Maximum => q5;
         public void Add(double s)
         {
             switch (++N)
@@ -771,8 +758,23 @@ namespace CsCheck
                     if (s > q5) q5 = s;
                     Adjust(0.25, 1, ref n2, n3, q1, ref q2, q3);
                     Adjust(0.50, n2, ref n3, n4, q2, ref q3, q4);
-                    Adjust(0.75, n2, ref n4, N, q3, ref q4, q5);
+                    Adjust(0.75, n3, ref n4, N, q3, ref q4, q5);
                     return;
+            }
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void Adjust(double p, int n1, ref int n2, int n3, double q1, ref double q2, double q3)
+        {
+            double d = 1 - n2 + (N - 1) * p;
+            if ((d >= 1.0 && n3 - n2 > 1) || (d <= -1.0 && n1 - n2 < -1))
+            {
+                int ds = Math.Sign(d);
+                double q = q2 + (double)ds / (n3 - n1) * ((n2 - n1 + ds) * (q3 - q2) / (n3 - n2) + (n3 - n2 - ds) * (q2 - q1) / (n2 - n1));
+                q = q1 < q && q < q3 ? q :
+                    ds == 1 ? q2 + (q3 - q2) / (n3 - n2) :
+                    q2 - (q1 - q2) / (n1 - n2);
+                n2 += ds;
+                q2 = q;
             }
         }
     }

@@ -21,9 +21,9 @@ CsCheck also makes multithreading, performance and regression testing simple and
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;multithreading;performance;regression;testing</PackageTags>
-        <Version>1.1.1</Version>
+        <Version>1.1.2</Version>
         <PackageReleaseNotes>
-Shift size up 32 for collections. Gives priority to smaller collections.
+Median estimator bug fix and clear interquartile range.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>9.0</LangVersion>
