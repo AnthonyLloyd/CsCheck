@@ -14,7 +14,7 @@ This gives the following advantages:
 - Automatic shrinking. Gen classes are composable with no need for Arb classes. So less boilerplate.
 - Random testing and shrinking are parallelized. This and PCG make it very fast.
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
-- Shrinking can be repeated to give simpler cases for high dimensional problems.
+- Shrinking can be continued later to give simpler cases for high dimensional problems.
 
 See the [comparison](Comparison.md) with other random testing libraries.
 The low ceremony generators make CsCheck a good choice for C#, but the superior automatic shrinking and performance will make it a good choice for other languages too.

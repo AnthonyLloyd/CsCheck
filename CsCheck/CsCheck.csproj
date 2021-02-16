@@ -10,7 +10,7 @@ This gives the following advantages:
 - Automatic shrinking. Gen classes are composable with no need for Arb classes. So less boilerplate.
 - Random testing and shrinking are parallelized. This and PCG make it very fast.
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
-- Shrinking can be repeated to give simpler cases for high dimensional problems.
+- Shrinking can be continued later to give simpler cases for high dimensional problems.
 
 CsCheck also makes multithreading, performance and regression testing simple and fast.
         </Description>
