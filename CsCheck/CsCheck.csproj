@@ -16,7 +16,7 @@ CsCheck also makes multithreading, performance and regression testing simple and
         </Description>
         <Authors>Anthony Lloyd</Authors>
         <Owners>Anthony Lloyd</Owners>
-        <Copyright>Copyright 2020</Copyright>
+        <Copyright>Copyright 2021</Copyright>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
@@ -24,11 +24,15 @@ CsCheck also makes multithreading, performance and regression testing simple and
         <Version>1.1.3</Version>
         <PackageReleaseNotes>
 Decimal invalid values bug fix.
+Strong name the assembly.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>9.0</LangVersion>
         <WarningLevel>5</WarningLevel>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <SignAssembly>true</SignAssembly>
+        <DelaySign>false</DelaySign>
+        <AssemblyOriginatorKeyFile>../SigningKey.snk</AssemblyOriginatorKeyFile>
     </PropertyGroup>
     <ItemGroup>
         <None Include="CsCheck.png" Pack="true" PackagePath="" />
