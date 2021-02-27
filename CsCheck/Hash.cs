@@ -13,13 +13,14 @@
 // limitations under the License.
 
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
+using System.Linq;
 using System.Threading;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace CsCheck
 {
@@ -158,12 +159,15 @@ namespace CsCheck
         public static void WriteDecimal(Stream stream, decimal val)
         {
             var c = new DecimalConverter { D = val };
-            WriteULong(stream, c.I0);
-            WriteULong(stream, c.I1);
+            WriteUShort(stream, (ushort)(c.flags >> 16));
+            WriteUInt(stream, c.hi);
+            WriteUInt(stream, c.mid);
+            WriteUInt(stream, c.lo);
         }
         public static decimal ReadDecimal(Stream stream)
         {
-            return new DecimalConverter { I0 = ReadULong(stream), I1 = ReadULong(stream) }.D;
+            return new DecimalConverter { flags = (uint)ReadUShort(stream) << 16,
+                hi = ReadUInt(stream), mid = ReadUInt(stream), lo = ReadUInt(stream) }.D;
         }
         public static void WriteDateTime(Stream stream, DateTime val)
         {
@@ -464,8 +468,10 @@ namespace CsCheck
         {
             Stream(StreamSerializer.WriteDecimal, StreamSerializer.ReadDecimal, val);
             var c = new DecimalConverter { D = val };
-            AddPrivate(c.I0);
-            AddPrivate(c.I1);
+            AddPrivate(c.flags);
+            AddPrivate(c.hi);
+            AddPrivate(c.mid);
+            AddPrivate(c.lo);
         }
         public void Add(DateTime val)
         {
@@ -816,5 +822,15 @@ namespace CsCheck
             if (position > 0) hash.Add(bytes);
             return hash.GetHashCode();
         }
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct DecimalConverter
+    {
+        [FieldOffset(0)] public uint flags;
+        [FieldOffset(4)] public uint hi;
+        [FieldOffset(8)] public uint mid;
+        [FieldOffset(12)] public uint lo;
+        [FieldOffset(0)] public decimal D;
     }
 }

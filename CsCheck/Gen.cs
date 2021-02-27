@@ -862,20 +862,14 @@ namespace CsCheck
         public DoubleSkew Skew = new();
     }
 
-    [StructLayout(LayoutKind.Explicit)]
-    internal struct DecimalConverter
-    {
-        [FieldOffset(0)] public ulong I0;
-        [FieldOffset(8)] public ulong I1;
-        [FieldOffset(0)] public decimal D;
-    }
-
     public class GenDecimal : Gen<decimal>
     {
         public override (decimal, Size) Generate(PCG pcg)
         {
-            var c = new DecimalConverter { I0 = pcg.Next64(), I1 = pcg.Next64() };
-            return (c.D, new Size(c.I0));
+            var scaleAndSign = (int)pcg.Next(58);
+            var hi = (int)pcg.Next();
+            var d = new decimal((int)pcg.Next(), (int)pcg.Next(), hi, (scaleAndSign & 1) == 1, (byte)(scaleAndSign >> 1));
+            return (d, new Size((ulong)scaleAndSign << 32 + hi));
         }
         public Gen<decimal> this[decimal start, decimal finish]
         {
@@ -893,8 +887,10 @@ namespace CsCheck
         }
         public Gen<decimal> NonNegative = new GenF<decimal>(pcg =>
         {
-            var c = new DecimalConverter { I0 = pcg.Next64(), I1 = pcg.Next64() };
-            return (Math.Abs(c.D), new Size(c.I0));
+            var scale = (byte)pcg.Next(29);
+            var hi = (int)pcg.Next();
+            var d = new decimal((int)pcg.Next(), (int)pcg.Next(), hi, false, scale);
+            return (d, new Size((ulong)scale << 32 + hi));
         });
         public Gen<decimal> Unit = new GenF<decimal>(pcg =>
         {

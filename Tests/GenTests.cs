@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using CsCheck;
 using Xunit;
 
@@ -350,7 +351,10 @@ namespace Tests
         [Fact]
         public void Decimal()
         {
-            Gen.Decimal.Unit.Sample(i => i <= decimal.MaxValue);
+            Gen.Decimal.Sample(i => {
+                var c = new DecimalConverter { D = i };
+                return (c.flags & ~(DecimalConverter.SignMask | DecimalConverter.ScaleMask)) == 0 && (c.flags & DecimalConverter.ScaleMask) <= (28 << 16);
+            });
         }
 
         [Fact]
@@ -532,5 +536,17 @@ namespace Tests
                 Assert.Equal(a1, a2);
             });
         }
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct DecimalConverter
+    {
+        public const int ScaleMask = 0x00FF0000;
+        public const int SignMask = unchecked((int)0x80000000);
+        [FieldOffset(0)] public uint flags;
+        [FieldOffset(4)] public uint hi;
+        [FieldOffset(8)] public uint mid;
+        [FieldOffset(12)] public uint lo;
+        [FieldOffset(0)] public decimal D;
     }
 }
