@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Intrinsics.X86;
 using CsCheck;
 using Microsoft.Collections.Extensions;
 using Xunit;
@@ -271,7 +272,8 @@ namespace Tests
         [Fact]
         public void MedianEstimator()
         {
-            Gen.Double[-1000.0,1000.0].Array[5,100].Sample(values =>
+            Gen.Double[-1000.0, 1000.0].Array[5, 100]
+            .Sample(values =>
             {
                 var expected = new P2QuantileEstimator(0.5);
                 foreach (var v in values) expected.AddValue(v);
@@ -279,6 +281,57 @@ namespace Tests
                 foreach (var v in values) actual.Add(v);
                 Assert.Equal(expected.GetQuantile(), actual.Median);
             });
+        }
+
+        [Fact]
+        public void ConcurrentBag_ModelBased()
+        {
+            // Model-based testing of a ConcurrentBag using a List as the model.
+            // The operations are run in a random sequence on an initial random ConcurrencyBag checking that the bag and model are always equal.
+            // If not the failing sequence will be shrunk down to the shortest and simplest and simplest initial bag.
+            Gen.Int.List.Select(l => (new ConcurrentBag<int>(l), l))
+            .SampleModelBased(
+                // Equality check of bag vs list.
+                equal: (bag, list) => bag.OrderBy(i => i).SequenceEqual(list.OrderBy(i => i)),
+                // Add operation - Gen used to create the data required and this is turned into an Action on the bag and list.
+                Gen.Int.Select<int, Action<ConcurrentBag<int>, List<int>>>(i => (bag, list) =>
+                {
+                    bag.Add(i);
+                    list.Add(i);
+                }),
+                // TryTake operation - An example of an operation that doesn't need any data. This operation also has a post assert.
+                Gen.Const<Action<ConcurrentBag<int>, List<int>>>((bag, list) =>
+                {
+                    Assert.Equal(bag.TryTake(out var i), list.Remove(i));
+                })
+                // Other operations ...
+            );
+        }
+
+        [Fact]
+        public void ConcurrentBag_Concurrent()
+        {
+            // Concurrency testing of a ConcurrentBag.
+            // A random list of operations are run in parallel. The result is compared against the result of the possible sequential permutations.
+            // At least one of these permutations result must be equal to it for the concurrency to have been linearized successfully.
+            // If not the failing list will be shrunk down to the shortest and simplest and simplest initial bag.
+            Gen.Int.List.Select(l => new ConcurrentBag<int>(l))
+            .SampleConcurrent(
+                // Equality check of bag vs bag.
+                equal: (bag1, bag2) => bag1.OrderBy(i => i).SequenceEqual(bag2.OrderBy(i => i)),
+                seed: "hi",
+                // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
+                Gen.Int.Select<int, Action<ConcurrentBag<int>>>(i => bag =>
+                {
+                    bag.Add(i);
+                }),
+                // TryTake operation - An example of an operation that doesn't need any data.
+                Gen.Const<Action<ConcurrentBag<int>>>(bag =>
+                {
+                    bag.TryTake(out var i);
+                })
+                // Other operations ...
+            );
         }
     }
 

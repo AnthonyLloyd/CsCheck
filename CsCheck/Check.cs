@@ -14,6 +14,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -303,6 +304,22 @@ namespace CsCheck
                 throw e.InnerException; // remove seed info as it's not reproducible.
             }
         }
+
+        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, Func<Actual, Model, bool> equal, params Gen<Action<Actual, Model>>[] operations)
+        {
+        }
+
+        public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal,
+            string seed = null, int size = -1, int threads = -1, params Gen<Action<T>>[] operations)
+        {
+        }
+
+        public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, params Gen<Action<T>>[] operations)
+            => SampleConcurrent(initial, equal, operations: operations);
+
+        public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, string seed, params Gen<Action<T>>[] operations)
+            => SampleConcurrent(initial, equal, seed: seed, operations: operations);
+
         /// <summary>Assert actual is in line with expected using a chi-squared test to 6 sigma.</summary>
         public static void ChiSquared(int[] expected, int[] actual)
         {
