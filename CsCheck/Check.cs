@@ -318,7 +318,7 @@ namespace CsCheck
             => SampleConcurrent(initial, equal, operations: operations);
 
         public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, string seed, params Gen<Action<T>>[] operations)
-            => SampleConcurrent(initial, equal, seed: seed, operations: operations);
+            => SampleConcurrent(initial, equal, seed, -1, -1, operations: operations);
 
         /// <summary>Assert actual is in line with expected using a chi-squared test to 6 sigma.</summary>
         public static void ChiSquared(int[] expected, int[] actual)
