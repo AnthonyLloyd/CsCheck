@@ -29,10 +29,19 @@ namespace CsCheck
         public CsCheckException(string message, Exception exception) : base(message, exception) { }
     }
 
+    public class SampleOptions<T>
+    {
+        public static SampleOptions<T> Default = new();
+        public string Seed = Check.Seed;
+        public int Size = Check.Size;
+        public int Threads = Check.Threads;
+        public Func<T, string> Print = t => Check.Print(t);
+    }
+
     public static class Check
     {
         public static int Size = 100;
-        public static int Threads = -1;
+        public static int Threads = Environment.ProcessorCount;
         public static string Seed;
         public static double Sigma;
 
@@ -47,8 +56,9 @@ namespace CsCheck
             var sigma = Environment.GetEnvironmentVariable("CsCheck_Sigma");
             if (!string.IsNullOrWhiteSpace(sigma)) Sigma = double.Parse(sigma);
         }
+
         /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-        public static void Sample<T>(this Gen<T> gen, Action<T> assert, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+        public static void Sample<T>(this Gen<T> gen, SampleOptions<T> options, Action<T> assert)
         {
             PCG minPCG = null;
             ulong minState = 0UL;
@@ -56,11 +66,9 @@ namespace CsCheck
             T minT = default;
             Exception minException = null;
             int shrinks = -1;
-            if (size == -1) size = Size;
-            if (seed is null) seed = Seed;
-            if (seed is not null)
+            if (options.Seed is not null)
             {
-                var pcg = PCG.Parse(seed);
+                var pcg = PCG.Parse(options.Seed);
                 ulong state = pcg.State;
                 Size s = null;
                 T t = default;
@@ -81,8 +89,8 @@ namespace CsCheck
             }
             var lockObj = new object();
             int skipped = 0;
-            if (threads == -1) threads = Threads;
-            Parallel.For(0, seed is null ? size : size - 1, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
+            Parallel.For(0, options.Seed is null ? options.Size : options.Size - 1,
+                new ParallelOptions { MaxDegreeOfParallelism = options.Threads }, _ =>
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
@@ -115,15 +123,30 @@ namespace CsCheck
             if (minPCG != null)
             {
                 var seedString = minPCG.ToString(minState);
-                var tString = print is null ? Print(minT) : print(minT);
+                var tString = options.Print(minT);
                 if (tString.Length > 500) tString = tString.Substring(0, 500) + " ...";
                 throw new CsCheckException(
-                    $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)\nSample: {tString}"
+                    $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {options.Size:#,0} total)\nSample: {tString}"
                     , minException);
             }
         }
+
+        /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        public static void Sample<T>(this Gen<T> gen, Action<T> assert, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+        {
+            var options = new SampleOptions<T>();
+            if (seed is not null) options.Seed = seed;
+            if (size != -1) options.Size = size;
+            if (threads != -1) options.Threads = threads;
+            if (print is not null) options.Print = print;
+            Sample(gen, options, assert);
+        }
+
+        /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        public static void Sample<T>(this Gen<T> gen, Action<T> assert) => Sample(gen, SampleOptions<T>.Default, assert);
+
         /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-        public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+        public static void Sample<T>(this Gen<T> gen, SampleOptions<T> options, Func<T, bool> predicate)
         {
             PCG minPCG = null;
             ulong minState = 0UL;
@@ -131,12 +154,9 @@ namespace CsCheck
             T minT = default;
             Exception minException = null;
             int shrinks = -1;
-            if (size == -1) size = Size;
-            if (seed is null) seed = Seed;
-            if (seed is not null)
+            if (options.Seed is not null)
             {
-                size--;
-                var pcg = PCG.Parse(seed);
+                var pcg = PCG.Parse(options.Seed);
                 ulong state = pcg.State;
                 Size s = null;
                 T t = default;
@@ -165,8 +185,8 @@ namespace CsCheck
 
             var lockObj = new object();
             int skipped = 0;
-            if (threads == -1) threads = Threads;
-            Parallel.For(0, seed is null ? size : size - 1, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
+            Parallel.For(0, options.Seed is null ? options.Size : options.Size - 1,
+                new ParallelOptions { MaxDegreeOfParallelism = options.Threads }, _ =>
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
@@ -212,23 +232,36 @@ namespace CsCheck
             if (minPCG != null)
             {
                 var seedString = minPCG.ToString(minState);
-                var tString = print is null ? Print(minT) : print(minT);
+                var tString = options.Print(minT);
                 if (tString.Length > 500) tString = tString.Substring(0, 500) + " ...";
                 throw new CsCheckException(
-                    $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)\nSample: {tString}"
+                    $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {options.Size:#,0} total)\nSample: {tString}"
                     , minException);
             }
         }
+
+        /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+        {
+            var options = new SampleOptions<T>();
+            if (seed is not null) options.Seed = seed;
+            if (size != -1) options.Size = size;
+            if (threads != -1) options.Threads = threads;
+            if (print is not null) options.Print = print;
+            Sample(gen, options, predicate);
+        }
+
+        /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate) => Sample(gen, SampleOptions<T>.Default, predicate);
+
         /// <summary>Sample the gen once calling the assert.</summary>
-        public static void SampleOne<T>(this Gen<T> gen, Action<T> assert, string seed = null)
-        {
-            Sample(gen, assert, seed, 1, 1);
-        }
+        public static void SampleOne<T>(this Gen<T> gen, Action<T> assert, string seed = null, Func<T, string> print = null)
+            => Sample(gen, assert, seed, 1, 1, print);
+
         /// <summary>Sample the gen once calling the predicate.</summary>
-        public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null)
-        {
-            Sample(gen, predicate, seed, 1, 1);
-        }
+        public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, Func<T, string> print = null)
+            => Sample(gen, predicate, seed, 1, 1, print);
+
         /// <summary>Sample the gen and assert pairs each time across multiple threads. Useful for multithreading tests.</summary>
         public static void Sample<T1, T2>(Gen<T1> gen1, Action<T1> assert1, Gen<T2> gen2, Action<T2> assert2,
             string seed = null, int size = -1, int threads = -1)
@@ -305,8 +338,8 @@ namespace CsCheck
             }
         }
 
-        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, Func<Actual, Model, bool> equal,
-            params Gen<Action<Actual, Model>>[] operations)
+        static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, SampleOptions<(Actual,Model)> options,
+            Func<Actual, Model, bool> equal, params Gen<Action<Actual, Model>>[] operations)
         {
             initial.Select(Gen.OneOf(operations).Array)
             .Sample(g =>
@@ -315,16 +348,17 @@ namespace CsCheck
                 foreach (var operation in g.V1)
                     operation(actual, model);
                 return equal(actual, model);
-            });
+            }, options.Seed, options.Size, options.Threads,
+            x => "operations: " + x.V1.Length + " " + options.Print(x.V0));
         }
 
-        public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal,
-            string seed = null, int size = -1, int threads = -1, Func<T, string> print = null, params Gen<Action<T>>[] operations)
+        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial,
+            Func<Actual, Model, bool> equal, params Gen<Action<Actual, Model>>[] operations)
+            => SampleModelBased(initial, SampleOptions<(Actual, Model)>.Default, equal, operations);
+
+        public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options,
+            Func<T, T, bool> equal, params Gen<Action<T>>[] operations)
         {
-            if (seed is null) seed = Seed;
-            if (size == -1) size = Size;
-            if (threads == -1) threads = Threads;
-            if (threads == -1) threads = Environment.ProcessorCount;
             Gen.Create(pcg =>
             {
                 var stream = pcg.Stream;
@@ -332,7 +366,7 @@ namespace CsCheck
                 var (t, size) = initial.Generate(pcg);
                 return ((t, stream, seed), size);
             })
-            .Select(Gen.OneOf(operations).Array, Gen.Int[2, threads])
+            .Select(Gen.OneOf(operations).Array, Gen.Int[2, options.Threads])
             .Sample(g =>
             {
                 var ((t, stream, seed), operations, concurrency) = g;
@@ -355,8 +389,8 @@ namespace CsCheck
                     }
                 });
                 return linearizable;
-            }, seed, size, threads: 1, x => "initial: " + (print == null ? Print(x.V0.t) : print(x.V0.t))
-                                            + " operations: " + x.V1.Length + " threads: " + x.V2);
+            }, options.Seed, options.Size, threads: 1,
+            x => "operations: " + x.V1.Length + " threads: " + x.V2 + " initial: " + options.Print(x.V0.t));
         }
 
         static IEnumerable<T[]> Permutations<T>(T[] sequence, int[] threadIds)
@@ -365,10 +399,7 @@ namespace CsCheck
         }
 
         public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, params Gen<Action<T>>[] operations)
-            => SampleConcurrent(initial, equal, null, -1, -1, null, operations: operations);
-
-        public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, string seed, params Gen<Action<T>>[] operations)
-            => SampleConcurrent(initial, equal, seed, -1, -1, operations: operations);
+            => SampleConcurrent(initial, SampleOptions<T>.Default, equal, operations);
 
         /// <summary>Assert actual is in line with expected using a chi-squared test to 6 sigma.</summary>
         public static void ChiSquared(int[] expected, int[] actual)
@@ -744,7 +775,7 @@ namespace CsCheck
             }
         }
 
-        static string Print(object o) => o switch
+        internal static string Print(object o) => o switch
         {
             IList { Count: <= 12 } l => $"L={l.Count} [{string.Join(", ", l.Cast<object>().Select(Print))}]",
             IList l => $"L={l.Count} [{Print(l[0])}, {Print(l[1])}, {Print(l[2])} ... {Print(l[l.Count - 2])}, {Print(l[l.Count - 1])}]",

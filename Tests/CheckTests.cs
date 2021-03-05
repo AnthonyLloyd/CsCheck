@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Intrinsics.X86;
 using CsCheck;
 using Microsoft.Collections.Extensions;
 using Xunit;
@@ -316,7 +315,7 @@ namespace Tests
             // At least one of these permutations result must be equal to it for the concurrency to have been linearized successfully.
             // If not the failing list will be shrunk down to the shortest and simplest and simplest initial bag.
             Gen.Int.List.Select(l => new ConcurrentBag<int>(l))
-            .SampleConcurrent(
+            .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Threads = 10 },
                 // Equality check of bag vs bag.
                 equal: (bag1, bag2) => bag1.OrderBy(i => i).SequenceEqual(bag2.OrderBy(i => i)),
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
