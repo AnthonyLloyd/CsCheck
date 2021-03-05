@@ -308,22 +308,64 @@ namespace CsCheck
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, Func<Actual, Model, bool> equal,
             params Gen<Action<Actual, Model>>[] operations)
         {
-            Sample(initial.Select(Gen.OneOf(operations).Array), g =>
+            initial.Select(Gen.OneOf(operations).Array)
+            .Sample(g =>
             {
-                var (a, m) = g.V0;
+                var (actual, model) = g.V0;
                 foreach (var operation in g.V1)
-                    operation(a, m);
-                return equal(a, m);
+                    operation(actual, model);
+                return equal(actual, model);
             });
         }
 
         public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal,
-            string seed = null, int size = -1, int threads = -1, params Gen<Action<T>>[] operations)
+            string seed = null, int size = -1, int threads = -1, Func<T, string> print = null, params Gen<Action<T>>[] operations)
         {
+            if (seed is null) seed = Seed;
+            if (size == -1) size = Size;
+            if (threads == -1) threads = Threads;
+            if (threads == -1) threads = Environment.ProcessorCount;
+            Gen.Create(pcg =>
+            {
+                var stream = pcg.Stream;
+                var seed = pcg.Seed;
+                var (t, size) = initial.Generate(pcg);
+                return ((t, stream, seed), size);
+            })
+            .Select(Gen.OneOf(operations).Array, Gen.Int[2, threads])
+            .Sample(g =>
+            {
+                var ((t, stream, seed), operations, concurrency) = g;
+                var threadIds = new int[operations.Length];
+                Parallel.For(0, operations.Length, new ParallelOptions { MaxDegreeOfParallelism = concurrency }, i =>
+                {
+                    threadIds[i] = Thread.CurrentThread.ManagedThreadId;
+                    operations[i](t);
+                });
+                bool linearizable = true;// false;
+                Parallel.ForEach(Permutations(operations, threadIds), (sequence, state) =>
+                {
+                    var pt = initial.Generate(new PCG(stream, seed)).Item1;
+                    foreach (var operation in sequence)
+                        operation(pt);
+                    if (equal(t, pt))
+                    {
+                        linearizable = true;
+                        state.Stop();
+                    }
+                });
+                return linearizable;
+            }, seed, size, threads: 1, x => "initial: " + (print == null ? Print(x.V0.t) : print(x.V0.t))
+                                            + " operations: " + x.V1.Length + " threads: " + x.V2);
+        }
+
+        static IEnumerable<T[]> Permutations<T>(T[] sequence, int[] threadIds)
+        {
+            yield return sequence;
         }
 
         public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, params Gen<Action<T>>[] operations)
-            => SampleConcurrent(initial, equal, operations: operations);
+            => SampleConcurrent(initial, equal, null, -1, -1, null, operations: operations);
 
         public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, string seed, params Gen<Action<T>>[] operations)
             => SampleConcurrent(initial, equal, seed, -1, -1, operations: operations);

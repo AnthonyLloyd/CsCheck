@@ -319,7 +319,6 @@ namespace Tests
             .SampleConcurrent(
                 // Equality check of bag vs bag.
                 equal: (bag1, bag2) => bag1.OrderBy(i => i).SequenceEqual(bag2.OrderBy(i => i)),
-                seed: "hi",
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
                 Gen.Int.Select<int, Action<ConcurrentBag<int>>>(i => bag =>
                 {

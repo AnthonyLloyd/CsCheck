@@ -27,6 +27,7 @@ namespace CsCheck
         readonly ulong Inc;
         public ulong State { get; private set; }
         public uint Stream => (uint)(Inc >> 1);
+        public ulong Seed => State - Inc;
         PCG(ulong inc, ulong state)
         {
             Inc = inc;
