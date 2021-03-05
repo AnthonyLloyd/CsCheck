@@ -305,8 +305,20 @@ namespace CsCheck
             }
         }
 
-        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, Func<Actual, Model, bool> equal, params Gen<Action<Actual, Model>>[] operations)
+        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, Func<Actual, Model, bool> equal,
+            params Gen<Action<Actual, Model>>[] operations)
         {
+            Sample(initial.Select(Gen.OneOf(operations).Array), g =>
+            {
+                var (a, m) = g.V0;
+                if (!equal(a, m)) return false;
+                foreach (var operation in g.V1)
+                {
+                    operation(a, m);
+                    if (!equal(a, m)) return false;
+                }
+                return true;
+            });
         }
 
         public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal,
