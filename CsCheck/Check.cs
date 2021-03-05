@@ -311,13 +311,9 @@ namespace CsCheck
             Sample(initial.Select(Gen.OneOf(operations).Array), g =>
             {
                 var (a, m) = g.V0;
-                if (!equal(a, m)) return false;
                 foreach (var operation in g.V1)
-                {
                     operation(a, m);
-                    if (!equal(a, m)) return false;
-                }
-                return true;
+                return equal(a, m);
             });
         }
 
