@@ -366,7 +366,7 @@ namespace CsCheck
                 var (t, size) = initial.Generate(pcg);
                 return ((t, stream, seed), size);
             })
-            .Select(Gen.OneOf(operations).Array, Gen.Int[2, options.Threads])
+            .Select(Gen.OneOf(operations).Array[5, 10], Gen.Int[2, options.Threads])
             .Sample(g =>
             {
                 var ((t, stream, seed), operations, concurrency) = g;
@@ -376,8 +376,8 @@ namespace CsCheck
                     threadIds[i] = Thread.CurrentThread.ManagedThreadId;
                     operations[i](t);
                 });
-                bool linearizable = true;// false;
-                Parallel.ForEach(Permutations(operations, threadIds), (sequence, state) =>
+                bool linearizable = false;
+                Parallel.ForEach(Statistics.Permutations(threadIds, operations), (sequence, state) =>
                 {
                     var pt = initial.Generate(new PCG(stream, seed)).Item1;
                     foreach (var operation in sequence)
@@ -391,11 +391,6 @@ namespace CsCheck
                 return linearizable;
             }, options.Seed, options.Size, threads: 1,
             x => "operations: " + x.V1.Length + " threads: " + x.V2 + " initial: " + options.Print(x.V0.t));
-        }
-
-        static IEnumerable<T[]> Permutations<T>(T[] sequence, int[] threadIds)
-        {
-            yield return sequence;
         }
 
         public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, params Gen<Action<T>>[] operations)
@@ -811,6 +806,72 @@ namespace CsCheck
         public void Output(Action<string> output)
         {
             output(ToString());
+        }
+    }
+
+    public class Statistics
+    {
+        public static void Normalize(int[] ids)
+        {
+            int nextId = 1;
+            var newids = new Dictionary<int, int>();
+            for (int i = 0; i < ids.Length; i++)
+            {
+                int threadId = ids[i];
+                if (!newids.TryGetValue(threadId, out int normId))
+                {
+                    newids.Add(threadId, normId = nextId);
+                    nextId <<= 1;
+                }
+                ids[i] = normId;
+            }
+        }
+
+        public static IEnumerable<T[]> Permutations<T>(int[] threadIds, T[] sequence)
+        {
+            yield return sequence;
+            Normalize(threadIds);
+            List<(int, int[], T[])> next = new() { (1, threadIds, sequence) };
+            while (next.Count != 0)
+            {
+                var current = next;
+                next = new();
+                foreach (var (start, ids, seq) in current)
+                {
+                    for (int i = start; i < ids.Length; i++)
+                    {
+                        int idi = ids[i];
+                        int mask = idi;
+                        var lastIds = ids;
+                        var lastSeq = seq;
+                        int u = i;
+                        int idu;
+                        while (u-- >= start && (mask & (idu = ids[u])) == 0)
+                        {
+                            mask |= idu;
+                            (lastIds, lastSeq) = CopySwap(lastIds, lastSeq, u);
+                            yield return lastSeq;
+                            if (u + 2 < ids.Length) next.Add((u + 2, lastIds, lastSeq));
+                        }
+                    }
+                }
+            }
+
+        }
+
+        public static (int[], T[]) CopySwap<T>(int[] ids, T[] seq, int u)
+        {
+            var newIds = new int[ids.Length];
+            Array.Copy(ids, newIds, ids.Length);
+            var id = newIds[u];
+            newIds[u] = newIds[u + 1];
+            newIds[u + 1] = id;
+            var newSeq = new T[seq.Length];
+            Array.Copy(seq, newSeq, seq.Length);
+            var s = newSeq[u];
+            newSeq[u] = newSeq[u + 1];
+            newSeq[u + 1] = s;
+            return (newIds, newSeq);
         }
     }
 
