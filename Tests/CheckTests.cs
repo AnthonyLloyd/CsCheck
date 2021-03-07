@@ -310,15 +310,16 @@ namespace Tests
             );
         }
 
-        [Fact(Skip = "Not working mate")]
+        [Fact]
         public void ConcurrentBag_Concurrent()
         {
             // Concurrency testing of a ConcurrentBag.
             // A random list of operations are run in parallel. The result is compared against the result of the possible sequential permutations.
             // At least one of these permutations result must be equal to it for the concurrency to have been linearized successfully.
             // If not the failing list will be shrunk down to the shortest and simplest and simplest initial bag.
-            Gen.Int.List.Select(l => new ConcurrentBag<int>(l))
-            .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Threads = 2, Size = 1_000_000 },
+            //Gen.Int.List[0].Select(l => new ConcurrentBag<int>(l))
+            Gen.Const(new ConcurrentBag<int>(new int[] { 12, 76, 35 }))
+            .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Size = 100 },
                 // Equality check of bag vs bag.
                 equal: (bag1, bag2) => bag1.OrderBy(i => i).SequenceEqual(bag2.OrderBy(i => i)),
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
@@ -405,10 +406,69 @@ namespace Tests
             });
         }
 
-        //foreach (var a in Statistics.Permutations(new int[] { 1, 2, 3 }, new int[] { 1, 2, 3 }))
-        //{
-        //    writeLine(string.Join(", ", a));
-        //}
+        [Fact]
+        public void Perm_1212()
+        {
+            Check(new int[] { 1, 2, 1, 2 }, new[] {
+                new int[] { 1, 2, 1, 2 },
+                new int[] { 2, 1, 1, 2 },
+                new int[] { 1, 1, 2, 2 },
+                new int[] { 1, 2, 2, 1 },
+                new int[] { 2, 1, 2, 1 },
+            });
+        }
+
+        [Fact]
+        public void Perm_1231()
+        {
+            Check(new int[] { 1, 2, 3, 1 }, new[] {
+                new int[] { 1, 2, 3, 1 },
+                new int[] { 2, 1, 3, 1 },
+                new int[] { 1, 3, 2, 1 },
+                new int[] { 3, 1, 2, 1 },
+                new int[] { 1, 2, 1, 3 },
+                new int[] { 1, 1, 2, 3 },
+                new int[] { 2, 3, 1, 1 },
+                new int[] { 2, 1, 1, 3 },
+                new int[] { 1, 3, 1, 2 },
+                new int[] { 3, 2, 1, 1 },
+                new int[] { 3, 1, 1, 2 },
+                new int[] { 1, 1, 3, 2 },
+            });
+        }
+
+        [Fact]
+        public void Perm_1232()
+        {
+            Check(new int[] { 1, 2, 3, 2 }, new[] {
+                new int[] { 1, 2, 3, 2 },
+                new int[] { 2, 1, 3, 2 },
+                new int[] { 1, 3, 2, 2 },
+                new int[] { 3, 1, 2, 2 },
+                new int[] { 1, 2, 2, 3 },
+                new int[] { 2, 3, 1, 2 },
+                new int[] { 2, 1, 2, 3 },
+                new int[] { 2, 2, 1, 3 },
+                new int[] { 3, 2, 1, 2 },
+                new int[] { 2, 3, 2, 1 },
+                new int[] { 2, 2, 3, 1 },
+                new int[] { 3, 2, 2, 1 },
+            });
+        }
+
+        [Fact]
+        public void Perm_No_Repeat()
+        {
+            Gen.Int[0, 5].Array[0, 10]
+            .Sample(a =>
+            {
+                var a2 = new int[a.Length];
+                Array.Copy(a, a2, a.Length);
+                var ps = Statistics.Permutations(a, a2).ToList();
+                var ss = new HashSet<int[]>(ps, IntArrayComparer.Default);
+                Assert.Equal(ss.Count, ps.Count);
+            });
+        }
     }
 
     public class IntArrayComparer : IEqualityComparer<int[]>, IComparer<int[]>
@@ -432,9 +492,15 @@ namespace Tests
             return true;
         }
 
-        public int GetHashCode([DisallowNull] int[] obj)
+        public int GetHashCode([DisallowNull] int[] a)
         {
-            throw new NotImplementedException();
+            unchecked
+            {
+                int hash = (int)2166136261;
+                foreach (int i in a)
+                    hash = (hash * 16777619) ^ i;
+                return hash;
+            }
         }
     }
 

@@ -366,7 +366,7 @@ namespace CsCheck
                 var (t, size) = initial.Generate(pcg);
                 return ((t, stream, seed), size);
             })
-            .Select(Gen.OneOf(operations).Array[5, 10], Gen.Int[2, options.Threads])
+            .Select(Gen.OneOf(operations).Array, Gen.Int[2, options.Threads])
             .Sample(g =>
             {
                 var ((t, stream, seed), operations, concurrency) = g;
