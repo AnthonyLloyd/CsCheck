@@ -366,18 +366,20 @@ namespace CsCheck
                 var (t, size) = initial.Generate(pcg);
                 return ((t, stream, seed), size);
             })
-            .Select(Gen.OneOf(operations).Array, Gen.Int[2, options.Threads])
+            .Select(Gen.OneOf(operations).Array[2, 10]
+                    .SelectMany(ops => Gen.Int[2, Math.Min(options.Threads, ops.Length)], (ops, threads) => (ops, threads))
+            )
             .Sample(g =>
             {
-                var ((t, stream, seed), operations, concurrency) = g;
+                var ((t, stream, seed), (operations, threads)) = g;
                 var threadIds = new int[operations.Length];
-                Parallel.For(0, operations.Length, new ParallelOptions { MaxDegreeOfParallelism = concurrency }, i =>
+                Parallel.For(0, operations.Length, new ParallelOptions { MaxDegreeOfParallelism = threads }, i =>
                 {
                     threadIds[i] = Thread.CurrentThread.ManagedThreadId;
                     operations[i](t);
                 });
                 bool linearizable = false;
-                Parallel.ForEach(Statistics.Permutations(threadIds, operations), (sequence, state) =>
+                var x = Parallel.ForEach(ThreadStats.Permutations(threadIds, operations), (sequence, state) =>
                 {
                     var pt = initial.Generate(new PCG(stream, seed)).Item1;
                     foreach (var operation in sequence)
@@ -385,12 +387,12 @@ namespace CsCheck
                     if (equal(t, pt))
                     {
                         linearizable = true;
-                        state.Stop();
+                        //state.Stop();
                     }
                 });
                 return linearizable;
             }, options.Seed, options.Size, threads: 1,
-            x => "operations: " + x.V1.Length + " threads: " + x.V2 + " initial: " + options.Print(x.V0.t));
+            x => x.V1.ops.Length + " operations on " + x.V1.threads + " threads. Final state = " + options.Print(x.V0.t));
         }
 
         public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, params Gen<Action<T>>[] operations)
@@ -809,7 +811,7 @@ namespace CsCheck
         }
     }
 
-    public class Statistics
+    public class ThreadStats
     {
         public static void Normalize(int[] ids)
         {
@@ -859,7 +861,7 @@ namespace CsCheck
 
         }
 
-        public static (int[], T[]) CopySwap<T>(int[] ids, T[] seq, int u)
+        static (int[], T[]) CopySwap<T>(int[] ids, T[] seq, int u)
         {
             var newIds = new int[ids.Length];
             Array.Copy(ids, newIds, ids.Length);

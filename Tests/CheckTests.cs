@@ -207,26 +207,6 @@ namespace Tests
         }
 
         [Fact]
-        public void Multithreading_DictionarySlim()
-        {
-            var d = new DictionarySlim<int, int>();
-            Check.Sample(
-                Gen.Int[1, 10],
-                i =>
-                {
-                    ref var v = ref d.GetOrAddValueRef(i);
-                    v = 1 - v;
-                },
-                Gen.Int[1, 10],
-                i =>
-                {
-                    d.TryGetValue(i, out var v);
-                    Assert.True(v == 0 || v == 1);
-                }
-            );
-        }
-
-        [Fact]
         public void Multithreading_ConcurrentDictionary()
         {
             var d = new ConcurrentDictionary<int, int>();
@@ -319,17 +299,23 @@ namespace Tests
             // If not the failing list will be shrunk down to the shortest and simplest and simplest initial bag.
             //Gen.Int.List[0].Select(l => new ConcurrentBag<int>(l))
             Gen.Const(new ConcurrentBag<int>(new int[] { 12, 76, 35 }))
-            .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Size = 100 },
+            .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Size = 100/*, Seed = "9-WYYEgqk3b1"*/ },
                 // Equality check of bag vs bag.
-                equal: (bag1, bag2) => bag1.OrderBy(i => i).SequenceEqual(bag2.OrderBy(i => i)),
+                equal: (bag1, bag2) => {
+                    var equal = bag1.OrderBy(i => i).SequenceEqual(bag2.OrderBy(i => i));
+                    //writeLine($"bag1: {string.Join(", ", bag1.OrderBy(i => i))}\nbag2: {string.Join(", ", bag2.OrderBy(i => i))}\nequal: {equal}");
+                    return equal;
+                },
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
                 Gen.Int.Select<int, Action<ConcurrentBag<int>>>(i => bag =>
                 {
+                    //writeLine($"Add({i})");
                     bag.Add(i);
                 }),
                 // TryTake operation - An example of an operation that doesn't need any data.
                 Gen.Const<Action<ConcurrentBag<int>>>(bag =>
                 {
+                    //writeLine($"TryTake()");
                     bag.TryTake(out var i);
                 })
             // Other operations ...
@@ -337,16 +323,13 @@ namespace Tests
         }
     }
 
-    public class StatisticsTests
+    public class ThreadStatsTests
     {
-        readonly Action<string> writeLine;
-        public StatisticsTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
-
         [Fact]
         public void Normalize()
         {
             var ids = new int[] { 123, 99, 123, 123, 7, 99, 12, 123, 7, 12 };
-            Statistics.Normalize(ids);
+            ThreadStats.Normalize(ids);
             Assert.Equal(new[] { 1, 2, 1, 1, 4, 2, 8, 1, 4, 8 }, ids);
         }
 
@@ -354,11 +337,11 @@ namespace Tests
         {
             var seq = new int[ids.Length];
             Array.Copy(ids, seq, ids.Length);
-            Assert.Equal(Statistics.Permutations(ids, seq), expected, IntArrayComparer.Default);
+            Assert.Equal(ThreadStats.Permutations(ids, seq), expected, IntArrayComparer.Default);
         }
 
         [Fact]
-        public void Perm_11()
+        public void Permutations_11()
         {
             Check(new int[] { 1, 1 }, new[] {
                 new int[] { 1, 1 },
@@ -366,7 +349,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Perm_12()
+        public void Permutations_12()
         {
             Check(new int[] { 1, 2 }, new[] {
                 new int[] { 1, 2 },
@@ -375,7 +358,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Perm_112()
+        public void Permutations_112()
         {
             Check(new int[] { 1, 1, 2 }, new[] {
                 new int[] { 1, 1, 2 },
@@ -384,7 +367,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Perm_121()
+        public void Permutations_121()
         {
             Check(new int[] { 1, 2, 1 }, new[] {
                 new int[] { 1, 2, 1 },
@@ -394,7 +377,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Perm_123()
+        public void Permutations_123()
         {
             Check(new int[] { 1, 2, 3 }, new[] {
                 new int[] { 1, 2, 3 },
@@ -407,7 +390,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Perm_1212()
+        public void Permutations_1212()
         {
             Check(new int[] { 1, 2, 1, 2 }, new[] {
                 new int[] { 1, 2, 1, 2 },
@@ -419,7 +402,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Perm_1231()
+        public void Permutations_1231()
         {
             Check(new int[] { 1, 2, 3, 1 }, new[] {
                 new int[] { 1, 2, 3, 1 },
@@ -438,7 +421,7 @@ namespace Tests
         }
 
         [Fact]
-        public void Perm_1232()
+        public void Permutations_1232()
         {
             Check(new int[] { 1, 2, 3, 2 }, new[] {
                 new int[] { 1, 2, 3, 2 },
@@ -457,14 +440,14 @@ namespace Tests
         }
 
         [Fact]
-        public void Perm_No_Repeat()
+        public void Permutations_Should_Be_Unique()
         {
             Gen.Int[0, 5].Array[0, 10]
             .Sample(a =>
             {
                 var a2 = new int[a.Length];
                 Array.Copy(a, a2, a.Length);
-                var ps = Statistics.Permutations(a, a2).ToList();
+                var ps = ThreadStats.Permutations(a, a2).ToList();
                 var ss = new HashSet<int[]>(ps, IntArrayComparer.Default);
                 Assert.Equal(ss.Count, ps.Count);
             });

@@ -21,9 +21,9 @@ namespace CsCheck
 {
     public class Size
     {
-        public static Size Zero = new(0UL);
-        public static Size Max = new(ulong.MaxValue);
-        public static Size[] EmptyArray = new Size[0];
+        public readonly static Size[] EmptyArray = new Size[0];
+        public readonly static Size Zero = new(0UL);
+        public readonly static Size Max = new(ulong.MaxValue);
         public readonly ulong I;
         public readonly Size[] Next;
         public Size(ulong i, Size[] next)
@@ -298,6 +298,7 @@ namespace CsCheck
             return t;
         });
         public static Gen<T> Const<T>(T value) => new GenF<T>(_ => (value, Size.Zero));
+        public static Gen<T> Const<T>(Func<T> value) => new GenF<T>(_ => (value(), Size.Zero));
         public static Gen<T> OneOf<T>(params T[] ts) => Int[0, ts.Length - 1].Select(i => ts[i]);
         public static Gen<T> OneOf<T>(params Gen<T>[] gens) => Int[0, gens.Length - 1].SelectMany(i => gens[i]);
         public static Gen<T> Enum<T>() where T : Enum
