@@ -20,6 +20,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Schema;
 
 namespace CsCheck
 {
@@ -356,8 +357,7 @@ namespace CsCheck
             Func<Actual, Model, bool> equal, params Gen<Action<Actual, Model>>[] operations)
             => SampleModelBased(initial, SampleOptions<(Actual, Model)>.Default, equal, operations);
 
-        public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options,
-            Func<T, T, bool> equal, params Gen<Action<T>>[] operations)
+        public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, Func<T, T, bool> equal, params Gen<(string, Action<T>)>[] operations)
         {
             Gen.Create(pcg =>
             {
@@ -366,36 +366,76 @@ namespace CsCheck
                 var (t, size) = initial.Generate(pcg);
                 return ((t, stream, seed), size);
             })
-            .Select(Gen.OneOf(operations).Array[2, 10]
+            .Select(Gen.OneOf(operations).Array[2, 5]
                     .SelectMany(ops => Gen.Int[2, Math.Min(options.Threads, ops.Length)], (ops, threads) => (ops, threads))
             )
             .Sample(g =>
             {
                 var ((t, stream, seed), (operations, threads)) = g;
                 var threadIds = new int[operations.Length];
-                Parallel.For(0, operations.Length, new ParallelOptions { MaxDegreeOfParallelism = threads }, i =>
+                var opId = -1;
+                var runners = new Thread[threads];
+                while (threads-- > 0)
                 {
-                    threadIds[i] = Thread.CurrentThread.ManagedThreadId;
-                    operations[i](t);
-                });
+                    runners[threads] = new Thread(threadId =>
+                    {
+                        int tid = (int)threadId, i;
+                        while ((i = Interlocked.Increment(ref opId)) < operations.Length)
+                        {
+                            threadIds[i] = tid;
+                            operations[i].Item1 += " " + tid;
+                            operations[i].Item2(t);
+                        }
+                    });
+                }
+                for (int i = 0; i < runners.Length; i++) runners[i].Start(i);
+                for (int i = 0; i < runners.Length; i++) runners[i].Join();
+
+                //Parallel.For(0, operations.Length, new ParallelOptions { MaxDegreeOfParallelism = threads }, i =>
+                //{
+                //    threadIds[i] = Thread.CurrentThread.ManagedThreadId;
+                //    operations[i].Item2(t);
+                //});
+
                 bool linearizable = false;
-                var x = Parallel.ForEach(ThreadStats.Permutations(threadIds, operations), (sequence, state) =>
+                foreach (var sequence in ThreadStats.Permutations(threadIds, operations))
                 {
                     var pt = initial.Generate(new PCG(stream, seed)).Item1;
-                    foreach (var operation in sequence)
-                        operation(pt);
+                    foreach (var operation in sequence) operation.Item2(pt);
                     if (equal(t, pt))
                     {
                         linearizable = true;
-                        //state.Stop();
+                        break;
                     }
-                });
+                }
+                if(!linearizable)
+                {
+                    foreach (var sequence in ThreadStats.Permutations(threadIds, operations))
+                    {
+                        var pt = initial.Generate(new PCG(stream, seed)).Item1;
+                        foreach (var operation in sequence) operation.Item2(pt);
+                        operations[operations.Length - 1].Item1 += "\n" + options.Print(pt);
+                    }
+                }
                 return linearizable;
+                //var x = Parallel.ForEach(ThreadStats.Permutations(threadIds, operations), new ParallelOptions { MaxDegreeOfParallelism = 1}, (sequence, state) =>
+                //{
+                //    var pt = initial.Generate(new PCG(stream, seed)).Item1;
+                //    foreach (var operation in sequence)
+                //        operation(pt);
+                //    if (equal(t, pt))
+                //    {
+                //        //linearizable = true;
+                //        state.Stop();
+                //    }
+                //});
+                //return !x.IsCompleted;
             }, options.Seed, options.Size, threads: 1,
-            x => x.V1.ops.Length + " operations on " + x.V1.threads + " threads. Final state = " + options.Print(x.V0.t));
+            x => x.V1.ops.Length + " operations on " + x.V1.threads + " threads. Final state = " + options.Print(x.V0.t)
+                 + $"\noperations [{string.Join(", ", x.V1.ops.Select(i => i.Item1))}]");
         }
 
-        public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, params Gen<Action<T>>[] operations)
+        public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, params Gen<(string, Action<T>)>[] operations)
             => SampleConcurrent(initial, SampleOptions<T>.Default, equal, operations);
 
         /// <summary>Assert actual is in line with expected using a chi-squared test to 6 sigma.</summary>

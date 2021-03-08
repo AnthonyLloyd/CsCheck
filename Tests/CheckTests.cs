@@ -297,27 +297,27 @@ namespace Tests
             // A random list of operations are run in parallel. The result is compared against the result of the possible sequential permutations.
             // At least one of these permutations result must be equal to it for the concurrency to have been linearized successfully.
             // If not the failing list will be shrunk down to the shortest and simplest and simplest initial bag.
-            //Gen.Int.List[0].Select(l => new ConcurrentBag<int>(l))
-            Gen.Const(new ConcurrentBag<int>(new int[] { 12, 76, 35 }))
-            .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Size = 100/*, Seed = "9-WYYEgqk3b1"*/ },
+            Gen.Int.List[0].Select(l => new ConcurrentBag<int>(l))
+            //Gen.Const(new ConcurrentBag<int>(new int[] { 12, 76, 35 }))
+            .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Size = 100, Print = b => $"[{string.Join(", ", b)}]" },
                 // Equality check of bag vs bag.
-                equal: (bag1, bag2) => {
-                    var equal = bag1.OrderBy(i => i).SequenceEqual(bag2.OrderBy(i => i));
-                    //writeLine($"bag1: {string.Join(", ", bag1.OrderBy(i => i))}\nbag2: {string.Join(", ", bag2.OrderBy(i => i))}\nequal: {equal}");
+                equal: (actual, pos) => {
+                    var equal = actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i));
+                    //writeLine($"actual: [{string.Join(", ", actual.OrderBy(i => i))}]\npos: [{string.Join(", ", pos.OrderBy(i => i))}]\nequal: {equal}");
                     return equal;
                 },
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
-                Gen.Int.Select<int, Action<ConcurrentBag<int>>>(i => bag =>
+                Gen.Int.Select<int, (string, Action<ConcurrentBag<int>>)>(i => ($"Add({i})", bag =>
                 {
                     //writeLine($"Add({i})");
                     bag.Add(i);
-                }),
+                })),
                 // TryTake operation - An example of an operation that doesn't need any data.
-                Gen.Const<Action<ConcurrentBag<int>>>(bag =>
+                Gen.Const<(string, Action<ConcurrentBag<int>>)>(("TryTake()", bag =>
                 {
                     //writeLine($"TryTake()");
                     bag.TryTake(out var i);
-                })
+                }))
             // Other operations ...
             );
         }
