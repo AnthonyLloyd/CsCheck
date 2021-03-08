@@ -299,26 +299,14 @@ namespace Tests
             // If not the failing list will be shrunk down to the shortest and simplest and simplest initial bag.
             Gen.Int.List[0].Select(l => new ConcurrentBag<int>(l))
             //Gen.Const(new ConcurrentBag<int>(new int[] { 12, 76, 35 }))
-            .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Size = 100, Print = b => $"[{string.Join(", ", b)}]" },
+            .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Size = 1_000_000, Print = b => $"[{string.Join(", ", b)}]" },
                 // Equality check of bag vs bag.
-                equal: (actual, pos) => {
-                    var equal = actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i));
-                    //writeLine($"actual: [{string.Join(", ", actual.OrderBy(i => i))}]\npos: [{string.Join(", ", pos.OrderBy(i => i))}]\nequal: {equal}");
-                    return equal;
-                },
+                equal: (actual, pos) => actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i)),
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
-                Gen.Int.Select<int, (string, Action<ConcurrentBag<int>>)>(i => ($"Add({i})", bag =>
-                {
-                    //writeLine($"Add({i})");
-                    bag.Add(i);
-                })),
+                Gen.Int.Select<int, (string, Action<ConcurrentBag<int>>)>(i => ($"Add({i})", bag => bag.Add(i))),
                 // TryTake operation - An example of an operation that doesn't need any data.
-                Gen.Const<(string, Action<ConcurrentBag<int>>)>(("TryTake()", bag =>
-                {
-                    //writeLine($"TryTake()");
-                    bag.TryTake(out var i);
-                }))
-            // Other operations ...
+                Gen.Const<(string, Action<ConcurrentBag<int>>)>(("TryTake()", bag => bag.TryTake(out var i)))
+                // Other operations ...
             );
         }
     }

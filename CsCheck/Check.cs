@@ -366,8 +366,8 @@ namespace CsCheck
                 var (t, size) = initial.Generate(pcg);
                 return ((t, stream, seed), size);
             })
-            .Select(Gen.OneOf(operations).Array[2, 5]
-                    .SelectMany(ops => Gen.Int[2, Math.Min(options.Threads, ops.Length)], (ops, threads) => (ops, threads))
+            .Select(Gen.OneOf(operations).Array[1, 5]
+                    .SelectMany(ops => Gen.Int[1, Math.Min(options.Threads, ops.Length)], (operations, threads) => (operations, threads))
             )
             .Sample(g =>
             {
@@ -375,41 +375,37 @@ namespace CsCheck
                 var threadIds = new int[operations.Length];
                 var opId = -1;
                 var runners = new Thread[threads];
-                while (threads-- > 0)
+                while (--threads >= 0)
                 {
                     runners[threads] = new Thread(threadId =>
                     {
-                        int tid = (int)threadId, i;
+                        int i, tid = (int)threadId;
                         while ((i = Interlocked.Increment(ref opId)) < operations.Length)
                         {
                             threadIds[i] = tid;
-                            operations[i].Item1 += " " + tid;
                             operations[i].Item2(t);
                         }
                     });
                 }
                 for (int i = 0; i < runners.Length; i++) runners[i].Start(i);
                 for (int i = 0; i < runners.Length; i++) runners[i].Join();
-
-                //Parallel.For(0, operations.Length, new ParallelOptions { MaxDegreeOfParallelism = threads }, i =>
-                //{
-                //    threadIds[i] = Thread.CurrentThread.ManagedThreadId;
-                //    operations[i].Item2(t);
-                //});
-
                 bool linearizable = false;
-                foreach (var sequence in ThreadStats.Permutations(threadIds, operations))
+                Parallel.ForEach(ThreadStats.Permutations(threadIds, operations), (sequence, state) =>
                 {
                     var pt = initial.Generate(new PCG(stream, seed)).Item1;
-                    foreach (var operation in sequence) operation.Item2(pt);
+                    foreach (var operation in sequence)
+                        operation.Item2(pt);
                     if (equal(t, pt))
                     {
                         linearizable = true;
-                        break;
+                        state.Stop();
                     }
-                }
-                if(!linearizable)
+                });
+                if (!linearizable)
                 {
+                    for (int i = 0; i < operations.Length; i++)
+                        operations[i].Item1 = threadIds[i] + " " + operations[i].Item1;
+
                     foreach (var sequence in ThreadStats.Permutations(threadIds, operations))
                     {
                         var pt = initial.Generate(new PCG(stream, seed)).Item1;
@@ -418,21 +414,9 @@ namespace CsCheck
                     }
                 }
                 return linearizable;
-                //var x = Parallel.ForEach(ThreadStats.Permutations(threadIds, operations), new ParallelOptions { MaxDegreeOfParallelism = 1}, (sequence, state) =>
-                //{
-                //    var pt = initial.Generate(new PCG(stream, seed)).Item1;
-                //    foreach (var operation in sequence)
-                //        operation(pt);
-                //    if (equal(t, pt))
-                //    {
-                //        //linearizable = true;
-                //        state.Stop();
-                //    }
-                //});
-                //return !x.IsCompleted;
             }, options.Seed, options.Size, threads: 1,
-            x => x.V1.ops.Length + " operations on " + x.V1.threads + " threads. Final state = " + options.Print(x.V0.t)
-                 + $"\noperations [{string.Join(", ", x.V1.ops.Select(i => i.Item1))}]");
+            x => x.V1.operations.Length + " operations on " + x.V1.threads + " threads. Final state = " + options.Print(x.V0.t)
+                 + $"\noperations [{string.Join(", ", x.V1.operations.Select(i => i.Item1))}]");
         }
 
         public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, params Gen<(string, Action<T>)>[] operations)
