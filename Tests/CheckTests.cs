@@ -253,7 +253,7 @@ namespace Tests
             // At least one of these permutations result must be equal to it for the concurrency to have been linearized successfully.
             // If not the failing list will be shrunk down to the shortest and simplest and simplest initial bag.
             Gen.Int.List[0, 5].Select(l => new ConcurrentBag<int>(l))
-            .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Size = 100, Print = b => $"[{string.Join(", ", b)}]" },
+            .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Size = 100 },
                 // Equality check of bag vs bag.
                 equal: (actual, pos) => actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i)),
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag.

@@ -263,8 +263,9 @@ namespace CsCheck
         /// <summary>Sample the gen once calling the predicate.</summary>
         public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, Func<T, string> print = null)
             => Sample(gen, predicate, seed, 1, 1, print);
-        
-        static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, SampleOptions<(Actual,Model)> options,
+
+        /// <summary>Sample model-based operations on a random initial state checking that the actual and model are equal.</summary>
+        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, SampleOptions<(Actual, Model)> options,
             Func<Actual, Model, bool> equal, params Gen<Action<Actual, Model>>[] operations)
         {
             initial.Select(Gen.OneOf(operations).Array)
@@ -278,10 +279,33 @@ namespace CsCheck
             x => "operations: " + x.V1.Length + " " + options.Print(x.V0));
         }
 
+        /// <summary>Sample model-based operations on a random initial state checking that the actual and model are equal.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial,
             Func<Actual, Model, bool> equal, params Gen<Action<Actual, Model>>[] operations)
             => SampleModelBased(initial, SampleOptions<(Actual, Model)>.Default, equal, operations);
 
+        static void ThreadRun<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[] threadIds = null)
+        {
+            if (threadIds == null) threadIds = new int[operations.Length];
+            var opId = -1;
+            var runners = new Thread[threads];
+            while (--threads >= 0)
+            {
+                runners[threads] = new Thread(threadId =>
+                {
+                    int i, tid = (int)threadId;
+                    while ((i = Interlocked.Increment(ref opId)) < operations.Length)
+                    {
+                        threadIds[i] = tid;
+                        operations[i].Item2(concurrentState);
+                    }
+                });
+            }
+            for (int i = 0; i < runners.Length; i++) runners[i].Start(i);
+            for (int i = 0; i < runners.Length; i++) runners[i].Join();
+        }
+
+        /// <summary>Sample concurrent operations on a random initial state checking that that result can be linearized.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, Func<T, T, bool> equal, params Gen<(string, Action<T>)>[] operations)
         {
             Gen.Create(pcg =>
@@ -310,8 +334,8 @@ namespace CsCheck
                 var ((concurrentState, stream, seed), (operations, threads, threadIds)) = printState;
                 var sb = new StringBuilder();
                 sb.Append(operations.Length).Append(" operations on ").Append(threads).Append(" threads.");
-                sb.Append("\n   Operations: [").Append(string.Join(", ", operations.Select(i => i.Item1))).Append("]");
-                sb.Append("\n   On Threads: [").Append(string.Join(", ", threadIds)).Append("]");
+                sb.Append("\n   Operations: ").Append(Print(operations.Select(i => i.Item1).ToList()));
+                sb.Append("\n   On Threads: ").Append(Print(threadIds));
                 sb.Append("\nInitial state: ").Append(options.Print(initial.Generate(new PCG(stream, seed)).Item1));
                 sb.Append("\n  Final state: ").Append(options.Print(concurrentState));
                 bool first = true;
@@ -319,9 +343,9 @@ namespace CsCheck
                 {
                     var linearState = initial.Generate(new PCG(stream, seed)).Item1;
                     ThreadRun(linearState, sequence, 1);
-                    sb.Append(first ? "\n   Linearized: [" : "\n             : [");
-                    sb.Append(string.Join(", ", sequence.Select(i => i.Item1)));
-                    sb.Append("] -> ");
+                    sb.Append(first ? "\n   Linearized: " : "\n             : ");
+                    sb.Append(Print(sequence.Select(i => i.Item1).ToList()));
+                    sb.Append(" -> ");
                     sb.Append(options.Print(linearState));
                     first = false;
                 }
@@ -329,27 +353,7 @@ namespace CsCheck
             });
         }
 
-        static void ThreadRun<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[] threadIds = null)
-        {
-            if (threadIds == null) threadIds = new int[operations.Length];
-            var opId = -1;
-            var runners = new Thread[threads];
-            while (--threads >= 0)
-            {
-                runners[threads] = new Thread(threadId =>
-                {
-                    int i, tid = (int)threadId;
-                    while ((i = Interlocked.Increment(ref opId)) < operations.Length)
-                    {
-                        threadIds[i] = tid;
-                        operations[i].Item2(concurrentState);
-                    }
-                });
-            }
-            for (int i = 0; i < runners.Length; i++) runners[i].Start(i);
-            for (int i = 0; i < runners.Length; i++) runners[i].Join();
-        }
-
+        /// <summary>Sample concurrent operations on a random initial state checking that that result can be linearized.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, params Gen<(string, Action<T>)>[] operations)
             => SampleConcurrent(initial, SampleOptions<T>.Default, equal, operations);
 
@@ -729,9 +733,15 @@ namespace CsCheck
 
         internal static string Print(object o) => o switch
         {
-            IList { Count: <= 12 } l => $"L={l.Count} [{string.Join(", ", l.Cast<object>().Select(Print))}]",
+            string s => s,
+            Array { Length: <= 12 } a => "[" + string.Join(", ", a.Cast<object>().Select(Print)) + "]",
+            Array a => $"L={a.Length} [{Print(a.GetValue(0))}, {Print(a.GetValue(1))}, {Print(a.GetValue(2))} ... {Print(a.GetValue(a.Length - 2))}, {Print(a.GetValue(a.Length - 1))}]",
+            IList { Count: <= 12 } l => "[" + string.Join(", ", l.Cast<object>().Select(Print)) + "]",
             IList l => $"L={l.Count} [{Print(l[0])}, {Print(l[1])}, {Print(l[2])} ... {Print(l[l.Count - 2])}, {Print(l[l.Count - 1])}]",
-            IEnumerable e => Print(e.Cast<object>().Take(999).ToList()),
+            IEnumerable<object> e when e.Take(12).Count() <= 12 => "{" + string.Join(", ", e.Select(Print)) + "}",
+            IEnumerable<object> e when e.Take(999).Count() <= 999 => "L=" + e.Count() + " {" + string.Join(", ", e.Select(Print)) + "}",
+            IEnumerable<object> e => "L>999 {" + string.Join(", ", e.Take(6).Select(Print)) + " ... }",
+            IEnumerable e => Print(e.Cast<object>()),
             _ => o.ToString(),
         };
     }
