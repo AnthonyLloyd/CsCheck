@@ -13,7 +13,7 @@ namespace ImTools.Experimental
     public class ImHashMap234<K, V>
     {
         /// <summary>Empty tree to start with.</summary>
-        public static readonly ImHashMap234<K, V> Empty = new ImHashMap234<K, V>();
+        public static readonly ImHashMap234<K, V> Empty = new();
 
         /// <summary>Hide the constructor to prevent the multiple Empty trees creation</summary>
         protected ImHashMap234() { } // todo: @perf - does it hurt the perf or the call to the empty constructor is erased?

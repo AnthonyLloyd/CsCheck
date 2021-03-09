@@ -292,7 +292,7 @@ namespace CsCheck
 
     public class Hash
     {
-        static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new ConcurrentDictionary<string, ReaderWriterLockSlim>();
+        static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new();
         static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
         public const int OFFSET_SIZE = 500_000_000;
         readonly int Offset;
@@ -687,12 +687,6 @@ namespace CsCheck
             AddPrivate((uint)(val >> 32));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void AddPrivate(ulong val)
-        {
-            AddPrivate((uint)val);
-            AddPrivate((uint)(val >> 32));
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static uint MixEmptyState()
         {
             return Prime5;
@@ -752,7 +746,7 @@ namespace CsCheck
         public override int Read(byte[] buffer, int offset, int count) => throw new NotImplementedException();
         public override long Seek(long offset, SeekOrigin origin) => 0;
         public override void SetLength(long value) { }
-        readonly Hash hash = new Hash(null);
+        readonly Hash hash = new(null);
         uint bytes;
         int position = 0;
         public override void Write(byte[] buffer, int offset, int count)
