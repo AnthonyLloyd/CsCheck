@@ -41,7 +41,7 @@ namespace CsCheck
 
     public static class Check
     {
-        const int MAX_LENGTH = 3000;
+        const int MAX_LENGTH = 5000;
         public static int Size = 100;
         public static int Threads = Environment.ProcessorCount;
         public static string Seed;
@@ -193,7 +193,7 @@ namespace CsCheck
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
                 Size s = null;
-                T t;
+                T t = default;
                 try
                 {
                     (t, s) = gen.Generate(pcg);
@@ -226,6 +226,7 @@ namespace CsCheck
                             minPCG = pcg;
                             minState = state;
                             minSize = s;
+                            minT = t;
                             minException = e;
                         }
                     }
@@ -286,6 +287,7 @@ namespace CsCheck
 
         static void ThreadRun<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[] threadIds = null)
         {
+            Exception exception = null;
             if (threadIds == null) threadIds = new int[operations.Length];
             var opId = -1;
             var runners = new Thread[threads];
@@ -297,13 +299,25 @@ namespace CsCheck
                     while ((i = Interlocked.Increment(ref opId)) < operations.Length)
                     {
                         threadIds[i] = tid;
-                        operations[i].Item2(concurrentState);
+                        try { operations[i].Item2(concurrentState); }
+                        catch (Exception e)
+                        {
+                            if (exception == null)
+                            {
+                                exception = e;
+                                Interlocked.Exchange(ref opId, operations.Length);
+                            }
+                        }
                     }
                 });
             }
             for (int i = 0; i < runners.Length; i++) runners[i].Start(i);
             for (int i = 0; i < runners.Length; i++) runners[i].Join();
+            if(exception != null) throw exception;
         }
+
+        class ConcurrentData<T> { public T State; public uint Stream; public ulong Seed; public (string, Action<T>)[] Operations;
+                                  public int Threads; public int[] ThreadIds; public Exception Exception; }
 
         /// <summary>Sample concurrent operations on a random initial state checking that that result can be linearized.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, Func<T, T, bool> equal, params Gen<(string, Action<T>)>[] operations)
@@ -315,38 +329,63 @@ namespace CsCheck
                 var (t, size) = initial.Generate(pcg);
                 return ((t, stream, seed), size);
             })
-            .Select(Gen.OneOf(operations).Array[1, 5]
-                    .SelectMany(ops => Gen.Int[1, Math.Min(options.Threads, ops.Length)], (operations, threads) => (operations, threads, new int[operations.Length]))
+            .Select(Gen.OneOf(operations).Array[1, 10].Select(ops => Gen.Int[1, Math.Min(options.Threads, ops.Length)]), (a, b) =>
+                new ConcurrentData<T> { State = a.t, Stream = a.stream, Seed = a.seed, Operations = b.V0, Threads = b.V1, ThreadIds = new int[b.V0.Length] }
             )
-            .Sample(randomInitial =>
+            .Sample(cd =>
             {
-                var ((concurrentState, stream, seed), (operations, threads, threadIds)) = randomInitial;
-                ThreadRun(concurrentState, operations, threads, threadIds);
-                return !Parallel.ForEach(ThreadStats.Permutations(threadIds, operations), (sequence, state) =>
+                try
                 {
-                    var linearState = initial.Generate(new PCG(stream, seed)).Item1;
-                    ThreadRun(linearState, sequence, 1);
-                    if (equal(concurrentState, linearState)) state.Stop();
-                }).IsCompleted;
+                    ThreadRun(cd.State, cd.Operations, cd.Threads, cd.ThreadIds);
+                }
+                catch (Exception e)
+                {
+                    cd.Exception = e;
+                    return false;
+                }
+                bool linearizable = false;
+                Parallel.ForEach(ThreadStats.Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
+                {
+                    var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed)).Item1;
+                    try
+                    {
+                        ThreadRun(linearState, sequence, 1);
+                        if (equal(cd.State, linearState))
+                        {
+                            linearizable = true;
+                            state.Stop();
+                        }
+                    }
+                    catch { state.Stop(); }
+                });
+                return linearizable;
             }, options.Seed, options.Size, threads: 1,
-            printState =>
+            p =>
             {
-                var ((concurrentState, stream, seed), (operations, threads, threadIds)) = printState;
                 var sb = new StringBuilder();
-                sb.Append(operations.Length).Append(" operations on ").Append(threads).Append(" threads.");
-                sb.Append("\n   Operations: ").Append(Print(operations.Select(i => i.Item1).ToList()));
-                sb.Append("\n   On Threads: ").Append(Print(threadIds));
-                sb.Append("\nInitial state: ").Append(options.Print(initial.Generate(new PCG(stream, seed)).Item1));
-                sb.Append("\n  Final state: ").Append(options.Print(concurrentState));
+                sb.Append(p.Operations.Length).Append(" operations on ").Append(p.Threads).Append(" threads.");
+                sb.Append("\n   Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
+                sb.Append("\n   On Threads: ").Append(Print(p.ThreadIds));
+                sb.Append("\nInitial state: ").Append(options.Print(initial.Generate(new PCG(p.Stream, p.Seed)).Item1));
+                sb.Append("\n  Final state: ").Append(p.Exception != null ? p.Exception.ToString() : options.Print(p.State));
                 bool first = true;
-                foreach (var sequence in ThreadStats.Permutations(threadIds, operations))
+                foreach (var sequence in ThreadStats.Permutations(p.ThreadIds, p.Operations))
                 {
-                    var linearState = initial.Generate(new PCG(stream, seed)).Item1;
-                    ThreadRun(linearState, sequence, 1);
+                    var linearState = initial.Generate(new PCG(p.Stream, p.Seed)).Item1;
+                    string result;
+                    try
+                    {
+                        ThreadRun(linearState, sequence, 1);
+                        result = options.Print(linearState);
+                    }
+                    catch (Exception e)
+                    {
+                        result = e.ToString();
+                    }
                     sb.Append(first ? "\n   Linearized: " : "\n             : ");
                     sb.Append(Print(sequence.Select(i => i.Item1).ToList()));
                     sb.Append(" -> ");
-                    sb.Append(options.Print(linearState));
+                    sb.Append(result);
                     first = false;
                 }
                 return sb.ToString();

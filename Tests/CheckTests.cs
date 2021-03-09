@@ -221,7 +221,7 @@ namespace Tests
         }
 
         [Fact]
-        public void ConcurrentBag_ModelBased()
+        public void SampleModelBased_ConcurrentBag()
         {
             // Model-based testing of a ConcurrentBag using a List as the model.
             // The operations are run in a random sequence on an initial random ConcurrencyBag checking that the bag and model are always equal.
@@ -246,14 +246,14 @@ namespace Tests
         }
 
         [Fact]
-        public void ConcurrentBag_Concurrent()
+        public void SampleConcurrent_ConcurrentBag()
         {
             // Concurrency testing of a ConcurrentBag.
             // A random list of operations are run in parallel. The result is compared against the result of the possible sequential permutations.
             // At least one of these permutations result must be equal to it for the concurrency to have been linearized successfully.
             // If not the failing list will be shrunk down to the shortest and simplest and simplest initial bag.
             Gen.Int.List[0, 5].Select(l => new ConcurrentBag<int>(l))
-            .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Size = 100 },
+            .SampleConcurrent(
                 // Equality check of bag vs bag.
                 equal: (actual, pos) => actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i)),
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
@@ -261,6 +261,39 @@ namespace Tests
                 // TryTake operation - An example of an operation that doesn't need any data.
                 Gen.Const<(string, Action<ConcurrentBag<int>>)>(("TryTake()", bag => bag.TryTake(out _)))
                 // Other operations ...
+            );
+        }
+
+        //[Fact]
+        //public void SampleConcurrent_List()
+        //{
+        //    Gen.Int.List
+        //    .SampleConcurrent(new SampleOptions<List<int>> { Size = 1_000_000 },
+        //        // Equality check of bag vs bag.
+        //        equal: (actual, pos) => actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i)),
+        //        // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
+        //        Gen.Int.Select<int, (string, Action<List<int>>)>(i => ($"Add({i})", list => list.Add(i)))
+        //        // TryTake operation - An example of an operation that doesn't need any data.
+        //        //Gen.Const<(string, Action<List<int>>)>(("Remove()", list => list.RemoveAt(0)))
+        //    // Other operations ...
+        //    );
+        //}
+
+        [Fact]
+        public void SampleConcurrent_ConcurrentDictionary()
+        {
+            Gen.Dictionary(Gen.Int[0, 100], Gen.Byte)[0, 10].Select(l => new ConcurrentDictionary<int, byte>(l))
+            .SampleConcurrent(
+
+                equal: (actual, pos) => actual.OrderBy(i => i.Key).SequenceEqual(pos.OrderBy(i => i.Key)),
+
+                Gen.Int[0, 100].Select(Gen.Byte).Select<(int, byte), (string, Action<ConcurrentDictionary<int, byte>>)>(t =>
+                      ($"d[{t.Item1}] = {t.Item2}", d => d[t.Item1] = t.Item2)
+                ),
+
+                Gen.Int[0, 100].Select<int, (string, Action<ConcurrentDictionary<int, byte>>)>(i =>
+                     ($"TryRemove({i})", d => d.TryRemove(i, out _))
+                )
             );
         }
     }

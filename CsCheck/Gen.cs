@@ -235,6 +235,22 @@ namespace CsCheck
             var (v4, s4) = gen4.Generate(pcg);
             return ((v0, v1, v2, v3, v4), new Size(s0, s1, s2, s3, s4));
         });
+        public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen, Func<T0, Gen<T1>> selector) => new GenF<(T0, T1)>(pcg =>
+        {
+            var (v1, s1) = gen.Generate(pcg);
+            var genR = selector(v1);
+            var (vR, sR) = genR.Generate(pcg);
+            return ((v1, vR), s1.Append(sR));
+        });
+        public static Gen<(T0 V0, T1 V1, T2 V2)> Select<T0, T1, T2>(this Gen<T0> gen1, Gen<T1> gen2,
+            Func<T0, T1, Gen<T2>> selector) => new GenF<(T0, T1, T2)>(pcg =>
+        {
+            var (v1, s1) = gen1.Generate(pcg);
+            var (v2, s2) = gen2.Generate(pcg);
+            var genR = selector(v1, v2);
+            var (vR, sR) = genR.Generate(pcg);
+            return ((v1, v2, vR), new Size(s1.Append(sR), s2.Append(sR)));
+        });
         public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, Gen<R>> selector) => new GenF<R>(pcg =>
         {
             var (v1, s1) = gen.Generate(pcg);
