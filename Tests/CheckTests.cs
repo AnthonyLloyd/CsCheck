@@ -207,51 +207,6 @@ namespace Tests
         }
 
         [Fact]
-        public void Multithreading_ConcurrentDictionary()
-        {
-            var d = new ConcurrentDictionary<int, int>();
-            Check.Sample(
-                Gen.Int[1, 10],
-                i => d.AddOrUpdate(i, 0, (_, v) => 1 - v),
-                Gen.Int[1, 10],
-                i =>
-                {
-                    d.TryGetValue(i, out var v);
-                    Assert.True(v == 0 || v == 1);
-                },
-                Gen.Const(0),
-                _ => Assert.True(d.Count <= 10)
-            );
-        }
-
-        [Fact]
-        public void Multithreading_ConcurrentBag()
-        {
-            Gen.Int[5, 40].SampleOne(n =>
-            {
-                var b = new ConcurrentBag<int>();
-                Check.Sample(
-                    Gen.Int[1, n],
-                    b.Add,
-                    Gen.Const(0),
-                    _ =>
-                    {
-                        b.TryTake(out int v);
-                        Assert.True(v >= 0 && v <= n);
-                    },
-                    Gen.Const(0),
-                    _ =>
-                    {
-                        b.TryPeek(out int v);
-                        Assert.True(v >= 0 && v <= n);
-                    },
-                    Gen.Const(0),
-                    _ => b.Clear()
-                );
-            });
-        }
-
-        [Fact]
         public void MedianEstimator()
         {
             Gen.Double[-1000.0, 1000.0].Array[5, 100]
@@ -286,7 +241,7 @@ namespace Tests
                 {
                     Assert.Equal(bag.TryTake(out var i), list.Remove(i));
                 })
-            // Other operations ...
+                // Other operations ...
             );
         }
 
@@ -297,15 +252,14 @@ namespace Tests
             // A random list of operations are run in parallel. The result is compared against the result of the possible sequential permutations.
             // At least one of these permutations result must be equal to it for the concurrency to have been linearized successfully.
             // If not the failing list will be shrunk down to the shortest and simplest and simplest initial bag.
-            Gen.Int.List[0].Select(l => new ConcurrentBag<int>(l))
-            //Gen.Const(new ConcurrentBag<int>(new int[] { 12, 76, 35 }))
+            Gen.Int.List[0, 5].Select(l => new ConcurrentBag<int>(l))
             .SampleConcurrent(new SampleOptions<ConcurrentBag<int>> { Size = 100, Print = b => $"[{string.Join(", ", b)}]" },
                 // Equality check of bag vs bag.
                 equal: (actual, pos) => actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i)),
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
                 Gen.Int.Select<int, (string, Action<ConcurrentBag<int>>)>(i => ($"Add({i})", bag => bag.Add(i))),
                 // TryTake operation - An example of an operation that doesn't need any data.
-                Gen.Const<(string, Action<ConcurrentBag<int>>)>(("TryTake()", bag => bag.TryTake(out var i)))
+                Gen.Const<(string, Action<ConcurrentBag<int>>)>(("TryTake()", bag => bag.TryTake(out _)))
                 // Other operations ...
             );
         }
@@ -313,14 +267,6 @@ namespace Tests
 
     public class ThreadStatsTests
     {
-        [Fact]
-        public void Normalize()
-        {
-            var ids = new int[] { 123, 99, 123, 123, 7, 99, 12, 123, 7, 12 };
-            ThreadStats.Normalize(ids);
-            Assert.Equal(new[] { 1, 2, 1, 1, 4, 2, 8, 1, 4, 8 }, ids);
-        }
-
         static void Check(int[] ids, IEnumerable<int[]> expected)
         {
             var seq = new int[ids.Length];
@@ -444,7 +390,7 @@ namespace Tests
 
     public class IntArrayComparer : IEqualityComparer<int[]>, IComparer<int[]>
     {
-        public static IntArrayComparer Default = new();
+        public readonly static IntArrayComparer Default = new();
         public int Compare(int[] x, int[] y)
         {
             for(int i = 0; i < x.Length; i++)

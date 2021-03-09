@@ -18,9 +18,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Schema;
 
 namespace CsCheck
 {
@@ -41,6 +41,7 @@ namespace CsCheck
 
     public static class Check
     {
+        const int MAX_LENGTH = 3000;
         public static int Size = 100;
         public static int Threads = Environment.ProcessorCount;
         public static string Seed;
@@ -125,7 +126,7 @@ namespace CsCheck
             {
                 var seedString = minPCG.ToString(minState);
                 var tString = options.Print(minT);
-                if (tString.Length > 500) tString = tString.Substring(0, 500) + " ...";
+                if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
                 throw new CsCheckException(
                     $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {options.Size:#,0} total)\nSample: {tString}"
                     , minException);
@@ -234,7 +235,7 @@ namespace CsCheck
             {
                 var seedString = minPCG.ToString(minState);
                 var tString = options.Print(minT);
-                if (tString.Length > 500) tString = tString.Substring(0, 500) + " ...";
+                if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
                 throw new CsCheckException(
                     $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {options.Size:#,0} total)\nSample: {tString}"
                     , minException);
@@ -262,83 +263,7 @@ namespace CsCheck
         /// <summary>Sample the gen once calling the predicate.</summary>
         public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, Func<T, string> print = null)
             => Sample(gen, predicate, seed, 1, 1, print);
-
-        /// <summary>Sample the gen and assert pairs each time across multiple threads. Useful for multithreading tests.</summary>
-        public static void Sample<T1, T2>(Gen<T1> gen1, Action<T1> assert1, Gen<T2> gen2, Action<T2> assert2,
-            string seed = null, int size = -1, int threads = -1)
-        {
-            try
-            {
-                Sample(
-                    Gen.Bool.SelectMany(b => b ? gen1.Select(t => (b, (object)t))
-                                               : gen2.Select(t => (b, (object)t))),
-                    t => { if (t.b) assert1((T1)t.Item2); else assert2((T2)t.Item2); },
-                    seed, size, threads
-                );
-            }
-            catch (CsCheckException e)
-            {
-                throw e.InnerException; // remove seed info as it's not reproducible.
-            }
-        }
-        /// <summary>Sample the gen and assert pairs each time across multiple threads. Useful for multithreading tests.</summary>
-        public static void Sample<T1, T2, T3>(Gen<T1> gen1, Action<T1> assert1, Gen<T2> gen2, Action<T2> assert2,
-            Gen<T3> gen3, Action<T3> assert3, string seed = null, int size = -1, int threads = -1)
-        {
-            try
-            {
-                Sample(
-                    Gen.Int[0, 2].SelectMany(i => i == 0 ? gen1.Select(t => (i, (object)t))
-                                                : i == 1 ? gen2.Select(t => (i, (object)t))
-                                                : gen3.Select(t => (i, (object)t))),
-                    t =>
-                    {
-                        if (t.i == 0) assert1((T1)t.Item2);
-                        else if (t.i == 1) assert2((T2)t.Item2);
-                        else assert3((T3)t.Item2);
-                    },
-                    seed, size, threads
-                );
-            }
-            catch (CsCheckException e)
-            {
-                throw e.InnerException; // remove seed info as it's not reproducible.
-            }
-        }
-        /// <summary>Sample the gen and assert pairs each time across multiple threads. Useful for multithreading tests.</summary>
-        public static void Sample<T1, T2, T3, T4>(Gen<T1> gen1, Action<T1> assert1, Gen<T2> gen2, Action<T2> assert2,
-            Gen<T3> gen3, Action<T3> assert3, Gen<T4> gen4, Action<T4> assert4, string seed = null, int size = -1, int threads = -1)
-        {
-            try
-            {
-                Sample(
-                    Gen.Int.SelectMany(i =>
-                    {
-                        i &= 3;
-                        return i == 0 ? gen1.Select(t => (i, (object)t))
-                             : i == 1 ? gen2.Select(t => (i, (object)t))
-                             : i == 2 ? gen3.Select(t => (i, (object)t))
-                             : gen4.Select(t => (i, (object)t));
-                    }),
-                    t =>
-                    {
-                        switch (t.i & 3)
-                        {
-                            case 0: assert1((T1)t.Item2); break;
-                            case 1: assert2((T2)t.Item2); break;
-                            case 2: assert3((T3)t.Item2); break;
-                            default: assert4((T4)t.Item2); break;
-                        }
-                    },
-                    seed, size, threads
-                );
-            }
-            catch (CsCheckException e)
-            {
-                throw e.InnerException; // remove seed info as it's not reproducible.
-            }
-        }
-
+        
         static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, SampleOptions<(Actual,Model)> options,
             Func<Actual, Model, bool> equal, params Gen<Action<Actual, Model>>[] operations)
         {
@@ -367,56 +292,62 @@ namespace CsCheck
                 return ((t, stream, seed), size);
             })
             .Select(Gen.OneOf(operations).Array[1, 5]
-                    .SelectMany(ops => Gen.Int[1, Math.Min(options.Threads, ops.Length)], (operations, threads) => (operations, threads))
+                    .SelectMany(ops => Gen.Int[1, Math.Min(options.Threads, ops.Length)], (operations, threads) => (operations, threads, new int[operations.Length]))
             )
-            .Sample(g =>
+            .Sample(randomInitial =>
             {
-                var ((t, stream, seed), (operations, threads)) = g;
-                var threadIds = new int[operations.Length];
-                var opId = -1;
-                var runners = new Thread[threads];
-                while (--threads >= 0)
+                var ((concurrentState, stream, seed), (operations, threads, threadIds)) = randomInitial;
+                ThreadRun(concurrentState, operations, threads, threadIds);
+                return !Parallel.ForEach(ThreadStats.Permutations(threadIds, operations), (sequence, state) =>
                 {
-                    runners[threads] = new Thread(threadId =>
-                    {
-                        int i, tid = (int)threadId;
-                        while ((i = Interlocked.Increment(ref opId)) < operations.Length)
-                        {
-                            threadIds[i] = tid;
-                            operations[i].Item2(t);
-                        }
-                    });
+                    var linearState = initial.Generate(new PCG(stream, seed)).Item1;
+                    ThreadRun(linearState, sequence, 1);
+                    if (equal(concurrentState, linearState)) state.Stop();
+                }).IsCompleted;
+            }, options.Seed, options.Size, threads: 1,
+            printState =>
+            {
+                var ((concurrentState, stream, seed), (operations, threads, threadIds)) = printState;
+                var sb = new StringBuilder();
+                sb.Append(operations.Length).Append(" operations on ").Append(threads).Append(" threads.");
+                sb.Append("\n   Operations: [").Append(string.Join(", ", operations.Select(i => i.Item1))).Append("]");
+                sb.Append("\n   On Threads: [").Append(string.Join(", ", threadIds)).Append("]");
+                sb.Append("\nInitial state: ").Append(options.Print(initial.Generate(new PCG(stream, seed)).Item1));
+                sb.Append("\n  Final state: ").Append(options.Print(concurrentState));
+                bool first = true;
+                foreach (var sequence in ThreadStats.Permutations(threadIds, operations))
+                {
+                    var linearState = initial.Generate(new PCG(stream, seed)).Item1;
+                    ThreadRun(linearState, sequence, 1);
+                    sb.Append(first ? "\n   Linearized: [" : "\n             : [");
+                    sb.Append(string.Join(", ", sequence.Select(i => i.Item1)));
+                    sb.Append("] -> ");
+                    sb.Append(options.Print(linearState));
+                    first = false;
                 }
-                for (int i = 0; i < runners.Length; i++) runners[i].Start(i);
-                for (int i = 0; i < runners.Length; i++) runners[i].Join();
-                bool linearizable = false;
-                Parallel.ForEach(ThreadStats.Permutations(threadIds, operations), (sequence, state) =>
+                return sb.ToString();
+            });
+        }
+
+        static void ThreadRun<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[] threadIds = null)
+        {
+            if (threadIds == null) threadIds = new int[operations.Length];
+            var opId = -1;
+            var runners = new Thread[threads];
+            while (--threads >= 0)
+            {
+                runners[threads] = new Thread(threadId =>
                 {
-                    var pt = initial.Generate(new PCG(stream, seed)).Item1;
-                    foreach (var operation in sequence)
-                        operation.Item2(pt);
-                    if (equal(t, pt))
+                    int i, tid = (int)threadId;
+                    while ((i = Interlocked.Increment(ref opId)) < operations.Length)
                     {
-                        linearizable = true;
-                        state.Stop();
+                        threadIds[i] = tid;
+                        operations[i].Item2(concurrentState);
                     }
                 });
-                if (!linearizable)
-                {
-                    for (int i = 0; i < operations.Length; i++)
-                        operations[i].Item1 = threadIds[i] + " " + operations[i].Item1;
-
-                    foreach (var sequence in ThreadStats.Permutations(threadIds, operations))
-                    {
-                        var pt = initial.Generate(new PCG(stream, seed)).Item1;
-                        foreach (var operation in sequence) operation.Item2(pt);
-                        operations[operations.Length - 1].Item1 += "\n" + options.Print(pt);
-                    }
-                }
-                return linearizable;
-            }, options.Seed, options.Size, threads: 1,
-            x => x.V1.operations.Length + " operations on " + x.V1.threads + " threads. Final state = " + options.Print(x.V0.t)
-                 + $"\noperations [{string.Join(", ", x.V1.operations.Select(i => i.Item1))}]");
+            }
+            for (int i = 0; i < runners.Length; i++) runners[i].Start(i);
+            for (int i = 0; i < runners.Length; i++) runners[i].Join();
         }
 
         public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, params Gen<(string, Action<T>)>[] operations)
@@ -837,27 +768,10 @@ namespace CsCheck
 
     public class ThreadStats
     {
-        public static void Normalize(int[] ids)
-        {
-            int nextId = 1;
-            var newids = new Dictionary<int, int>();
-            for (int i = 0; i < ids.Length; i++)
-            {
-                int threadId = ids[i];
-                if (!newids.TryGetValue(threadId, out int normId))
-                {
-                    newids.Add(threadId, normId = nextId);
-                    nextId <<= 1;
-                }
-                ids[i] = normId;
-            }
-        }
-
         public static IEnumerable<T[]> Permutations<T>(int[] threadIds, T[] sequence)
         {
             yield return sequence;
-            Normalize(threadIds);
-            List<(int, int[], T[])> next = new() { (1, threadIds, sequence) };
+            var next = new List<(int, int[], T[])> { (1, threadIds, sequence) };
             while (next.Count != 0)
             {
                 var current = next;
@@ -866,38 +780,31 @@ namespace CsCheck
                 {
                     for (int i = start; i < ids.Length; i++)
                     {
-                        int idi = ids[i];
-                        int mask = idi;
+                        int mask = 1 << ids[i];
                         var lastIds = ids;
                         var lastSeq = seq;
                         int u = i;
-                        int idu;
-                        while (u-- >= start && (mask & (idu = ids[u])) == 0)
+                        int isMask;
+                        while (u-- >= start && (mask & (isMask = 1 << ids[u])) == 0)
                         {
-                            mask |= idu;
-                            (lastIds, lastSeq) = CopySwap(lastIds, lastSeq, u);
+                            mask |= isMask;
+                            lastIds = CopySwap(lastIds, u);
+                            lastSeq = CopySwap(lastSeq, u);
                             yield return lastSeq;
                             if (u + 2 < ids.Length) next.Add((u + 2, lastIds, lastSeq));
                         }
                     }
                 }
             }
-
         }
 
-        static (int[], T[]) CopySwap<T>(int[] ids, T[] seq, int u)
+        static T[] CopySwap<T>(T[] array, int i)
         {
-            var newIds = new int[ids.Length];
-            Array.Copy(ids, newIds, ids.Length);
-            var id = newIds[u];
-            newIds[u] = newIds[u + 1];
-            newIds[u + 1] = id;
-            var newSeq = new T[seq.Length];
-            Array.Copy(seq, newSeq, seq.Length);
-            var s = newSeq[u];
-            newSeq[u] = newSeq[u + 1];
-            newSeq[u + 1] = s;
-            return (newIds, newSeq);
+            array = (T[])array.Clone();
+            var s = array[i];
+            array[i] = array[i + 1];
+            array[i + 1] = s;
+            return array;
         }
     }
 

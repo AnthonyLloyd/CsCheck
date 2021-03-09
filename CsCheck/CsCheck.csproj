@@ -12,7 +12,7 @@ This gives the following advantages:
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be continued later to give simpler cases for high dimensional problems.
 
-CsCheck also makes multithreading, performance and regression testing simple and fast.
+CsCheck also makes concurrency, performance and regression testing simple and fast.
         </Description>
         <Authors>Anthony Lloyd</Authors>
         <Owners>Anthony Lloyd</Owners>
@@ -21,10 +21,10 @@ CsCheck also makes multithreading, performance and regression testing simple and
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;multithreading;performance;regression;testing</PackageTags>
-        <Version>1.1.3</Version>
+        <Version>2.0.0</Version>
         <PackageReleaseNotes>
-Decimal invalid values bug fix.
-Strong name the assembly.
+Added SampleModelBased and SampleConcurrent.
+Removed older Sample multithreading functions.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>9.0</LangVersion>
@@ -33,6 +33,8 @@ Strong name the assembly.
         <SignAssembly>true</SignAssembly>
         <DelaySign>false</DelaySign>
         <AssemblyOriginatorKeyFile>../SigningKey.snk</AssemblyOriginatorKeyFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>CS1591</NoWarn>
     </PropertyGroup>
     <ItemGroup>
         <None Include="CsCheck.png" Pack="true" PackagePath="" />
