@@ -293,6 +293,7 @@ namespace CsCheck
         /// <summary>Sample concurrent operations on a random initial state checking that that result can be linearized.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, Func<T, T, bool> equal = null, params Gen<(string, Action<T>)>[] operations)
         {
+            int[] replay = null;
             if (equal is null) equal = DefaultEqual;
             Gen.Create(pcg =>
             {
@@ -302,13 +303,16 @@ namespace CsCheck
                 return ((t, stream, seed), size);
             })
             .Select(Gen.OneOf(operations).Array[1, MAX_CONCURRENT_OPERATIONS].Select(ops => Gen.Int[1, Math.Min(options.Threads, ops.Length)]), (a, b) =>
-                new ConcurrentData<T> { State = a.t, Stream = a.stream, Seed = a.seed, Operations = b.V0, Threads = b.V1, ThreadIds = new int[b.V0.Length] }
+                new ConcurrentData<T> { State = a.t, Stream = a.stream, Seed = a.seed, Operations = b.V0, Threads = b.V1 }
             )
             .Sample(cd =>
             {
                 try
                 {
-                    ThreadUtils.Run(cd.State, cd.Operations, cd.Threads, cd.ThreadIds);
+                    if (replay is null)
+                        ThreadUtils.Run(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = new int[cd.Operations.Length]);
+                    else
+                        ThreadUtils.RunReplay(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = replay);
                 }
                 catch (Exception e)
                 {

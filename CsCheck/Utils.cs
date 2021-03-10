@@ -54,6 +54,37 @@ namespace CsCheck
             if (exception is not null) throw exception;
         }
 
+        internal static void RunReplay<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[] threadIds)
+        {
+            Exception exception = null;
+            var runners = new Thread[threads];
+            while (--threads >= 0)
+            {
+                runners[threads] = new Thread(threadId =>
+                {
+                    int opId = -1, i = -1, tid = (int)threadId;
+                    while ((i = Interlocked.Increment(ref opId)) < operations.Length)
+                    {
+                        if (threadIds[i] == tid)
+                        {
+                            try { operations[i].Item2(concurrentState); }
+                            catch (Exception e)
+                            {
+                                if (exception is null)
+                                {
+                                    exception = e;
+                                    Interlocked.Exchange(ref opId, operations.Length);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            for (int i = 0; i < runners.Length; i++) runners[i].Start(i);
+            for (int i = 0; i < runners.Length; i++) runners[i].Join();
+            if (exception is not null) throw exception;
+        }
+
         internal static IEnumerable<T[]> Permutations<T>(int[] threadIds, T[] sequence)
         {
             yield return sequence;
