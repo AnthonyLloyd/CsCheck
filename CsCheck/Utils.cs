@@ -22,10 +22,11 @@ namespace CsCheck
 {
     internal class ThreadUtils
     {
+        static readonly int[] DummyArray = new int[Check.MAX_CONCURRENT_OPERATIONS];
         internal static void Run<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[] threadIds = null)
         {
+            if (threadIds is null) threadIds = DummyArray;
             Exception exception = null;
-            if (threadIds is null) threadIds = new int[operations.Length];
             var opId = -1;
             var runners = new Thread[threads];
             while (--threads >= 0)

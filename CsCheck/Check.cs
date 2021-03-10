@@ -267,8 +267,9 @@ namespace CsCheck
 
         /// <summary>Sample model-based operations on a random initial state checking that the actual and model are equal.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, SampleOptions<(Actual, Model)> options,
-            Func<Actual, Model, bool> equal, params Gen<Action<Actual, Model>>[] operations)
+            Func<Actual, Model, bool> equal = null, params Gen<Action<Actual, Model>>[] operations)
         {
+            if (equal is null) equal = DefaultModelEqual;
             initial.Select(Gen.OneOf(operations).Array)
             .Sample(g =>
             {
@@ -288,9 +289,11 @@ namespace CsCheck
         class ConcurrentData<T> { public T State; public uint Stream; public ulong Seed; public (string, Action<T>)[] Operations;
                                   public int Threads; public int[] ThreadIds; public Exception Exception; }
 
+        internal const int MAX_CONCURRENT_OPERATIONS = 10;
         /// <summary>Sample concurrent operations on a random initial state checking that that result can be linearized.</summary>
-        public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, Func<T, T, bool> equal, params Gen<(string, Action<T>)>[] operations)
+        public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, Func<T, T, bool> equal = null, params Gen<(string, Action<T>)>[] operations)
         {
+            if (equal is null) equal = DefaultEqual;
             Gen.Create(pcg =>
             {
                 var stream = pcg.Stream;
@@ -298,7 +301,7 @@ namespace CsCheck
                 var (t, size) = initial.Generate(pcg);
                 return ((t, stream, seed), size);
             })
-            .Select(Gen.OneOf(operations).Array[1, 10].Select(ops => Gen.Int[1, Math.Min(options.Threads, ops.Length)]), (a, b) =>
+            .Select(Gen.OneOf(operations).Array[1, MAX_CONCURRENT_OPERATIONS].Select(ops => Gen.Int[1, Math.Min(options.Threads, ops.Length)]), (a, b) =>
                 new ConcurrentData<T> { State = a.t, Stream = a.stream, Seed = a.seed, Operations = b.V0, Threads = b.V1, ThreadIds = new int[b.V0.Length] }
             )
             .Sample(cd =>
@@ -753,6 +756,65 @@ namespace CsCheck
             IEnumerable e => Print(e.Cast<object>()),
             _ => o.ToString(),
         };
+
+        internal static bool DefaultEqual<T>(T a, T b)
+        {
+            if (a is IEquatable<T> aie) return aie.Equals(b);
+            else if (a is IList ail && b is IList bil)
+            {
+                if (ail.Count != bil.Count) return false;
+                for (int i = 0; i < ail.Count; i++)
+                    if (!ail[i].Equals(bil[i]))
+                        return false;
+                return true;
+            }
+            else if (a is IReadOnlyList<object> airl && b is IReadOnlyList<object> birl)
+            {
+                if (airl.Count != birl.Count) return false;
+                for (int i = 0; i < airl.Count; i++)
+                    if (!airl[i].Equals(birl[i]))
+                        return false;
+                return true;
+            }
+            else if (a is IReadOnlyCollection<object> airc && b is IReadOnlyCollection<object> birc)
+            {
+                return airc.Count == birc.Count && !airc.Except(birc).Any();
+            }
+            else if (a is ICollection aic && b is ICollection bic)
+            {
+                return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
+            }
+            return EqualityComparer<T>.Default.Equals(a, b);
+        }
+
+        internal static bool DefaultModelEqual<T, M>(T a, M b)
+        {
+            if (a is IList ail && b is IList bil)
+            {
+                if (ail.Count != bil.Count) return false;
+                for (int i = 0; i < ail.Count; i++)
+                    if (!ail[i].Equals(bil[i]))
+                        return false;
+                return true;
+            }
+            if (a is IReadOnlyList<object> airl && b is IReadOnlyList<object> birl)
+            {
+                if (airl.Count != birl.Count) return false;
+                for (int i = 0; i < airl.Count; i++)
+                    if (!airl[i].Equals(birl[i]))
+                        return false;
+                return true;
+            }
+            else if (a is IReadOnlyCollection<object> airc && b is IReadOnlyCollection<object> birc)
+            {
+                return airc.Count == birc.Count && !airc.Except(birc).Any();
+            }
+            else if (a is ICollection aic && b is ICollection bic)
+            {
+                return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
+            }
+            return a.Equals(b);
+        }
     }
 
     public class FasterResult

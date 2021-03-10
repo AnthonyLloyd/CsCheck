@@ -142,18 +142,6 @@ namespace Tests
         {
             Gen.Byte.Array[100, 1000]
             .Faster(
-                data => data.Aggregate(0.0, (t, b) => t + b),
-                data => data.Select(i => (double)i).Sum(),
-                sigma: 50
-            )
-            .Output(writeLine);
-        }
-
-        [Fact]
-        public void Faster_Linq_Imperative_Random()
-        {
-            Gen.Byte.Array[100, 1000]
-            .Faster(
                 data =>
                 {
                     double s = 0.0;
@@ -201,7 +189,8 @@ namespace Tests
             Gen.Int.List.Select(l => (new ConcurrentBag<int>(l), l))
             .SampleModelBased(
                 // Equality check of bag vs list.
-                equal: (bag, list) => bag.OrderBy(i => i).SequenceEqual(list.OrderBy(i => i)),
+                //equal: (bag, list) => bag.OrderBy(i => i).SequenceEqual(list.OrderBy(i => i)),
+                equal: null,
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag and list.
                 Gen.Int.Select<int, Action<ConcurrentBag<int>, List<int>>>(i => (bag, list) =>
                 {
@@ -227,7 +216,8 @@ namespace Tests
             Gen.Int.List[0, 5].Select(l => new ConcurrentBag<int>(l))
             .SampleConcurrent(
                 // Equality check of bag vs bag.
-                equal: (actual, pos) => actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i)),
+                //equal: (actual, pos) => actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i)),
+                equal: null,
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
                 Gen.Int.Select<int, (string, Action<ConcurrentBag<int>>)>(i => ($"Add({i})", bag => bag.Add(i))),
                 // TryTake operation - An example of an operation that doesn't need any data.
@@ -257,8 +247,8 @@ namespace Tests
             Gen.Dictionary(Gen.Int[0, 100], Gen.Byte)[0, 10].Select(l => new ConcurrentDictionary<int, byte>(l))
             .SampleConcurrent(
 
-                equal: (actual, pos) => actual.OrderBy(i => i.Key).SequenceEqual(pos.OrderBy(i => i.Key)),
-
+                //equal: (actual, pos) => actual.OrderBy(i => i.Key).SequenceEqual(pos.OrderBy(i => i.Key)),
+                equal: null,
                 Gen.Int[0, 100].Select(Gen.Byte).Select<(int, byte), (string, Action<ConcurrentDictionary<int, byte>>)>(t =>
                       ($"d[{t.Item1}] = {t.Item2}", d => d[t.Item1] = t.Item2)
                 ),
@@ -274,10 +264,23 @@ namespace Tests
         {
             Gen.Int.List[0, 5].Select(l => new ConcurrentQueue<int>(l))
             .SampleConcurrent(new SampleOptions<ConcurrentQueue<int>> { Size = 100 },
-                equal: (actual, pos) => actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i)),
+                //equal: (actual, pos) => actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i)),
+                equal: null,
                 Gen.Int.Select<int, (string, Action<ConcurrentQueue<int>>)>(i => ($"Enqueue({i})", q => q.Enqueue(i))),
                 Gen.Const<(string, Action<ConcurrentQueue<int>>)>(("TryDequeue()", q => q.TryDequeue(out _)))
             );
         }
     }
 }
+
+// RC1
+// TODO: Concurrent - replay
+// TODO: Model-Based - exceptions, output, immutable?
+// TODO: default parameters vs params and option
+// TODO: AssertEqual? - Array is IList
+
+// RC2
+// TODO: More Gen.ConcurrentDictionary
+// TODO: More Print
+// TODO: More DefaultEqual
+// TODO: More Docs
