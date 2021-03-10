@@ -13,14 +13,47 @@
 // limitations under the License.
 
 using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
+[assembly: InternalsVisibleTo("Tests, PublicKey=002400000480000094000000060200000024000052534131000400000100010089f5f142bc30ab84c70e4ccd0b09a684c3d822a99d269cac850f155421fced34048c0e3869a38db5cca81cd8ffcb7469a79422c3a2438a234c7534885471c1cc856ae40461a1ec4a4c5b1d897ba50f70ff486801a482505e0ec506c22da4a6ac5a1d8417e47985aa95caffd180dab750815989d43fcf0a7ee06ce8f1825106d0")]
 namespace CsCheck
 {
-    public class ThreadStats
+    internal class ThreadUtils
     {
-        public static IEnumerable<T[]> Permutations<T>(int[] threadIds, T[] sequence)
+        internal static void Run<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[] threadIds = null)
+        {
+            Exception exception = null;
+            if (threadIds is null) threadIds = new int[operations.Length];
+            var opId = -1;
+            var runners = new Thread[threads];
+            while (--threads >= 0)
+            {
+                runners[threads] = new Thread(threadId =>
+                {
+                    int i, tid = (int)threadId;
+                    while ((i = Interlocked.Increment(ref opId)) < operations.Length)
+                    {
+                        threadIds[i] = tid;
+                        try { operations[i].Item2(concurrentState); }
+                        catch (Exception e)
+                        {
+                            if (exception is null)
+                            {
+                                exception = e;
+                                Interlocked.Exchange(ref opId, operations.Length);
+                            }
+                        }
+                    }
+                });
+            }
+            for (int i = 0; i < runners.Length; i++) runners[i].Start(i);
+            for (int i = 0; i < runners.Length; i++) runners[i].Join();
+            if (exception is not null) throw exception;
+        }
+
+        internal static IEnumerable<T[]> Permutations<T>(int[] threadIds, T[] sequence)
         {
             yield return sequence;
             var next = new List<(int, int[], T[])> { (1, threadIds, sequence) };

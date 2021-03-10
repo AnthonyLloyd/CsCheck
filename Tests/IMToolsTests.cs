@@ -10,9 +10,6 @@ namespace Tests
 {
     public class IMToolsTests
     {
-        readonly Action<string> writeLine;
-        public IMToolsTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
-
         [Fact(Skip = "Experiment")]
         public void AddOrUpdate_random_items_and_randomly_checking()
         {

@@ -14,8 +14,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace CsCheck
 {
@@ -69,15 +69,14 @@ namespace CsCheck
         }
     }
 
-    public interface IGen
-    {
-        (object, Size) Generate(PCG pcg);
-    }
-
-    public abstract class Gen<T> : IGen
+    public abstract class Gen<T>
     {
         public abstract (T, Size) Generate(PCG pcg);
-        (object, Size) IGen.Generate(PCG pcg) => Generate(pcg);
+        public Gen<R> Cast<R>() => Gen.Create(pcg =>
+        {
+            var (o, s) = Generate(pcg);
+            return (o is R t ? t : (R)Convert.ChangeType(o, typeof(R)), s);
+        });
         public GenArray<T> Array => new(this);
         public GenEnumerable<T> Enumerable => new(this);
         public GenArray2D<T> Array2D => new(this);
@@ -86,30 +85,29 @@ namespace CsCheck
         public GenArrayUnique<T> ArrayUnique => new(this);
     }
 
-    class GenF<T> : Gen<T>
-    {
-        readonly Func<PCG, (T, Size)> generate;
-        public GenF(Func<PCG, (T, Size)> generate) => this.generate = generate;
-        public override (T, Size) Generate(PCG pcg) => generate(pcg);
-    }
-
     public static class Gen
     {
-        public static Gen<T> Create<T>(Func<PCG, (T, Size)> gen) => new GenF<T>(gen);
-        public static Gen<R> Select<T, R>(this Gen<T> gen, Func<T, R> selector) => new GenF<R>(pcg =>
+        class GenFunc<T> : Gen<T>
+        {
+            readonly Func<PCG, (T, Size)> generate;
+            internal GenFunc(Func<PCG, (T, Size)> generate) => this.generate = generate;
+            public override (T, Size) Generate(PCG pcg) => generate(pcg);
+        }
+        public static Gen<T> Create<T>(Func<PCG, (T, Size)> gen) => new GenFunc<T>(gen);
+        public static Gen<R> Select<T, R>(this Gen<T> gen, Func<T, R> selector) => Create(pcg =>
         {
             var (v, s) = gen.Generate(pcg);
             return (selector(v), s);
         });
         public static Gen<R> Select<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2,
-            Func<T1, T2, R> selector) => new GenF<R>(pcg =>
+            Func<T1, T2, R> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
             return (selector(v1, v2), new Size(s1, s2));
         });
         public static Gen<R> Select<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
-            Func<T1, T2, T3, R> selector) => new GenF<R>(pcg =>
+            Func<T1, T2, T3, R> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
@@ -117,7 +115,7 @@ namespace CsCheck
             return (selector(v1, v2, v3), new Size(s1, s2, s3));
         });
         public static Gen<R> Select<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
-            Func<T1, T2, T3, T4, R> selector) => new GenF<R>(pcg =>
+            Func<T1, T2, T3, T4, R> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
@@ -126,7 +124,7 @@ namespace CsCheck
             return (selector(v1, v2, v3, v4), new Size(s1, s2, s3, s4));
         });
         public static Gen<R> Select<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
-            Gen<T5> gen5, Func<T1, T2, T3, T4, T5, R> selector) => new GenF<R>(pcg =>
+            Gen<T5> gen5, Func<T1, T2, T3, T4, T5, R> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
@@ -136,7 +134,7 @@ namespace CsCheck
             return (selector(v1, v2, v3, v4, v5), new Size(s1, s2, s3, s4, s5));
         });
         public static Gen<R> Select<T1, T2, T3, T4, T5, T6, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
-            Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, R> selector) => new GenF<R>(pcg =>
+            Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, R> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
@@ -147,7 +145,7 @@ namespace CsCheck
             return (selector(v1, v2, v3, v4, v5, v6), new Size(s1, s2, s3, s4, s5, s6));
         });
         public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
-            Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) => new GenF<R>(pcg =>
+            Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
@@ -159,7 +157,7 @@ namespace CsCheck
             return (selector(v1, v2, v3, v4, v5, v6, v7), new Size(s1, s2, s3, s4, s5, s6, s7));
         });
         public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
-            Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector) => new GenF<R>(pcg =>
+            Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
@@ -173,7 +171,7 @@ namespace CsCheck
         });
         public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9,
-            Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> selector) => new GenF<R>(pcg =>
+            Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
@@ -188,7 +186,7 @@ namespace CsCheck
         });
         public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
             Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
-        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> selector) => new GenF<R>(pcg =>
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
@@ -202,14 +200,14 @@ namespace CsCheck
             var (v10, s10) = gen10.Generate(pcg);
             return (selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10), new Size(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10));
         });
-        public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen0, Gen<T1> gen1) => new GenF<(T0, T1)>(pcg =>
+        public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen0, Gen<T1> gen1) => Create(pcg =>
         {
             var (v0, s0) = gen0.Generate(pcg);
             var (v1, s1) = gen1.Generate(pcg);
             return ((v0, v1), new Size(s0, s1));
         });
         public static Gen<(T0 V0, T1 V1, T2 V2)> Select<T0, T1, T2>(this Gen<T0> gen0, Gen<T1> gen1, Gen<T2> gen2)
-            => new GenF<(T0, T1, T2)>(pcg =>
+            => Create(pcg =>
         {
             var (v0, s0) = gen0.Generate(pcg);
             var (v1, s1) = gen1.Generate(pcg);
@@ -217,7 +215,7 @@ namespace CsCheck
             return ((v0, v1, v2), new Size(s0, s1, s2));
         });
         public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> Select<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1,
-            Gen<T2> gen2, Gen<T3> gen3) => new GenF<(T0, T1, T2, T3)>(pcg =>
+            Gen<T2> gen2, Gen<T3> gen3) => Create(pcg =>
         {
             var (v0, s0) = gen0.Generate(pcg);
             var (v1, s1) = gen1.Generate(pcg);
@@ -226,7 +224,7 @@ namespace CsCheck
             return ((v0, v1, v2, v3), new Size(s0, s1, s2, s3));
         });
         public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3, T4 V4)> Select<T0, T1, T2, T3, T4>(this Gen<T0> gen0, Gen<T1> gen1,
-            Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4) => new GenF<(T0, T1, T2, T3, T4)>(pcg =>
+            Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4) => Create(pcg =>
         {
             var (v0, s0) = gen0.Generate(pcg);
             var (v1, s1) = gen1.Generate(pcg);
@@ -235,30 +233,40 @@ namespace CsCheck
             var (v4, s4) = gen4.Generate(pcg);
             return ((v0, v1, v2, v3, v4), new Size(s0, s1, s2, s3, s4));
         });
-        public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen, Func<T0, Gen<T1>> selector) => new GenF<(T0, T1)>(pcg =>
+        public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen, Func<T0, Gen<T1>> selector) => Create(pcg =>
         {
             var (v1, s1) = gen.Generate(pcg);
             var genR = selector(v1);
             var (vR, sR) = genR.Generate(pcg);
             return ((v1, vR), s1.Append(sR));
         });
-        public static Gen<(T0 V0, T1 V1, T2 V2)> Select<T0, T1, T2>(this Gen<T0> gen1, Gen<T1> gen2,
-            Func<T0, T1, Gen<T2>> selector) => new GenF<(T0, T1, T2)>(pcg =>
+        public static Gen<(T0 V0, T1 V1, T2 V2)> Select<T0, T1, T2>(this Gen<T0> gen0, Gen<T1> gen1,
+            Func<T0, T1, Gen<T2>> selector) => Create(pcg =>
         {
+            var (v0, s0) = gen0.Generate(pcg);
+            var (v1, s1) = gen1.Generate(pcg);
+            var gen2 = selector(v0, v1);
+            var (v2, s2) = gen2.Generate(pcg);
+            return ((v0, v1, v2), new Size(s0.Append(s2), s1.Append(s2)));
+        });
+        public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> Select<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1, Gen<T2> gen2,
+            Func<T0, T1, T2, Gen<T3>> selector) => Create(pcg =>
+        {
+            var (v0, s0) = gen0.Generate(pcg);
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
-            var genR = selector(v1, v2);
-            var (vR, sR) = genR.Generate(pcg);
-            return ((v1, v2, vR), new Size(s1.Append(sR), s2.Append(sR)));
+            var gen3 = selector(v0, v1, v2);
+            var (v3, s3) = gen3.Generate(pcg);
+            return ((v0, v1, v2, v3), new Size(s0.Append(s3), s1.Append(s3), s2.Append(s3)));
         });
-        public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, Gen<R>> selector) => new GenF<R>(pcg =>
+        public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, Gen<R>> selector) => Create(pcg =>
         {
             var (v1, s1) = gen.Generate(pcg);
             var genR = selector(v1);
             var (vR, sR) = genR.Generate(pcg);
             return (vR, s1.Append(sR));
         });
-        public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, Gen<R>> selector) => new GenF<R>(pcg =>
+        public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, Gen<R>> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
@@ -267,7 +275,7 @@ namespace CsCheck
             return (vR, new Size(s1.Append(sR), s2.Append(sR)));
         });
         public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
-            Func<T1, T2, T3, Gen<R>> selector) => new GenF<R>(pcg =>
+            Func<T1, T2, T3, Gen<R>> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
@@ -277,7 +285,7 @@ namespace CsCheck
             return (vR, new Size(s1.Append(sR), s2.Append(sR), s3.Append(sR)));
         });
         public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
-            Func<T1, T2, T3, T4, Gen<R>> selector) => new GenF<R>(pcg =>
+            Func<T1, T2, T3, T4, Gen<R>> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
@@ -288,7 +296,7 @@ namespace CsCheck
             return (vR, new Size(s1.Append(sR), s2.Append(sR), s3.Append(sR), s4.Append(sR)));
         });
         public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
-            Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector) => new GenF<R>(pcg =>
+            Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector) => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var (v2, s2) = gen2.Generate(pcg);
@@ -300,21 +308,21 @@ namespace CsCheck
             return (vR, new Size(s1.Append(sR), s2.Append(sR), s3.Append(sR), s4.Append(sR), s5.Append(sR)));
         });
         public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Func<T1, Gen<T2>> genSelector, Func<T1, T2, R> resultSelector)
-            => new GenF<R>(pcg =>
+            => Create(pcg =>
         {
             var (v1, s1) = gen1.Generate(pcg);
             var gen2 = genSelector(v1);
             var (v2, s2) = gen2.Generate(pcg);
             return (resultSelector(v1, v2), s1.Append(s2));
         });
-        public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => new GenF<T>(pcg =>
+        public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => Create(pcg =>
         {
             var t = gen.Generate(pcg);
             while (!predicate(t.Item1)) t = gen.Generate(pcg);
             return t;
         });
-        public static Gen<T> Const<T>(T value) => new GenF<T>(_ => (value, Size.Zero));
-        public static Gen<T> Const<T>(Func<T> value) => new GenF<T>(_ => (value(), Size.Zero));
+        public static Gen<T> Const<T>(T value) => Create(_ => (value, Size.Zero));
+        public static Gen<T> Const<T>(Func<T> value) => Create(_ => (value(), Size.Zero));
         public static Gen<T> OneOf<T>(params T[] ts) => Int[0, ts.Length - 1].Select(i => ts[i]);
         public static Gen<T> OneOf<T>(params Gen<T>[] gens) => Int[0, gens.Length - 1].SelectMany(i => gens[i]);
         public static Gen<T> Enum<T>() where T : Enum
@@ -325,11 +333,6 @@ namespace CsCheck
                 ts[i] = (T)a.GetValue(i);
             return OneOf(ts);
         }
-        public static Gen<T> Cast<T>(this IGen gen) => new GenF<T>(pcg =>
-        {
-            var (o, s) = gen.Generate(pcg);
-            return ((o is T t) ? t : (T)Convert.ChangeType(o, typeof(T)), s);
-        });
         public static Gen<T> Frequency<T>(params (int, T)[] ts)
         {
             var tsAgg = new (int, T)[ts.Length];
@@ -388,20 +391,20 @@ namespace CsCheck
             }
         }
 
-        public static Gen<T[]> Shuffle<T>(T[] a) => new GenF<T[]>(pcg =>
+        public static Gen<T[]> Shuffle<T>(T[] a) => Create(pcg =>
         {
             Shuffle(a, pcg, 0);
             return (a, Size.Zero);
         });
 
-        public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen) => new GenF<T[]>(pcg =>
+        public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen) => Create(pcg =>
         {
             var (a, s) = gen.Generate(pcg);
             Shuffle(a, pcg, 0);
             return (a, s);
         });
 
-        public static Gen<T[]> Shuffle<T>(T[] a, int length) => new GenF<T[]>(pcg =>
+        public static Gen<T[]> Shuffle<T>(T[] a, int length) => Create(pcg =>
         {
             int lower = Math.Max(a.Length - length, 0);
             Shuffle(a, pcg, lower);
@@ -421,20 +424,20 @@ namespace CsCheck
         public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen, int start, int finish) =>
             SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
 
-        public static Gen<List<T>> Shuffle<T>(List<T> a) => new GenF<List<T>>(pcg =>
+        public static Gen<List<T>> Shuffle<T>(List<T> a) => Create(pcg =>
         {
             Shuffle(a, pcg, 0);
             return (a, Size.Zero);
         });
 
-        public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => new GenF<List<T>>(pcg =>
+        public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => Create(pcg =>
         {
             var (a, s) = gen.Generate(pcg);
             Shuffle(a, pcg, 0);
             return (a, s);
         });
 
-        public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => new GenF<List<T>>(pcg =>
+        public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => Create(pcg =>
         {
             int lower = Math.Max(a.Count - length, 0);
             Shuffle(a, pcg, lower);
@@ -499,7 +502,7 @@ namespace CsCheck
             get
             {
                 uint l = (uint)(finish - start) + 1u;
-                return new GenF<sbyte>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     sbyte i = (sbyte)(start + pcg.Next(l));
                     return (i, new Size(Zigzag(i)));
@@ -521,7 +524,7 @@ namespace CsCheck
             {
                 uint s = start;
                 uint l = finish - s + 1u;
-                return new GenF<byte>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     byte i = (byte)(s + pcg.Next(l));
                     return (i, new Size(i));
@@ -544,7 +547,7 @@ namespace CsCheck
             get
             {
                 uint l = (uint)(finish - start) + 1u;
-                return new GenF<short>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     short i = (short)(start + pcg.Next(l));
                     return (i, new Size(Zigzag(i)));
@@ -565,7 +568,7 @@ namespace CsCheck
             get
             {
                 uint l = (uint)(finish - start) + 1u;
-                return new GenF<ushort>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     ushort i = (ushort)(start + pcg.Next(l));
                     return (i, new Size(i));
@@ -590,7 +593,7 @@ namespace CsCheck
             get
             {
                 uint l = (uint)(finish - start) + 1u;
-                return new GenF<int>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     int i = (int)(start + pcg.Next(l));
                     return (i, new Size(Zigzag(i)));
@@ -621,7 +624,7 @@ namespace CsCheck
             get
             {
                 uint l = finish - start + 1u;
-                return new GenF<uint>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     uint i = start + pcg.Next(l);
                     return (i, new Size(i));
@@ -661,7 +664,7 @@ namespace CsCheck
             {
 
                 ulong l = (ulong)(finish - start) + 1ul;
-                return new GenF<long>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     long i = start + (long)pcg.Next64(l);
                     return (i, new Size(Zigzag(i)));
@@ -682,7 +685,7 @@ namespace CsCheck
             get
             {
                 ulong l = finish - start + 1ul;
-                return new GenF<ulong>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     ulong i = start + pcg.Next64(l);
                     return (i, new Size(i));
@@ -691,15 +694,14 @@ namespace CsCheck
         }
     }
 
-    [StructLayout(LayoutKind.Explicit)]
-    internal struct FloatConverter
-    {
-        [FieldOffset(0)] public uint I;
-        [FieldOffset(0)] public float F;
-    }
-
     public class GenFloat : Gen<float>
     {
+        [StructLayout(LayoutKind.Explicit)]
+        struct FloatConverter
+        {
+            [FieldOffset(0)] public uint I;
+            [FieldOffset(0)] public float F;
+        }
         public override (float, Size) Generate(PCG pcg)
         {
             uint i = pcg.Next();
@@ -711,7 +713,7 @@ namespace CsCheck
             {
                 finish -= start;
                 start -= finish;
-                return new GenF<float>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     uint i = pcg.Next() >> 9;
                     return (new FloatConverter { I = i | 0x3F800000 }.F * finish + start
@@ -720,25 +722,25 @@ namespace CsCheck
             }
         }
         /// <summary>In the range 0.0 &lt;= x &lt;= max including special values.</summary>
-        public Gen<float> NonNegative = new GenF<float>(pcg =>
+        public Gen<float> NonNegative = Gen.Create(pcg =>
         {
             uint i = pcg.Next();
             return (Math.Abs(new FloatConverter { I = i }.F), new Size(i));
         });
         /// <summary>In the range 0.0f &lt;= x &lt; 1.0f.</summary>
-        public Gen<float> Unit = new GenF<float>(pcg =>
+        public Gen<float> Unit = Gen.Create(pcg =>
         {
             uint i = pcg.Next() >> 9;
             return (new FloatConverter { I = i | 0x3F800000 }.F - 1f, new Size(i));
         });
         /// <summary>In the range 1.0f &lt;= x &lt; 2.0f.</summary>
-        public Gen<float> OneTwo = new GenF<float>(pcg =>
+        public Gen<float> OneTwo = Gen.Create(pcg =>
         {
             uint i = pcg.Next() >> 9;
             return (new FloatConverter { I = i | 0x3F800000 }.F, new Size(i));
         });
         /// <summary>Without special values nan and inf.</summary>
-        public Gen<float> Normal = new GenF<float>(pcg =>
+        public Gen<float> Normal = Gen.Create(pcg =>
         {
             uint i = pcg.Next();
             return ((i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU))
@@ -746,7 +748,7 @@ namespace CsCheck
                 , new Size(i));
         });
         /// <summary>In the range 0.0 &lt;= x &lt;= max without special values.</summary>
-        public Gen<float> NormalNonNegative = new GenF<float>(pcg =>
+        public Gen<float> NormalNonNegative = Gen.Create(pcg =>
         {
             uint i = pcg.Next();
             return (Math.Abs((i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU))
@@ -774,7 +776,7 @@ namespace CsCheck
         };
 
         /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
-        public Gen<float> Special = new GenF<float>(pcg =>
+        public Gen<float> Special = Gen.Create(pcg =>
         {
             uint i = pcg.Next();
             return ((i & 0xF0U) == 0xD0U ? MakeSpecial(i)
@@ -796,7 +798,7 @@ namespace CsCheck
             {
                 finish -= start;
                 start -= finish;
-                return new GenF<double>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     ulong i = pcg.Next64() >> 12;
                     return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * finish + start
@@ -805,27 +807,27 @@ namespace CsCheck
             }
         }
         /// <summary>In the range 0.0 &lt;= x &lt;= max.</summary>
-        public Gen<double> NonNegative = new GenF<double>(pcg =>
+        public Gen<double> NonNegative = Gen.Create(pcg =>
         {
             ulong i = pcg.Next64();
             return (Math.Abs(BitConverter.Int64BitsToDouble((long)i)), new Size(i));
         });
         /// <summary>In the range 0.0 &lt;= x &lt; 1.0.</summary>
-        public Gen<double> Unit = new GenF<double>(pcg =>
+        public Gen<double> Unit = Gen.Create(pcg =>
         {
             ulong i = pcg.Next64() >> 12;
             return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1.0
                     , new Size(i));
         });
         /// <summary>In the range 1.0 &lt;= x &lt; 2.0.</summary>
-        public Gen<double> OneTwo = new GenF<double>(pcg =>
+        public Gen<double> OneTwo = Gen.Create(pcg =>
         {
             ulong i = pcg.Next64() >> 12;
             return (BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000)
                     , new Size(i));
         });
         /// <summary>Without special values nan and inf.</summary>
-        public Gen<double> Normal = new GenF<double>(pcg =>
+        public Gen<double> Normal = Gen.Create(pcg =>
         {
             ulong i = pcg.Next64();
             return ((i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL))
@@ -833,7 +835,7 @@ namespace CsCheck
                 , new Size(i));
         });
         /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
-        public Gen<double> NormalNonNegative = new GenF<double>(pcg =>
+        public Gen<double> NormalNonNegative = Gen.Create(pcg =>
         {
             ulong i = pcg.Next64();
             return (Math.Abs((i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL))
@@ -860,7 +862,7 @@ namespace CsCheck
             _ => 0.0,
         };
         /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
-        public Gen<double> Special = new GenF<double>(pcg =>
+        public Gen<double> Special = Gen.Create(pcg =>
         {
             ulong i = pcg.Next64();
             return ((i & 0xF0UL) == 0xD0UL ? MakeSpecial(i)
@@ -894,7 +896,7 @@ namespace CsCheck
             {
                 finish -= start;
                 start -= finish;
-                return new GenF<decimal>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     var i = pcg.Next64() >> 12;
                     return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * finish + start
@@ -902,14 +904,14 @@ namespace CsCheck
                 });
             }
         }
-        public Gen<decimal> NonNegative = new GenF<decimal>(pcg =>
+        public Gen<decimal> NonNegative = Gen.Create(pcg =>
         {
             var scale = (byte)pcg.Next(29);
             var hi = (int)pcg.Next();
             var d = new decimal((int)pcg.Next(), (int)pcg.Next(), hi, false, scale);
             return (d, new Size((ulong)scale << 32 + hi));
         });
-        public Gen<decimal> Unit = new GenF<decimal>(pcg =>
+        public Gen<decimal> Unit = Gen.Create(pcg =>
         {
             ulong i = pcg.Next64() >> 12;
             return ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1M
@@ -930,7 +932,7 @@ namespace CsCheck
             get
             {
                 ulong l = (ulong)(finish.Ticks - start.Ticks) + 1ul;
-                return new GenF<DateTime>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     ulong i = (ulong)start.Ticks + pcg.Next64(l);
                     return (new DateTime((long)i), new Size(i));
@@ -953,7 +955,7 @@ namespace CsCheck
             {
                 uint s = (uint)(start.Ticks / TimeSpan.TicksPerDay);
                 uint l = (uint)((finish.Ticks - start.Ticks) / TimeSpan.TicksPerDay) + 1u;
-                return new GenF<DateTime>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     uint i = s + pcg.Next(l);
                     return (new DateTime(i * TimeSpan.TicksPerDay), new Size(i));
@@ -974,7 +976,7 @@ namespace CsCheck
             get
             {
                 ulong l = (ulong)(finish.Ticks - start.Ticks) + 1ul;
-                return new GenF<TimeSpan>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     ulong i = (ulong)start.Ticks + pcg.Next64(l);
                     return (new TimeSpan((long)i), new Size(i));
@@ -995,18 +997,17 @@ namespace CsCheck
         }
     }
 
-    [StructLayout(LayoutKind.Explicit)]
-    internal struct GuidConverter
-    {
-        [FieldOffset(0)] public uint I0;
-        [FieldOffset(4)] public uint I1;
-        [FieldOffset(8)] public uint I2;
-        [FieldOffset(12)] public uint I3;
-        [FieldOffset(0)] public Guid G;
-    }
-
     public class GenGuid : Gen<Guid>
     {
+        [StructLayout(LayoutKind.Explicit)]
+        struct GuidConverter
+        {
+            [FieldOffset(0)] public Guid G;
+            [FieldOffset(0)] public uint I0;
+            [FieldOffset(4)] public uint I1;
+            [FieldOffset(8)] public uint I2;
+            [FieldOffset(12)] public uint I3;
+        }
         public override (Guid, Size) Generate(PCG pcg)
         {
             var c = new GuidConverter { I0 = pcg.Next(), I1 = pcg.Next(), I2 = pcg.Next(), I3 = pcg.Next() };
@@ -1028,7 +1029,7 @@ namespace CsCheck
             {
                 uint s = start;
                 uint l = finish + 1u - s;
-                return new GenF<char>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     var i = pcg.Next(l);
                     return ((char)(s + i), new Size(i));
@@ -1039,7 +1040,7 @@ namespace CsCheck
         {
             get
             {
-                return new GenF<char>(pcg =>
+                return Gen.Create(pcg =>
                 {
                     var i = pcg.Next((uint)chars.Length);
                     return (chars[(int)i], new Size(i));
@@ -1084,12 +1085,12 @@ namespace CsCheck
             var l = pcg.Next() & 127U;
             return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
-        public Gen<T[]> this[Gen<int> length] => new GenF<T[]>(pcg =>
+        public Gen<T[]> this[Gen<int> length] => Gen.Create(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
             return Generate(pcg, l, sl.I << 32);
         });
-        public Gen<T[]> this[int length] => new GenF<T[]>(pcg =>
+        public Gen<T[]> this[int length] => Gen.Create(pcg =>
         {
             return Generate(pcg, length, 0UL);
         });
@@ -1126,12 +1127,12 @@ namespace CsCheck
             var l = pcg.Next() & 127U;
             return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
-        public Gen<T[]> this[Gen<int> length] => new GenF<T[]>(pcg =>
+        public Gen<T[]> this[Gen<int> length] => Gen.Create(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
             return Generate(pcg, l, sl.I << 32);
         });
-        public Gen<T[]> this[int length] => new GenF<T[]>(pcg =>
+        public Gen<T[]> this[int length] => Gen.Create(pcg =>
         {
             return Generate(pcg, length, 0UL);
         });
@@ -1160,12 +1161,12 @@ namespace CsCheck
             var l = pcg.Next() & 127U;
             return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
-        public Gen<IEnumerable<T>> this[Gen<int> length] => new GenF<IEnumerable<T>>(pcg =>
+        public Gen<IEnumerable<T>> this[Gen<int> length] => Gen.Create(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
             return Generate(pcg, l, sl.I << 32);
         });
-        public Gen<IEnumerable<T>> this[int length] => new GenF<IEnumerable<T>>(pcg =>
+        public Gen<IEnumerable<T>> this[int length] => Gen.Create(pcg =>
         {
             return Generate(pcg, length, 0UL);
         });
@@ -1194,11 +1195,11 @@ namespace CsCheck
             var l1 = pcg.Next() & 127U;
             return Generate(pcg, (int)l0, (int)l1, ((ulong)(l0 * l1)) << 32);
         }
-        public Gen<T[,]> this[int length0, int length1] => new GenF<T[,]>(pcg =>
+        public Gen<T[,]> this[int length0, int length1] => Gen.Create(pcg =>
         {
             return Generate(pcg, length0, length1, 0UL);
         });
-        public Gen<T[,]> this[Gen<int> length0, Gen<int> length1] => new GenF<T[,]>(pcg =>
+        public Gen<T[,]> this[Gen<int> length0, Gen<int> length1] => Gen.Create(pcg =>
         {
             var (l0, s0) = length0.Generate(pcg);
             var (l1, s1) = length1.Generate(pcg);
@@ -1228,12 +1229,12 @@ namespace CsCheck
             uint l = pcg.Next() & 127U;
             return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
-        public Gen<List<T>> this[Gen<int> length] => new GenF<List<T>>(pcg =>
+        public Gen<List<T>> this[Gen<int> length] => Gen.Create(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
             return Generate(pcg, l, sl.I << 32);
         });
-        public Gen<List<T>> this[int length] => new GenF<List<T>>(pcg =>
+        public Gen<List<T>> this[int length] => Gen.Create(pcg =>
         {
             return Generate(pcg, length, 0UL);
         });
@@ -1267,12 +1268,12 @@ namespace CsCheck
             var l = pcg.Next() & 127U;
             return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
-        public Gen<HashSet<T>> this[Gen<int> length] => new GenF<HashSet<T>>(pcg =>
+        public Gen<HashSet<T>> this[Gen<int> length] => Gen.Create(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
             return Generate(pcg, l, sl.I << 32);
         });
-        public Gen<HashSet<T>> this[int length] => new GenF<HashSet<T>>(pcg =>
+        public Gen<HashSet<T>> this[int length] => Gen.Create(pcg =>
         {
             return Generate(pcg, length, 0UL);
         });
@@ -1315,12 +1316,12 @@ namespace CsCheck
             var l = pcg.Next() & 127U;
             return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
-        public Gen<Dictionary<K, V>> this[Gen<int> length] => new GenF<Dictionary<K, V>>(pcg =>
+        public Gen<Dictionary<K, V>> this[Gen<int> length] => Gen.Create(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
             return Generate(pcg, l, sl.I << 32);
         });
-        public Gen<Dictionary<K, V>> this[int length] => new GenF<Dictionary<K, V>>(pcg =>
+        public Gen<Dictionary<K, V>> this[int length] => Gen.Create(pcg =>
         {
             return Generate(pcg, length, 0UL);
         });
@@ -1363,12 +1364,12 @@ namespace CsCheck
             var l = pcg.Next() & 127U;
             return Generate(pcg, (int)l, ((ulong)l) << 32);
         }
-        public Gen<SortedDictionary<K, V>> this[Gen<int> length] => new GenF<SortedDictionary<K, V>>(pcg =>
+        public Gen<SortedDictionary<K, V>> this[Gen<int> length] => Gen.Create(pcg =>
         {
             var (l, sl) = length.Generate(pcg);
             return Generate(pcg, l, sl.I << 32);
         });
-        public Gen<SortedDictionary<K, V>> this[int length] => new GenF<SortedDictionary<K, V>>(pcg =>
+        public Gen<SortedDictionary<K, V>> this[int length] => Gen.Create(pcg =>
         {
             return Generate(pcg, length, 0UL);
         });

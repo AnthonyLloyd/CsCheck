@@ -14,7 +14,7 @@ namespace Tests
         {
             var seq = new int[ids.Length];
             Array.Copy(ids, seq, ids.Length);
-            Assert.Equal(ThreadStats.Permutations(ids, seq), expected, IntArrayComparer.Default);
+            Assert.Equal(ThreadUtils.Permutations(ids, seq), expected, IntArrayComparer.Default);
         }
 
         [Fact]
@@ -124,7 +124,7 @@ namespace Tests
             {
                 var a2 = new int[a.Length];
                 Array.Copy(a, a2, a.Length);
-                var ps = ThreadStats.Permutations(a, a2).ToList();
+                var ps = ThreadUtils.Permutations(a, a2).ToList();
                 var ss = new HashSet<int[]>(ps, IntArrayComparer.Default);
                 Assert.Equal(ss.Count, ps.Count);
             });

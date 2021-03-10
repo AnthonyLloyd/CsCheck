@@ -63,19 +63,16 @@ namespace CsCheck
             while ((n = Next64()) < threshold) ;
             return n % maxExclusive;
         }
-        public override string ToString() => SeedString.Create(State, Stream);
-        public string ToString(ulong state) => SeedString.Create(state, Stream);
+        public override string ToString() => ToSeedString(State, Stream);
+        public string ToString(ulong state) => ToSeedString(state, Stream);
         public static PCG Parse(string seed)
         {
-            var (state, stream) = SeedString.Parse(seed);
+            var (state, stream) = ParseSeedString(seed);
             return new PCG((stream << 1) | 1UL, state);
         }
-    }
 
-    public static class SeedString
-    {
         static readonly char[] Chars64 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-".ToCharArray();
-        public static string Create(ulong i0, uint i1)
+        internal static string ToSeedString(ulong i0, uint i1)
         {
             var chars = new char[i1 < 64 ? 12
                                : i1 < 64 * 64 ? 13
@@ -119,11 +116,11 @@ namespace CsCheck
         }
         static int Index(char c)
         {
-            for (int i = 0; i < Chars64.Length; i++)
-                if (Chars64[i] == c) return i;
-            throw new Exception("Invalid seed");
+            int i = Array.IndexOf(Chars64, c);
+            if(i == -1) throw new Exception("Invalid seed");
+            return i;
         }
-        public static (ulong, uint) Parse(string seed)
+        internal static (ulong, uint) ParseSeedString(string seed)
         {
             var i = seed.Length == 12 ? Index(seed[11])
                   : seed.Length == 13 ? Index(seed[11]) + (Index(seed[12]) << 6)

@@ -140,6 +140,12 @@ namespace CsCheck
                 + ((ulong)stream.ReadByte() << 48)
                 + ((ulong)stream.ReadByte() << 56);
         }
+        [StructLayout(LayoutKind.Explicit)]
+        struct FloatConverter
+        {
+            [FieldOffset(0)] public uint I;
+            [FieldOffset(0)] public float F;
+        }
         public static void WriteFloat(Stream stream, float val)
         {
             WriteUInt(stream, new FloatConverter { F = val }.I);
@@ -155,6 +161,15 @@ namespace CsCheck
         public static double ReadDouble(Stream stream)
         {
             return BitConverter.Int64BitsToDouble(ReadLong(stream));
+        }
+        [StructLayout(LayoutKind.Explicit)]
+        struct DecimalConverter
+        {
+            [FieldOffset(0)] public decimal D;
+            [FieldOffset(0)] public uint flags;
+            [FieldOffset(4)] public uint hi;
+            [FieldOffset(8)] public uint mid;
+            [FieldOffset(12)] public uint lo;
         }
         public static void WriteDecimal(Stream stream, decimal val)
         {
@@ -193,6 +208,15 @@ namespace CsCheck
         public static DateTimeOffset ReadDateTimeOffset(Stream stream)
         {
             return new DateTimeOffset(ReadDateTime(stream), ReadTimeSpan(stream));
+        }
+        [StructLayout(LayoutKind.Explicit)]
+        struct GuidConverter
+        {
+            [FieldOffset(0)] public Guid G;
+            [FieldOffset(0)] public uint I0;
+            [FieldOffset(4)] public uint I1;
+            [FieldOffset(8)] public uint I2;
+            [FieldOffset(12)] public uint I3;
         }
         public static void WriteGuid(Stream stream, Guid val)
         {
@@ -454,6 +478,12 @@ namespace CsCheck
             AddPrivate((uint)val);
             AddPrivate((uint)(val >> 32));
         }
+        [StructLayout(LayoutKind.Explicit)]
+        struct FloatConverter
+        {
+            [FieldOffset(0)] public uint I;
+            [FieldOffset(0)] public float F;
+        }
         public void Add(float val)
         {
             Stream(StreamSerializer.WriteFloat, StreamSerializer.ReadFloat, val);
@@ -463,6 +493,15 @@ namespace CsCheck
         {
             Stream(StreamSerializer.WriteDouble, StreamSerializer.ReadDouble, val);
             AddPrivate(BitConverter.DoubleToInt64Bits(val));
+        }
+        [StructLayout(LayoutKind.Explicit)]
+        struct DecimalConverter
+        {
+            [FieldOffset(0)] public decimal D;
+            [FieldOffset(0)] public uint flags;
+            [FieldOffset(4)] public uint hi;
+            [FieldOffset(8)] public uint mid;
+            [FieldOffset(12)] public uint lo;
         }
         public void Add(decimal val)
         {
@@ -488,6 +527,15 @@ namespace CsCheck
             Stream(StreamSerializer.WriteDateTimeOffset, StreamSerializer.ReadDateTimeOffset, val);
             AddPrivate(val.DateTime.Ticks);
             AddPrivate(val.Offset.Ticks);
+        }
+        [StructLayout(LayoutKind.Explicit)]
+        struct GuidConverter
+        {
+            [FieldOffset(0)] public Guid G;
+            [FieldOffset(0)] public uint I0;
+            [FieldOffset(4)] public uint I1;
+            [FieldOffset(8)] public uint I2;
+            [FieldOffset(12)] public uint I3;
         }
         public void Add(Guid val)
         {
@@ -816,15 +864,5 @@ namespace CsCheck
             if (position > 0) hash.Add(bytes);
             return hash.GetHashCode();
         }
-    }
-
-    [StructLayout(LayoutKind.Explicit)]
-    internal struct DecimalConverter
-    {
-        [FieldOffset(0)] public uint flags;
-        [FieldOffset(4)] public uint hi;
-        [FieldOffset(8)] public uint mid;
-        [FieldOffset(12)] public uint lo;
-        [FieldOffset(0)] public decimal D;
     }
 }

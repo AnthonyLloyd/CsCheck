@@ -177,8 +177,8 @@ namespace Tests
             Gen.Select(Gen.ULong, Gen.UInt)
             .Sample(t =>
             {
-                var seed = SeedString.Create(t.V0, t.V1);
-                Assert.Equal(t, SeedString.Parse(seed));
+                var seed = PCG.ToSeedString(t.V0, t.V1);
+                Assert.Equal(t, PCG.ParseSeedString(seed));
             });
         }
 

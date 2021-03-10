@@ -285,37 +285,6 @@ namespace CsCheck
             Func<Actual, Model, bool> equal, params Gen<Action<Actual, Model>>[] operations)
             => SampleModelBased(initial, SampleOptions<(Actual, Model)>.Default, equal, operations);
 
-        static void ThreadRun<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[] threadIds = null)
-        {
-            Exception exception = null;
-            if (threadIds is null) threadIds = new int[operations.Length];
-            var opId = -1;
-            var runners = new Thread[threads];
-            while (--threads >= 0)
-            {
-                runners[threads] = new Thread(threadId =>
-                {
-                    int i, tid = (int)threadId;
-                    while ((i = Interlocked.Increment(ref opId)) < operations.Length)
-                    {
-                        threadIds[i] = tid;
-                        try { operations[i].Item2(concurrentState); }
-                        catch (Exception e)
-                        {
-                            if (exception is null)
-                            {
-                                exception = e;
-                                Interlocked.Exchange(ref opId, operations.Length);
-                            }
-                        }
-                    }
-                });
-            }
-            for (int i = 0; i < runners.Length; i++) runners[i].Start(i);
-            for (int i = 0; i < runners.Length; i++) runners[i].Join();
-            if(exception is not null) throw exception;
-        }
-
         class ConcurrentData<T> { public T State; public uint Stream; public ulong Seed; public (string, Action<T>)[] Operations;
                                   public int Threads; public int[] ThreadIds; public Exception Exception; }
 
@@ -336,7 +305,7 @@ namespace CsCheck
             {
                 try
                 {
-                    ThreadRun(cd.State, cd.Operations, cd.Threads, cd.ThreadIds);
+                    ThreadUtils.Run(cd.State, cd.Operations, cd.Threads, cd.ThreadIds);
                 }
                 catch (Exception e)
                 {
@@ -344,12 +313,12 @@ namespace CsCheck
                     return false;
                 }
                 bool linearizable = false;
-                Parallel.ForEach(ThreadStats.Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
+                Parallel.ForEach(ThreadUtils.Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
                 {
                     var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed)).Item1;
                     try
                     {
-                        ThreadRun(linearState, sequence, 1);
+                        ThreadUtils.Run(linearState, sequence, 1);
                         if (equal(cd.State, linearState))
                         {
                             linearizable = true;
@@ -369,13 +338,13 @@ namespace CsCheck
                 sb.Append("\nInitial state: ").Append(options.Print(initial.Generate(new PCG(p.Stream, p.Seed)).Item1));
                 sb.Append("\n  Final state: ").Append(p.Exception is not null ? p.Exception.ToString() : options.Print(p.State));
                 bool first = true;
-                foreach (var sequence in ThreadStats.Permutations(p.ThreadIds, p.Operations))
+                foreach (var sequence in ThreadUtils.Permutations(p.ThreadIds, p.Operations))
                 {
                     var linearState = initial.Generate(new PCG(p.Stream, p.Seed)).Item1;
                     string result;
                     try
                     {
-                        ThreadRun(linearState, sequence, 1);
+                        ThreadUtils.Run(linearState, sequence, 1);
                         result = options.Print(linearState);
                     }
                     catch (Exception e)
@@ -467,6 +436,7 @@ namespace CsCheck
             }
             return r;
         }
+
         /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6).</summary>
         public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Action<T, T> assertEqual = null,
             double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60_000, bool raiseexception = true)

@@ -138,24 +138,13 @@ namespace Tests
         }
 
         [Fact]
-        public void Faster_Linq_Fixed()
-        {
-            var data = new byte[1000];
-            new Random(42).NextBytes(data);
-            Check.Faster(
-                () => data.Aggregate(0.0, (t, b) => t + b),
-                () => data.Select(i => (double)i).Sum()
-            )
-            .Output(writeLine);
-        }
-
-        [Fact]
         public void Faster_Linq_Random()
         {
             Gen.Byte.Array[100, 1000]
             .Faster(
                 data => data.Aggregate(0.0, (t, b) => t + b),
-                data => data.Select(i => (double)i).Sum()
+                data => data.Select(i => (double)i).Sum(),
+                sigma: 50
             )
             .Output(writeLine);
         }
