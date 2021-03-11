@@ -76,8 +76,7 @@ namespace CsCheck
                 T t = default;
                 try
                 {
-                    (t, s) = gen.Generate(pcg);
-                    assert(t);
+                    assert(t = gen.Generate(pcg, out s));
                 }
                 catch (Exception e)
                 {
@@ -100,7 +99,7 @@ namespace CsCheck
                 T t = default;
                 try
                 {
-                    (t, s) = gen.Generate(pcg);
+                    t = gen.Generate(pcg, out s);
                     if (s.IsLessThan(minSize))
                         assert(t);
                     else
@@ -164,7 +163,7 @@ namespace CsCheck
                 T t = default;
                 try
                 {
-                    (t, s) = gen.Generate(pcg);
+                    t = gen.Generate(pcg, out s);
                     if (!predicate(t))
                     {
                         shrinks++;
@@ -196,7 +195,7 @@ namespace CsCheck
                 T t = default;
                 try
                 {
-                    (t, s) = gen.Generate(pcg);
+                    t = gen.Generate(pcg, out s);
                     if (s.IsLessThan(minSize))
                     {
                         if (!predicate(t))
@@ -306,7 +305,7 @@ namespace CsCheck
             {
                 var stream = pcg.Stream;
                 var seed = pcg.Seed;
-                var (t, size) = initial.Generate(pcg);
+                var t = initial.Generate(pcg, out Size size);
                 return ((t, stream, seed), size);
             })
             .Select(Gen.OneOf(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS].Select(ops => Gen.Int[1, Math.Min(options.Threads, ops.Length)]), (a, b) =>
@@ -329,7 +328,7 @@ namespace CsCheck
                 bool linearizable = false;
                 Parallel.ForEach(ThreadUtils.Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
                 {
-                    var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed)).Item1;
+                    var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed), out _);
                     try
                     {
                         ThreadUtils.Run(linearState, sequence, 1);
@@ -349,12 +348,12 @@ namespace CsCheck
                 sb.Append(p.Operations.Length).Append(" operations on ").Append(p.Threads).Append(" threads.");
                 sb.Append("\n   Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
                 sb.Append("\n   On Threads: ").Append(Print(p.ThreadIds));
-                sb.Append("\nInitial state: ").Append(options.Print(initial.Generate(new PCG(p.Stream, p.Seed)).Item1));
+                sb.Append("\nInitial state: ").Append(options.Print(initial.Generate(new PCG(p.Stream, p.Seed), out _)));
                 sb.Append("\n  Final state: ").Append(p.Exception is not null ? p.Exception.ToString() : options.Print(p.State));
                 bool first = true;
                 foreach (var sequence in ThreadUtils.Permutations(p.ThreadIds, p.Operations))
                 {
-                    var linearState = initial.Generate(new PCG(p.Stream, p.Seed)).Item1;
+                    var linearState = initial.Generate(new PCG(p.Stream, p.Seed), out _);
                     string result;
                     try
                     {
@@ -552,7 +551,7 @@ namespace CsCheck
                         while (!mre.IsSet)
                         {
                             state = pcg.State;
-                            t = gen.Generate(pcg).Item1;
+                            t = gen.Generate(pcg, out _);
                             var tf = Stopwatch.GetTimestamp();
                             for (int i = 1; i < repeat; i++) faster(t);
                             faster(t);
@@ -613,7 +612,7 @@ namespace CsCheck
                         while (!mre.IsSet)
                         {
                             state = pcg.State;
-                            t = gen.Generate(pcg).Item1;
+                            t = gen.Generate(pcg, out _);
                             var tf = Stopwatch.GetTimestamp();
                             for (int i = 1; i < repeat; i++) faster(t);
                             var vf = faster(t);
@@ -691,7 +690,7 @@ namespace CsCheck
                         {
                             if (mre.IsSet) return;
                             var state = pcg.State;
-                            var t = g.Generate(pcg).Item1;
+                            var t = g.Generate(pcg, out _);
                             if (predicate(t))
                             {
                                 lock (mre)
@@ -714,7 +713,7 @@ namespace CsCheck
             else
             {
                 var pcg = PCG.Parse(seed);
-                var t = g.Generate(pcg).Item1;
+                var t = g.Generate(pcg, out _);
                 if (!predicate(t)) throw new CsCheckException("where clause no longer satisfied");
                 return t;
             }
