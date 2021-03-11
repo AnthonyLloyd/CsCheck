@@ -77,6 +77,13 @@ namespace CsCheck
             var (o, s) = Generate(pcg);
             return (o is R t ? t : (R)Convert.ChangeType(o, typeof(R)), s);
         });
+        public Gen<(string, Action<R>)> Operation<R>(Func<T, string> name, Action<T, R> f)
+        {
+            return Gen.Create<(string, Action<R>)>(pcg => {
+                var (t, s) = Generate(pcg);
+                return ((name(t), r => f(t, r)), s);
+            });
+        }
         public GenArray<T> Array => new(this);
         public GenEnumerable<T> Enumerable => new(this);
         public GenArray2D<T> Array2D => new(this);
@@ -456,6 +463,11 @@ namespace CsCheck
 
         public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int start, int finish) =>
             SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
+
+        public static Gen<(string, Action<T>)> Operation<T>(string name, Action<T> action)
+        {
+            return Create(pcg => ((name, action), Size.Zero));
+        }
 
         public static readonly GenBool Bool = new();
         public static readonly GenSByte SByte = new();

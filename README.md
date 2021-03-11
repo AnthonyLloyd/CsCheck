@@ -19,7 +19,7 @@ This gives the following advantages:
 See the [comparison](Comparison.md) with other random testing libraries.
 The low ceremony generators make CsCheck a good choice for C#, but the superior automatic shrinking and performance will make it a good choice for other languages too.
 
-CsCheck also has functionality to make multithreading, performance and regression testing simple and fast.
+CsCheck also has functionality to make concurrency, performance and regression testing simple and fast.
 
 ## Examples
 

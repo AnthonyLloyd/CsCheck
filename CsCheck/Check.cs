@@ -267,7 +267,7 @@ namespace CsCheck
 
         /// <summary>Sample model-based operations on a random initial state checking that the actual and model are equal.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, SampleOptions<(Actual, Model)> options,
-            Func<Actual, Model, bool> equal = null, params Gen<Action<Actual, Model>>[] operations)
+            Func<Actual, Model, bool> equal = null, params Gen<(string, Action<Actual, Model>)>[] operations)
         {
             if (equal is null) equal = DefaultModelEqual;
             initial.Select(Gen.OneOf(operations).Array)
@@ -275,7 +275,7 @@ namespace CsCheck
             {
                 var (actual, model) = g.V0;
                 foreach (var operation in g.V1)
-                    operation(actual, model);
+                    operation.Item2(actual, model);
                 return equal(actual, model);
             }, options.Seed, options.Size, options.Threads,
             x => "operations: " + x.V1.Length + " " + options.Print(x.V0));
@@ -283,15 +283,20 @@ namespace CsCheck
 
         /// <summary>Sample model-based operations on a random initial state checking that the actual and model are equal.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial,
-            Func<Actual, Model, bool> equal, params Gen<Action<Actual, Model>>[] operations)
+            Func<Actual, Model, bool> equal, params Gen<(string, Action<Actual, Model>)>[] operations)
             => SampleModelBased(initial, SampleOptions<(Actual, Model)>.Default, equal, operations);
+
+        /// <summary>Sample model-based operations on a random initial state checking that the actual and model are equal.</summary>
+        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial,
+            params Gen<(string, Action<Actual, Model>)>[] operations)
+            => SampleModelBased(initial, SampleOptions<(Actual, Model)>.Default, null, operations);
 
         class ConcurrentData<T> { public T State; public uint Stream; public ulong Seed; public (string, Action<T>)[] Operations;
                                   public int Threads; public int[] ThreadIds; public Exception Exception; }
 
         internal const int MAX_CONCURRENT_OPERATIONS = 10;
         /// <summary>Sample concurrent operations on a random initial state checking that that result can be linearized.</summary>
-        public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, Func<T, T, bool> equal = null, params Gen<(string, Action<T>)>[] operations)
+        public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, Func<T, T, bool> equal, params Gen<(string, Action<T>)>[] operations)
         {
             int[] replay = null;
             if (equal is null) equal = DefaultEqual;
@@ -369,8 +374,12 @@ namespace CsCheck
         }
 
         /// <summary>Sample concurrent operations on a random initial state checking that that result can be linearized.</summary>
-        public static void SampleConcurrent<T>(this Gen<T> initial, Func<T, T, bool> equal, params Gen<(string, Action<T>)>[] operations)
-            => SampleConcurrent(initial, SampleOptions<T>.Default, equal, operations);
+        public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, params Gen<(string, Action<T>)>[] operations)
+            => SampleConcurrent(initial, options, null, operations);
+
+        /// <summary>Sample concurrent operations on a random initial state checking that that result can be linearized.</summary>
+        public static void SampleConcurrent<T>(this Gen<T> initial, params Gen<(string, Action<T>)>[] operations)
+            => SampleConcurrent(initial, SampleOptions<T>.Default, null, operations);
 
         /// <summary>Assert actual is in line with expected using a chi-squared test to 6 sigma.</summary>
         public static void ChiSquared(int[] expected, int[] actual)

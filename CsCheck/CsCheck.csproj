@@ -20,7 +20,7 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
-        <PackageTags>quickcheck;random;multithreading;performance;regression;testing</PackageTags>
+        <PackageTags>quickcheck;random;concurrency;performance;regression;testing</PackageTags>
         <Version>2.0.0-rc1</Version>
         <PackageReleaseNotes>
 Added SampleModelBased and SampleConcurrent.

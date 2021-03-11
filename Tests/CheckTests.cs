@@ -188,20 +188,17 @@ namespace Tests
             // If not the failing sequence will be shrunk down to the shortest and simplest and simplest initial bag.
             Gen.Int.List.Select(l => (new ConcurrentBag<int>(l), l))
             .SampleModelBased(
-                // Equality check of bag vs list.
-                //equal: (bag, list) => bag.OrderBy(i => i).SequenceEqual(list.OrderBy(i => i)),
-                equal: null,
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag and list.
-                Gen.Int.Select<int, Action<ConcurrentBag<int>, List<int>>>(i => (bag, list) =>
+                Gen.Int.Select<int, (string, Action<ConcurrentBag<int>, List<int>>)>(i => ("", (bag, list) =>
                 {
                     bag.Add(i);
                     list.Add(i);
-                }),
+                })),
                 // TryTake operation - An example of an operation that doesn't need any data. This operation also has a post assert.
-                Gen.Const<Action<ConcurrentBag<int>, List<int>>>((bag, list) =>
+                Gen.Const<(string, Action<ConcurrentBag<int>, List<int>>)>(("", (bag, list) =>
                 {
                     Assert.Equal(bag.TryTake(out var i), list.Remove(i));
-                })
+                }))
                 // Other operations ...
             );
         }
@@ -215,47 +212,37 @@ namespace Tests
             // If not the failing list will be shrunk down to the shortest and simplest and simplest initial bag.
             Gen.Int.List[0, 5].Select(l => new ConcurrentBag<int>(l))
             .SampleConcurrent(
-                // Equality check of bag vs bag.
-                //equal: (actual, pos) => actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i)),
-                equal: null,
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
-                Gen.Int.Select<int, (string, Action<ConcurrentBag<int>>)>(i => ($"Add({i})", bag => bag.Add(i))),
+                Gen.Int.Operation<ConcurrentBag<int>>(i => $"Add({i})", (i, bag) => bag.Add(i)),
                 // TryTake operation - An example of an operation that doesn't need any data.
-                Gen.Const<(string, Action<ConcurrentBag<int>>)>(("TryTake()", bag => bag.TryTake(out _)))
+                Gen.Operation<ConcurrentBag<int>>("TryTake()", bag => bag.TryTake(out _))
                 // Other operations ...
             );
         }
 
-        //[Fact]
-        //public void SampleConcurrent_List()
-        //{
-        //    Gen.Int.List
-        //    .SampleConcurrent(new SampleOptions<List<int>> { Size = 1_000_000 },
-        //        // Equality check of bag vs bag.
-        //        equal: (actual, pos) => actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i)),
-        //        // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
-        //        Gen.Int.Select<int, (string, Action<List<int>>)>(i => ($"Add({i})", list => list.Add(i)))
-        //        // TryTake operation - An example of an operation that doesn't need any data.
-        //        //Gen.Const<(string, Action<List<int>>)>(("Remove()", list => list.RemoveAt(0)))
-        //    // Other operations ...
-        //    );
-        //}
+        [Fact]
+        public void SampleConcurrent_List()
+        {
+            Gen.Int.List
+            .SampleConcurrent(
+                // Add operation - Gen used to create the data required and this is turned into an Action on the bag.
+                Gen.Int.Operation<List<int>>(i => $"Add({i})", (i, list) => list.Add(i))
+                // TryTake operation - An example of an operation that doesn't need any data.
+                //Gen.Const<(string, Action<List<int>>)>(("Remove()", list => list.RemoveAt(0)))
+                // Other operations ...
+            );
+        }
 
         [Fact]
         public void SampleConcurrent_ConcurrentDictionary()
         {
             Gen.Dictionary(Gen.Int[0, 100], Gen.Byte)[0, 10].Select(l => new ConcurrentDictionary<int, byte>(l))
             .SampleConcurrent(
+                Gen.Int[0, 100].Select(Gen.Byte)
+                .Operation<ConcurrentDictionary<int, byte>>(t =>$"d[{t.V0}] = {t.V1}", (t, d) => d[t.V0] = t.V1),
 
-                //equal: (actual, pos) => actual.OrderBy(i => i.Key).SequenceEqual(pos.OrderBy(i => i.Key)),
-                equal: null,
-                Gen.Int[0, 100].Select(Gen.Byte).Select<(int, byte), (string, Action<ConcurrentDictionary<int, byte>>)>(t =>
-                      ($"d[{t.Item1}] = {t.Item2}", d => d[t.Item1] = t.Item2)
-                ),
-
-                Gen.Int[0, 100].Select<int, (string, Action<ConcurrentDictionary<int, byte>>)>(i =>
-                     ($"TryRemove({i})", d => d.TryRemove(i, out _))
-                )
+                Gen.Int[0, 100]
+                .Operation<ConcurrentDictionary<int, byte>>(i => $"TryRemove({i})", (i, d) => d.TryRemove(i, out _))
             );
         }
 
@@ -264,17 +251,14 @@ namespace Tests
         {
             Gen.Int.List[0, 5].Select(l => new ConcurrentQueue<int>(l))
             .SampleConcurrent(new SampleOptions<ConcurrentQueue<int>> { Size = 100 },
-                //equal: (actual, pos) => actual.OrderBy(i => i).SequenceEqual(pos.OrderBy(i => i)),
-                equal: null,
-                Gen.Int.Select<int, (string, Action<ConcurrentQueue<int>>)>(i => ($"Enqueue({i})", q => q.Enqueue(i))),
-                Gen.Const<(string, Action<ConcurrentQueue<int>>)>(("TryDequeue()", q => q.TryDequeue(out _)))
+                Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (i, q) => q.Enqueue(i)),
+                Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
             );
         }
     }
 }
 
 // RC1
-// TODO: Concurrent - replay
 // TODO: Model-Based - exceptions, output, immutable?
 // TODO: default parameters vs params and option
 // TODO: AssertEqual? - Array is IList
