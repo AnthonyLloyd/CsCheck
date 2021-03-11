@@ -189,16 +189,16 @@ namespace Tests
             Gen.Int.List.Select(l => (new ConcurrentBag<int>(l), l))
             .SampleModelBased(
                 // Add operation - Gen used to create the data required and this is turned into an Action on the bag and list.
-                Gen.Int.Select<int, (string, Action<ConcurrentBag<int>, List<int>>)>(i => ("", (bag, list) =>
+                Gen.Int.Operation<ConcurrentBag<int>, List<int>>(i => "", (i, bag, list) =>
                 {
                     bag.Add(i);
                     list.Add(i);
-                })),
+                }),
                 // TryTake operation - An example of an operation that doesn't need any data. This operation also has a post assert.
-                Gen.Const<(string, Action<ConcurrentBag<int>, List<int>>)>(("", (bag, list) =>
+                Gen.Operation<ConcurrentBag<int>, List<int>>("", (bag, list) =>
                 {
                     Assert.Equal(bag.TryTake(out var i), list.Remove(i));
-                }))
+                })
                 // Other operations ...
             );
         }

@@ -69,7 +69,12 @@ namespace CsCheck
         }
     }
 
-    public abstract class Gen<T>
+    public interface IGen<out T>
+    {
+        T Generate(PCG pcg, out Size size);
+    }
+
+    public abstract class Gen<T> : IGen<T>
     {
         public abstract (T, Size) Generate(PCG pcg);
         public Gen<R> Cast<R>() => Gen.Create(pcg =>
@@ -77,13 +82,26 @@ namespace CsCheck
             var (o, s) = Generate(pcg);
             return (o is R t ? t : (R)Convert.ChangeType(o, typeof(R)), s);
         });
-        public Gen<(string, Action<R>)> Operation<R>(Func<T, string> name, Action<T, R> f)
+
+        public GenOperation<T1> Operation<T1>(Func<T, string> name, Action<T, T1> f) => new(pcg =>
         {
-            return Gen.Create<(string, Action<R>)>(pcg => {
-                var (t, s) = Generate(pcg);
-                return ((name(t), r => f(t, r)), s);
-            });
+            var (t, s) = Generate(pcg);
+            return ((name(t), r => f(t, r)), s);
+        });
+
+        public GenOperation<T1, T2> Operation<T1, T2>(Func<T, string> name, Action<T, T1, T2> f) => new(pcg =>
+        {
+            var (t, s) = Generate(pcg);
+            return ((name(t), (r, rb) => f(t, r, rb)), s);
+        });
+
+        public T Generate(PCG pcg, out Size size)
+        {
+            T t;
+            (t, size) = Generate(pcg);
+            return t;
         }
+
         public GenArray<T> Array => new(this);
         public GenEnumerable<T> Enumerable => new(this);
         public GenArray2D<T> Array2D => new(this);
@@ -266,11 +284,11 @@ namespace CsCheck
             var (v3, s3) = gen3.Generate(pcg);
             return ((v0, v1, v2, v3), new Size(s0.Append(s3), s1.Append(s3), s2.Append(s3)));
         });
-        public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, Gen<R>> selector) => Create(pcg =>
+        public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, IGen<R>> selector) => Create(pcg =>
         {
             var (v1, s1) = gen.Generate(pcg);
             var genR = selector(v1);
-            var (vR, sR) = genR.Generate(pcg);
+            var vR = genR.Generate(pcg, out var sR);
             return (vR, s1.Append(sR));
         });
         public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, Gen<R>> selector) => Create(pcg =>
@@ -358,9 +376,9 @@ namespace CsCheck
                 return tsAgg[tsAgg.Length - 1].Item2;
             });
         }
-        public static Gen<T> Frequency<T>(params (int, Gen<T>)[] gens)
+        public static Gen<T> Frequency<T>(params (int, IGen<T>)[] gens)
         {
-            var gensAgg = new (int, Gen<T>)[gens.Length];
+            var gensAgg = new (int, IGen<T>)[gens.Length];
             int total = 0;
             for (int i = 0; i < gens.Length; i++)
             {
@@ -464,10 +482,8 @@ namespace CsCheck
         public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int start, int finish) =>
             SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
 
-        public static Gen<(string, Action<T>)> Operation<T>(string name, Action<T> action)
-        {
-            return Create(pcg => ((name, action), Size.Zero));
-        }
+        public static GenOperation<T> Operation<T>(string name, Action<T> action) => new(pcg => ((name, action), Size.Zero));
+        public static GenOperation<T1, T2> Operation<T1, T2>(string name, Action<T1, T2> action) => new(pcg => ((name, action), Size.Zero));
 
         public static readonly GenBool Bool = new();
         public static readonly GenSByte SByte = new();
@@ -1386,5 +1402,19 @@ namespace CsCheck
             return Generate(pcg, length, 0UL);
         });
         public Gen<SortedDictionary<K, V>> this[int start, int finish] => this[Gen.Int[start, finish]];
+    }
+
+    public class GenOperation<T> : Gen<(string, Action<T>)>
+    {
+        readonly Func<PCG, ((string, Action<T>), Size)> generate;
+        internal GenOperation(Func<PCG, ((string, Action<T>), Size)> generate) => this.generate = generate;
+        public override ((string, Action<T>), Size) Generate(PCG pcg) => generate(pcg);
+    }
+
+    public class GenOperation<T1, T2> : Gen<(string, Action<T1, T2>)>
+    {
+        readonly Func<PCG, ((string, Action<T1, T2>), Size)> generate;
+        internal GenOperation(Func<PCG, ((string, Action<T1, T2>), Size)> generate) => this.generate = generate;
+        public override ((string, Action<T1, T2>), Size) Generate(PCG pcg) => generate(pcg);
     }
 }
