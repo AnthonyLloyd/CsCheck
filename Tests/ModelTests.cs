@@ -63,19 +63,21 @@ namespace Tests
 
         public static class ModelGen
         {
-            public static Gen<string> Name = Gen.String["ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 "];
-            public static Gen<Currency> Currency = Gen.Enum<Currency>();
-            public static Gen<Country> Country = Gen.Enum<Country>();
-            public static Gen<int> Quantity = Gen.Int[-99, 99].Select(Gen.Int[0, 5]).Select(t => t.V0 * (int)Math.Pow(10, t.V1));
-            public static Gen<double> Coupon = Gen.Int[0, 100].Select(i => 0.125 * i);
-            public static Gen<double> Price = Gen.Int[0001, 9999].Select(i => 0.01 * i);
-            public static Gen<DateTime> Date = Gen.Date[new DateTime(2000, 1, 1), new DateTime(2040, 1, 1)];
-            public static Gen<Equity> Equity = Gen.Select(Name, Country, Currency, Gen.Enum<Exchange>().HashSet[1, 3], (n, co, cu, e) => new Equity(n, co, cu, e));
-            public static Gen<Bond> Bond = Gen.Select(Name, Country, Currency, Gen.SortedDictionary(Date, Coupon), (n, co, cu, c) => new Bond(n, co, cu, c));
-            public static Gen<Instrument> Instrument = Gen.Frequency<Instrument>((2, Equity), (1, Bond));
-            public static Gen<Trade> Trade = Gen.Select(Date, Quantity, Price, (dt, q, p) => new Trade(dt, q, q * p));
-            public static Gen<Position> Position = Gen.Select(Instrument, Trade.List, Price, (i, t, p) => new Position(i, t, p));
-            public static Gen<Portfolio> Portfolio = Gen.Select(Name, Currency, Position.Array, (n, c, p) => new Portfolio(n, c, p));
+            public readonly static Gen<string> Name = Gen.String["ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 "];
+            public readonly static Gen<Currency> Currency = Gen.Enum<Currency>();
+            public readonly static Gen<Country> Country = Gen.Enum<Country>();
+            public readonly static Gen<int> Quantity = Gen.Int[-99, 99].Select(Gen.Int[0, 5]).Select(t => t.V0 * (int)Math.Pow(10, t.V1));
+            public readonly static Gen<double> Coupon = Gen.Int[0, 100].Select(i => 0.125 * i);
+            public readonly static Gen<double> Price = Gen.Int[0001, 9999].Select(i => 0.01 * i);
+            public readonly static Gen<DateTime> Date = Gen.Date[new DateTime(2000, 1, 1), new DateTime(2040, 1, 1)];
+            public readonly static Gen<Equity> Equity = Gen.Select(Name, Country, Currency, Gen.Enum<Exchange>().HashSet[1, 3],
+                                                        (n, co, cu, e) => new Equity(n, co, cu, e));
+            public readonly static Gen<Bond> Bond = Gen.Select(Name, Country, Currency, Gen.SortedDictionary(Date, Coupon),
+                                                        (n, co, cu, c) => new Bond(n, co, cu, c));
+            public readonly static Gen<Instrument> Instrument = Gen.OneOf<Instrument>(Equity, Bond);
+            public readonly static Gen<Trade> Trade = Gen.Select(Date, Quantity, Price, (dt, q, p) => new Trade(dt, q, q * p));
+            public readonly static Gen<Position> Position = Gen.Select(Instrument, Trade.List, Price, (i, t, p) => new Position(i, t, p));
+            public readonly static Gen<Portfolio> Portfolio = Gen.Select(Name, Currency, Position.Array, (n, c, p) => new Portfolio(n, c, p));
         }
 
         [Fact]
@@ -96,7 +98,7 @@ namespace Tests
                 h.AddDecimalPlaces(2, portfolio.Positions.Select(p => p.Profit));
                 h.AddDecimalPlaces(2, portfolio.Profit(fxRate));
                 h.AddDecimalPlaces(2, portfolio.RiskByPosition(fxRate));
-            }, 6329654411345187086);
+            }, 8262409355294024920);
         }
     }
 }

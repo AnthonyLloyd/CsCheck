@@ -271,7 +271,7 @@ namespace CsCheck
             var opNameActions = new Gen<(string, Action<Actual, Model>)>[operations.Length];
             for (int i = 0; i < operations.Length; i++) opNameActions[i] = operations[i];
             if (equal is null) equal = DefaultModelEqual;
-            initial.Select(Gen.OneOf(opNameActions).Array)
+            initial.Select(Gen.OneOf<(string, Action<Actual,Model>)>(opNameActions).Array)
             .Sample(g =>
             {
                 var (actual, model) = g.V0;
@@ -301,15 +301,14 @@ namespace CsCheck
             for (int i = 0; i < operations.Length; i++) opNameActions[i] = operations[i];
             int[] replay = null;
             if (equal is null) equal = DefaultEqual;
-            Gen.Create(pcg =>
+            Gen.Create((PCG pcg, out Size size) =>
             {
                 var stream = pcg.Stream;
                 var seed = pcg.Seed;
-                var t = initial.Generate(pcg, out Size size);
-                return ((t, stream, seed), size);
+                return (initial.Generate(pcg, out size), stream, seed);
             })
-            .Select(Gen.OneOf(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS].Select(ops => Gen.Int[1, Math.Min(options.Threads, ops.Length)]), (a, b) =>
-                new ConcurrentData<T> { State = a.t, Stream = a.stream, Seed = a.seed, Operations = b.V0, Threads = b.V1 }
+            .Select(Gen.OneOf<(string, Action<T>)>(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS].Select(ops => Gen.Int[1, Math.Min(options.Threads, ops.Length)]), (a, b) =>
+                new ConcurrentData<T> { State = a.Item1, Stream = a.stream, Seed = a.seed, Operations = b.V0, Threads = b.V1 }
             )
             .Sample(cd =>
             {
