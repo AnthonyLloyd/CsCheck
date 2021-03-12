@@ -117,7 +117,7 @@ namespace CsCheck
         static int Index(char c)
         {
             int i = Array.IndexOf(Chars64, c);
-            if(i == -1) throw new Exception("Invalid seed");
+            if (i == -1) throw new Exception("Invalid seed");
             return i;
         }
         internal static (ulong, uint) ParseSeedString(string seed)

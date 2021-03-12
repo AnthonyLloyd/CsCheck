@@ -243,10 +243,9 @@ namespace Tests
 }
 
 // RC1
-// TODO: Model-Based - exceptions, output, immutable?
-// TODO: default parameters vs params and option
 // TODO: AssertEqual? - Array is IList
 // TODO: replay repeat, Check.Info
+// TODO: ImTools example and example tests tidy.
 
 // RC2
 // TODO: More Gen.ConcurrentDictionary

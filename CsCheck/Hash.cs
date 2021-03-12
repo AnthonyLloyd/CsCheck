@@ -181,8 +181,13 @@ namespace CsCheck
         }
         public static decimal ReadDecimal(Stream stream)
         {
-            return new DecimalConverter { flags = (uint)ReadUShort(stream) << 16,
-                hi = ReadUInt(stream), mid = ReadUInt(stream), lo = ReadUInt(stream) }.D;
+            return new DecimalConverter
+            {
+                flags = (uint)ReadUShort(stream) << 16,
+                hi = ReadUInt(stream),
+                mid = ReadUInt(stream),
+                lo = ReadUInt(stream)
+            }.D;
         }
         public static void WriteDateTime(Stream stream, DateTime val)
         {

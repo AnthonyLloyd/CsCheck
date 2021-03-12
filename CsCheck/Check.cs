@@ -239,78 +239,134 @@ namespace CsCheck
         public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, Func<T, string> print = null)
             => Sample(gen, predicate, seed, 1, 1, print);
 
+        class ModelBasedData<Actual, Model>
+        {
+            public Actual ActualState; public Model ModelState; public uint Stream; public ulong Seed;
+            public (string, Action<Actual, Model>)[] Operations; public Exception Exception;
+        }
+
         /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model>[] operations,
-            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1,
+            Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
         {
             if (equal is null) equal = DefaultModelEqual;
             if (seed is null) seed = Seed;
             if (size == -1) size = Size;
             if (threads == -1) threads = Threads;
-            if (print is null) print = (a,m) => "  Actual:" + Print(a) + "\n  Model:" + Print(m);
+            if (printActual is null) printActual = Print;
+            if (printModel is null) printModel = Print;
 
             var opNameActions = new Gen<(string, Action<Actual, Model>)>[operations.Length];
             for (int i = 0; i < operations.Length; i++) opNameActions[i] = operations[i];
             if (equal is null) equal = DefaultModelEqual;
-            initial.Select(Gen.OneOf<(string, Action<Actual,Model>)>(opNameActions).Array)
-            .Sample(g =>
+            Gen.Create((PCG pcg, out Size size) =>
             {
-                var (actual, model) = g.V0;
-                foreach (var operation in g.V1)
-                    operation.Item2(actual, model);
-                return equal(actual, model);
+                var stream = pcg.Stream;
+                var seed = pcg.Seed;
+                return (initial.Generate(pcg, out size), stream, seed);
+            })
+            .Select(Gen.OneOf<(string, Action<Actual, Model>)>(opNameActions).Array, (a, b) =>
+                 new ModelBasedData<Actual, Model>
+                 {
+                     ActualState = a.Item1.Item1,
+                     ModelState = a.Item1.Item2,
+                     Stream = a.stream,
+                     Seed = a.seed,
+                     Operations = b
+                 })
+            .Sample(d =>
+            {
+                try
+                {
+                    foreach (var operation in d.Operations)
+                        operation.Item2(d.ActualState, d.ModelState);
+                    return equal(d.ActualState, d.ModelState);
+                }
+                catch (Exception e)
+                {
+                    d.Exception = e;
+                    return false;
+                }
             }, seed, size, threads,
-            x => "operations: " + x.V1.Length + " " /*+ print(x.V0)*/);
+            p =>
+            {
+                var sb = new StringBuilder();
+                sb.Append(p.Operations.Length).Append(" operations.");
+                sb.Append("\n    Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
+                var initialState = initial.Generate(new PCG(p.Stream, p.Seed), out _);
+                sb.Append("\nInitial Actual: ").Append(printActual(initialState.Item1));
+                sb.Append("\nInitial  Model: ").Append(printModel(initialState.Item2));
+                if (p.Exception is null)
+                {
+                    sb.Append("\n  Final Actual: ").Append(printActual(p.ActualState));
+                    sb.Append("\n  Final  Model: ").Append(printModel(p.ModelState));
+                }
+                else
+                {
+                    sb.Append("\n     Exception: ").Append(p.Exception.ToString());
+                }
+                return sb.ToString();
+            });
         }
 
         /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation,
-            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
-            => SampleModelBased(initial, new[] { operation }, equal, seed, size, threads, print);
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1,
+            Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
+            => SampleModelBased(initial, new[] { operation }, equal, seed, size, threads, printActual, printModel);
 
         /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
             GenOperation<Actual, Model> operation2,
-            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
-            => SampleModelBased(initial, new[] { operation1, operation2 }, equal, seed, size, threads, print);
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1,
+            Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
+            => SampleModelBased(initial, new[] { operation1, operation2 }, equal, seed, size, threads, printActual, printModel);
 
         /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
             GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3,
-            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
-            => SampleModelBased(initial, new[] { operation1, operation2, operation3 }, equal, seed, size, threads, print);
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1,
+            Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
+            => SampleModelBased(initial, new[] { operation1, operation2, operation3 }, equal, seed, size, threads, printActual, printModel);
 
         /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
             GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
-            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
-            => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, size, threads, print);
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1,
+            Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
+            => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, size, threads, printActual, printModel);
 
         /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
             GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
             GenOperation<Actual, Model> operation5,
-            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
-            => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5},
-                equal, seed, size, threads, print);
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1,
+            Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
+            => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5 },
+                equal, seed, size, threads, printActual, printModel);
 
         /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
             GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
             GenOperation<Actual, Model> operation5, GenOperation<Actual, Model> operation6,
-            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1,
+            Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
             => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
-                equal, seed, size, threads, print);
+                equal, seed, size, threads, printActual, printModel);
 
-        class ConcurrentData<T> { public T State; public uint Stream; public ulong Seed; public (string, Action<T>)[] Operations;
-                                  public int Threads; public int[] ThreadIds; public Exception Exception; }
+        class ConcurrentData<T>
+        {
+            public T State; public uint Stream; public ulong Seed; public (string, Action<T>)[] Operations;
+            public int Threads; public int[] ThreadIds; public Exception Exception;
+        }
 
         internal const int MAX_CONCURRENT_OPERATIONS = 10;
 

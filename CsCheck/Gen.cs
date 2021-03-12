@@ -479,7 +479,7 @@ namespace CsCheck
             if (lower == 0) return a;
             var r = new T[length];
             for (int i = 0; i < r.Length; i++)
-                r[i] = a[i + lower];            
+                r[i] = a[i + lower];
             return r;
         });
 
@@ -1001,9 +1001,8 @@ namespace CsCheck
         {
             var scale = (byte)pcg.Next(29);
             var hi = (int)pcg.Next();
-            var d = new decimal((int)pcg.Next(), (int)pcg.Next(), hi, false, scale);
             size = new Size((ulong)scale << 32 + hi);
-            return d;
+            return new decimal((int)pcg.Next(), (int)pcg.Next(), hi, false, scale);
         });
         public Gen<decimal> Unit = Gen.Create((PCG pcg, out Size size) =>
         {
@@ -1207,7 +1206,7 @@ namespace CsCheck
             var ss = new Size[length];
             var hs = new HashSet<T>();
             int i = 0;
-            while(i < length)
+            while (i < length)
             {
 
                 var v = gen.Generate(pcg, out Size s);
@@ -1224,8 +1223,7 @@ namespace CsCheck
         }
         public override T[] Generate(PCG pcg, out Size size)
         {
-            var l = pcg.Next() & 127U;
-            return Generate(pcg, (int)l, out size);
+            return Generate(pcg, (int)(pcg.Next() & 127U), out size);
         }
         public Gen<T[]> this[Gen<int> length] => Gen.Create((PCG pcg, out Size size) =>
         {
@@ -1274,18 +1272,16 @@ namespace CsCheck
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         T[,] Generate(PCG pcg, int length0, int length1, out Size size)
         {
+            size = new Size(((ulong)(length0 * length1)) << 32);
             var vs = new T[length0, length1];
             for (int i = 0; i < length0; i++)
                 for (int j = 0; j < length1; j++)
                     vs[i, j] = gen.Generate(pcg, out _);
-            size = new Size(((ulong)(length0 * length1)) << 32);
             return vs;
         }
         public override T[,] Generate(PCG pcg, out Size size)
         {
-            var l0 = pcg.Next() & 127U;
-            var l1 = pcg.Next() & 127U;
-            return Generate(pcg, (int)l0, (int)l1, out size);
+            return Generate(pcg, (int)(pcg.Next() & 127U), (int)(pcg.Next() & 127U), out size);
         }
         public Gen<T[,]> this[int length0, int length1] => Gen.Create((PCG pcg, out Size size) =>
         {
@@ -1293,9 +1289,7 @@ namespace CsCheck
         });
         public Gen<T[,]> this[Gen<int> length0, Gen<int> length1] => Gen.Create((PCG pcg, out Size size) =>
         {
-            var l0 = length0.Generate(pcg, out Size s0);
-            var l1 = length1.Generate(pcg, out Size s1);
-            return Generate(pcg, l0, l1, out size);
+            return Generate(pcg, length0.Generate(pcg, out _), length1.Generate(pcg, out _), out size);
         });
     }
 
@@ -1353,8 +1347,7 @@ namespace CsCheck
         }
         public override HashSet<T> Generate(PCG pcg, out Size size)
         {
-            var l = pcg.Next() & 127U;
-            return Generate(pcg, (int)l, out size);
+            return Generate(pcg, (int)(pcg.Next() & 127U), out size);
         }
         public Gen<HashSet<T>> this[Gen<int> length] => Gen.Create((PCG pcg, out Size size) =>
         {
@@ -1446,8 +1439,7 @@ namespace CsCheck
         }
         public override SortedDictionary<K, V> Generate(PCG pcg, out Size size)
         {
-            var l = pcg.Next() & 127U;
-            return Generate(pcg, (int)l, out size);
+            return Generate(pcg, (int)(pcg.Next() & 127U), out size);
         }
         public Gen<SortedDictionary<K, V>> this[Gen<int> length] => Gen.Create((PCG pcg, out Size size) =>
         {
