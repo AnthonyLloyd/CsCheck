@@ -30,15 +30,6 @@ namespace CsCheck
         public CsCheckException(string message, Exception exception) : base(message, exception) { }
     }
 
-    public class SampleOptions<T>
-    {
-        public static SampleOptions<T> Default = new();
-        public string Seed = Check.Seed;
-        public int Size = Check.Size;
-        public int Threads = Check.Threads;
-        public Func<T, string> Print = t => Check.Print(t);
-    }
-
     public static class Check
     {
         const int MAX_LENGTH = 5000;
@@ -60,17 +51,23 @@ namespace CsCheck
         }
 
         /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-        public static void Sample<T>(this Gen<T> gen, SampleOptions<T> options, Action<T> assert)
+        public static void Sample<T>(this Gen<T> gen, Action<T> assert,
+            string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
         {
+            if (seed is null) seed = Seed;
+            if (size == -1) size = Size;
+            if (threads == -1) threads = Threads;
+            if (print is null) print = Print;
+
             PCG minPCG = null;
             ulong minState = 0UL;
             Size minSize = CsCheck.Size.Max;
             T minT = default;
             Exception minException = null;
             int shrinks = -1;
-            if (options.Seed is not null)
+            if (seed is not null)
             {
-                var pcg = PCG.Parse(options.Seed);
+                var pcg = PCG.Parse(seed);
                 ulong state = pcg.State;
                 Size s = null;
                 T t = default;
@@ -90,8 +87,8 @@ namespace CsCheck
             }
             var lockObj = new object();
             int skipped = 0;
-            Parallel.For(0, options.Seed is null ? options.Size : options.Size - 1,
-                new ParallelOptions { MaxDegreeOfParallelism = options.Threads }, _ =>
+            Parallel.For(0, seed is null ? size : size - 1,
+                new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
@@ -124,40 +121,32 @@ namespace CsCheck
             if (minPCG is not null)
             {
                 var seedString = minPCG.ToString(minState);
-                var tString = options.Print(minT);
+                var tString = print(minT);
                 if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
                 throw new CsCheckException(
-                    $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {options.Size:#,0} total)\nSample: {tString}"
+                    $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)\nSample: {tString}"
                     , minException);
             }
         }
 
-        /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-        public static void Sample<T>(this Gen<T> gen, Action<T> assert, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
-        {
-            var options = new SampleOptions<T>();
-            if (seed is not null) options.Seed = seed;
-            if (size != -1) options.Size = size;
-            if (threads != -1) options.Threads = threads;
-            if (print is not null) options.Print = print;
-            Sample(gen, options, assert);
-        }
-
-        /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-        public static void Sample<T>(this Gen<T> gen, Action<T> assert) => Sample(gen, SampleOptions<T>.Default, assert);
-
         /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-        public static void Sample<T>(this Gen<T> gen, SampleOptions<T> options, Func<T, bool> predicate)
+        public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate,
+            string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
         {
+            if (seed is null) seed = Seed;
+            if (size == -1) size = Size;
+            if (threads == -1) threads = Threads;
+            if (print is null) print = Print;
+
             PCG minPCG = null;
             ulong minState = 0UL;
             Size minSize = CsCheck.Size.Max;
             T minT = default;
             Exception minException = null;
             int shrinks = -1;
-            if (options.Seed is not null)
+            if (seed is not null)
             {
-                var pcg = PCG.Parse(options.Seed);
+                var pcg = PCG.Parse(seed);
                 ulong state = pcg.State;
                 Size s = null;
                 T t = default;
@@ -186,8 +175,8 @@ namespace CsCheck
 
             var lockObj = new object();
             int skipped = 0;
-            Parallel.For(0, options.Seed is null ? options.Size : options.Size - 1,
-                new ParallelOptions { MaxDegreeOfParallelism = options.Threads }, _ =>
+            Parallel.For(0, seed is null ? size : size - 1,
+                new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
@@ -234,27 +223,13 @@ namespace CsCheck
             if (minPCG is not null)
             {
                 var seedString = minPCG.ToString(minState);
-                var tString = options.Print(minT);
+                var tString = print(minT);
                 if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
                 throw new CsCheckException(
-                    $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {options.Size:#,0} total)\nSample: {tString}"
+                    $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)\nSample: {tString}"
                     , minException);
             }
         }
-
-        /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-        public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
-        {
-            var options = new SampleOptions<T>();
-            if (seed is not null) options.Seed = seed;
-            if (size != -1) options.Size = size;
-            if (threads != -1) options.Threads = threads;
-            if (print is not null) options.Print = print;
-            Sample(gen, options, predicate);
-        }
-
-        /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-        public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate) => Sample(gen, SampleOptions<T>.Default, predicate);
 
         /// <summary>Sample the gen once calling the assert.</summary>
         public static void SampleOne<T>(this Gen<T> gen, Action<T> assert, string seed = null, Func<T, string> print = null)
@@ -264,10 +239,17 @@ namespace CsCheck
         public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, Func<T, string> print = null)
             => Sample(gen, predicate, seed, 1, 1, print);
 
-        /// <summary>Sample model-based operations on a random initial state checking that the actual and model are equal.</summary>
-        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, SampleOptions<(Actual, Model)> options,
-            Func<Actual, Model, bool> equal = null, params GenOperation<Actual, Model>[] operations)
+        /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model>[] operations,
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
         {
+            if (equal is null) equal = DefaultModelEqual;
+            if (seed is null) seed = Seed;
+            if (size == -1) size = Size;
+            if (threads == -1) threads = Threads;
+            if (print is null) print = (a,m) => "  Actual:" + Print(a) + "\n  Model:" + Print(m);
+
             var opNameActions = new Gen<(string, Action<Actual, Model>)>[operations.Length];
             for (int i = 0; i < operations.Length; i++) opNameActions[i] = operations[i];
             if (equal is null) equal = DefaultModelEqual;
@@ -278,19 +260,54 @@ namespace CsCheck
                 foreach (var operation in g.V1)
                     operation.Item2(actual, model);
                 return equal(actual, model);
-            }, options.Seed, options.Size, options.Threads,
-            x => "operations: " + x.V1.Length + " " + options.Print(x.V0));
+            }, seed, size, threads,
+            x => "operations: " + x.V1.Length + " " /*+ print(x.V0)*/);
         }
 
         /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, Func<Actual, Model, bool> equal, params GenOperation<Actual, Model>[] operations)
-            => SampleModelBased(initial, SampleOptions<(Actual, Model)>.Default, equal, operations);
+        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation,
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
+            => SampleModelBased(initial, new[] { operation }, equal, seed, size, threads, print);
 
         /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, params GenOperation<Actual, Model>[] operations)
-            => SampleModelBased(initial, SampleOptions<(Actual, Model)>.Default, null, operations);
+        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
+            GenOperation<Actual, Model> operation2,
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
+            => SampleModelBased(initial, new[] { operation1, operation2 }, equal, seed, size, threads, print);
+
+        /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
+            GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3,
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
+            => SampleModelBased(initial, new[] { operation1, operation2, operation3 }, equal, seed, size, threads, print);
+
+        /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
+            GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
+            => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, size, threads, print);
+
+        /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
+            GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
+            GenOperation<Actual, Model> operation5,
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
+            => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5},
+                equal, seed, size, threads, print);
+
+        /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+        public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
+            GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
+            GenOperation<Actual, Model> operation5, GenOperation<Actual, Model> operation6,
+            Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<Actual, Model, string> print = null)
+            => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
+                equal, seed, size, threads, print);
 
         class ConcurrentData<T> { public T State; public uint Stream; public ulong Seed; public (string, Action<T>)[] Operations;
                                   public int Threads; public int[] ThreadIds; public Exception Exception; }
@@ -301,19 +318,25 @@ namespace CsCheck
         /// The result is compared against the result of the possible sequential permutations.
         /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-        public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, Func<T, T, bool> equal, params GenOperation<T>[] operations)
+        public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T>[] operations,
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
         {
+            if (equal is null) equal = DefaultEqual;
+            if (seed is null) seed = Seed;
+            if (size == -1) size = Size;
+            if (threads == -1) threads = Threads;
+            if (print is null) print = Print;
+
             var opNameActions = new Gen<(string, Action<T>)>[operations.Length];
             for (int i = 0; i < operations.Length; i++) opNameActions[i] = operations[i];
             int[] replay = null;
-            if (equal is null) equal = DefaultEqual;
             Gen.Create((PCG pcg, out Size size) =>
             {
                 var stream = pcg.Stream;
                 var seed = pcg.Seed;
                 return (initial.Generate(pcg, out size), stream, seed);
             })
-            .Select(Gen.OneOf<(string, Action<T>)>(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS].Select(ops => Gen.Int[1, Math.Min(options.Threads, ops.Length)]), (a, b) =>
+            .Select(Gen.OneOf<(string, Action<T>)>(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS].Select(ops => Gen.Int[1, Math.Min(threads, ops.Length)]), (a, b) =>
                 new ConcurrentData<T> { State = a.Item1, Stream = a.stream, Seed = a.seed, Operations = b.V0, Threads = b.V1 }
             )
             .Sample(cd =>
@@ -346,15 +369,15 @@ namespace CsCheck
                     catch { state.Stop(); }
                 });
                 return linearizable;
-            }, options.Seed, options.Size, threads: 1,
+            }, seed, size, threads: 1,
             p =>
             {
                 var sb = new StringBuilder();
                 sb.Append(p.Operations.Length).Append(" operations on ").Append(p.Threads).Append(" threads.");
                 sb.Append("\n   Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
                 sb.Append("\n   On Threads: ").Append(Print(p.ThreadIds));
-                sb.Append("\nInitial state: ").Append(options.Print(initial.Generate(new PCG(p.Stream, p.Seed), out _)));
-                sb.Append("\n  Final state: ").Append(p.Exception is not null ? p.Exception.ToString() : options.Print(p.State));
+                sb.Append("\nInitial state: ").Append(print(initial.Generate(new PCG(p.Stream, p.Seed), out _)));
+                sb.Append("\n  Final state: ").Append(p.Exception is not null ? p.Exception.ToString() : print(p.State));
                 bool first = true;
                 foreach (var sequence in ThreadUtils.Permutations(p.ThreadIds, p.Operations))
                 {
@@ -363,7 +386,7 @@ namespace CsCheck
                     try
                     {
                         ThreadUtils.Run(linearState, sequence, 1);
-                        result = options.Print(linearState);
+                        result = print(linearState);
                     }
                     catch (Exception e)
                     {
@@ -383,15 +406,55 @@ namespace CsCheck
         /// The result is compared against the result of the possible sequential permutations.
         /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-        public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, params GenOperation<T>[] operations)
-            => SampleConcurrent(initial, options, null, operations);
+        public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation,
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            => SampleConcurrent(initial, new[] { operation }, equal, seed, size, threads, print);
 
         /// <summary>Sample model-based operations on a random initial state concurrently.
         /// The result is compared against the result of the possible sequential permutations.
         /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-        public static void SampleConcurrent<T>(this Gen<T> initial, params GenOperation<T>[] operations)
-            => SampleConcurrent(initial, SampleOptions<T>.Default, null, operations);
+        public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            => SampleConcurrent(initial, new[] { operation1, operation2 }, equal, seed, size, threads, print);
+
+        /// <summary>Sample model-based operations on a random initial state concurrently.
+        /// The result is compared against the result of the possible sequential permutations.
+        /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+        public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
+            GenOperation<T> operation3,
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            => SampleConcurrent(initial, new[] { operation1, operation2, operation3 }, equal, seed, size, threads, print);
+
+        /// <summary>Sample model-based operations on a random initial state concurrently.
+        /// The result is compared against the result of the possible sequential permutations.
+        /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+        public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
+            GenOperation<T> operation3, GenOperation<T> operation4,
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, size, threads, print);
+
+        /// <summary>Sample model-based operations on a random initial state concurrently.
+        /// The result is compared against the result of the possible sequential permutations.
+        /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+        public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
+            GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5,
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5 },
+                equal, seed, size, threads, print);
+
+        /// <summary>Sample model-based operations on a random initial state concurrently.
+        /// The result is compared against the result of the possible sequential permutations.
+        /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+        public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
+            GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5, GenOperation<T> operation6,
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
+                equal, seed, size, threads, print);
 
         /// <summary>Assert actual is in line with expected using a chi-squared test to 6 sigma.</summary>
         public static void ChiSquared(int[] expected, int[] actual)
@@ -768,7 +831,7 @@ namespace CsCheck
             }
         }
 
-        internal static string Print(object o) => o switch
+        internal static string Print<T>(T t) => t switch
         {
             string s => s,
             Array { Length: <= 12 } a => "[" + string.Join(", ", a.Cast<object>().Select(Print)) + "]",
@@ -779,7 +842,7 @@ namespace CsCheck
             IEnumerable<object> e when e.Take(999).Count() <= 999 => "L=" + e.Count() + " {" + string.Join(", ", e.Select(Print)) + "}",
             IEnumerable<object> e => "L>999 {" + string.Join(", ", e.Take(6).Select(Print)) + " ... }",
             IEnumerable e => Print(e.Cast<object>()),
-            _ => o.ToString(),
+            _ => t.ToString(),
         };
 
         internal static bool DefaultEqual<T>(T a, T b)

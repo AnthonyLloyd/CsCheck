@@ -234,10 +234,10 @@ namespace Tests
         public void SampleConcurrent_ConcurrentQueue()
         {
             Gen.Int.List[0, 5].Select(l => new ConcurrentQueue<int>(l))
-            .SampleConcurrent(new SampleOptions<ConcurrentQueue<int>> { Size = 100 },
+            .SampleConcurrent(
                 Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
                 Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
-            );
+            ,size: 10);
         }
     }
 }
