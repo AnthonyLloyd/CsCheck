@@ -83,16 +83,17 @@ namespace CsCheck
             return o is R t ? t : (R)Convert.ChangeType(o, typeof(R));
         });
 
-        public GenOperation<T1> Operation<T1>(Func<T, string> name, Action<T, T1> f) => new((PCG pcg, out Size size) =>
+        public GenOperation<M> Operation<M>(Func<T, string> name, Action<M, T> f) => new((PCG pcg, out Size size) =>
         {
             var t = Generate(pcg, out size);
-            return (name(t), r => f(t, r));
+            return (name(t), m => f(m, t));
         });
 
-        public GenOperation<T1, T2> Operation<T1, T2>(Func<T, string> name, Action<T, T1, T2> f) => new((PCG pcg, out Size size) =>
+        public GenOperation<Actual, Model> Operation<Actual, Model>(Func<T, string> name, Action<Actual, Model, T> f)
+            => new((PCG pcg, out Size size) =>
         {
             var t = Generate(pcg, out size);
-            return (name(t), (r, rb) => f(t, r, rb));
+            return (name(t), (a, m) => f(a, m, t));
         });
 
         public GenArray<T> Array => new(this);
@@ -529,7 +530,7 @@ namespace CsCheck
         public static GenOperation<T> Operation<T>(string name, Action<T> action)
             => new((PCG pcg, out Size size) => { size = Size.Zero; return (name, action); });
 
-        public static GenOperation<T1, T2> Operation<T1, T2>(string name, Action<T1, T2> action)
+        public static GenOperation<Actual, Model> Operation<Actual, Model>(string name, Action<Actual, Model> action)
             => new((PCG pcg, out Size size) => { size = Size.Zero; return (name, action); });
 
         public static readonly GenBool Bool = new();

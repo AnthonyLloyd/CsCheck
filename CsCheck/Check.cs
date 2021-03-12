@@ -282,11 +282,13 @@ namespace CsCheck
             x => "operations: " + x.V1.Length + " " + options.Print(x.V0));
         }
 
-        /// <summary>Sample model-based operations on a random initial state checking that the actual and model are equal.</summary>
+        /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, Func<Actual, Model, bool> equal, params GenOperation<Actual, Model>[] operations)
             => SampleModelBased(initial, SampleOptions<(Actual, Model)>.Default, equal, operations);
 
-        /// <summary>Sample model-based operations on a random initial state checking that the actual and model are equal.</summary>
+        /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, params GenOperation<Actual, Model>[] operations)
             => SampleModelBased(initial, SampleOptions<(Actual, Model)>.Default, null, operations);
 
@@ -294,7 +296,11 @@ namespace CsCheck
                                   public int Threads; public int[] ThreadIds; public Exception Exception; }
 
         internal const int MAX_CONCURRENT_OPERATIONS = 10;
-        /// <summary>Sample concurrent operations on a random initial state checking that that result can be linearized.</summary>
+
+        /// <summary>Sample model-based operations on a random initial state concurrently.
+        /// The result is compared against the result of the possible sequential permutations.
+        /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, Func<T, T, bool> equal, params GenOperation<T>[] operations)
         {
             var opNameActions = new Gen<(string, Action<T>)>[operations.Length];
@@ -373,11 +379,17 @@ namespace CsCheck
             });
         }
 
-        /// <summary>Sample concurrent operations on a random initial state checking that that result can be linearized.</summary>
+        /// <summary>Sample model-based operations on a random initial state concurrently.
+        /// The result is compared against the result of the possible sequential permutations.
+        /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, SampleOptions<T> options, params GenOperation<T>[] operations)
             => SampleConcurrent(initial, options, null, operations);
 
-        /// <summary>Sample concurrent operations on a random initial state checking that that result can be linearized.</summary>
+        /// <summary>Sample model-based operations on a random initial state concurrently.
+        /// The result is compared against the result of the possible sequential permutations.
+        /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, params GenOperation<T>[] operations)
             => SampleConcurrent(initial, SampleOptions<T>.Default, null, operations);
 
