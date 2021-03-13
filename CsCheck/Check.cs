@@ -900,8 +900,6 @@ namespace CsCheck
         internal static string Print<T>(T t) => t switch
         {
             string s => s,
-            Array { Length: <= 12 } a => "[" + string.Join(", ", a.Cast<object>().Select(Print)) + "]",
-            Array a => $"L={a.Length} [{Print(a.GetValue(0))}, {Print(a.GetValue(1))}, {Print(a.GetValue(2))} ... {Print(a.GetValue(a.Length - 2))}, {Print(a.GetValue(a.Length - 1))}]",
             IList { Count: <= 12 } l => "[" + string.Join(", ", l.Cast<object>().Select(Print)) + "]",
             IList l => $"L={l.Count} [{Print(l[0])}, {Print(l[1])}, {Print(l[2])} ... {Print(l[l.Count - 2])}, {Print(l[l.Count - 1])}]",
             IEnumerable<object> e when e.Take(12).Count() <= 12 => "{" + string.Join(", ", e.Select(Print)) + "}",
@@ -914,6 +912,16 @@ namespace CsCheck
         internal static bool DefaultEqual<T>(T a, T b)
         {
             if (a is IEquatable<T> aie) return aie.Equals(b);
+            else if (a is Array aa2 && b is Array ba2 && aa2.Rank == 2)
+            {
+                if ((aa2.GetLength(0) != ba2.GetLength(0))
+                 || (aa2.GetLength(1) != ba2.GetLength(1))) return false;
+                for (int i = 0; i < aa2.GetLength(0); i++)
+                    for (int j = 0; j < aa2.GetLength(1); j++)
+                        if (!aa2.GetValue(i, j).Equals(ba2.GetValue(i, j)))
+                            return false;
+                return true;
+            }
             else if (a is IList ail && b is IList bil)
             {
                 if (ail.Count != bil.Count) return false;
@@ -921,18 +929,6 @@ namespace CsCheck
                     if (!ail[i].Equals(bil[i]))
                         return false;
                 return true;
-            }
-            else if (a is IReadOnlyList<object> airl && b is IReadOnlyList<object> birl)
-            {
-                if (airl.Count != birl.Count) return false;
-                for (int i = 0; i < airl.Count; i++)
-                    if (!airl[i].Equals(birl[i]))
-                        return false;
-                return true;
-            }
-            else if (a is IReadOnlyCollection<object> airc && b is IReadOnlyCollection<object> birc)
-            {
-                return airc.Count == birc.Count && !airc.Except(birc).Any();
             }
             else if (a is ICollection aic && b is ICollection bic)
             {
@@ -951,21 +947,15 @@ namespace CsCheck
                         return false;
                 return true;
             }
-            if (a is IReadOnlyList<object> airl && b is IReadOnlyList<object> birl)
-            {
-                if (airl.Count != birl.Count) return false;
-                for (int i = 0; i < airl.Count; i++)
-                    if (!airl[i].Equals(birl[i]))
-                        return false;
-                return true;
-            }
-            else if (a is IReadOnlyCollection<object> airc && b is IReadOnlyCollection<object> birc)
-            {
-                return airc.Count == birc.Count && !airc.Except(birc).Any();
-            }
             else if (a is ICollection aic && b is ICollection bic)
             {
                 return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
+            }
+            else if (a is IEnumerable aie && b is IEnumerable bie)
+            {
+                var aieo = aie.Cast<object>().ToList();
+                var bieo = bie.Cast<object>().ToList();
+                return aieo.Count == bieo.Count && !aieo.Except(bieo).Any();
             }
             return a.Equals(b);
         }

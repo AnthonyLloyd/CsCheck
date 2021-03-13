@@ -181,6 +181,76 @@ namespace Tests
         }
 
         [Fact]
+        public void Equal_Dictionary()
+        {
+            Assert.True(Check.DefaultEqual(
+                new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } },
+                new Dictionary<int, byte> { { 3, 4 }, { 1, 2 } }
+            ));
+        }
+
+        [Fact]
+        public void Equal_List()
+        {
+            Assert.True(Check.DefaultEqual(
+                new List<int> { 1, 2, 3, 4 },
+                new List<int> { 1, 2, 3, 4 }
+            ));
+            Assert.False(Check.DefaultEqual(
+                new List<int> { 1, 2, 3, 4 },
+                new List<int> { 1, 2, 4, 3 }
+            ));
+        }
+
+        [Fact]
+        public void Equal_Array()
+        {
+            Assert.True(Check.DefaultEqual(
+                new int[] { 1, 2, 3, 4 },
+                new int[] { 1, 2, 3, 4 }
+            ));
+            Assert.False(Check.DefaultEqual(
+                new int[] { 1, 2, 3, 4 },
+                new int[] { 1, 2, 4, 3 }
+            ));
+        }
+
+        [Fact]
+        public void Equal_Array2D()
+        {
+            Assert.True(Check.DefaultEqual(
+                new int[,] { { 1, 2 }, { 3, 4 } },
+                new int[,] { { 1, 2 }, { 3, 4 } }
+            ));
+            Assert.False(Check.DefaultEqual(
+                new int[,] { { 1, 2 }, { 3, 4 } },
+                new int[,] { { 1, 2 }, { 4, 3 } }
+            ));
+        }
+
+        [Fact]
+        public void ModelEqual_HashSet()
+        {
+            Assert.True(Check.DefaultModelEqual(
+                new HashSet<int> { 1, 2, 3, 4 },
+                new List<int> { 4, 3, 2, 1 }
+            ));
+        }
+
+        [Fact]
+        public void ModelEqual_List()
+        {
+            Assert.True(Check.DefaultModelEqual(
+                new List<int> { 1, 2, 3, 4 },
+                new int[] { 1, 2, 3, 4 }
+            ));
+            Assert.False(Check.DefaultModelEqual(
+                new List<int> { 1, 2, 3, 4 },
+                new int[] { 1, 2, 4, 3 }
+            ));
+        }
+
+        [Fact]
         public void SampleModelBased_ConcurrentBag()
         {
             Gen.Int[0, 5].List.Select(l => (new ConcurrentBag<int>(l), l))
@@ -239,6 +309,12 @@ namespace Tests
                 Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
             );
         }
+
+        //class ImHolder<T>
+        //{
+        //    public T Im;
+
+        //}
     }
 }
 
