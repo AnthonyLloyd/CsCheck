@@ -183,14 +183,14 @@ namespace Tests
         [Fact]
         public void SampleModelBased_ConcurrentBag()
         {
-            Gen.Int.List.Select(l => (new ConcurrentBag<int>(l), l))
+            Gen.Int[0, 5].List.Select(l => (new ConcurrentBag<int>(l), l))
             .SampleModelBased(
-                Gen.Int.Operation<ConcurrentBag<int>, List<int>>(i => "", (bag, list, i) =>
+                Gen.Int.Operation<ConcurrentBag<int>, List<int>>((bag, list, i) =>
                 {
                     bag.Add(i);
                     list.Add(i);
                 }),
-                Gen.Operation<ConcurrentBag<int>, List<int>>("", (bag, list) =>
+                Gen.Operation<ConcurrentBag<int>, List<int>>((bag, list) =>
                 {
                     Assert.Equal(bag.TryTake(out var i), list.Remove(i));
                 })
@@ -207,15 +207,15 @@ namespace Tests
             );
         }
 
-        [Fact]
-        public void SampleConcurrent_List()
-        {
-            Gen.Int.List
-            .SampleConcurrent(
-                Gen.Int.Operation<List<int>>(i => $"Add({i})", (list, i) => list.Add(i))
-                //Gen.Const<(string, Action<List<int>>)>(("Remove()", list => list.RemoveAt(0)))
-            );
-        }
+        //[Fact]
+        //public void SampleConcurrent_List()
+        //{
+        //    Gen.Int.List
+        //    .SampleConcurrent(
+        //        Gen.Int.Operation<List<int>>(i => $"Add({i})", (list, i) => list.Add(i))
+        //        //Gen.Const<(string, Action<List<int>>)>(("Remove()", list => list.RemoveAt(0)))
+        //    );
+        //}
 
         [Fact]
         public void SampleConcurrent_ConcurrentDictionary()
@@ -237,7 +237,7 @@ namespace Tests
             .SampleConcurrent(
                 Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
                 Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
-            ,size: 10);
+            );
         }
     }
 }

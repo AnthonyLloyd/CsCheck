@@ -259,8 +259,13 @@ namespace CsCheck
             if (printModel is null) printModel = Print;
 
             var opNameActions = new Gen<(string, Action<Actual, Model>)>[operations.Length];
-            for (int i = 0; i < operations.Length; i++) opNameActions[i] = operations[i];
-            if (equal is null) equal = DefaultModelEqual;
+            for (int i = 0; i < operations.Length; i++)
+            {
+                var op = operations[i];
+                var opName = "Op" + i;
+                opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2)) : op;
+            }
+
             Gen.Create((PCG pcg, out Size size) =>
             {
                 var stream = pcg.Stream;
@@ -375,7 +380,7 @@ namespace CsCheck
         /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T>[] operations,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            Func<T, T, bool> equal = null, string seed = null, int[] replay = null, int size = -1, int threads = -1, Func<T, string> print = null)
         {
             if (equal is null) equal = DefaultEqual;
             if (seed is null) seed = Seed;
@@ -384,8 +389,13 @@ namespace CsCheck
             if (print is null) print = Print;
 
             var opNameActions = new Gen<(string, Action<T>)>[operations.Length];
-            for (int i = 0; i < operations.Length; i++) opNameActions[i] = operations[i];
-            int[] replay = null;
+            for (int i = 0; i < operations.Length; i++)
+            {
+                var op = operations[i];
+                var opName = "Op" + i;
+                opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2)): op;
+            }
+
             Gen.Create((PCG pcg, out Size size) =>
             {
                 var stream = pcg.Stream;
@@ -463,16 +473,16 @@ namespace CsCheck
         /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
-            => SampleConcurrent(initial, new[] { operation }, equal, seed, size, threads, print);
+            Func<T, T, bool> equal = null, string seed = null, int[] replay = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            => SampleConcurrent(initial, new[] { operation }, equal, seed, replay, size, threads, print);
 
         /// <summary>Sample model-based operations on a random initial state concurrently.
         /// The result is compared against the result of the possible sequential permutations.
         /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
-            => SampleConcurrent(initial, new[] { operation1, operation2 }, equal, seed, size, threads, print);
+            Func<T, T, bool> equal = null, string seed = null, int[] replay = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            => SampleConcurrent(initial, new[] { operation1, operation2 }, equal, seed, replay, size, threads, print);
 
         /// <summary>Sample model-based operations on a random initial state concurrently.
         /// The result is compared against the result of the possible sequential permutations.
@@ -480,8 +490,8 @@ namespace CsCheck
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             GenOperation<T> operation3,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
-            => SampleConcurrent(initial, new[] { operation1, operation2, operation3 }, equal, seed, size, threads, print);
+            Func<T, T, bool> equal = null, string seed = null, int[] replay = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            => SampleConcurrent(initial, new[] { operation1, operation2, operation3 }, equal, seed, replay, size, threads, print);
 
         /// <summary>Sample model-based operations on a random initial state concurrently.
         /// The result is compared against the result of the possible sequential permutations.
@@ -489,8 +499,8 @@ namespace CsCheck
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             GenOperation<T> operation3, GenOperation<T> operation4,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
-            => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, size, threads, print);
+            Func<T, T, bool> equal = null, string seed = null, int[] replay = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, replay, size, threads, print);
 
         /// <summary>Sample model-based operations on a random initial state concurrently.
         /// The result is compared against the result of the possible sequential permutations.
@@ -498,9 +508,9 @@ namespace CsCheck
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            Func<T, T, bool> equal = null, string seed = null, int[] replay = null, int size = -1, int threads = -1, Func<T, string> print = null)
             => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5 },
-                equal, seed, size, threads, print);
+                equal, seed, replay, size, threads, print);
 
         /// <summary>Sample model-based operations on a random initial state concurrently.
         /// The result is compared against the result of the possible sequential permutations.
@@ -508,9 +518,9 @@ namespace CsCheck
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5, GenOperation<T> operation6,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            Func<T, T, bool> equal = null, string seed = null, int[] replay = null, int size = -1, int threads = -1, Func<T, string> print = null)
             => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
-                equal, seed, size, threads, print);
+                equal, seed, replay, size, threads, print);
 
         /// <summary>Assert actual is in line with expected using a chi-squared test to 6 sigma.</summary>
         public static void ChiSquared(int[] expected, int[] actual)
