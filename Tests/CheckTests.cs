@@ -183,7 +183,7 @@ namespace Tests
         [Fact]
         public void Equal_Dictionary()
         {
-            Assert.True(Check.DefaultEqual(
+            Assert.True(Check.Equal(
                 new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } },
                 new Dictionary<int, byte> { { 3, 4 }, { 1, 2 } }
             ));
@@ -192,11 +192,11 @@ namespace Tests
         [Fact]
         public void Equal_List()
         {
-            Assert.True(Check.DefaultEqual(
+            Assert.True(Check.Equal(
                 new List<int> { 1, 2, 3, 4 },
                 new List<int> { 1, 2, 3, 4 }
             ));
-            Assert.False(Check.DefaultEqual(
+            Assert.False(Check.Equal(
                 new List<int> { 1, 2, 3, 4 },
                 new List<int> { 1, 2, 4, 3 }
             ));
@@ -205,11 +205,11 @@ namespace Tests
         [Fact]
         public void Equal_Array()
         {
-            Assert.True(Check.DefaultEqual(
+            Assert.True(Check.Equal(
                 new int[] { 1, 2, 3, 4 },
                 new int[] { 1, 2, 3, 4 }
             ));
-            Assert.False(Check.DefaultEqual(
+            Assert.False(Check.Equal(
                 new int[] { 1, 2, 3, 4 },
                 new int[] { 1, 2, 4, 3 }
             ));
@@ -218,11 +218,11 @@ namespace Tests
         [Fact]
         public void Equal_Array2D()
         {
-            Assert.True(Check.DefaultEqual(
+            Assert.True(Check.Equal(
                 new int[,] { { 1, 2 }, { 3, 4 } },
                 new int[,] { { 1, 2 }, { 3, 4 } }
             ));
-            Assert.False(Check.DefaultEqual(
+            Assert.False(Check.Equal(
                 new int[,] { { 1, 2 }, { 3, 4 } },
                 new int[,] { { 1, 2 }, { 4, 3 } }
             ));
@@ -231,7 +231,7 @@ namespace Tests
         [Fact]
         public void ModelEqual_HashSet()
         {
-            Assert.True(Check.DefaultModelEqual(
+            Assert.True(Check.ModelEqual(
                 new HashSet<int> { 1, 2, 3, 4 },
                 new List<int> { 4, 3, 2, 1 }
             ));
@@ -240,11 +240,11 @@ namespace Tests
         [Fact]
         public void ModelEqual_List()
         {
-            Assert.True(Check.DefaultModelEqual(
+            Assert.True(Check.ModelEqual(
                 new List<int> { 1, 2, 3, 4 },
                 new int[] { 1, 2, 3, 4 }
             ));
-            Assert.False(Check.DefaultModelEqual(
+            Assert.False(Check.ModelEqual(
                 new List<int> { 1, 2, 3, 4 },
                 new int[] { 1, 2, 4, 3 }
             ));

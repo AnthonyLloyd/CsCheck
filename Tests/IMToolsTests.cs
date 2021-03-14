@@ -13,7 +13,7 @@ namespace Tests
         [Fact]
         public void ModelEqual_ImHashMap234()
         {
-            Assert.True(Check.DefaultModelEqual(
+            Assert.True(Check.ModelEqual(
                 ImHashMap234<int, int>.Empty.AddOrUpdate(1, 2).AddOrUpdate(3, 4)
                 .Enumerate().Select(kv => ImTools.KeyValuePair.Pair(kv.Key, kv.Value)),
                 new Dictionary<int, int> { {3, 4}, {1, 2 } }

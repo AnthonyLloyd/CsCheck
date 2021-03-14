@@ -251,7 +251,7 @@ namespace CsCheck
             Func<Actual, Model, bool> equal = null, string seed = null, int size = -1, int threads = -1,
             Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
         {
-            if (equal is null) equal = DefaultModelEqual;
+            if (equal is null) equal = ModelEqual;
             if (seed is null) seed = Seed;
             if (size == -1) size = Size;
             if (threads == -1) threads = Threads;
@@ -383,7 +383,7 @@ namespace CsCheck
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T>[] operations,
             Func<T, T, bool> equal = null, string seed = null, int[] replay = null, int size = -1, int threads = -1, Func<T, string> print = null)
         {
-            if (equal is null) equal = DefaultEqual;
+            if (equal is null) equal = Equal;
             if (seed is null) seed = Seed;
             if (size == -1) size = Size;
             if (threads == -1) threads = Threads;
@@ -394,7 +394,7 @@ namespace CsCheck
             {
                 var op = operations[i];
                 var opName = "Op" + i;
-                opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2)): op;
+                opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2)) : op;
             }
 
             Gen.Create((PCG pcg, out Size size) =>
@@ -911,7 +911,7 @@ namespace CsCheck
             _ => t.ToString(),
         };
 
-        internal static bool DefaultEqual<T>(T a, T b)
+        internal static bool Equal<T>(T a, T b)
         {
             if (a is IEquatable<T> aie) return aie.Equals(b);
             else if (a is Array aa2 && b is Array ba2 && aa2.Rank == 2)
@@ -939,7 +939,7 @@ namespace CsCheck
             return EqualityComparer<T>.Default.Equals(a, b);
         }
 
-        internal static bool DefaultModelEqual<T, M>(T a, M b)
+        internal static bool ModelEqual<T, M>(T a, M b)
         {
             if (a is IList ail && b is IList bil)
             {
