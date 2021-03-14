@@ -69,7 +69,7 @@ namespace CsCheck
             {
                 var pcg = PCG.Parse(seed);
                 ulong state = pcg.State;
-                Size s = null;
+                Size s = CsCheck.Size.Zero;
                 T t = default;
                 try
                 {
@@ -92,7 +92,7 @@ namespace CsCheck
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
-                Size s = null;
+                Size s = CsCheck.Size.Zero;
                 T t = default;
                 try
                 {
@@ -148,7 +148,7 @@ namespace CsCheck
             {
                 var pcg = PCG.Parse(seed);
                 ulong state = pcg.State;
-                Size s = null;
+                Size s = CsCheck.Size.Zero;
                 T t = default;
                 try
                 {
@@ -180,7 +180,7 @@ namespace CsCheck
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
-                Size s = null;
+                Size s = CsCheck.Size.Zero;
                 T t = default;
                 try
                 {
@@ -297,6 +297,7 @@ namespace CsCheck
             }, seed, size, threads,
             p =>
             {
+                if (p == null) return "";
                 var sb = new StringBuilder();
                 sb.Append(p.Operations.Length).Append(" operations.");
                 sb.Append("\n    Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
@@ -438,6 +439,7 @@ namespace CsCheck
             }, seed, size, threads: 1,
             p =>
             {
+                if (p == null) return "";
                 var sb = new StringBuilder();
                 sb.Append(p.Operations.Length).Append(" operations on ").Append(p.Threads).Append(" threads.");
                 sb.Append("\n   Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));

@@ -309,19 +309,13 @@ namespace Tests
                 Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
             );
         }
-
-        //class ImHolder<T>
-        //{
-        //    public T Im;
-
-        //}
     }
 }
 
 // RC1
 // TODO: AssertEqual? - Array is IList
 // TODO: replay repeat, Check.Info
-// TODO: ImTools example and example tests tidy.
+// TODO: ImTools isomorphic?
 
 // RC2
 // TODO: More Gen.ConcurrentDictionary

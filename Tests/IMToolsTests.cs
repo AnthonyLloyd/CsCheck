@@ -10,6 +10,17 @@ namespace Tests
 {
     public class IMToolsTests
     {
+        [Fact]
+        public void ModelEqual_ImHashMap234()
+        {
+            Assert.True(Check.DefaultModelEqual(
+                ImHashMap234<int, int>.Empty.AddOrUpdate(1, 2).AddOrUpdate(3, 4)
+                .Enumerate().Select(kv => ImTools.KeyValuePair.Pair(kv.Key, kv.Value)),
+                new Dictionary<int, int> { {3, 4}, {1, 2 } }
+            ));
+        }
+
+
         [Fact(Skip = "Experiment")]
         public void AddOrUpdate_random_items_and_randomly_checking()
         {
@@ -75,23 +86,32 @@ namespace Tests
             , seed: "42ChASl6qJI5");
         }
 
+        class ImHolder<T> { public T Im; }
+
         [Fact(Skip = "Experiment")]
         public void AddOrUpdate_ModelBased()
         {
             const int upperBound = 100000;
-            Gen.Select(GenMap(upperBound), Gen.Int[0, upperBound], Gen.Int)
-            .Sample(t =>
+            GenMap(upperBound).Select(d =>
             {
-                var dic1 = new Dictionary<int, int>();
-                foreach (var entry in t.V0.Enumerate()) dic1.Add(entry.Key, entry.Value);
-                dic1[t.V1] = t.V2;
-                var dic2 = new Dictionary<int, int>();
-                foreach (var entry in t.V0.AddOrUpdate(t.V1, t.V2).Enumerate())
-                    dic2.Add(entry.Key, entry.Value);
-                Assert.Equal(dic1, dic2);
-            }
-            , size: 100_000
-            , print: t => t + "\n" + string.Join("\n", t.V0.Enumerate()));
+                var m = new Dictionary<int, int>();
+                foreach (var entry in d.Enumerate()) m[entry.Key] = entry.Value;
+                return (new ImHolder<ImHashMap234<int, int>> { Im = d }, m);
+            })
+            .SampleModelBased(
+                Gen.Int[0, upperBound].Select(Gen.Int).Operation<ImHolder<ImHashMap234<int, int>>, Dictionary<int, int>>((h, d, kv) =>
+                {
+                    h.Im = h.Im.AddOrUpdate(kv.V0, kv.V1);
+                    d[kv.V0] = kv.V1;
+                })
+                , equal: (h, d) =>
+                {
+                    var he = h.Im.Enumerate().Select(kv => (kv.Key, kv.Value)).ToList();
+                    return he.Count == d.Count && !he.Except(d.Select(kv => (kv.Key, kv.Value))).Any();
+                }
+                , printActual: h => Check.Print(h.Im.Enumerate().Select(kv => (kv.Key, kv.Value)))
+                , size: 100_000
+            );
         }
     }
 }
