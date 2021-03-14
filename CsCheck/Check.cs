@@ -18,6 +18,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -626,9 +628,13 @@ namespace CsCheck
                             if (mre.IsSet) return;
                             if (assertEqual is null)
                             {
-                                if (!vf.Equals(vs))
+                                if (!Equal(vf, vs))
                                 {
-                                    exception = new CsCheckException($"Return values differ: faster={vf} slower={vs}");
+                                    var vfs = Print(vf);
+                                    vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
+                                    var vss = Print(vs);
+                                    vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
+                                    exception = new CsCheckException("Return values differ:" + vfs + vss);
                                     mre.Set();
                                     return;
                                 }
@@ -716,9 +722,9 @@ namespace CsCheck
                     }
                     catch (Exception e)
                     {
-                        var tstring = t.ToString();
+                        var tstring = Print(t);
                         if (tstring.Length > 100) tstring = tstring.Substring(0, 100);
-                        exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tstring}", e);
+                        exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tstring, e);
                         mre.Set();
                     }
                 });
@@ -767,10 +773,13 @@ namespace CsCheck
                             if (mre.IsSet) return;
                             if (assertEqual is null)
                             {
-                                if (!vf.Equals(vs))
+                                if (!Equal(vf, vs))
                                 {
-                                    exception = new CsCheckException(
-                                        $"Return values differ: CsCheck_Seed = \"{pcg.ToString(state)}\" faster={vf} slower={vs}");
+                                    var vfs = Print(vf);
+                                    vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
+                                    var vss = Print(vs);
+                                    vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
+                                    exception = new CsCheckException("Return values differ: CsCheck_Seed = \"" + pcg.ToString(state)+ "\"" + vfs + vss);
                                     mre.Set();
                                     return;
                                 }
@@ -783,8 +792,7 @@ namespace CsCheck
                                 }
                                 catch (Exception ex)
                                 {
-                                    exception = new CsCheckException(
-                                        $"Return values differ: CsCheck_Seed = \"" + pcg.ToString(state) + "\"", ex);
+                                    exception = new CsCheckException("Return values differ: CsCheck_Seed = \"" + pcg.ToString(state) + "\"", ex);
                                     mre.Set();
                                     return;
                                 }
@@ -801,9 +809,9 @@ namespace CsCheck
                     }
                     catch (Exception e)
                     {
-                        var tstring = t.ToString();
+                        var tstring = Print(t);
                         if (tstring.Length > 100) tstring = tstring.Substring(0, 100);
-                        exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tstring}", e);
+                        exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tstring, e);
                         mre.Set();
                     }
                 });
@@ -839,7 +847,7 @@ namespace CsCheck
                                 {
                                     if (message is null)
                                     {
-                                        message = $"Example {typeof(T).Name} seed = \"{pcg.ToString(state)}\"";
+                                        message = "Example " + typeof(T).Name + " seed = \"" + pcg.ToString(state) + "\"";
                                         ret = t;
                                         mre.Set();
                                     }
@@ -872,7 +880,7 @@ namespace CsCheck
                 hash = new Hash(null, offset);
                 action(hash);
                 var fullHashCode = CsCheck.Hash.FullHash(offset, hash.GetHashCode());
-                throw new CsCheckException($"Hash is {fullHashCode}");
+                throw new CsCheckException("Hash is " + fullHashCode);
             }
             else
             {
@@ -894,14 +902,33 @@ namespace CsCheck
                         actualHashCode = hash.GetHashCode();
                     }
                     var actualFullHash = CsCheck.Hash.FullHash(offset, actualHashCode);
-                    throw new CsCheckException($"Actual {actualFullHash} but expected {expected}");
+                    throw new CsCheckException("Actual " + actualFullHash + " but expected " + expected);
                 }
             }
+        }
+
+        static string PrintArray2D(Array a)
+        {
+            int I = a.GetLength(0), J = a.GetLength(1);
+            var sb = new StringBuilder("{");
+            for (int i = 0; i < I; i++)
+            {
+                sb.Append("\n  {");
+                for (int j = 0; j < J; j++)
+                {
+                    if (j != 0) sb.Append(", ");
+                    sb.Append(a.GetValue(i, j));
+                }
+                sb.Append("},");
+            }
+            sb.Append("\n}");
+            return sb.ToString();
         }
 
         internal static string Print<T>(T t) => t switch
         {
             string s => s,
+            Array { Rank: 2 } a => PrintArray2D(a),
             IList { Count: <= 12 } l => "[" + string.Join(", ", l.Cast<object>().Select(Print)) + "]",
             IList l => $"L={l.Count} [{Print(l[0])}, {Print(l[1])}, {Print(l[2])} ... {Print(l[l.Count - 2])}, {Print(l[l.Count - 1])}]",
             IEnumerable<object> e when e.Take(12).Count() <= 12 => "{" + string.Join(", ", e.Select(Print)) + "}",
@@ -913,13 +940,13 @@ namespace CsCheck
 
         internal static bool Equal<T>(T a, T b)
         {
-            if (a is IEquatable<T> aie) return aie.Equals(b);
+            if (a is IEquatable<T> aieq) return aieq.Equals(b);
             else if (a is Array aa2 && b is Array ba2 && aa2.Rank == 2)
             {
-                if ((aa2.GetLength(0) != ba2.GetLength(0))
-                 || (aa2.GetLength(1) != ba2.GetLength(1))) return false;
-                for (int i = 0; i < aa2.GetLength(0); i++)
-                    for (int j = 0; j < aa2.GetLength(1); j++)
+                int I = aa2.GetLength(0), J = aa2.GetLength(1);
+                if (I != ba2.GetLength(0) || J != ba2.GetLength(1)) return false;
+                for (int i = 0; i < I; i++)
+                    for (int j = 0; j < J; j++)
                         if (!aa2.GetValue(i, j).Equals(ba2.GetValue(i, j)))
                             return false;
                 return true;
@@ -936,7 +963,13 @@ namespace CsCheck
             {
                 return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
             }
-            return EqualityComparer<T>.Default.Equals(a, b);
+            else if (a is IEnumerable aie && b is IEnumerable bie)
+            {
+                var aieo = aie.Cast<object>().ToList();
+                var bieo = bie.Cast<object>().ToList();
+                return aieo.Count == bieo.Count && !aieo.Except(bieo).Any();
+            }
+            return a.Equals(b);
         }
 
         internal static bool ModelEqual<T, M>(T a, M b)

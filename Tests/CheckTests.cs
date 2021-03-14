@@ -131,8 +131,7 @@ namespace Tests
             )
             .Faster(
                 t => MulIKJ(t.V0, t.V1),
-                t => MulIJK(t.V0, t.V1),
-                Assert.Equal
+                t => MulIJK(t.V0, t.V1)
             )
             .Output(writeLine);
         }
@@ -313,12 +312,11 @@ namespace Tests
 }
 
 // RC1
-// TODO: AssertEqual? - Array is IList
 // TODO: replay repeat, Check.Info
 // TODO: ImTools isomorphic?
 
-// RC2
+// FOR 2.0
 // TODO: More Gen.ConcurrentDictionary
 // TODO: More Print
-// TODO: More DefaultEqual
+// TODO: More Equal, ModelEqual
 // TODO: More Docs
