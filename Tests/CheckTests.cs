@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using CsCheck;
-using Microsoft.Collections.Extensions;
 using Xunit;
 
 namespace Tests
@@ -153,33 +152,6 @@ namespace Tests
         }
 
         [Fact]
-        public void Faster_DictionarySlim_Counter()
-        {
-            Gen.Byte.Array
-            .Faster(
-                t =>
-                {
-                    var d = new DictionarySlim<byte, int>();
-                    for (int i = 0; i < t.Length; i++)
-                        d.GetOrAddValueRef(t[i])++;
-                    return d.Count;
-                },
-                t =>
-                {
-                    var d = new Dictionary<byte, int>();
-                    for (int i = 0; i < t.Length; i++)
-                    {
-                        var k = t[i];
-                        d.TryGetValue(k, out var v);
-                        d[k] = v + 1;
-                    }
-                    return d.Count;
-                }
-            )
-            .Output(writeLine);
-        }
-
-        [Fact]
         public void Equal_Dictionary()
         {
             Assert.True(Check.Equal(
@@ -314,6 +286,7 @@ namespace Tests
 
 // RC1
 // TODO: replay repeat
+// TODO: Add slims
 // TODO: ImTools isomorphic?
 
 // FOR 2.0
