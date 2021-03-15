@@ -689,6 +689,8 @@ namespace CsCheck
         public static int Unzigzag(uint i) => ((int)(i >> 1)) ^ -((int)(i & 1U));
         public override int Generate(PCG pcg, out Size size)
         {
+            //var m = pcg.Next(32);
+            //int i = (int)(pcg.Next() & ((int)((1L << ((int)m + 1)) - 1L)));
             int i = (int)pcg.Next();
             size = new Size(Zigzag(i));
             return i;

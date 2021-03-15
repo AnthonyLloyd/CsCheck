@@ -288,6 +288,7 @@ namespace Tests
 // TODO: replay repeat
 // TODO: Add slims
 // TODO: ImTools isomorphic?
+// TODO: Tuple print
 
 // FOR 2.0
 // TODO: More Gen.ConcurrentDictionary

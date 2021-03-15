@@ -13,7 +13,7 @@
         [Fact(Skip = "Long running test.")]
         public void ReverseComplement_Faster()
         {
-            if (!File.Exists(Utils.Fasta.Filename)) Utils.Fasta.NotMain(new[] { "25000000" });
+            if (!File.Exists(FastaUtils.Fasta.Filename)) FastaUtils.Fasta.NotMain(new[] { "25000000" });
 
             Check.Faster(
                 ReverseComplementNew.RevComp.NotMain,
@@ -51,7 +51,7 @@ namespace ReverseComplementNew
                          : bytesRead == 0 ? offset
                          : Read(stream, bytes, offset + bytesRead);
                 }
-                using var inStream = File.OpenRead(Utils.Fasta.Filename);//Console.OpenStandardInput();
+                using var inStream = File.OpenRead(FastaUtils.Fasta.Filename);//Console.OpenStandardInput();
                 do
                 {
                     var page = ArrayPool<byte>.Shared.Rent(PAGE_SIZE);
@@ -204,7 +204,7 @@ namespace ReverseComplementOld
         }
         static void Reader()
         {
-            using var stream = File.OpenRead(Utils.Fasta.Filename);
+            using var stream = File.OpenRead(FastaUtils.Fasta.Filename);
             int bytesRead;
             do
             {
@@ -390,7 +390,7 @@ namespace ReverseComplementOld
     }
 }
 
-namespace Utils
+namespace FastaUtils
 {
     using System;
     using System.Buffers;

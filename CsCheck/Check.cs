@@ -92,7 +92,7 @@ namespace CsCheck
                         info = new List<string>();
                     }
                 }
-                if (info != null && info.Count > 0) info.Clear();
+                info?.Clear();
             }
             var lockObj = new object();
             int skipped = 0;
@@ -130,7 +130,7 @@ namespace CsCheck
                         }
                     }
                 }
-                if (info != null && info.Count > 0) info.Clear();
+                info?.Clear();
             });
             if (minPCG is not null)
             {
@@ -179,7 +179,7 @@ namespace CsCheck
                         minState = state;
                         minSize = s;
                         minT = t;
-                        if (info != null && info.Count > 0)
+                        if (info is not null && info.Count > 0)
                         {
                             minInfo = info;
                             info = new List<string>();
@@ -194,13 +194,13 @@ namespace CsCheck
                     minSize = s;
                     minT = t;
                     minException = e;
-                    if (info != null && info.Count > 0)
+                    if (info is not null && info.Count > 0)
                     {
                         minInfo = info;
                         info = new List<string>();
                     }
                 }
-                if (info != null && info.Count > 0) info.Clear();
+                info?.Clear();
             }
 
             var lockObj = new object();
@@ -227,7 +227,7 @@ namespace CsCheck
                                     minState = state;
                                     minSize = s;
                                     minT = t;
-                                    if (info != null && info.Count > 0)
+                                    if (info is not null && info.Count > 0)
                                     {
                                         minInfo = info;
                                         info = new List<string>();
@@ -250,7 +250,7 @@ namespace CsCheck
                             minSize = s;
                             minT = t;
                             minException = e;
-                            if (info != null && info.Count > 0)
+                            if (info is not null && info.Count > 0)
                             {
                                 minInfo = info;
                                 info = new List<string>();
@@ -258,7 +258,7 @@ namespace CsCheck
                         }
                     }
                 }
-                if (info != null && info.Count > 0) info.Clear();
+                info?.Clear();
             });
             if (minPCG is not null)
             {
@@ -451,9 +451,9 @@ namespace CsCheck
                 try
                 {
                     if (replay is null)
-                        ThreadUtils.Run(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = new int[cd.Operations.Length]);
+                        Utils.Run(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = new int[cd.Operations.Length]);
                     else
-                        ThreadUtils.RunReplay(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = replay);
+                        Utils.RunReplay(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = replay);
                 }
                 catch (Exception e)
                 {
@@ -461,12 +461,12 @@ namespace CsCheck
                     return false;
                 }
                 bool linearizable = false;
-                Parallel.ForEach(ThreadUtils.Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
+                Parallel.ForEach(Utils.Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
                 {
                     var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed), out _);
                     try
                     {
-                        ThreadUtils.Run(linearState, sequence, 1);
+                        Utils.Run(linearState, sequence, 1);
                         if (equal(cd.State, linearState))
                         {
                             linearizable = true;
@@ -486,13 +486,13 @@ namespace CsCheck
                 sb.Append("\nInitial state: ").Append(print(initial.Generate(new PCG(p.Stream, p.Seed), out _)));
                 sb.Append("\n  Final state: ").Append(p.Exception is not null ? p.Exception.ToString() : print(p.State));
                 bool first = true;
-                foreach (var sequence in ThreadUtils.Permutations(p.ThreadIds, p.Operations))
+                foreach (var sequence in Utils.Permutations(p.ThreadIds, p.Operations))
                 {
                     var linearState = initial.Generate(new PCG(p.Stream, p.Seed), out _);
                     string result;
                     try
                     {
-                        ThreadUtils.Run(linearState, sequence, 1);
+                        Utils.Run(linearState, sequence, 1);
                         result = print(linearState);
                     }
                     catch (Exception e)
@@ -966,8 +966,39 @@ namespace CsCheck
             return sb.ToString();
         }
 
+        static bool IsValueTuple(object o)
+        {
+            var t = o.GetType();
+            if (!t.IsGenericType) return false;
+            var gt = t.GetGenericTypeDefinition();
+            return gt == typeof(ValueTuple<,>)
+                || gt == typeof(ValueTuple<,,>)
+                || gt == typeof(ValueTuple<,,,>)
+                || gt == typeof(ValueTuple<,,,,>)
+                || gt == typeof(ValueTuple<,,,,>)
+                || gt == typeof(ValueTuple<,,,,>)
+                || gt == typeof(ValueTuple<,,,,,>)
+                || gt == typeof(ValueTuple<,,,,,,>)
+                || gt == typeof(ValueTuple<,,,,,,,>);
+        }
+
+        static string PrintValueTuple(object o)
+        {
+            var sb = new StringBuilder("(");
+            var fields = o.GetType().GetFields();
+            sb.Append(Print(fields[0].GetValue(o)));
+            for (int i = 1; i < fields.Length; i++)
+            {
+                sb.Append(", ");
+                sb.Append(Print(fields[i].GetValue(o)));
+            }
+            sb.Append(")");
+            return sb.ToString();
+        }
+
         internal static string Print<T>(T t) => t switch
         {
+            null => "null",
             string s => s,
             Array { Rank: 2 } a => PrintArray2D(a),
             IList { Count: <= 12 } l => "[" + string.Join(", ", l.Cast<object>().Select(Print)) + "]",
@@ -976,6 +1007,7 @@ namespace CsCheck
             IEnumerable<object> e when e.Take(999).Count() <= 999 => "L=" + e.Count() + " {" + string.Join(", ", e.Select(Print)) + "}",
             IEnumerable<object> e => "L>999 {" + string.Join(", ", e.Take(6).Select(Print)) + " ... }",
             IEnumerable e => Print(e.Cast<object>()),
+            T tuple when IsValueTuple(tuple) => PrintValueTuple(tuple),
             _ => t.ToString(),
         };
 
