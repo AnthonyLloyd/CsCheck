@@ -18,8 +18,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -66,6 +64,9 @@ namespace CsCheck
             Size minSize = CsCheck.Size.Max;
             T minT = default;
             Exception minException = null;
+            List<string> minInfo = null;
+            if (threads == 1) info = new List<string>();
+
             int shrinks = -1;
             if (seed is not null)
             {
@@ -85,12 +86,17 @@ namespace CsCheck
                     minSize = s;
                     minT = t;
                     minException = e;
+                    if(info != null && info.Count > 0)
+                    {
+                        minInfo = info;
+                        info = new List<string>();
+                    }
                 }
+                if (info != null && info.Count > 0) info.Clear();
             }
             var lockObj = new object();
             int skipped = 0;
-            Parallel.For(0, seed is null ? size : size - 1,
-                new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
+            Parallel.For(0, seed is null ? size : size - 1, new() { MaxDegreeOfParallelism = threads }, _ =>
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
@@ -116,19 +122,27 @@ namespace CsCheck
                             minSize = s;
                             minT = t;
                             minException = e;
+                            if (info != null && info.Count > 0)
+                            {
+                                minInfo = info;
+                                info = new List<string>();
+                            }
                         }
                     }
                 }
+                if (info != null && info.Count > 0) info.Clear();
             });
             if (minPCG is not null)
             {
                 var seedString = minPCG.ToString(minState);
                 var tString = print(minT);
                 if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
-                throw new CsCheckException(
-                    $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)\nSample: {tString}"
-                    , minException);
+                var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total).\n";
+                string info = null;
+                if (minInfo != null) info = "          Info: " + string.Join("\n              : ", minInfo);
+                throw new CsCheckException(summary + info + tString, minException);
             }
+            info = null;
         }
 
         /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -145,6 +159,9 @@ namespace CsCheck
             Size minSize = CsCheck.Size.Max;
             T minT = default;
             Exception minException = null;
+            List<string> minInfo = null;
+            if (threads == 1) info = new List<string>();
+
             int shrinks = -1;
             if (seed is not null)
             {
@@ -162,6 +179,11 @@ namespace CsCheck
                         minState = state;
                         minSize = s;
                         minT = t;
+                        if (info != null && info.Count > 0)
+                        {
+                            minInfo = info;
+                            info = new List<string>();
+                        }
                     }
                 }
                 catch (Exception e)
@@ -172,13 +194,18 @@ namespace CsCheck
                     minSize = s;
                     minT = t;
                     minException = e;
+                    if (info != null && info.Count > 0)
+                    {
+                        minInfo = info;
+                        info = new List<string>();
+                    }
                 }
+                if (info != null && info.Count > 0) info.Clear();
             }
 
             var lockObj = new object();
             int skipped = 0;
-            Parallel.For(0, seed is null ? size : size - 1,
-                new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
+            Parallel.For(0, seed is null ? size : size - 1, new() { MaxDegreeOfParallelism = threads }, _ =>
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
@@ -200,6 +227,11 @@ namespace CsCheck
                                     minState = state;
                                     minSize = s;
                                     minT = t;
+                                    if (info != null && info.Count > 0)
+                                    {
+                                        minInfo = info;
+                                        info = new List<string>();
+                                    }
                                 }
                             }
                         }
@@ -218,18 +250,25 @@ namespace CsCheck
                             minSize = s;
                             minT = t;
                             minException = e;
+                            if (info != null && info.Count > 0)
+                            {
+                                minInfo = info;
+                                info = new List<string>();
+                            }
                         }
                     }
                 }
+                if (info != null && info.Count > 0) info.Clear();
             });
             if (minPCG is not null)
             {
                 var seedString = minPCG.ToString(minState);
                 var tString = print(minT);
                 if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
-                throw new CsCheckException(
-                    $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total)\nSample: {tString}"
-                    , minException);
+                var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {size:#,0} total).\n";
+                string info = null;
+                if (minInfo != null) info = "          Info: " + string.Join("\n              : ", minInfo);
+                throw new CsCheckException(summary + info + tString, minException);
             }
         }
 
@@ -301,7 +340,6 @@ namespace CsCheck
             {
                 if (p == null) return "";
                 var sb = new StringBuilder();
-                sb.Append(p.Operations.Length).Append(" operations.");
                 sb.Append("\n    Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
                 var initialState = initial.Generate(new PCG(p.Stream, p.Seed), out _);
                 sb.Append("\nInitial Actual: ").Append(printActual(initialState.Item1));
@@ -443,7 +481,6 @@ namespace CsCheck
             {
                 if (p == null) return "";
                 var sb = new StringBuilder();
-                sb.Append(p.Operations.Length).Append(" operations on ").Append(p.Threads).Append(" threads.");
                 sb.Append("\n   Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
                 sb.Append("\n   On Threads: ").Append(Print(p.ThreadIds));
                 sb.Append("\nInitial state: ").Append(print(initial.Generate(new PCG(p.Stream, p.Seed), out _)));
@@ -906,6 +943,10 @@ namespace CsCheck
                 }
             }
         }
+
+        static List<string> info;
+        /// <summary>Store useful info to be displayed on shrunk failure.</summary>
+        public static void Info(string s) => info?.Add(s);
 
         static string PrintArray2D(Array a)
         {

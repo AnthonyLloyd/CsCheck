@@ -263,6 +263,7 @@ namespace Tests
                 {
                     Assert.Equal(bag.TryTake(out var i), list.Remove(i));
                 })
+                , threads: 1
             );
         }
 
@@ -282,7 +283,7 @@ namespace Tests
         //    Gen.Int.List
         //    .SampleConcurrent(
         //        Gen.Int.Operation<List<int>>(i => $"Add({i})", (list, i) => list.Add(i))
-        //        //Gen.Const<(string, Action<List<int>>)>(("Remove()", list => list.RemoveAt(0)))
+        //    //Gen.Const<(string, Action<List<int>>)>(("Remove()", list => list.RemoveAt(0)))
         //    );
         //}
 
@@ -312,7 +313,7 @@ namespace Tests
 }
 
 // RC1
-// TODO: replay repeat, Check.Info
+// TODO: replay repeat
 // TODO: ImTools isomorphic?
 
 // FOR 2.0
