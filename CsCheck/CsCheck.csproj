@@ -23,10 +23,13 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageTags>quickcheck;random;concurrency;performance;regression;testing</PackageTags>
         <Version>2.0.0-rc1</Version>
         <PackageReleaseNotes>
-Added SampleModelBased and SampleConcurrent.
-Added further Gen.Selects.
-Removed IGen interface.
-Removed older Sample multithreading functions.
+Added Check.SampleModelBased and Check.SampleConcurrent.
+Added further Gen.Select overloads.
+Added Gen.Deferred.
+Replaced IGen interface with covariant IGen&lt;out T&gt;
+Split Gen.OneOf into OneOf and OneOfConst.
+Split Gen.Frequency into OneOf and FrequencyConst.
+Removed older Check.Sample multithreading functions.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>9.0</LangVersion>
@@ -39,6 +42,6 @@ Removed older Sample multithreading functions.
         <NoWarn>CS1591</NoWarn>
     </PropertyGroup>
     <ItemGroup>
-        <None Include="..\CsCheck.png" Pack="true" PackagePath="" Visible="False"/>
+        <None Include="..\CsCheck.png" Pack="true" PackagePath="" Visible="False" />
     </ItemGroup>
 </Project>

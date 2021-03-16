@@ -10,17 +10,17 @@ namespace Tests
 
     public class ThreadStatsTests
     {
-        static void Check(int[] ids, IEnumerable<int[]> expected)
+        static void Test(int[] ids, IEnumerable<int[]> expected)
         {
             var seq = new int[ids.Length];
             Array.Copy(ids, seq, ids.Length);
-            Assert.Equal(CsCheck.Utils.Permutations(ids, seq), expected, IntArrayComparer.Default);
+            Assert.Equal(Check.Permutations(ids, seq), expected, IntArrayComparer.Default);
         }
 
         [Fact]
         public void Permutations_11()
         {
-            Check(new int[] { 1, 1 }, new[] {
+            Test(new int[] { 1, 1 }, new[] {
                 new int[] { 1, 1 },
             });
         }
@@ -28,7 +28,7 @@ namespace Tests
         [Fact]
         public void Permutations_12()
         {
-            Check(new int[] { 1, 2 }, new[] {
+            Test(new int[] { 1, 2 }, new[] {
                 new int[] { 1, 2 },
                 new int[] { 2, 1 },
             });
@@ -37,7 +37,7 @@ namespace Tests
         [Fact]
         public void Permutations_112()
         {
-            Check(new int[] { 1, 1, 2 }, new[] {
+            Test(new int[] { 1, 1, 2 }, new[] {
                 new int[] { 1, 1, 2 },
                 new int[] { 1, 2, 1 },
             });
@@ -46,7 +46,7 @@ namespace Tests
         [Fact]
         public void Permutations_121()
         {
-            Check(new int[] { 1, 2, 1 }, new[] {
+            Test(new int[] { 1, 2, 1 }, new[] {
                 new int[] { 1, 2, 1 },
                 new int[] { 2, 1, 1 },
                 new int[] { 1, 1, 2 },
@@ -56,7 +56,7 @@ namespace Tests
         [Fact]
         public void Permutations_123()
         {
-            Check(new int[] { 1, 2, 3 }, new[] {
+            Test(new int[] { 1, 2, 3 }, new[] {
                 new int[] { 1, 2, 3 },
                 new int[] { 2, 1, 3 },
                 new int[] { 1, 3, 2 },
@@ -69,7 +69,7 @@ namespace Tests
         [Fact]
         public void Permutations_1212()
         {
-            Check(new int[] { 1, 2, 1, 2 }, new[] {
+            Test(new int[] { 1, 2, 1, 2 }, new[] {
                 new int[] { 1, 2, 1, 2 },
                 new int[] { 2, 1, 1, 2 },
                 new int[] { 1, 1, 2, 2 },
@@ -81,7 +81,7 @@ namespace Tests
         [Fact]
         public void Permutations_1231()
         {
-            Check(new int[] { 1, 2, 3, 1 }, new[] {
+            Test(new int[] { 1, 2, 3, 1 }, new[] {
                 new int[] { 1, 2, 3, 1 },
                 new int[] { 2, 1, 3, 1 },
                 new int[] { 1, 3, 2, 1 },
@@ -100,7 +100,7 @@ namespace Tests
         [Fact]
         public void Permutations_1232()
         {
-            Check(new int[] { 1, 2, 3, 2 }, new[] {
+            Test(new int[] { 1, 2, 3, 2 }, new[] {
                 new int[] { 1, 2, 3, 2 },
                 new int[] { 2, 1, 3, 2 },
                 new int[] { 1, 3, 2, 2 },
@@ -124,7 +124,7 @@ namespace Tests
             {
                 var a2 = new int[a.Length];
                 Array.Copy(a, a2, a.Length);
-                var ps = Utils.Permutations(a, a2).ToList();
+                var ps = Check.Permutations(a, a2).ToList();
                 var ss = new HashSet<int[]>(ps, IntArrayComparer.Default);
                 Assert.Equal(ss.Count, ps.Count);
             });

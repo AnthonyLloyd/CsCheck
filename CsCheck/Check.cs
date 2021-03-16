@@ -13,14 +13,13 @@
 // limitations under the License.
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
+using System.Linq;
 using System.Threading;
+using System.Diagnostics;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace CsCheck
 {
@@ -30,7 +29,7 @@ namespace CsCheck
         public CsCheckException(string message, Exception exception) : base(message, exception) { }
     }
 
-    public static class Check
+    public static partial class Check
     {
         const int MAX_LENGTH = 5000;
         public static int Size = 100;
@@ -451,9 +450,9 @@ namespace CsCheck
                 try
                 {
                     if (replay is null)
-                        Utils.Run(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = new int[cd.Operations.Length]);
+                        Run(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = new int[cd.Operations.Length]);
                     else
-                        Utils.RunReplay(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = replay);
+                        RunReplay(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = replay);
                 }
                 catch (Exception e)
                 {
@@ -461,12 +460,12 @@ namespace CsCheck
                     return false;
                 }
                 bool linearizable = false;
-                Parallel.ForEach(Utils.Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
+                Parallel.ForEach(Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
                 {
                     var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed), out _);
                     try
                     {
-                        Utils.Run(linearState, sequence, 1);
+                        Run(linearState, sequence, 1);
                         if (equal(cd.State, linearState))
                         {
                             linearizable = true;
@@ -486,13 +485,13 @@ namespace CsCheck
                 sb.Append("\nInitial state: ").Append(print(initial.Generate(new PCG(p.Stream, p.Seed), out _)));
                 sb.Append("\n  Final state: ").Append(p.Exception is not null ? p.Exception.ToString() : print(p.State));
                 bool first = true;
-                foreach (var sequence in Utils.Permutations(p.ThreadIds, p.Operations))
+                foreach (var sequence in Permutations(p.ThreadIds, p.Operations))
                 {
                     var linearState = initial.Generate(new PCG(p.Stream, p.Seed), out _);
                     string result;
                     try
                     {
-                        Utils.Run(linearState, sequence, 1);
+                        Run(linearState, sequence, 1);
                         result = print(linearState);
                     }
                     catch (Exception e)
@@ -947,126 +946,6 @@ namespace CsCheck
         static List<string> info;
         /// <summary>Store useful info to be displayed on shrunk failure.</summary>
         public static void Info(string s) => info?.Add(s);
-
-        static string PrintArray2D(Array a)
-        {
-            int I = a.GetLength(0), J = a.GetLength(1);
-            var sb = new StringBuilder("{");
-            for (int i = 0; i < I; i++)
-            {
-                sb.Append("\n  {");
-                for (int j = 0; j < J; j++)
-                {
-                    if (j != 0) sb.Append(", ");
-                    sb.Append(a.GetValue(i, j));
-                }
-                sb.Append("},");
-            }
-            sb.Append("\n}");
-            return sb.ToString();
-        }
-
-        static bool IsValueTuple(object o)
-        {
-            var t = o.GetType();
-            if (!t.IsGenericType) return false;
-            var gt = t.GetGenericTypeDefinition();
-            return gt == typeof(ValueTuple<,>)
-                || gt == typeof(ValueTuple<,,>)
-                || gt == typeof(ValueTuple<,,,>)
-                || gt == typeof(ValueTuple<,,,,>)
-                || gt == typeof(ValueTuple<,,,,>)
-                || gt == typeof(ValueTuple<,,,,>)
-                || gt == typeof(ValueTuple<,,,,,>)
-                || gt == typeof(ValueTuple<,,,,,,>)
-                || gt == typeof(ValueTuple<,,,,,,,>);
-        }
-
-        static string PrintValueTuple(object o)
-        {
-            var sb = new StringBuilder("(");
-            var fields = o.GetType().GetFields();
-            sb.Append(Print(fields[0].GetValue(o)));
-            for (int i = 1; i < fields.Length; i++)
-            {
-                sb.Append(", ");
-                sb.Append(Print(fields[i].GetValue(o)));
-            }
-            sb.Append(")");
-            return sb.ToString();
-        }
-
-        internal static string Print<T>(T t) => t switch
-        {
-            null => "null",
-            string s => s,
-            Array { Rank: 2 } a => PrintArray2D(a),
-            IList { Count: <= 12 } l => "[" + string.Join(", ", l.Cast<object>().Select(Print)) + "]",
-            IList l => $"L={l.Count} [{Print(l[0])}, {Print(l[1])}, {Print(l[2])} ... {Print(l[l.Count - 2])}, {Print(l[l.Count - 1])}]",
-            IEnumerable<object> e when e.Take(12).Count() <= 12 => "{" + string.Join(", ", e.Select(Print)) + "}",
-            IEnumerable<object> e when e.Take(999).Count() <= 999 => "L=" + e.Count() + " {" + string.Join(", ", e.Select(Print)) + "}",
-            IEnumerable<object> e => "L>999 {" + string.Join(", ", e.Take(6).Select(Print)) + " ... }",
-            IEnumerable e => Print(e.Cast<object>()),
-            T tuple when IsValueTuple(tuple) => PrintValueTuple(tuple),
-            _ => t.ToString(),
-        };
-
-        internal static bool Equal<T>(T a, T b)
-        {
-            if (a is IEquatable<T> aieq) return aieq.Equals(b);
-            else if (a is Array aa2 && b is Array ba2 && aa2.Rank == 2)
-            {
-                int I = aa2.GetLength(0), J = aa2.GetLength(1);
-                if (I != ba2.GetLength(0) || J != ba2.GetLength(1)) return false;
-                for (int i = 0; i < I; i++)
-                    for (int j = 0; j < J; j++)
-                        if (!aa2.GetValue(i, j).Equals(ba2.GetValue(i, j)))
-                            return false;
-                return true;
-            }
-            else if (a is IList ail && b is IList bil)
-            {
-                if (ail.Count != bil.Count) return false;
-                for (int i = 0; i < ail.Count; i++)
-                    if (!ail[i].Equals(bil[i]))
-                        return false;
-                return true;
-            }
-            else if (a is ICollection aic && b is ICollection bic)
-            {
-                return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
-            }
-            else if (a is IEnumerable aie && b is IEnumerable bie)
-            {
-                var aieo = aie.Cast<object>().ToList();
-                var bieo = bie.Cast<object>().ToList();
-                return aieo.Count == bieo.Count && !aieo.Except(bieo).Any();
-            }
-            return a.Equals(b);
-        }
-
-        internal static bool ModelEqual<T, M>(T a, M b)
-        {
-            if (a is IList ail && b is IList bil)
-            {
-                if (ail.Count != bil.Count) return false;
-                for (int i = 0; i < ail.Count; i++)
-                    if (!ail[i].Equals(bil[i]))
-                        return false;
-                return true;
-            }
-            else if (a is ICollection aic && b is ICollection bic)
-            {
-                return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
-            }
-            else if (a is IEnumerable aie && b is IEnumerable bie)
-            {
-                var aieo = aie.Cast<object>().ToList();
-                var bieo = bie.Cast<object>().ToList();
-                return aieo.Count == bieo.Count && !aieo.Except(bieo).Any();
-            }
-            return a.Equals(b);
-        }
     }
 
     public class FasterResult

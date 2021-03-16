@@ -16,13 +16,146 @@ using System;
 using System.Threading;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Collections;
+using System.Linq;
+using System.Text;
 
 [assembly: InternalsVisibleTo("Tests, PublicKey=002400000480000094000000060200000024000052534131000400000100010089f5f142bc30ab84c70e4ccd0b09a684c3d822a99d269cac850f155421fced34048c0e3869a38db5cca81cd8ffcb7469a79422c3a2438a234c7534885471c1cc856ae40461a1ec4a4c5b1d897ba50f70ff486801a482505e0ec506c22da4a6ac5a1d8417e47985aa95caffd180dab750815989d43fcf0a7ee06ce8f1825106d0")]
 namespace CsCheck
 {
-    internal class Utils
+    public partial class Check
     {
-        static readonly int[] DummyArray = new int[Check.MAX_CONCURRENT_OPERATIONS];
+        static string PrintArray2D(Array a)
+        {
+            int I = a.GetLength(0), J = a.GetLength(1);
+            var sb = new StringBuilder("{");
+            for (int i = 0; i < I; i++)
+            {
+                sb.Append("\n  {");
+                for (int j = 0; j < J; j++)
+                {
+                    if (j != 0) sb.Append(", ");
+                    sb.Append(a.GetValue(i, j));
+                }
+                sb.Append("},");
+            }
+            sb.Append("\n}");
+            return sb.ToString();
+        }
+
+        static bool IsTuple(object o)
+        {
+            var t = o.GetType();
+            if (!t.IsGenericType) return false;
+            var gt = t.GetGenericTypeDefinition();
+            return gt == typeof(KeyValuePair<,>)
+                || gt == typeof(ValueTuple<>)
+                || gt == typeof(ValueTuple<,>)
+                || gt == typeof(ValueTuple<,,>)
+                || gt == typeof(ValueTuple<,,,>)
+                || gt == typeof(ValueTuple<,,,,>)
+                || gt == typeof(ValueTuple<,,,,>)
+                || gt == typeof(ValueTuple<,,,,>)
+                || gt == typeof(ValueTuple<,,,,,>)
+                || gt == typeof(ValueTuple<,,,,,,>)
+                || gt == typeof(ValueTuple<,,,,,,,>)
+                || gt == typeof(Tuple<>)
+                || gt == typeof(Tuple<,>)
+                || gt == typeof(Tuple<,,>)
+                || gt == typeof(Tuple<,,,>)
+                || gt == typeof(Tuple<,,,,>)
+                || gt == typeof(Tuple<,,,,,>)
+                || gt == typeof(Tuple<,,,,,,>)
+                || gt == typeof(Tuple<,,,,,,,>);
+        }
+
+        static string PrintTuple(object o)
+        {
+            var sb = new StringBuilder("(");
+            var fields = o.GetType().GetFields();
+            sb.Append(Print(fields[0].GetValue(o)));
+            for (int i = 1; i < fields.Length; i++)
+            {
+                sb.Append(", ");
+                sb.Append(Print(fields[i].GetValue(o)));
+            }
+            sb.Append(")");
+            return sb.ToString();
+        }
+
+        internal static string Print<T>(T t) => t switch
+        {
+            null => "null",
+            string s => s,
+            Array { Rank: 2 } a => PrintArray2D(a),
+            IList { Count: <= 12 } l => "[" + string.Join(", ", l.Cast<object>().Select(Print)) + "]",
+            IList l => $"L={l.Count} [{Print(l[0])}, {Print(l[1])}, {Print(l[2])} ... {Print(l[l.Count - 2])}, {Print(l[l.Count - 1])}]",
+            IEnumerable<object> e when e.Take(12).Count() <= 12 => "{" + string.Join(", ", e.Select(Print)) + "}",
+            IEnumerable<object> e when e.Take(999).Count() <= 999 => "L=" + e.Count() + " {" + string.Join(", ", e.Select(Print)) + "}",
+            IEnumerable<object> e => "L>999 {" + string.Join(", ", e.Take(6).Select(Print)) + " ... }",
+            IEnumerable e => Print(e.Cast<object>()),
+            T tuple when IsTuple(tuple) => PrintTuple(tuple),
+            _ => t.ToString(),
+        };
+
+        internal static bool Equal<T>(T a, T b)
+        {
+            if (a is IEquatable<T> aieq) return aieq.Equals(b);
+            else if (a is Array aa2 && b is Array ba2 && aa2.Rank == 2)
+            {
+                int I = aa2.GetLength(0), J = aa2.GetLength(1);
+                if (I != ba2.GetLength(0) || J != ba2.GetLength(1)) return false;
+                for (int i = 0; i < I; i++)
+                    for (int j = 0; j < J; j++)
+                        if (!aa2.GetValue(i, j).Equals(ba2.GetValue(i, j)))
+                            return false;
+                return true;
+            }
+            else if (a is IList ail && b is IList bil)
+            {
+                if (ail.Count != bil.Count) return false;
+                for (int i = 0; i < ail.Count; i++)
+                    if (!ail[i].Equals(bil[i]))
+                        return false;
+                return true;
+            }
+            else if (a is ICollection aic && b is ICollection bic)
+            {
+                return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
+            }
+            else if (a is IEnumerable aie && b is IEnumerable bie)
+            {
+                var aieo = aie.Cast<object>().ToList();
+                var bieo = bie.Cast<object>().ToList();
+                return aieo.Count == bieo.Count && !aieo.Except(bieo).Any();
+            }
+            return a.Equals(b);
+        }
+
+        internal static bool ModelEqual<T, M>(T a, M b)
+        {
+            if (a is IList ail && b is IList bil)
+            {
+                if (ail.Count != bil.Count) return false;
+                for (int i = 0; i < ail.Count; i++)
+                    if (!ail[i].Equals(bil[i]))
+                        return false;
+                return true;
+            }
+            else if (a is ICollection aic && b is ICollection bic)
+            {
+                return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
+            }
+            else if (a is IEnumerable aie && b is IEnumerable bie)
+            {
+                var aieo = aie.Cast<object>().ToList();
+                var bieo = bie.Cast<object>().ToList();
+                return aieo.Count == bieo.Count && !aieo.Except(bieo).Any();
+            }
+            return a.Equals(b);
+        }
+
+        static readonly int[] DummyArray = new int[MAX_CONCURRENT_OPERATIONS];
         internal static void Run<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[] threadIds = null)
         {
             if (threadIds is null) threadIds = DummyArray;

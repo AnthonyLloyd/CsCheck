@@ -401,7 +401,7 @@ namespace CsCheck
 
         public static Gen<T> Const<T>(Func<T> value) => Create((PCG pcg, out Size size) => { size = Size.Zero; return value(); });
 
-        public static Gen<T> OneOf<T>(params T[] ts) => Int[0, ts.Length - 1].Select(i => ts[i]);
+        public static Gen<T> OneOfConst<T>(params T[] ts) => Int[0, ts.Length - 1].Select(i => ts[i]);
 
         public static Gen<T> OneOf<T>(params IGen<T>[] gens) => Int[0, gens.Length - 1].SelectMany(i => gens[i]);
 
@@ -411,10 +411,10 @@ namespace CsCheck
             var ts = new T[a.Length];
             for (int i = 0; i < ts.Length; i++)
                 ts[i] = (T)a.GetValue(i);
-            return OneOf(ts);
+            return OneOfConst(ts);
         }
 
-        public static Gen<T> Frequency<T>(params (int, T)[] ts)
+        public static Gen<T> FrequencyConst<T>(params (int, T)[] ts)
         {
             var tsAgg = new (int, T)[ts.Length];
             int total = 0;
@@ -450,6 +450,12 @@ namespace CsCheck
                         return gensAgg[i].Item2;
                 return gensAgg[gensAgg.Length - 1].Item2;
             });
+        }
+
+        public static Gen<T> Deferred<T>(Func<Gen<T>> gen)
+        {
+            var lazy = new Lazy<Gen<T>>(gen);
+            return Create((PCG pcg, out Size size) => lazy.Value.Generate(pcg, out size));
         }
 
         public static GenDictionary<K, V> Dictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new(genK, genV);

@@ -506,9 +506,15 @@ namespace Tests
         }
 
         [Fact]
+        public void OneOfConst()
+        {
+            Gen.OneOfConst(0, 1, 2).Sample(i => i >= 0 && i <= 2);
+        }
+
+        [Fact]
         public void OneOf()
         {
-            Gen.OneOf(0, 1, 2).Sample(i => i >= 0 && i <= 2);
+            Gen.OneOf(Gen.Const(0), Gen.Const(1), Gen.Const(2)).Sample(i => i >= 0 && i <= 2);
         }
 
         [Fact]
@@ -517,7 +523,7 @@ namespace Tests
             var frequency = 10;
             (from f in Gen.Select(Gen.Int[1, 5], Gen.Int[1, 5], Gen.Int[1, 5])
              let expected = new[] { f.V0 * frequency, f.V1 * frequency, f.V2 * frequency }
-             from actual in Gen.Frequency((f.V0, 0), (f.V1, 1), (f.V2, 2))
+             from actual in Gen.FrequencyConst((f.V0, 0), (f.V1, 1), (f.V2, 2))
                             .Array[frequency * (f.V0 + f.V1 + f.V2)]
                             .Select(sample => Tally(3, sample))
              select (expected, actual))
