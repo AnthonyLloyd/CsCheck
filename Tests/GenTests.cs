@@ -136,6 +136,27 @@ namespace Tests
         }
 
         [Fact]
+        public void Int_Positive()
+        {
+            Gen.Int.Positive.Sample(i => i > 0);
+        }
+
+        [Fact]
+        public void Int_Positive_Method()
+        {
+            static (int, ulong) Method(int s, uint v)
+            {
+                int i = 1 << s;
+                i = (int)v & (i - 1) | i;
+                var size = (ulong)s << 27 | (ulong)i & 0x7FFFFFFUL;
+                return (i, size);
+            }
+            Assert.Equal((1, 1U), Method(0, uint.MaxValue));
+            Assert.Equal((1, 1U), Method(0, 57686U));
+            Assert.Equal((int.MaxValue, 0xF7FFFFFFU), Method(30, uint.MaxValue));
+        }
+
+        [Fact]
         public void Int_Distribution()
         {
             var buckets = 70;

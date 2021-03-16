@@ -701,6 +701,14 @@ namespace CsCheck
             size = new Size(Zigzag(i));
             return i;
         }
+        public Gen<int> Positive = Gen.Create((PCG pcg, out Size size) =>
+        {
+            int s = (int)pcg.Next(31);
+            int i = 1 << s;
+            i = (int)pcg.Next() & (i - 1) | i;
+            size = new Size((ulong)s << 27 | (ulong)i & 0x7FFFFFFUL);
+            return i;
+        });
         public Gen<int> this[int start, int finish]
         {
             get
