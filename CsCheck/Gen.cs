@@ -769,8 +769,8 @@ namespace CsCheck
                 return (uint)(ua * uint.MaxValue + ua);
             });
             public Gen<uint> this[uint start, uint finish, double a] =>
-                a >= 0.0 ? Gen.Double.Unit.Select(u => (uint)(start + Math.Pow(u, a + 1.0) * (1.0 + finish - start)))
-                : Gen.Double.Unit.Select(u => (uint)(finish - Math.Pow(u, 1.0 - a) * (1.0 + finish - start)));
+                a >= 0.0 ? Gen.Double.Unit.Select(u => start + (uint)(Math.Pow(u, a + 1.0) * (1.0 + finish - start)))
+                : Gen.Double.Unit.Select(u => finish - (uint)(Math.Pow(u, 1.0 - a) * (1.0 + finish - start)));
         }
         /// <summary>Skew the distribution towards either end.
         /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
