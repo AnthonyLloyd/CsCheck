@@ -79,6 +79,12 @@ namespace Tests
         }
 
         [Fact]
+        public void Short_Zigzag_Roundtrip()
+        {
+            Gen.Short.Sample(i => GenShort.Unzigzag(GenShort.Zigzag(i)) == i);
+        }
+
+        [Fact]
         public void Short_Range()
         {
             (from t in Gen.Short.Select(Gen.Short)
@@ -142,18 +148,54 @@ namespace Tests
         }
 
         [Fact]
-        public void Int_Positive_Method()
+        public void Int_Positive_Gen_Method()
         {
-            static (int, ulong) Method(int s, uint v)
+            static (int, ulong) Method(uint s, uint v)
             {
-                int i = 1 << s;
+                int i = 1 << (int)s;
                 i = (int)v & (i - 1) | i;
-                var size = (ulong)s << 27 | (ulong)i & 0x7FFFFFFUL;
+                var size = s << 27 | (ulong)i & 0x7FF_FFFFUL;
                 return (i, size);
             }
-            Assert.Equal((1, 1U), Method(0, uint.MaxValue));
-            Assert.Equal((1, 1U), Method(0, 57686U));
-            Assert.Equal((int.MaxValue, 0xF7FFFFFFU), Method(30, uint.MaxValue));
+            Assert.Equal((1, 1UL), Method(0U, uint.MaxValue));
+            Assert.Equal((1, 1UL), Method(0U, 57686U));
+            Assert.Equal((int.MaxValue, 0xF7FF_FFFFUL), Method(30U, uint.MaxValue));
+        }
+
+        [Fact]
+        public void Short_Gen_Method()
+        {
+            static (short, ulong) Method(uint s, uint v)
+            {
+                ushort i = (ushort)(1U << (int)s);
+                i = (ushort)((v & (i - 1) | i) - 1);
+                var size = s << 11 | i & 0x7FFUL;
+                return ((short)-GenShort.Unzigzag(i), size);
+            }
+            Assert.Equal((0, 0UL), Method(0U, uint.MaxValue));
+            Assert.Equal((0, 0UL), Method(0U, 7686U));
+            Assert.Equal((1, 0x801UL), Method(1U, uint.MaxValue - 1));
+            Assert.Equal((-1, 0x802UL), Method(1U, uint.MaxValue));
+            Assert.Equal((short.MaxValue, 0x7FFDUL), Method(15U, uint.MaxValue - 1));
+            Assert.Equal((-short.MaxValue, 0x7FFEUL), Method(15U, uint.MaxValue));
+        }
+
+        [Fact]
+        public void Int_Gen_Method()
+        {
+            static (int, ulong) Method(uint s, uint v)
+            {
+                uint i = 1U << (int)s;
+                i = (v & (i - 1U) | i) - 1U;
+                var size = s << 27 | i & 0x7FF_FFFFUL;
+                return (-GenInt.Unzigzag(i), size);
+            }
+            Assert.Equal((0, 0UL), Method(0U, uint.MaxValue));
+            Assert.Equal((0, 0UL), Method(0U, 57686U));
+            Assert.Equal((1, 0x800_0001UL), Method(1U, uint.MaxValue-1));
+            Assert.Equal((-1, 0x800_0002UL), Method(1U, uint.MaxValue));
+            Assert.Equal((int.MaxValue, 0xFFFF_FFFDUL), Method(31U, uint.MaxValue-1));
+            Assert.Equal((-int.MaxValue, 0xFFFF_FFFEUL), Method(31U, uint.MaxValue));
         }
 
         [Fact]
@@ -182,6 +224,16 @@ namespace Tests
         public void Int_Zigzag_Roundtrip()
         {
             Gen.Int.Sample(i => GenInt.Unzigzag(GenInt.Zigzag(i)) == i);
+        }
+
+        [Fact]
+        public void Zigzag()
+        {
+            Assert.Equal(0, GenInt.Unzigzag(0U));
+            Assert.Equal(-1, GenInt.Unzigzag(1U));
+            Assert.Equal(1, GenInt.Unzigzag(2U));
+            Assert.Equal(int.MaxValue, GenInt.Unzigzag(0xFFFFFFFEU));
+            Assert.Equal(int.MinValue, GenInt.Unzigzag(0xFFFFFFFFU));
         }
 
         [Fact]
@@ -216,6 +268,28 @@ namespace Tests
              from value in Gen.UInt.Skew[start, finish, t.V2]
              select (value, start, finish))
             .Sample(i => i.value >= i.start && i.value <= i.finish);
+        }
+
+        [Fact]
+        public void Long_Zigzag_Roundtrip()
+        {
+            Gen.Long.Sample(i => GenLong.Unzigzag(GenLong.Zigzag(i)) == i);
+        }
+
+        [Fact]
+        public void Long_Gen_Method()
+        {
+            static (long, ulong) Method(uint s, ulong v)
+            {
+                ulong i = 1UL << (int)s;
+                i = (v & (i - 1UL) | i) - 1UL;
+                var size = (ulong)s << 46 | i & 0x3FFF_FFFF_FFFFU;
+                return (-GenLong.Unzigzag(i), size);
+            }
+            Assert.Equal((0, 0UL), Method(0, ulong.MaxValue));
+            Assert.Equal((0, 0UL), Method(0, 57686));
+            Assert.Equal((long.MaxValue, 0xF_FFFF_FFFF_FFFDUL), Method(63U, ulong.MaxValue - 1));
+            Assert.Equal((-long.MaxValue, 0xF_FFFF_FFFF_FFFEUL), Method(63U, ulong.MaxValue));
         }
 
         [Fact]

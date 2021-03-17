@@ -139,7 +139,7 @@ namespace Tests
                     hash.Add(Gen.Char.Generate(pcg, out _));
                     hash.Add(Gen.String.Generate(pcg, out _));
                 }
-            }, 8004654284);
+            }, 5603103118);
         }
 
         [Fact]

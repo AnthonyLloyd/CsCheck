@@ -642,12 +642,16 @@ namespace CsCheck
     public class GenShort : Gen<short>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static ulong Zigzag(short i) => (ulong)((i << 1) ^ (i >> 15));
+        public static ushort Zigzag(short i) => (ushort)(i << 1 ^ i >> 31);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short Unzigzag(ushort i) => (short)((i >> 1) ^ -(int)(i & 1U));
         public override short Generate(PCG pcg, out Size size)
         {
-            short i = (short)(pcg.Next() & 65535u);
-            size = new Size(Zigzag(i));
-            return i;
+            uint s = pcg.Next() & 15U;
+            ushort i = (ushort)(1U << (int)s);
+            i = (ushort)((pcg.Next() & (i - 1) | i) - 1);
+            size = new Size(s << 11 | i & 0x7FFUL);
+            return (short)-Unzigzag(i);
         }
         public Gen<short> this[short start, short finish]
         {
@@ -690,23 +694,23 @@ namespace CsCheck
     public class GenInt : Gen<int>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint Zigzag(int i) => (uint)((i << 1) ^ (i >> 31));
+        public static uint Zigzag(int i) => (uint)(i << 1 ^ i >> 31);
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int Unzigzag(uint i) => ((int)(i >> 1)) ^ -((int)(i & 1U));
+        public static int Unzigzag(uint i) => (int)(i >> 1) ^ -(int)(i & 1U);
         public override int Generate(PCG pcg, out Size size)
         {
-            //var m = pcg.Next(32);
-            //int i = (int)(pcg.Next() & ((int)((1L << ((int)m + 1)) - 1L)));
-            int i = (int)pcg.Next();
-            size = new Size(Zigzag(i));
-            return i;
+            uint s = pcg.Next() & 31U;
+            uint i = 1U << (int)s;
+            i = (pcg.Next() & (i - 1) | i) - 1;
+            size = new Size(s << 27 | i & 0x7FFFFFFUL);
+            return -Unzigzag(i);
         }
         public Gen<int> Positive = Gen.Create((PCG pcg, out Size size) =>
         {
-            int s = (int)pcg.Next(31);
-            int i = 1 << s;
+            uint s = pcg.Next(31);
+            int i = 1 << (int)s;
             i = (int)pcg.Next() & (i - 1) | i;
-            size = new Size((ulong)s << 27 | (ulong)i & 0x7FFFFFFUL);
+            size = new Size(s << 27 | (ulong)i & 0x7FFFFFFUL);
             return i;
         });
         public Gen<int> this[int start, int finish]
@@ -738,8 +742,10 @@ namespace CsCheck
     {
         public override uint Generate(PCG pcg, out Size size)
         {
-            uint i = pcg.Next();
-            size = new Size(i);
+            uint s = pcg.Next() & 31U;
+            uint i = 1U << (int)s;
+            i = (pcg.Next() & (i - 1) | i) - 1;
+            size = new Size(s << 27 | i & 0x7FFF_FFFUL);
             return i;
         }
         public Gen<uint> this[uint start, uint finish]
@@ -775,13 +781,16 @@ namespace CsCheck
     public class GenLong : Gen<long>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static ulong Zigzag(long i) => (ulong)((i << 1) ^ (i >> 63));
-
+        public static ulong Zigzag(long i) => (ulong)(i << 1 ^ i >> 63);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long Unzigzag(ulong i) => (long)(i >> 1) ^ -(long)(i & 1UL);
         public override long Generate(PCG pcg, out Size size)
         {
-            long i = (long)pcg.Next64();
-            size = new Size(Zigzag(i));
-            return i;
+            uint s = pcg.Next() & 63U;
+            ulong i = 1UL << (int)s;
+            i = (pcg.Next64() & (i - 1UL) | i) - 1UL;
+            size = new Size((ulong)s << 46 | i & 0x3FFF_FFFF_FFFFU);
+            return -Unzigzag(i);
         }
         public Gen<long> this[long start, long finish]
         {
@@ -803,8 +812,10 @@ namespace CsCheck
     {
         public override ulong Generate(PCG pcg, out Size size)
         {
-            ulong i = pcg.Next64();
-            size = new Size(i);
+            uint s = pcg.Next() & 63U;
+            ulong i = 1UL << (int)s;
+            i = (pcg.Next64() & (i - 1UL) | i) - 1UL;
+            size = new Size((ulong)s << 46 | i & 0x3FFF_FFFF_FFFFU);
             return i;
         }
         public Gen<ulong> this[ulong start, ulong finish]
@@ -919,7 +930,7 @@ namespace CsCheck
         public override double Generate(PCG pcg, out Size size)
         {
             ulong i = pcg.Next64();
-            size = new Size(i);
+            size = new Size(i >> 12);
             return BitConverter.Int64BitsToDouble((long)i);
         }
         public Gen<double> this[double start, double finish]
@@ -1053,7 +1064,7 @@ namespace CsCheck
         public override DateTime Generate(PCG pcg, out Size size)
         {
             ulong i = pcg.Next64(max);
-            size = new Size(i);
+            size = new Size(i >> 10);
             return new DateTime((long)i);
         }
         public Gen<DateTime> this[DateTime start, DateTime finish]
@@ -1101,7 +1112,7 @@ namespace CsCheck
         public override TimeSpan Generate(PCG pcg, out Size size)
         {
             ulong i = pcg.Next64();
-            size = new Size(i);
+            size = new Size(i >> 12);
             return new TimeSpan((long)i);
         }
         public Gen<TimeSpan> this[TimeSpan start, TimeSpan finish]

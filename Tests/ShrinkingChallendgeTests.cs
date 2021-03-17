@@ -8,7 +8,7 @@ namespace Tests
 {
     public class ShrinkingChallendgeTests
     {
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No1_Bound5() // ([-32768], [-1], [], [], [])
         {
             static short Sum(short[] l)
@@ -26,7 +26,7 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No2_LargeUnionList() // [[0, 1, -1, 2, -2]]
         {
             Gen.Int.Array.Array
@@ -42,7 +42,7 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No3_Reverse() // [0, 1] or [1, 0]
         {
             Gen.Int.Array
@@ -54,7 +54,7 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No4_Calculator() // 1 / (3 + -3)
         {
             Gen<object> gen = null;
@@ -83,10 +83,10 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No5_LengthList() // [900]
         {
-            Gen.Int[0, 1000].Array[1, 100]
+            Gen.Int.Array[1, 100]
             .Sample(a =>
             {
                 foreach (var i in a)
@@ -95,21 +95,21 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No6_Difference_MustNotBeZero() // (10, 10)
         {
             Gen.Int.Positive.Select(Gen.Int.Positive)
             .Sample(t => t.V0 < 10 || t.V0 != t.V1);
         }
 
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No6_Difference_MustNotBeSmall() // (10, 6)
         {
             Gen.Int.Positive.Select(Gen.Int.Positive)
             .Sample(t => t.V0 < 10 || Math.Abs(t.V0 - t.V1) > 4 || t.V0 == t.V1);
         }
 
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No6_Difference_MustNotBeOne() // (10, 9)
         {
             Gen.Int.Positive.Select(Gen.Int.Positive)
@@ -118,7 +118,7 @@ namespace Tests
 
         class Heap { public int Head; public Heap Left; public Heap Right; }
 
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No7_BinHeap() // (0, None, (0, (0, None, None), (1, None, None)))
         {
             Gen<Heap> gen = null;
@@ -174,7 +174,7 @@ namespace Tests
             }, print: Print);
         }
 
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No8_Coupling() // [1, 0]
         {
             Gen.Int[0, 100].SelectMany(l => Gen.Int[0, l - 1].Array[l])
@@ -189,7 +189,7 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No9_Deletion() // ([0, 0], 0)
         {
             Gen.Int.List[1, 100].Select(l => Gen.Int[0, l.Count - 1])
@@ -202,14 +202,14 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No10_Distinct() // [0, 1, -1] or [0, 1, 2]
         {
             Gen.Int.Array
             .Sample(a => a.ToHashSet().Count < 3);
         }
 
-        [Fact(Skip = "For now")]
+        [Fact(Skip = "Meant to fail")]
         public void No11_NestedLists() // [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
         {
             Gen.Int.Array.Array
