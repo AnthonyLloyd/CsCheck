@@ -201,7 +201,7 @@ namespace ImTools.Experimental
             public override ImHashMap234<K, V> AddOrKeepEntry(int hash, ValueEntry entry)
             {
                 if (hash > Hash)
-                    new Leaf2(this, entry);
+                    return new Leaf2(this, entry);
                 if (hash < Hash)
                     return new Leaf2(entry, this);
                 return Keep(entry);
@@ -1536,7 +1536,7 @@ namespace ImTools.Experimental
                     }
 
                     // Handling the Case #2
-                    if (newRight is Branch3 rb3 && Right is Branch2)
+                    if (newRight is Branch3 && Right is Branch2)
                     {
                         //         0                                  -10        0
                         //       /         \                          /     |          \                
@@ -1987,7 +1987,7 @@ namespace ImTools.Experimental
                     if (x.Key.Equals(key))
                         return x.Value;
             }
-            return default(V);
+            return default;
         }
 
         /// <summary>Looks up for the key using its hash code and checking the key with `object.Equals` for equality,
@@ -2013,7 +2013,7 @@ namespace ImTools.Experimental
                     if (x.Key == key)
                         return x.Value;
             }
-            return default(V);
+            return default;
         }
 
         /// <summary>Looks up for the key using its hash code and checking the key with `object.Equals` for equality,
@@ -2040,7 +2040,7 @@ namespace ImTools.Experimental
                     }
             }
 
-            value = default(V);
+            value = default;
             return false;
         }
 
@@ -2069,7 +2069,7 @@ namespace ImTools.Experimental
                     }
             }
 
-            value = default(V);
+            value = default;
             return false;
         }
 
