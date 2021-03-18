@@ -25,6 +25,7 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageReleaseNotes>
 Added Check.SampleModelBased and Check.SampleConcurrent.
 Added further Gen.Select overloads.
+Added Gen.Int.Positive and Gen.Int.NonNegative.
 Added Gen.Deferred.
 Replaced IGen interface with covariant IGen&lt;out T&gt;
 Split Gen.OneOf into OneOf and OneOfConst.

@@ -713,6 +713,14 @@ namespace CsCheck
             size = new Size(s << 27 | (ulong)i & 0x7FFFFFFUL);
             return i;
         });
+        public Gen<int> NonNegative = Gen.Create((PCG pcg, out Size size) =>
+        {
+            uint s = pcg.Next(31);
+            int i = 1 << (int)s;
+            i = ((int)pcg.Next() & (i - 1) | i) - 1;
+            size = new Size(s << 27 | (ulong)i & 0x7FFFFFFUL);
+            return i;
+        });
         public Gen<int> this[int start, int finish]
         {
             get

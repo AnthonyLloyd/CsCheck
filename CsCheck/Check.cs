@@ -33,6 +33,7 @@ namespace CsCheck
     {
         const int MAX_LENGTH = 5000;
         public static int Size = 100;
+        public static int Replay = 100;
         public static int Threads = Environment.ProcessorCount;
         public static string Seed;
         public static double Sigma;
@@ -41,6 +42,8 @@ namespace CsCheck
         {
             var size = Environment.GetEnvironmentVariable("CsCheck_Size");
             if (!string.IsNullOrWhiteSpace(size)) Size = int.Parse(size);
+            var replay = Environment.GetEnvironmentVariable("CsCheck_Replay");
+            if (!string.IsNullOrWhiteSpace(replay)) Replay = int.Parse(replay);
             var threads = Environment.GetEnvironmentVariable("CsCheck_Threads");
             if (!string.IsNullOrWhiteSpace(threads)) Threads = int.Parse(threads);
             var seed = Environment.GetEnvironmentVariable("CsCheck_Seed");
@@ -420,19 +423,20 @@ namespace CsCheck
         /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T>[] operations,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
         {
             if (equal is null) equal = Equal;
             if (seed is null) seed = Seed;
             if (size == -1) size = Size;
             if (threads == -1) threads = Threads;
             if (print is null) print = Print;
-            int[] replay = null;
+            if (replay == -1) replay = Replay;
+            int[] replayThreads = null;
             if(seed is not null && seed.Contains("["))
             {
                 int i = seed.IndexOf('[');
                 int j = seed.IndexOf(']', i + 1);
-                replay = seed.Substring(i + 1, j - i - 1).Split(',').Select(int.Parse).ToArray();
+                replayThreads = seed.Substring(i + 1, j - i - 1).Split(',').Select(int.Parse).ToArray();
                 seed = seed.Substring(0, i);
             }
 
@@ -443,6 +447,8 @@ namespace CsCheck
                 var opName = "Op" + i;
                 opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2)) : op;
             }
+
+            bool firstIteration = true;
 
             Gen.Create((PCG pcg, out Size size) =>
             {
@@ -455,33 +461,37 @@ namespace CsCheck
             )
             .Sample(cd =>
             {
-                try
-                {
-                    if (replay is null)
-                        Run(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = new int[cd.Operations.Length]);
-                    else
-                        RunReplay(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = replay);
-                }
-                catch (Exception e)
-                {
-                    cd.Exception = e;
-                    return false;
-                }
                 bool linearizable = false;
-                Parallel.ForEach(Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
+                do
                 {
-                    var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed), out _);
                     try
                     {
-                        Run(linearState, sequence, 1);
-                        if (equal(cd.State, linearState))
-                        {
-                            linearizable = true;
-                            state.Stop();
-                        }
+                        if (replayThreads is null)
+                            Run(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = new int[cd.Operations.Length]);
+                        else
+                            RunReplay(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = replayThreads);
                     }
-                    catch { state.Stop(); }
-                });
+                    catch (Exception e)
+                    {
+                        cd.Exception = e;
+                        break;
+                    }
+                    Parallel.ForEach(Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
+                    {
+                        var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed), out _);
+                        try
+                        {
+                            Run(linearState, sequence, 1);
+                            if (equal(cd.State, linearState))
+                            {
+                                linearizable = true;
+                                state.Stop();
+                            }
+                        }
+                        catch { state.Stop(); }
+                    });
+                } while (linearizable && firstIteration && seed != null && --replay > 0);
+                firstIteration = false;
                 return linearizable;
             }, seed, size, threads: 1,
             p =>
@@ -521,16 +531,16 @@ namespace CsCheck
         /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
-            => SampleConcurrent(initial, new[] { operation }, equal, seed, size, threads, print);
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
+            => SampleConcurrent(initial, new[] { operation }, equal, seed, size, threads, print, replay);
 
         /// <summary>Sample model-based operations on a random initial state concurrently.
         /// The result is compared against the result of the possible sequential permutations.
         /// At least one of these permutations result must be equal for the concurrency to have been linearized successfully.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
-            => SampleConcurrent(initial, new[] { operation1, operation2 }, equal, seed, size, threads, print);
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
+            => SampleConcurrent(initial, new[] { operation1, operation2 }, equal, seed, size, threads, print, replay);
 
         /// <summary>Sample model-based operations on a random initial state concurrently.
         /// The result is compared against the result of the possible sequential permutations.
@@ -538,8 +548,8 @@ namespace CsCheck
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             GenOperation<T> operation3,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
-            => SampleConcurrent(initial, new[] { operation1, operation2, operation3 }, equal, seed, size, threads, print);
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
+            => SampleConcurrent(initial, new[] { operation1, operation2, operation3 }, equal, seed, size, threads, print, replay);
 
         /// <summary>Sample model-based operations on a random initial state concurrently.
         /// The result is compared against the result of the possible sequential permutations.
@@ -547,8 +557,8 @@ namespace CsCheck
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             GenOperation<T> operation3, GenOperation<T> operation4,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
-            => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, size, threads, print);
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
+            => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, size, threads, print, replay);
 
         /// <summary>Sample model-based operations on a random initial state concurrently.
         /// The result is compared against the result of the possible sequential permutations.
@@ -556,9 +566,9 @@ namespace CsCheck
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
             => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5 },
-                equal, seed, size, threads, print);
+                equal, seed, size, threads, print, replay);
 
         /// <summary>Sample model-based operations on a random initial state concurrently.
         /// The result is compared against the result of the possible sequential permutations.
@@ -566,9 +576,9 @@ namespace CsCheck
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5, GenOperation<T> operation6,
-            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null)
+            Func<T, T, bool> equal = null, string seed = null, int size = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
             => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
-                equal, seed, size, threads, print);
+                equal, seed, size, threads, print, replay);
 
         /// <summary>Assert actual is in line with expected using a chi-squared test to 6 sigma.</summary>
         public static void ChiSquared(int[] expected, int[] actual)

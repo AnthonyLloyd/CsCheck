@@ -285,11 +285,10 @@ namespace Tests
 }
 
 // RC1
-// TODO: replay repeat
-// TODO: ImTools isomorphic?
 // TODO: Add slims
 
 // FOR 2.0
+// TODO: Metamorphic? Duplicate. Gen<A> -> Gen<Action<A, A, DD>> == Operation2<A>
 // TODO: More Gen.ConcurrentDictionary
 // TODO: More Print
 // TODO: More Equal, ModelEqual
