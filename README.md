@@ -5,6 +5,8 @@
 <a href="https://www.nuget.org/packages/CsCheck"><img src="https://buildstats.info/nuget/CsCheck?includePreReleases=true"></a>
 </p>
 
+NOTE: Please try the 2.0.0-rc1 release. The 2.0.0 release will be very soon after integrating any feedback. The examples below need a revamp which will happen over the next week.
+
 CsCheck is a C# random testing library inspired by QuickCheck.
 
 It differs in that generation and shrinking are both based on [PCG](https://www.pcg-random.org), a fast random number generator.
