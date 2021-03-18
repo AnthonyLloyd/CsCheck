@@ -11,6 +11,7 @@ This gives the following advantages:
 - Random testing and shrinking are parallelized. This and PCG make it very fast.
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be continued later to give simpler cases for high dimensional problems.
+- Concurrency testing and random shrinking work well together.
 
 CsCheck also makes concurrency, performance and regression testing simple and fast.
         </Description>
@@ -24,10 +25,11 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <Version>2.0.0-rc1</Version>
         <PackageReleaseNotes>
 Added Check.SampleModelBased and Check.SampleConcurrent.
-Added further Gen.Select overloads.
+Added more Gen.Select overloads.
 Added Gen.Int.Positive and Gen.Int.NonNegative.
 Added Gen.Deferred.
-Replaced IGen interface with covariant IGen&lt;out T&gt;
+Changed Size to an out parameter instead of tuple return value.
+Replaced IGen interface with covariant IGen&lt;out T&gt;.
 Split Gen.OneOf into OneOf and OneOfConst.
 Split Gen.Frequency into OneOf and FrequencyConst.
 Removed older Check.Sample multithreading functions.
