@@ -28,6 +28,7 @@ Added Check.SampleModelBased and Check.SampleConcurrent.
 Added more Gen.Select overloads.
 Added Gen.Int.Positive and Gen.Int.NonNegative.
 Added Gen.Deferred.
+Added documentation xml file.
 Changed Size to an out parameter instead of tuple return value.
 Replaced IGen interface with covariant IGen&lt;out T&gt;.
 Split Gen.OneOf into OneOf and OneOfConst.
