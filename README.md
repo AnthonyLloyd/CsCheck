@@ -22,11 +22,18 @@ This gives the following advantages:
 See the [comparison](Comparison.md) with other random testing libraries.
 The low ceremony generators make CsCheck a good choice for C#, but the superior automatic shrinking and performance will make it a good choice for other languages too.
 
-CsCheck also has functionality to make concurrency, performance and regression testing simple and fast.
+CsCheck also has functionality to make multiple types of testing simple and fast:
 
-## Examples
+- [Random testing](#Random-testing)
+- [Model-based testing](#Model-based-testing)
+- [Concurrency testing](#Concurrency-testing)
+- [Regression testing](#Regression-testing)
+- [Performance testing](#Performance-testing)
+- [Configuration](#Configuration)
 
-### **1.** Sample test of the range of a unit single. The default sample size is 100.
+## Random testing
+
+### Sample test of the range of a unit single. The default sample size is 100.
 ```csharp
 [Fact]
 public void Single_Unit_Range()
@@ -35,7 +42,7 @@ public void Single_Unit_Range()
 }
 ```
 
-### **2.** Sample test for long ranges.
+### Sample test for long ranges.
 ```csharp
 [Fact]
 public void Long_Range()
@@ -49,7 +56,7 @@ public void Long_Range()
 }
 ```
 
-### **3.** Sample one test for int value distribution.
+### Sample one test for int value distribution.
 ```csharp
 [Fact]
 public void Int_Distribution()
@@ -63,7 +70,7 @@ public void Int_Distribution()
 }
 ```
 
-### **4.** Sample roundtrip serialization testing.
+### Sample roundtrip serialization testing.
 ```csharp
 static void TestRoundtrip<T>(Gen<T> gen, Action<Stream, T> serialize, Func<Stream, T> deserialize)
 {
@@ -92,7 +99,9 @@ public void DateTime()
 }
 ```
 
-### **5.** Sample Map AddOrUpdate test.
+## Model-based testing
+
+### Sample Map AddOrUpdate test.
 ```csharp
 static Gen<ImHashMap234<int, int>> GenMap(int upperBound) =>
     Gen.Int[0, upperBound].ArrayUnique.SelectMany(ks =>
@@ -171,7 +180,9 @@ public void AddOrUpdate_ModelBased()
 }
 ```
 
-### **6.** Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
+## Concurrency testing
+
+### Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
 ```csharp
 [Fact]
 public void Multithreading_DictionarySlim()
@@ -194,7 +205,39 @@ public void Multithreading_DictionarySlim()
 }
 ```
 
-### **7.** Performance test of linq expressions checking the results are always the same. The first expression is asserted to be faster than the second.
+## Regression testing
+
+### Regression test of portfolio profit and risk.  
+**Example** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
+**Hash** is used to find and check a hash for a number of results.
+It saves a cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
+Together Example and Hash eliminate the need to commit data files in regression testing while also giving detailed information of any change.
+```csharp
+[Fact]
+public void Portfolio_Small_Mixed_Example()
+{
+    var portfolio = ModelGen.Portfolio.Example(p =>
+           p.Positions.Count == 5
+        && p.Positions.Any(p => p.Instrument is Bond)
+        && p.Positions.Any(p => p.Instrument is Equity)
+    , "0N0XIzNsQ0O2");
+    var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
+    var fxRates = ModelGen.Price.Array[currencies.Length].Example(a =>
+        a.All(p => p > 0.75 && p < 1.5)
+    , "ftXKwKhS6ec4");
+    double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
+    Check.Hash(h =>
+    {
+        h.AddDecimalPlaces(2, portfolio.Positions.Select(p => p.Profit));
+        h.AddDecimalPlaces(2, portfolio.Profit(fxRate));
+        h.AddDecimalPlaces(2, portfolio.RiskByPosition(fxRate));
+    }, 5857230471108592669);
+}
+```
+
+## Performnce testing
+
+### Performance test of linq expressions checking the results are always the same. The first expression is asserted to be faster than the second.
 ```csharp
 [Fact]
 public void Faster_Linq_Random()
@@ -219,7 +262,7 @@ Standard Output Messages:
  The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
  distribution for the null hypothosis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
 
-### **8.** Performance test of two different ways of multiplying a matrix for a sample of matrix sizes checking the results are always the same.
+### Performance test of two different ways of multiplying a matrix for a sample of matrix sizes checking the results are always the same.
 An external equal assert is used.
 ```csharp
 [Fact]
@@ -238,7 +281,7 @@ public void Faster_Matrix_Multiply_Range()
 }
 ```
 
-### **9.** Performance test of a new Benchmarks Game submission.
+### Performance test of a new Benchmarks Game submission.
 ```csharp
 [Fact]
 public void ReverseComplement_Faster()
@@ -260,7 +303,7 @@ Standard Output Messages:
 25.1%[20.5%..31.6%] faster, sigma=6.0 (36 vs 0)
 ```
 
-### **10.** Performance test of PrefixVarint vs Varint for a given distribution skew.
+### Performance test of PrefixVarint vs Varint for a given distribution skew.
 Repeat is used as the functions are very quick.
 ```csharp
 void PrefixVarint_Faster(double skew)
@@ -296,34 +339,6 @@ Standard Output Messages:
 Tests.ArraySerializerTests.PrefixVarint_Faster_Skew10 [1s 829ms]
 Standard Output Messages:
 25.5%[-1.1%..+39.6%] faster, sigma=50.0 (8,394 vs 3,046)
-```
-
-### **11.** Regression test of portfolio profit and risk.  
-**Example** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
-**Hash** is used to find and check a hash for a number of results.
-It saves a cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
-Together Example and Hash eliminate the need to commit data files in regression testing while also giving detailed information of any change.
-```csharp
-[Fact]
-public void Portfolio_Small_Mixed_Example()
-{
-    var portfolio = ModelGen.Portfolio.Example(p =>
-           p.Positions.Count == 5
-        && p.Positions.Any(p => p.Instrument is Bond)
-        && p.Positions.Any(p => p.Instrument is Equity)
-    , "0N0XIzNsQ0O2");
-    var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
-    var fxRates = ModelGen.Price.Array[currencies.Length].Example(a =>
-        a.All(p => p > 0.75 && p < 1.5)
-    , "ftXKwKhS6ec4");
-    double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
-    Check.Hash(h =>
-    {
-        h.AddDecimalPlaces(2, portfolio.Positions.Select(p => p.Profit));
-        h.AddDecimalPlaces(2, portfolio.Profit(fxRate));
-        h.AddDecimalPlaces(2, portfolio.RiskByPosition(fxRate));
-    }, 5857230471108592669);
-}
 ```
 
 These tests are in xUnit but could equally be used in any testing framework.
