@@ -20,7 +20,7 @@ This gives the following advantages:
 - Concurrency testing and random shrinking work well together.
 
 See the [comparison](Comparison.md) with other random testing libraries.
-The low ceremony generators make CsCheck a good choice for C#, but the superior automatic shrinking and performance will make it a good choice for other languages too.
+The low ceremony generators make CsCheck a good choice for C#, but the superior automatic shrinking and performance will make it a good choice for all languages.
 
 CsCheck also has functionality to make multiple types of testing simple and fast:
 
@@ -182,6 +182,8 @@ public void AddOrUpdate_ModelBased()
 
 ## Concurrency testing
 
+Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603). The following need updated for 2.0.0.
+
 ### Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
 ```csharp
 [Fact]
@@ -235,7 +237,7 @@ public void Portfolio_Small_Mixed_Example()
 }
 ```
 
-## Performnce testing
+## Performance testing
 
 ### Performance test of linq expressions checking the results are always the same. The first expression is asserted to be faster than the second.
 ```csharp
