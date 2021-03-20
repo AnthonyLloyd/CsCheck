@@ -32,7 +32,7 @@ Added documentation xml file.
 Changed Size to an out parameter instead of tuple return value.
 Replaced IGen interface with covariant IGen&lt;out T&gt;.
 Split Gen.OneOf into OneOf and OneOfConst.
-Split Gen.Frequency into OneOf and FrequencyConst.
+Split Gen.Frequency into Frequency and FrequencyConst.
 Removed older Check.Sample multithreading functions.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
