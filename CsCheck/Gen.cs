@@ -252,7 +252,7 @@ namespace CsCheck
             var v10 = gen10.Generate(pcg, out Size s10);
             size = new Size(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10);
             return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10);
-        });
+        }); 
 
         public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen0, Gen<T1> gen1) => Create((PCG pcg, out Size size) =>
         {
@@ -401,9 +401,13 @@ namespace CsCheck
 
         public static Gen<T> Const<T>(Func<T> value) => Create((PCG pcg, out Size size) => { size = Size.Zero; return value(); });
 
-        public static Gen<T> OneOfConst<T>(params T[] ts) => Int[0, ts.Length - 1].Select(i => ts[i]);
+        public static Gen<T> OneOfConst<T>(params T[] ts) => Create((PCG pcg, out Size size) => {
+            size = Size.Zero;
+            return ts[pcg.Next((uint)ts.Length)];
+        });
 
-        public static Gen<T> OneOf<T>(params IGen<T>[] gens) => Int[0, gens.Length - 1].SelectMany(i => gens[i]);
+        public static Gen<T> OneOf<T>(params IGen<T>[] gens) => Create((PCG pcg, out Size size)
+            => gens[pcg.Next((uint)gens.Length)].Generate(pcg, out size));
 
         public static Gen<T> Enum<T>() where T : Enum
         {
@@ -416,39 +420,35 @@ namespace CsCheck
 
         public static Gen<T> FrequencyConst<T>(params (int, T)[] ts)
         {
-            var tsAgg = new (int, T)[ts.Length];
             int total = 0;
-            for (int i = 0; i < ts.Length; i++)
+            foreach (var (i, _) in ts) total += i;
+            return Create((PCG pcg, out Size size) =>
             {
-                var (f, g) = ts[i];
-                total += f;
-                tsAgg[i] = (total, g);
-            }
-            return Int[1, total].Select(c =>
-            {
-                for (int i = 0; i < tsAgg.Length - 1; i++)
-                    if (c <= tsAgg[i].Item1)
-                        return tsAgg[i].Item2;
-                return tsAgg[tsAgg.Length - 1].Item2;
+                size = Size.Zero;
+                var v = (int)pcg.Next((uint)total);
+                foreach (var i in ts)
+                {
+                    v -= i.Item1;
+                    if (v < 0) return i.Item2;
+                }
+                return default;
             });
         }
 
         public static Gen<T> Frequency<T>(params (int, IGen<T>)[] gens)
         {
-            var gensAgg = new (int, IGen<T>)[gens.Length];
             int total = 0;
-            for (int i = 0; i < gens.Length; i++)
+            foreach (var (i, _) in gens) total += i;
+            return Create((PCG pcg, out Size size) =>
             {
-                var (f, g) = gens[i];
-                total += f;
-                gensAgg[i] = (total, g);
-            }
-            return Int[1, total].SelectMany(c =>
-            {
-                for (int i = 0; i < gensAgg.Length - 1; i++)
-                    if (c <= gensAgg[i].Item1)
-                        return gensAgg[i].Item2;
-                return gensAgg[gensAgg.Length - 1].Item2;
+                var v = (int)pcg.Next((uint)total);
+                foreach (var i in gens)
+                {
+                    v -= i.Item1;
+                    if (v < 0) return i.Item2.Generate(pcg, out size);
+                }
+                size = Size.Zero;
+                return default;
             });
         }
 
