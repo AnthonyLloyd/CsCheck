@@ -67,7 +67,6 @@ namespace CsCheck
             T minT = default;
             Exception minException = null;
             List<string> minInfo = null;
-            if (threads == 1) info = new List<string>();
 
             int shrinks = -1;
             if (seed is not null)
@@ -88,13 +87,9 @@ namespace CsCheck
                     minSize = s;
                     minT = t;
                     minException = e;
-                    if(info != null && info.Count > 0)
-                    {
-                        minInfo = info;
-                        info = new List<string>();
-                    }
+                    if(info != null) minInfo = info;
                 }
-                info?.Clear();
+                info = null;
             }
             var lockObj = new object();
             int skipped = 0;
@@ -124,15 +119,11 @@ namespace CsCheck
                             minSize = s;
                             minT = t;
                             minException = e;
-                            if (info != null && info.Count > 0)
-                            {
-                                minInfo = info;
-                                info = new List<string>();
-                            }
+                            if (info != null) minInfo = info;
                         }
                     }
                 }
-                info?.Clear();
+                info = null;
             });
             if (minPCG is not null)
             {
@@ -162,7 +153,6 @@ namespace CsCheck
             T minT = default;
             Exception minException = null;
             List<string> minInfo = null;
-            if (threads == 1) info = new List<string>();
 
             int shrinks = -1;
             if (seed is not null)
@@ -181,11 +171,7 @@ namespace CsCheck
                         minState = state;
                         minSize = s;
                         minT = t;
-                        if (info is not null && info.Count > 0)
-                        {
-                            minInfo = info;
-                            info = new List<string>();
-                        }
+                        if (info is not null) minInfo = info;
                     }
                 }
                 catch (Exception e)
@@ -196,13 +182,9 @@ namespace CsCheck
                     minSize = s;
                     minT = t;
                     minException = e;
-                    if (info is not null && info.Count > 0)
-                    {
-                        minInfo = info;
-                        info = new List<string>();
-                    }
+                    if (info is not null) minInfo = info;
                 }
-                info?.Clear();
+                info = null;
             }
 
             var lockObj = new object();
@@ -229,11 +211,7 @@ namespace CsCheck
                                     minState = state;
                                     minSize = s;
                                     minT = t;
-                                    if (info is not null && info.Count > 0)
-                                    {
-                                        minInfo = info;
-                                        info = new List<string>();
-                                    }
+                                    if (info is not null) minInfo = info;
                                 }
                             }
                         }
@@ -252,15 +230,11 @@ namespace CsCheck
                             minSize = s;
                             minT = t;
                             minException = e;
-                            if (info is not null && info.Count > 0)
-                            {
-                                minInfo = info;
-                                info = new List<string>();
-                            }
+                            if (info is not null) minInfo = info;
                         }
                     }
                 }
-                info?.Clear();
+                info = null;
             });
             if (minPCG is not null)
             {
@@ -963,7 +937,18 @@ namespace CsCheck
 
         static List<string> info;
         /// <summary>Store useful info to be displayed on shrunk failure.</summary>
-        public static void Info(string s) => info?.Add(s);
+        public static void Info(string s)
+        {
+            if (info is null) info = new List<string>();
+            info.Add(s);
+        }
+
+        public static List<string> InfoGather()
+        {
+            var r = info;
+            info = null;
+            return r;
+        }
     }
 
     public class FasterResult

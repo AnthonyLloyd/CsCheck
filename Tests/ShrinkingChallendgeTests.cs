@@ -125,7 +125,7 @@ namespace Tests
         class Heap { public int Head; public Heap Left; public Heap Right; }
 
         [Fact(Skip = "Meant to fail")]
-        public void No7_BinHeap() // 100: (-2, (-686692, None, None), (-26, None, (216149, None, None))) 13ms, 10_000_000: (0, (0, None, (-1, None, None)), (0, None, None)) 6s.
+        public void No7_BinHeap() // 100: (-2, (-686692, None, None), (-26, None, (216149, None, None))) 13ms, 10_000_000: (0, (0, None, None), (0, None, (1, None, None))) 6s.
                                   //                                                                                       (0, None, (0, (0, None, None), (1, None, None)))
         {
             Gen<Heap> gen = null;

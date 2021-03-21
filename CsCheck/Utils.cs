@@ -72,7 +72,7 @@ namespace CsCheck
         static string PrintTuple(object o)
         {
             var sb = new StringBuilder("(");
-            var fields = o.GetType().GetFields();
+            var fields = o.GetType().GetProperties();
             sb.Append(Print(fields[0].GetValue(o)));
             for (int i = 1; i < fields.Length; i++)
             {
