@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using CsCheck;
 using Xunit;
+using System.IO.MemoryMappedFiles;
 
 namespace Tests
 {
@@ -102,14 +103,14 @@ namespace Tests
         }
 
         [Fact(Skip = "Meant to fail")]
-        public void No6_Difference_MustNotBeZero() // 100: pass 9ms, 10_000_000 (10, 10) 658ms.
+        public void No6_Difference_MustNotBeZero() // 100: pass 9ms, 10_000_000: (10, 10) 658ms.
         {
             Gen.Int.Positive.Select(Gen.Int.Positive)
             .Sample(t => t.V0 < 10 || t.V0 != t.V1);
         }
 
         [Fact(Skip = "Meant to fail")]
-        public void No6_Difference_MustNotBeSmall() // 100: pass 9ms, 10_000_000:(10, 6) 586ms.
+        public void No6_Difference_MustNotBeSmall() // 100: pass 9ms, 10_000_000: (10, 6) 586ms.
         {
             Gen.Int.Positive.Select(Gen.Int.Positive)
             .Sample(t => t.V0 < 10 || Math.Abs(t.V0 - t.V1) > 4 || t.V0 == t.V1);
@@ -125,8 +126,7 @@ namespace Tests
         class Heap { public int Head; public Heap Left; public Heap Right; }
 
         [Fact(Skip = "Meant to fail")]
-        public void No7_BinHeap() // 100: (-2, (-686692, None, None), (-26, None, (216149, None, None))) 13ms, 10_000_000: (0, (0, None, None), (0, None, (1, None, None))) 6s.
-                                  //                                                                                       (0, None, (0, (0, None, None), (1, None, None)))
+        public void No7_BinHeap() // 100: (1, None, (-92290, None, None)) 12ms, 100_000: (0, None, (-1, None, None)) 31s.
         {
             Gen<Heap> gen = null;
             gen = Gen.Deferred(() =>
@@ -135,6 +135,14 @@ namespace Tests
                     (1, Gen.Select(Gen.Int, gen, gen, (h, l, r) => new Heap { Head = h, Left = l, Right = r }))
                 )
             );
+
+            static uint Count(Heap h) => h is null ? 0 : 1 + Count(h.Left) + Count(h.Right);
+
+            var gen2 = Gen.Create((PCG pcg, out Size size) => {
+                var r = gen.Generate(pcg, out size);
+                size = new Size(Count(r), size);
+                return r;
+            });
 
             static Heap MergeHeaps(Heap h1, Heap h2) =>
                 h1 is null ? h2
@@ -169,11 +177,16 @@ namespace Tests
                 return r;
             }
 
-            static List<int> Sorted(List<int> l) => new(l);
+            static List<int> Sorted(List<int> l)
+            {
+                l = new(l);
+                l.Sort();
+                return l;
+            }
 
             static string Print(Heap h) => h is null ? "None" : $"({h.Head}, {Print(h.Left)}, {Print(h.Right)})";
 
-            gen.Sample(h =>
+            gen2.Sample(h =>
             {
                 var l1 = ToList(h);
                 var l2 = WrongToSortedList(h);
