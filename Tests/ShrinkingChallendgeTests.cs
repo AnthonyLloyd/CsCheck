@@ -58,12 +58,11 @@ namespace Tests
         [Fact(Skip = "Meant to fail")]
         public void No4_Calculator() // 100: large example 13ms, 10_000_000: (/, 0, (+, 0, 0)) 3s.
         {
-            Gen<object> gen = null;
-            gen = Gen.Deferred(() =>
+            var gen = Gen.Recursive<object>(g =>
                 Gen.Frequency(
                     (3, Gen.Int[-10, 10].Cast<object>()),
-                    (1, Gen.Select(Gen.Const('+'), gen, gen).Cast<object>()),
-                    (1, Gen.Select(Gen.Const('/'), gen, gen).Cast<object>())
+                    (1, Gen.Select(Gen.Const('+'), g, g).Cast<object>()),
+                    (1, Gen.Select(Gen.Const('/'), g, g).Cast<object>())
                 )
             );
 
@@ -128,11 +127,10 @@ namespace Tests
         [Fact(Skip = "Meant to fail")]
         public void No7_BinHeap() // 100: (1, None, (-92290, None, None)) 12ms, 100_000: (0, None, (-1, None, None)) 31s.
         {
-            Gen<Heap> gen = null;
-            gen = Gen.Deferred(() =>
+            var gen = Gen.Recursive<Heap>(g =>
                 Gen.Frequency(
                     (3, Gen.Const((Heap)null)),
-                    (1, Gen.Select(Gen.Int, gen, gen, (h, l, r) => new Heap { Head = h, Left = l, Right = r }))
+                    (1, Gen.Select(Gen.Int, g, g, (h, l, r) => new Heap { Head = h, Left = l, Right = r }))
                 )
             );
 

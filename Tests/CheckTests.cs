@@ -284,6 +284,9 @@ namespace Tests
     }
 }
 
+// TODO: Try changing IGen to allow minSize parameter. Good for arrays but what else?
+// TODO: Reconsider the Select(Func) -> Tuple. Does it need a rename?
+// TODO: For Hash maybe move decimal places / s.f. to top level and not each call.
 // TODO: Add slims
 // TODO: Metamorphic? Duplicate. Gen<A> -> Gen<Action<A, A, DD>> == Operation2<A>
 // TODO: More Gen.ConcurrentDictionary

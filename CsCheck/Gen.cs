@@ -517,10 +517,12 @@ namespace CsCheck
             });
         }
 
-        public static Gen<T> Deferred<T>(Func<Gen<T>> gen)
+        public static Gen<T> Recursive<T>(Func<Gen<T>, Gen<T>> f)
         {
-            var lazy = new Lazy<Gen<T>>(gen);
-            return Create((PCG pcg, out Size size) => lazy.Value.Generate(pcg, out size));
+            Gen<T> gen = null;
+            var lazy = new Lazy<Gen<T>>(() => f(gen));
+            gen = Create((PCG pcg, out Size size) => lazy.Value.Generate(pcg, out size));
+            return gen;
         }
 
         public static GenDictionary<K, V> Dictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new(genK, genV);
