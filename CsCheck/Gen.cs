@@ -520,8 +520,7 @@ namespace CsCheck
         public static Gen<T> Recursive<T>(Func<Gen<T>, Gen<T>> f)
         {
             Gen<T> gen = null;
-            var lazy = new Lazy<Gen<T>>(() => f(gen));
-            gen = Create((PCG pcg, out Size size) => lazy.Value.Generate(pcg, out size));
+            gen = f(Create((PCG pcg, out Size size) => gen.Generate(pcg, out size)));
             return gen;
         }
 

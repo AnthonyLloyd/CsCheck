@@ -58,14 +58,6 @@ namespace Tests
         [Fact(Skip = "Meant to fail")]
         public void No4_Calculator() // 100: large example 13ms, 10_000_000: (/, 0, (+, 0, 0)) 3s.
         {
-            var gen = Gen.Recursive<object>(g =>
-                Gen.Frequency(
-                    (3, Gen.Int[-10, 10].Cast<object>()),
-                    (1, Gen.Select(Gen.Const('+'), g, g).Cast<object>()),
-                    (1, Gen.Select(Gen.Const('/'), g, g).Cast<object>())
-                )
-            );
-
             static bool DivSubTerms(object o) => o switch
             {
                 int i => true,
@@ -82,7 +74,14 @@ namespace Tests
                 _ => throw new Exception(o.ToString())
             };
 
-            gen.Where(DivSubTerms)
+            Gen.Recursive<object>(g =>
+                Gen.Frequency(
+                    (3, Gen.Int[-10, 10].Cast<object>()),
+                    (1, Gen.Select(Gen.Const('+'), g, g).Cast<object>()),
+                    (1, Gen.Select(Gen.Const('/'), g, g).Cast<object>())
+                )
+            )
+            .Where(DivSubTerms)
             .Sample(o =>
             {
                 int i = Evaluate(o);
@@ -125,22 +124,9 @@ namespace Tests
         class Heap { public int Head; public Heap Left; public Heap Right; }
 
         [Fact(Skip = "Meant to fail")]
-        public void No7_BinHeap() // 100: (1, None, (-92290, None, None)) 12ms, 100_000: (0, None, (-1, None, None)) 31s.
+        public void No7_BinHeap() // 100: (1, None, (-92290, None, None)) 12ms, 100_000: (0, None, (-1, None, None)) 31ms.
         {
-            var gen = Gen.Recursive<Heap>(g =>
-                Gen.Frequency(
-                    (3, Gen.Const((Heap)null)),
-                    (1, Gen.Select(Gen.Int, g, g, (h, l, r) => new Heap { Head = h, Left = l, Right = r }))
-                )
-            );
-
             static uint Count(Heap h) => h is null ? 0 : 1 + Count(h.Left) + Count(h.Right);
-
-            var gen2 = Gen.Create((PCG pcg, out Size size) => {
-                var r = gen.Generate(pcg, out size);
-                size = new Size(Count(r), size);
-                return r;
-            });
 
             static Heap MergeHeaps(Heap h1, Heap h2) =>
                 h1 is null ? h2
@@ -184,7 +170,19 @@ namespace Tests
 
             static string Print(Heap h) => h is null ? "None" : $"({h.Head}, {Print(h.Left)}, {Print(h.Right)})";
 
-            gen2.Sample(h =>
+            var gen = Gen.Recursive<Heap>(g =>
+                Gen.Frequency(
+                    (3, Gen.Const((Heap)null)),
+                    (1, Gen.Select(Gen.Int, g, g, (h, l, r) => new Heap { Head = h, Left = l, Right = r }))
+                )
+            );
+
+            Gen.Create((PCG pcg, out Size size) => {
+                var r = gen.Generate(pcg, out size);
+                size = new Size(Count(r), size);
+                return r;
+            })
+            .Sample(h =>
             {
                 var l1 = ToList(h);
                 var l2 = WrongToSortedList(h);
