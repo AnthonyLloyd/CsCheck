@@ -120,24 +120,24 @@ namespace Tests
                 var pcg = PCG.Parse("5a7zcxHI4Eg0");
                 for (int i = 0; i < 100; i++)
                 {
-                    hash.Add(Gen.Bool.Generate(pcg, out _));
-                    hash.Add(Gen.SByte.Generate(pcg, out _));
-                    hash.Add(Gen.Byte.Generate(pcg, out _));
-                    hash.Add(Gen.Short.Generate(pcg, out _));
-                    hash.Add(Gen.UShort.Generate(pcg, out _));
-                    hash.Add(Gen.Int.Generate(pcg, out _));
-                    hash.Add(Gen.UInt.Generate(pcg, out _));
-                    hash.Add(Gen.Long.Generate(pcg, out _));
-                    hash.Add(Gen.ULong.Generate(pcg, out _));
-                    hash.Add(Gen.Float.Generate(pcg, out _));
-                    hash.Add(Gen.Double.Generate(pcg, out _));
-                    hash.Add(Gen.Decimal.Generate(pcg, out _));
-                    hash.Add(Gen.DateTime.Generate(pcg, out _));
-                    hash.Add(Gen.TimeSpan.Generate(pcg, out _));
-                    hash.Add(Gen.DateTimeOffset.Generate(pcg, out _));
-                    hash.Add(Gen.Guid.Generate(pcg, out _));
-                    hash.Add(Gen.Char.Generate(pcg, out _));
-                    hash.Add(Gen.String.Generate(pcg, out _));
+                    hash.Add(Gen.Bool.Generate(pcg, null, out _));
+                    hash.Add(Gen.SByte.Generate(pcg, null, out _));
+                    hash.Add(Gen.Byte.Generate(pcg, null, out _));
+                    hash.Add(Gen.Short.Generate(pcg, null, out _));
+                    hash.Add(Gen.UShort.Generate(pcg, null, out _));
+                    hash.Add(Gen.Int.Generate(pcg, null, out _));
+                    hash.Add(Gen.UInt.Generate(pcg, null, out _));
+                    hash.Add(Gen.Long.Generate(pcg, null, out _));
+                    hash.Add(Gen.ULong.Generate(pcg, null, out _));
+                    hash.Add(Gen.Float.Generate(pcg, null, out _));
+                    hash.Add(Gen.Double.Generate(pcg, null, out _));
+                    hash.Add(Gen.Decimal.Generate(pcg, null, out _));
+                    hash.Add(Gen.DateTime.Generate(pcg, null, out _));
+                    hash.Add(Gen.TimeSpan.Generate(pcg, null, out _));
+                    hash.Add(Gen.DateTimeOffset.Generate(pcg, null, out _));
+                    hash.Add(Gen.Guid.Generate(pcg, null, out _));
+                    hash.Add(Gen.Char.Generate(pcg, null, out _));
+                    hash.Add(Gen.String.Generate(pcg, null, out _));
                 }
             }, 6017288915);
         }

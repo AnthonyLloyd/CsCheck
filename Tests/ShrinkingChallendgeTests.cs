@@ -222,7 +222,7 @@ namespace Tests
         [Fact(Skip = "Meant to fail")]
         public void No11_NestedLists() // 100: [L=115 [298, 1, -148635 ... -1364696, 86]] 26ms, 10_000_000: not [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
         {
-            Gen.Int.Array[0, 20].Array[0, 20]
+            Gen.Int.Array.Array
             .Sample(aa =>
             {
                 int l = 0;

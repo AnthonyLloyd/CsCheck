@@ -77,7 +77,7 @@ namespace CsCheck
                 T t = default;
                 try
                 {
-                    assert(t = gen.Generate(pcg, out s));
+                    assert(t = gen.Generate(pcg, null, out s));
                 }
                 catch (Exception e)
                 {
@@ -101,7 +101,7 @@ namespace CsCheck
                 T t = default;
                 try
                 {
-                    t = gen.Generate(pcg, out s);
+                    t = gen.Generate(pcg, minSize, out s);
                     if (s.IsLessThan(minSize))
                         assert(t);
                     else
@@ -163,7 +163,7 @@ namespace CsCheck
                 T t = default;
                 try
                 {
-                    t = gen.Generate(pcg, out s);
+                    t = gen.Generate(pcg, null, out s);
                     if (!predicate(t))
                     {
                         shrinks++;
@@ -197,7 +197,7 @@ namespace CsCheck
                 T t = default;
                 try
                 {
-                    t = gen.Generate(pcg, out s);
+                    t = gen.Generate(pcg, minSize, out s);
                     if (s.IsLessThan(minSize))
                     {
                         if (!predicate(t))
@@ -283,11 +283,11 @@ namespace CsCheck
                 opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2)) : op;
             }
 
-            Gen.Create((PCG pcg, out Size size) =>
+            Gen.Create((PCG pcg, Size min, out Size size) =>
             {
                 var stream = pcg.Stream;
                 var seed = pcg.Seed;
-                return (initial.Generate(pcg, out size), stream, seed);
+                return (initial.Generate(pcg, null, out size), stream, seed);
             })
             .Select(Gen.OneOf(opNameActions).Array, (a, b) =>
                  new ModelBasedData<Actual, Model>
@@ -317,7 +317,7 @@ namespace CsCheck
                 if (p == null) return "";
                 var sb = new StringBuilder();
                 sb.Append("\n    Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
-                var initialState = initial.Generate(new PCG(p.Stream, p.Seed), out _);
+                var initialState = initial.Generate(new PCG(p.Stream, p.Seed), null, out _);
                 sb.Append("\nInitial Actual: ").Append(printActual(initialState.Item1));
                 sb.Append("\nInitial  Model: ").Append(printModel(initialState.Item2));
                 if (p.Exception is null)
@@ -424,11 +424,11 @@ namespace CsCheck
 
             bool firstIteration = true;
 
-            Gen.Create((PCG pcg, out Size size) =>
+            Gen.Create((PCG pcg, Size min, out Size size) =>
             {
                 var stream = pcg.Stream;
                 var seed = pcg.Seed;
-                return (initial.Generate(pcg, out size), stream, seed);
+                return (initial.Generate(pcg, null, out size), stream, seed);
             })
             .Select(Gen.OneOf(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS].Select(ops => Gen.Int[1, Math.Min(threads, ops.Length)]), (a, b) =>
                 new ConcurrentData<T> { State = a.Item1, Stream = a.stream, Seed = a.seed, Operations = b.V0, Threads = b.V1 }
@@ -452,7 +452,7 @@ namespace CsCheck
                     }
                     Parallel.ForEach(Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
                     {
-                        var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed), out _);
+                        var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed), null, out _);
                         try
                         {
                             Run(linearState, sequence, 1);
@@ -474,12 +474,12 @@ namespace CsCheck
                 var sb = new StringBuilder();
                 sb.Append("\n   Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
                 sb.Append("\n   On Threads: ").Append(Print(p.ThreadIds));
-                sb.Append("\nInitial state: ").Append(print(initial.Generate(new PCG(p.Stream, p.Seed), out _)));
+                sb.Append("\nInitial state: ").Append(print(initial.Generate(new PCG(p.Stream, p.Seed), null, out _)));
                 sb.Append("\n  Final state: ").Append(p.Exception is not null ? p.Exception.ToString() : print(p.State));
                 bool first = true;
                 foreach (var sequence in Permutations(p.ThreadIds, p.Operations))
                 {
-                    var linearState = initial.Generate(new PCG(p.Stream, p.Seed), out _);
+                    var linearState = initial.Generate(new PCG(p.Stream, p.Seed), null, out _);
                     string result;
                     try
                     {
@@ -727,7 +727,7 @@ namespace CsCheck
                         while (!mre.IsSet)
                         {
                             state = pcg.State;
-                            t = gen.Generate(pcg, out _);
+                            t = gen.Generate(pcg, null, out _);
                             var tf = Stopwatch.GetTimestamp();
                             for (int i = 1; i < repeat; i++) faster(t);
                             faster(t);
@@ -788,7 +788,7 @@ namespace CsCheck
                         while (!mre.IsSet)
                         {
                             state = pcg.State;
-                            t = gen.Generate(pcg, out _);
+                            t = gen.Generate(pcg, null, out _);
                             var tf = Stopwatch.GetTimestamp();
                             for (int i = 1; i < repeat; i++) faster(t);
                             var vf = faster(t);
@@ -868,7 +868,7 @@ namespace CsCheck
                         {
                             if (mre.IsSet) return;
                             var state = pcg.State;
-                            var t = g.Generate(pcg, out _);
+                            var t = g.Generate(pcg, null, out _);
                             if (predicate(t))
                             {
                                 lock (mre)
@@ -891,7 +891,7 @@ namespace CsCheck
             else
             {
                 var pcg = PCG.Parse(seed);
-                var t = g.Generate(pcg, out _);
+                var t = g.Generate(pcg, null, out _);
                 if (!predicate(t)) throw new CsCheckException("where clause no longer satisfied");
                 return t;
             }
