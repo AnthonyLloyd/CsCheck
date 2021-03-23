@@ -173,6 +173,7 @@ namespace CsCheck
     }
 
     public delegate T GenDelegate<out T>(PCG pcg, out Size size);
+    public delegate T GenMap<T>(T pcg, ref Size size);
 
     public static class Gen
     {
@@ -521,6 +522,13 @@ namespace CsCheck
         {
             Gen<T> gen = null;
             gen = f(Create((PCG pcg, out Size size) => gen.Generate(pcg, out size)));
+            return gen;
+        }
+
+        public static Gen<T> Recursive<T>(Func<Gen<T>, Gen<T>> f, GenMap<T> map)
+        {
+            Gen<T> gen = null;
+            gen = f(Create((PCG pcg, out Size size) => map(gen.Generate(pcg, out size), ref size)));
             return gen;
         }
 

@@ -3,7 +3,6 @@ using System.Linq;
 using System.Collections.Generic;
 using CsCheck;
 using Xunit;
-using System.IO.MemoryMappedFiles;
 
 namespace Tests
 {
@@ -170,18 +169,13 @@ namespace Tests
 
             static string Print(Heap h) => h is null ? "None" : $"({h.Head}, {Print(h.Left)}, {Print(h.Right)})";
 
-            var gen = Gen.Recursive<Heap>(g =>
+            Gen.Recursive(g =>
                 Gen.Frequency(
                     (3, Gen.Const((Heap)null)),
                     (1, Gen.Select(Gen.Int, g, g, (h, l, r) => new Heap { Head = h, Left = l, Right = r }))
-                )
-            );
-
-            Gen.Create((PCG pcg, out Size size) => {
-                var r = gen.Generate(pcg, out size);
-                size = new Size(Count(r), size);
-                return r;
-            })
+                ),
+                (Heap h, ref Size size) => { size = new Size(Count(h), size); return h; }
+            )
             .Sample(h =>
             {
                 var l1 = ToList(h);
