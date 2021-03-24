@@ -284,7 +284,7 @@ namespace Tests
     }
 }
 
-// TODO: Try changing IGen to allow minSize parameter. Good for arrays but what else?
+// TODO: Rename size to iter and add time
 // TODO: Reconsider the Select(Func) -> Tuple. Does it need a rename?
 // TODO: For Hash maybe move decimal places / s.f. to top level and not each call.
 // TODO: Add slims

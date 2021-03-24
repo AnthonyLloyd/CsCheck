@@ -22,7 +22,6 @@ namespace CsCheck
     public class Size
     {
         public readonly static Size Zero = new(0UL);
-        public readonly static Size Max = new(ulong.MaxValue);
         public readonly ulong I;
         public readonly Size Next;
 
@@ -118,8 +117,7 @@ namespace CsCheck
             : s10 is null ? Sum(s1, s2, s3, s4, s5, s6, s7, s8, s9)
             : new Size(s1.I + s2.I + s3.I + s4.I + s5.I + s6.I + s7.I + s8.I + s9.I + s10.I, Sum(s1.Next, s2.Next, s3.Next, s4.Next, s5.Next, s6.Next, s7.Next, s8.Next, s9.Next, s10.Next));
 
-        public bool IsLessThan(Size s) =>
-            s is not null && (I < s.I || (I == s.I && ((Next is null && s.Next is not null) || (Next is not null && Next.IsLessThan(s.Next)))));
+        public static bool IsLessThan(Size s1, Size s2) => s1 is not null && (s2 is null || s1.I < s2.I || (s1.I == s2.I && IsLessThan(s1.Next, s2.Next)));
 
         public Size Append(Size s) => new(I, Next is null ? s : Next.Append(s));
     }
@@ -192,8 +190,13 @@ namespace CsCheck
         public static Gen<R> Select<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2,
             Func<T1, T2, R> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
+            if(min != null)
+            {
+                if (min.I < 0x2_0000_0000UL) { size = new Size(0x2_0000_0000UL); return default; }
+                min = min.I == 0x2_0000_0000UL ? min.Next : null;
+            }
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
             size = new Size(0x2_0000_0000UL, Size.Sum(s1, s2));
             return selector(v1, v2);
         });
@@ -201,9 +204,14 @@ namespace CsCheck
         public static Gen<R> Select<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
             Func<T1, T2, T3, R> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
+            if (min != null)
+            {
+                if (min.I < 0x3_0000_0000UL) { size = new Size(0x3_0000_0000UL); return default; }
+                min = min.I == 0x3_0000_0000UL ? min.Next : null;
+            }
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            var v3 = gen3.Generate(pcg, min, out Size s3);
             size = new Size(0x3_0000_0000UL, Size.Sum(s1, s2, s3));
             return selector(v1, v2, v3);
         });
@@ -211,10 +219,15 @@ namespace CsCheck
         public static Gen<R> Select<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Func<T1, T2, T3, T4, R> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
-            var v4 = gen4.Generate(pcg, null, out Size s4);
+            if (min != null)
+            {
+                if (min.I < 0x4_0000_0000UL) { size = new Size(0x4_0000_0000UL); return default; }
+                min = min.I == 0x4_0000_0000UL ? min.Next : null;
+            }
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            var v3 = gen3.Generate(pcg, min, out Size s3);
+            var v4 = gen4.Generate(pcg, min, out Size s4);
             size = new Size(0x4_0000_0000UL, Size.Sum(s1, s2, s3, s4));
             return selector(v1, v2, v3, v4);
         });
@@ -222,11 +235,16 @@ namespace CsCheck
         public static Gen<R> Select<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Gen<T5> gen5, Func<T1, T2, T3, T4, T5, R> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
-            var v4 = gen4.Generate(pcg, null, out Size s4);
-            var v5 = gen5.Generate(pcg, null, out Size s5);
+            if (min != null)
+            {
+                if (min.I < 0x5_0000_0000UL) { size = new Size(0x5_0000_0000UL); return default; }
+                min = min.I == 0x5_0000_0000UL ? min.Next : null;
+            }
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            var v3 = gen3.Generate(pcg, min, out Size s3);
+            var v4 = gen4.Generate(pcg, min, out Size s4);
+            var v5 = gen5.Generate(pcg, min, out Size s5);
             size = new Size(0x5_0000_0000UL, Size.Sum(s1, s2, s3, s4, s5));
             return selector(v1, v2, v3, v4, v5);
         });
@@ -234,12 +252,17 @@ namespace CsCheck
         public static Gen<R> Select<T1, T2, T3, T4, T5, T6, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, R> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
-            var v4 = gen4.Generate(pcg, null, out Size s4);
-            var v5 = gen5.Generate(pcg, null, out Size s5);
-            var v6 = gen6.Generate(pcg, null, out Size s6);
+            if (min != null)
+            {
+                if (min.I < 0x6_0000_0000UL) { size = new Size(0x6_0000_0000UL); return default; }
+                min = min.I == 0x6_0000_0000UL ? min.Next : null;
+            }
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            var v3 = gen3.Generate(pcg, min, out Size s3);
+            var v4 = gen4.Generate(pcg, min, out Size s4);
+            var v5 = gen5.Generate(pcg, min, out Size s5);
+            var v6 = gen6.Generate(pcg, min, out Size s6);
             size = new Size(0x6_0000_0000UL, Size.Sum(s1, s2, s3, s4, s5, s6));
             return selector(v1, v2, v3, v4, v5, v6);
         });
@@ -248,13 +271,18 @@ namespace CsCheck
             Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) =>
             Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
-            var v4 = gen4.Generate(pcg, null, out Size s4);
-            var v5 = gen5.Generate(pcg, null, out Size s5);
-            var v6 = gen6.Generate(pcg, null, out Size s6);
-            var v7 = gen7.Generate(pcg, null, out Size s7);
+            if (min != null)
+            {
+                if (min.I < 0x7_0000_0000UL) { size = new Size(0x7_0000_0000UL); return default; }
+                min = min.I == 0x7_0000_0000UL ? min.Next : null;
+            }
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            var v3 = gen3.Generate(pcg, min, out Size s3);
+            var v4 = gen4.Generate(pcg, min, out Size s4);
+            var v5 = gen5.Generate(pcg, min, out Size s5);
+            var v6 = gen6.Generate(pcg, min, out Size s6);
+            var v7 = gen7.Generate(pcg, min, out Size s7);
             size = new Size(0x7_0000_0000UL, Size.Sum(s1, s2, s3, s4, s5, s6, s7));
             return selector(v1, v2, v3, v4, v5, v6, v7);
         });
@@ -263,14 +291,19 @@ namespace CsCheck
             Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector)
             => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
-            var v4 = gen4.Generate(pcg, null, out Size s4);
-            var v5 = gen5.Generate(pcg, null, out Size s5);
-            var v6 = gen6.Generate(pcg, null, out Size s6);
-            var v7 = gen7.Generate(pcg, null, out Size s7);
-            var v8 = gen8.Generate(pcg, null, out Size s8);
+            if (min != null)
+            {
+                if (min.I < 0x8_0000_0000UL) { size = new Size(0x8_0000_0000UL); return default; }
+                min = min.I == 0x8_0000_0000UL ? min.Next : null;
+            }
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            var v3 = gen3.Generate(pcg, min, out Size s3);
+            var v4 = gen4.Generate(pcg, min, out Size s4);
+            var v5 = gen5.Generate(pcg, min, out Size s5);
+            var v6 = gen6.Generate(pcg, min, out Size s6);
+            var v7 = gen7.Generate(pcg, min, out Size s7);
+            var v8 = gen8.Generate(pcg, min, out Size s8);
             size = new Size(0x8_0000_0000UL, Size.Sum(s1, s2, s3, s4, s5, s6, s7, s8));
             return selector(v1, v2, v3, v4, v5, v6, v7, v8);
         });
@@ -279,15 +312,20 @@ namespace CsCheck
             Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
-            var v4 = gen4.Generate(pcg, null, out Size s4);
-            var v5 = gen5.Generate(pcg, null, out Size s5);
-            var v6 = gen6.Generate(pcg, null, out Size s6);
-            var v7 = gen7.Generate(pcg, null, out Size s7);
-            var v8 = gen8.Generate(pcg, null, out Size s8);
-            var v9 = gen9.Generate(pcg, null, out Size s9);
+            if (min != null)
+            {
+                if (min.I < 0x9_0000_0000UL) { size = new Size(0x9_0000_0000UL); return default; }
+                min = min.I == 0x9_0000_0000UL ? min.Next : null;
+            }
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            var v3 = gen3.Generate(pcg, min, out Size s3);
+            var v4 = gen4.Generate(pcg, min, out Size s4);
+            var v5 = gen5.Generate(pcg, min, out Size s5);
+            var v6 = gen6.Generate(pcg, min, out Size s6);
+            var v7 = gen7.Generate(pcg, min, out Size s7);
+            var v8 = gen8.Generate(pcg, min, out Size s8);
+            var v9 = gen9.Generate(pcg, min, out Size s9);
             size = new Size(0x9_0000_0000UL, Size.Sum(s1, s2, s3, s4, s5, s6, s7, s8, s9));
             return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9);
         });
@@ -296,24 +334,34 @@ namespace CsCheck
             Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
         Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
-            var v4 = gen4.Generate(pcg, null, out Size s4);
-            var v5 = gen5.Generate(pcg, null, out Size s5);
-            var v6 = gen6.Generate(pcg, null, out Size s6);
-            var v7 = gen7.Generate(pcg, null, out Size s7);
-            var v8 = gen8.Generate(pcg, null, out Size s8);
-            var v9 = gen9.Generate(pcg, null, out Size s9);
-            var v10 = gen10.Generate(pcg, null, out Size s10);
+            if (min != null)
+            {
+                if (min.I < 0xA_0000_0000UL) { size = new Size(0xA_0000_0000UL); return default; }
+                min = min.I == 0xA_0000_0000UL ? min.Next : null;
+            }
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            var v3 = gen3.Generate(pcg, min, out Size s3);
+            var v4 = gen4.Generate(pcg, min, out Size s4);
+            var v5 = gen5.Generate(pcg, min, out Size s5);
+            var v6 = gen6.Generate(pcg, min, out Size s6);
+            var v7 = gen7.Generate(pcg, min, out Size s7);
+            var v8 = gen8.Generate(pcg, min, out Size s8);
+            var v9 = gen9.Generate(pcg, min, out Size s9);
+            var v10 = gen10.Generate(pcg, min, out Size s10);
             size = new Size(0xA_0000_0000UL, Size.Sum(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10));
             return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10);
         });
 
         public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen0, Gen<T1> gen1) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v0 = gen0.Generate(pcg, null, out Size s0);
-            var v1 = gen1.Generate(pcg, null, out Size s1);
+            if (min != null)
+            {
+                if (min.I < 0x2_0000_0000UL) { size = new Size(0x2_0000_0000UL); return default; }
+                min = min.I == 0x2_0000_0000UL ? min.Next : null;
+            }
+            var v0 = gen0.Generate(pcg, min, out Size s0);
+            var v1 = gen1.Generate(pcg, min, out Size s1);
             size = new Size(0x2_0000_0000UL, Size.Sum(s0, s1));
             return (v0, v1);
         });
@@ -321,9 +369,14 @@ namespace CsCheck
         public static Gen<(T0 V0, T1 V1, T2 V2)> Select<T0, T1, T2>(this Gen<T0> gen0, Gen<T1> gen1, Gen<T2> gen2)
             => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v0 = gen0.Generate(pcg, null, out Size s0);
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
+            if (min != null)
+            {
+                if (min.I < 0x3_0000_0000UL) { size = new Size(0x3_0000_0000UL); return default; }
+                min = min.I == 0x3_0000_0000UL ? min.Next : null;
+            }
+            var v0 = gen0.Generate(pcg, min, out Size s0);
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
             size = new Size(0x3_0000_0000UL, Size.Sum(s0, s1, s2));
             return (v0, v1, v2);
         });
@@ -331,10 +384,15 @@ namespace CsCheck
         public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> Select<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1,
             Gen<T2> gen2, Gen<T3> gen3) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v0 = gen0.Generate(pcg, null, out Size s0);
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
+            if (min != null)
+            {
+                if (min.I < 0x4_0000_0000UL) { size = new Size(0x4_0000_0000UL); return default; }
+                min = min.I == 0x4_0000_0000UL ? min.Next : null;
+            }
+            var v0 = gen0.Generate(pcg, min, out Size s0);
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            var v3 = gen3.Generate(pcg, min, out Size s3);
             size = new Size(0x4_0000_0000UL, Size.Sum(s0, s1, s2, s3));
             return (v0, v1, v2, v3);
         });
@@ -342,11 +400,16 @@ namespace CsCheck
         public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3, T4 V4)> Select<T0, T1, T2, T3, T4>(this Gen<T0> gen0, Gen<T1> gen1,
             Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v0 = gen0.Generate(pcg, null, out Size s0);
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
-            var v4 = gen4.Generate(pcg, null, out Size s4);
+            if (min != null)
+            {
+                if (min.I < 0x5_0000_0000UL) { size = new Size(0x5_0000_0000UL); return default; }
+                min = min.I == 0x5_0000_0000UL ? min.Next : null;
+            }
+            var v0 = gen0.Generate(pcg, min, out Size s0);
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            var v3 = gen3.Generate(pcg, min, out Size s3);
+            var v4 = gen4.Generate(pcg, min, out Size s4);
             size = new Size(0x5_0000_0000UL, Size.Sum(s0, s1, s2, s3, s4));
             return (v0, v1, v2, v3, v4);
         });
@@ -354,93 +417,108 @@ namespace CsCheck
         public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen, Func<T0, Gen<T1>> selector)
             => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen.Generate(pcg, null, out Size s1);
+            var v1 = gen.Generate(pcg, min, out size);
+            if (min != null && min.I < size.I) return default;
             var vR = selector(v1).Generate(pcg, null, out Size sR);
-            size = s1.Append(sR);
+            size = size.Append(sR);
             return (v1, vR);
         });
 
         public static Gen<(T0 V0, T1 V1, T2 V2)> Select<T0, T1, T2>(this Gen<T0> gen0, Gen<T1> gen1,
             Func<T0, T1, Gen<T2>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v0 = gen0.Generate(pcg, null, out Size s0);
-            var v1 = gen1.Generate(pcg, null, out Size s1);
+            var v0 = gen0.Generate(pcg, min, out size);
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            size = Size.Sum(size, s1);
+            if (min != null && min.I < size.I) return default;
             var v2 = selector(v0, v1).Generate(pcg, null, out Size s2);
-            size = Size.Sum(s0, s1).Append(s2);
+            size = size.Append(s2);
             return (v0, v1, v2);
         });
 
         public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> Select<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1, Gen<T2> gen2,
             Func<T0, T1, T2, Gen<T3>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v0 = gen0.Generate(pcg, null, out Size s0);
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
+            var v0 = gen0.Generate(pcg, min, out size);
+            var v1 = gen1.Generate(pcg, min, out Size s1);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            size = Size.Sum(size, s1, s2);
+            if (min != null && min.I < size.I) return default;
             var v3 = selector(v0, v1, v2).Generate(pcg, null, out Size s3);
-            size = Size.Sum(s0, s1, s2).Append(s3);
+            size = size.Append(s3);
             return (v0, v1, v2, v3);
         });
 
         public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen.Generate(pcg, null, out Size s1);
+            var v1 = gen.Generate(pcg, min, out size);
+            if (min != null && min.I < size.I) return default;
             var vR = selector(v1).Generate(pcg, null, out var sR);
-            size = s1.Append(sR);
+            size = size.Append(sR);
             return vR;
         });
 
         public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, Gen<R>> selector)
             => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
+            var v1 = gen1.Generate(pcg, min, out size);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            size = Size.Sum(size, s2);
+            if (min != null && min.I < size.I) return default;
             var vR = selector(v1, v2).Generate(pcg, null, out Size sR);
-            size = Size.Sum(s1, s2).Append(sR);
+            size = size.Append(sR);
             return vR;
         });
 
         public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
             Func<T1, T2, T3, Gen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
+            var v1 = gen1.Generate(pcg, min, out size);
+            var v2 = gen2.Generate(pcg, min, out Size s2);
+            var v3 = gen3.Generate(pcg, min, out Size s3);
+            size = Size.Sum(size, s2, s3);
+            if (min != null && min.I < size.I) return default;
             var vR = selector(v1, v2, v3).Generate(pcg, null, out Size sR);
-            size = Size.Sum(s1, s2, s3).Append(sR);
+            size = size.Append(sR);
             return vR;
         });
 
         public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Func<T1, T2, T3, T4, Gen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
+            var v1 = gen1.Generate(pcg, null, out size);
             var v2 = gen2.Generate(pcg, null, out Size s2);
             var v3 = gen3.Generate(pcg, null, out Size s3);
             var v4 = gen4.Generate(pcg, null, out Size s4);
+            size = Size.Sum(size, s2, s3, s4);
+            if (min != null && min.I < size.I) return default;
             var vR = selector(v1, v2, v3, v4).Generate(pcg, null, out Size sR);
-            size = Size.Sum(s1, s2, s3, s4).Append(sR);
+            size = size.Append(sR);
             return vR;
         });
 
         public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
             Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
+            var v1 = gen1.Generate(pcg, null, out size);
             var v2 = gen2.Generate(pcg, null, out Size s2);
             var v3 = gen3.Generate(pcg, null, out Size s3);
             var v4 = gen4.Generate(pcg, null, out Size s4);
             var v5 = gen5.Generate(pcg, null, out Size s5);
+            size = Size.Sum(size, s2, s3, s4, s5);
+            if (min != null && min.I < size.I) return default;
             var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, null, out Size sR);
-            size = Size.Sum(s1, s2, s3, s4, s5).Append(sR);
+            size = size.Append(sR);
             return vR;
         });
 
         public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Func<T1, Gen<T2>> genSelector, Func<T1, T2, R> resultSelector)
             => Create((PCG pcg, Size min, out Size size) =>
         {
-            var v1 = gen1.Generate(pcg, null, out Size s1);
+            var v1 = gen1.Generate(pcg, null, out size);
+            if (min != null && min.I < size.I) return default;
             var v2 = genSelector(v1).Generate(pcg, null, out Size s2);
-            size = s1.Append(s2);
+            size = size.Append(s2);
             return resultSelector(v1, v2);
         });
 
@@ -460,12 +538,18 @@ namespace CsCheck
         public static Gen<T> OneOfConst<T>(params T[] ts) => Create((PCG pcg, Size min, out Size size) =>
         {
             size = new Size(0x1_0000_0000UL);
+            if (min != null && min.I < size.I) return default;
             return ts[pcg.Next((uint)ts.Length)];
         });
 
         public static Gen<T> OneOf<T>(params IGen<T>[] gens) => Create((PCG pcg, Size min, out Size size) =>
         {
-            var r = gens[pcg.Next((uint)gens.Length)].Generate(pcg, null, out size);
+            if (min != null)
+            {
+                if (min.I < 0x1_0000_0000UL) { size = new Size(0x1_0000_0000UL); return default; }
+                min = min.I == 0x1_0000_0000UL ? min.Next : null;
+            }
+            var r = gens[pcg.Next((uint)gens.Length)].Generate(pcg, min, out size);
             size = new Size(0x1_0000_0000UL, size);
             return r;
         });
@@ -486,6 +570,7 @@ namespace CsCheck
             return Create((PCG pcg, Size min, out Size size) =>
             {
                 size = new Size(0x1_0000_0000UL);
+                if (min != null && min.I < size.I) return default;
                 var v = (int)pcg.Next((uint)total);
                 foreach (var i in ts)
                 {
@@ -502,13 +587,18 @@ namespace CsCheck
             foreach (var (i, _) in gens) total += i;
             return Create((PCG pcg, Size min, out Size size) =>
             {
+                if (min != null)
+                {
+                    if (min.I < 0x1_0000_0000UL) { size = new Size(0x1_0000_0000UL); return default; }
+                    min = min.I == 0x1_0000_0000UL ? min.Next : null;
+                }
                 var v = (int)pcg.Next((uint)total);
                 foreach (var i in gens)
                 {
                     v -= i.Item1;
                     if (v < 0)
                     {
-                        var r = i.Item2.Generate(pcg, null, out size);
+                        var r = i.Item2.Generate(pcg, min, out size);
                         size = new Size(0x1_0000_0000UL, size);
                         return r;
                     }
@@ -1283,7 +1373,7 @@ namespace CsCheck
     public class GenString : Gen<string>
     {
         static readonly Gen<string> d = Gen.Char.Array.Select(i => new string(i));
-        public override string Generate(PCG pcg, Size min, out Size size) => d.Generate(pcg, null, out size);
+        public override string Generate(PCG pcg, Size min, out Size size) => d.Generate(pcg, min, out size);
         public Gen<string> this[int start, int finish] =>
             Gen.Char.Array[start, finish].Select(i => new string(i));
         public Gen<string> this[Gen<char> gen, int start, int finish] =>
@@ -1313,7 +1403,6 @@ namespace CsCheck
             {
                 vs[i] = gen.Generate(pcg, min, out var si);
                 size = Size.Sum(size, si);
-                //if (min != null && min.I < size.I) break;
             }
             size = new Size(sizeI, size);
             return vs;
@@ -1338,8 +1427,10 @@ namespace CsCheck
         readonly Gen<T> gen;
         public GenArrayUnique(Gen<T> gen) => this.gen = gen;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        T[] Generate(PCG pcg, int length, out Size size)
+        T[] Generate(PCG pcg, Size min, int length, out Size size)
         {
+            var sizeI = ((ulong)length << 32) + 1UL;
+            if (min != null && min.I < sizeI) { size = new Size(sizeI); return null; }
             var vs = new T[length];
             size = Size.Zero;
             var hs = new HashSet<T>();
@@ -1356,20 +1447,20 @@ namespace CsCheck
                 }
                 else if (++bad == 1000) throw new CsCheckException("Failing to add to ArrayUnique");
             }
-            size = new Size(((ulong)length << 32) + 1UL, size);
+            size = new Size(sizeI, size);
             return vs;
         }
         public override T[] Generate(PCG pcg, Size min, out Size size)
         {
-            return Generate(pcg, (int)(pcg.Next() & 127U), out size);
+            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         }
         public Gen<T[]> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length.Generate(pcg, null, out Size sl), out size);
+            return Generate(pcg, min, length.Generate(pcg, min, out size), out size);
         });
         public Gen<T[]> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length, out size);
+            return Generate(pcg, min, length, out size);
         });
         public Gen<T[]> this[int start, int finish] => this[Gen.Int[start, finish]];
     }
@@ -1379,29 +1470,35 @@ namespace CsCheck
         readonly Gen<T> gen;
         public GenEnumerable(Gen<T> gen) => this.gen = gen;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        IEnumerable<T> Generate(PCG pcg, int length, out Size size)
+        IEnumerable<T> Generate(PCG pcg, Size min, int length, out Size size)
         {
+            var sizeI = ((ulong)length << 32) + 1UL;
+            if (min != null)
+            {
+                if (min.I < sizeI) { size = new Size(sizeI); return null; }
+                min = min.I == sizeI ? min.Next : null;
+            }
             var vs = new T[length];
             size = Size.Zero;
             for (int i = 0; i < vs.Length; i++)
             {
-                vs[i] = gen.Generate(pcg, null, out var si);
+                vs[i] = gen.Generate(pcg, min, out var si);
                 size = Size.Sum(size, si);
             }
-            size = new Size(((ulong)length << 32) + 1UL, size);
+            size = new Size(sizeI, size);
             return vs;
         }
         public override IEnumerable<T> Generate(PCG pcg, Size min, out Size size)
         {
-            return Generate(pcg, (int)(pcg.Next() & 127U), out size);
+            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         }
         public Gen<IEnumerable<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length.Generate(pcg, null, out var sl), out size);
+            return Generate(pcg, min, length.Generate(pcg, null, out _), out size);
         });
         public Gen<IEnumerable<T>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length, out size);
+            return Generate(pcg, min, length, out size);
         });
         public Gen<IEnumerable<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
     }
@@ -1411,9 +1508,10 @@ namespace CsCheck
         readonly Gen<T> gen;
         public GenArray2D(Gen<T> gen) => this.gen = gen;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        T[,] Generate(PCG pcg, int length0, int length1, out Size size)
+        T[,] Generate(PCG pcg, Size min, int length0, int length1, out Size size)
         {
             size = new Size((((ulong)(length0 * length1)) << 32) + 1UL);
+            if (min != null && min.I < size.I) return null;
             var vs = new T[length0, length1];
             for (int i = 0; i < length0; i++)
                 for (int j = 0; j < length1; j++)
@@ -1422,15 +1520,15 @@ namespace CsCheck
         }
         public override T[,] Generate(PCG pcg, Size min, out Size size)
         {
-            return Generate(pcg, (int)(pcg.Next() & 127U), (int)(pcg.Next() & 127U), out size);
+            return Generate(pcg, min, (int)(pcg.Next() & 127U), (int)(pcg.Next() & 127U), out size);
         }
         public Gen<T[,]> this[int length0, int length1] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length0, length1, out size);
+            return Generate(pcg, min, length0, length1, out size);
         });
         public Gen<T[,]> this[Gen<int> length0, Gen<int> length1] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length0.Generate(pcg, null, out _), length1.Generate(pcg, null, out _), out size);
+            return Generate(pcg, min, length0.Generate(pcg, null, out _), length1.Generate(pcg, null, out _), out size);
         });
     }
 
@@ -1439,30 +1537,35 @@ namespace CsCheck
         readonly Gen<T> gen;
         public GenList(Gen<T> gen) => this.gen = gen;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        List<T> Generate(PCG pcg, int length, out Size size)
+        List<T> Generate(PCG pcg, Size min, int length, out Size size)
         {
+            var sizeI = ((ulong)length << 32) + 1UL;
+            if (min != null)
+            {
+                if (min.I < sizeI) { size = new Size(sizeI); return null; }
+                min = min.I == sizeI ? min.Next : null;
+            }
             var vs = new List<T>(length);
             size = Size.Zero;
             for (int i = 0; i < length; i++)
             {
-                vs.Add(gen.Generate(pcg, null, out var si));
+                vs.Add(gen.Generate(pcg, min, out var si));
                 size = Size.Sum(size, si);
             }
-            size = new Size(((ulong)length << 32) + 1UL, size);
+            size = new Size(sizeI, size);
             return vs;
         }
         public override List<T> Generate(PCG pcg, Size min, out Size size)
         {
-            uint l = pcg.Next() & 127U;
-            return Generate(pcg, (int)l, out size);
+            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         }
         public Gen<List<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length.Generate(pcg, null, out var sl), out size);
+            return Generate(pcg, min, length.Generate(pcg, null, out _), out size);
         });
         public Gen<List<T>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length, out size);
+            return Generate(pcg, min, length, out size);
         });
         public Gen<List<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
     }
@@ -1472,8 +1575,10 @@ namespace CsCheck
         readonly Gen<T> gen;
         public GenHashSet(Gen<T> gen) => this.gen = gen;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        HashSet<T> Generate(PCG pcg, int length, out Size size)
+        HashSet<T> Generate(PCG pcg, Size min, int length, out Size size)
         {
+            var sizeI = ((ulong)length << 32) + 1UL;
+            if (min != null && min.I < sizeI) { size = new Size(sizeI); return null; }
             var vs = new HashSet<T>();
             size = Size.Zero;
             var bad = 0;
@@ -1487,20 +1592,20 @@ namespace CsCheck
                 }
                 else if (++bad == 1000) throw new CsCheckException("Failing to add to HashSet");
             }
-            size = new Size(((ulong)length << 32) + 1UL, size);
+            size = new Size(sizeI, size);
             return vs;
         }
         public override HashSet<T> Generate(PCG pcg, Size min, out Size size)
         {
-            return Generate(pcg, (int)(pcg.Next() & 127U), out size);
+            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         }
         public Gen<HashSet<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length.Generate(pcg, null, out var sl), out size);
+            return Generate(pcg, min, length.Generate(pcg, null, out _), out size);
         });
         public Gen<HashSet<T>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length, out size);
+            return Generate(pcg, min, length, out size);
         });
         public Gen<HashSet<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
     }
@@ -1515,8 +1620,10 @@ namespace CsCheck
             this.genV = genV;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        Dictionary<K, V> Generate(PCG pcg, int length, out Size size)
+        Dictionary<K, V> Generate(PCG pcg, Size min, int length, out Size size)
         {
+            var sizeI = ((ulong)length << 32) + 1UL;
+            if (min != null && min.I < sizeI) { size = new Size(sizeI); return null; }
             var vs = new Dictionary<K, V>(length);
             size = Size.Zero;
             var i = length;
@@ -1533,20 +1640,20 @@ namespace CsCheck
                 }
                 else if (++bad == 1000) throw new CsCheckException("Failing to add to Dictionary");
             }
-            size = new Size(((ulong)length << 32) + 1, size);
+            size = new Size(sizeI, size);
             return vs;
         }
         public override Dictionary<K, V> Generate(PCG pcg, Size min, out Size size)
         {
-            return Generate(pcg, (int)(pcg.Next() & 127U), out size);
+            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         }
         public Gen<Dictionary<K, V>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length.Generate(pcg, null, out Size sl), out size);
+            return Generate(pcg, min, length.Generate(pcg, null, out _), out size);
         });
         public Gen<Dictionary<K, V>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length, out size);
+            return Generate(pcg, min, length, out size);
         });
         public Gen<Dictionary<K, V>> this[int start, int finish] => this[Gen.Int[start, finish]];
     }
@@ -1561,8 +1668,10 @@ namespace CsCheck
             this.genV = genV;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        SortedDictionary<K, V> Generate(PCG pcg, int length, out Size size)
+        SortedDictionary<K, V> Generate(PCG pcg, Size min, int length, out Size size)
         {
+            var sizeI = ((ulong)length << 32) + 1UL;
+            if (min != null && min.I < sizeI) { size = new Size(sizeI); return null; }
             var vs = new SortedDictionary<K, V>();
             size = Size.Zero;
             var i = length;
@@ -1579,20 +1688,20 @@ namespace CsCheck
                 }
                 else if (++bad == 1000) throw new CsCheckException("Failing to add to SortedDictionary");
             }
-            size = new Size(((ulong)length << 32) + 1, size);
+            size = new Size(sizeI, size);
             return vs;
         }
         public override SortedDictionary<K, V> Generate(PCG pcg, Size min, out Size size)
         {
-            return Generate(pcg, (int)(pcg.Next() & 127U), out size);
+            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         }
         public Gen<SortedDictionary<K, V>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length.Generate(pcg, null, out var sl), out size);
+            return Generate(pcg, min, length.Generate(pcg, null, out _), out size);
         });
         public Gen<SortedDictionary<K, V>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            return Generate(pcg, length, out size);
+            return Generate(pcg, min, length, out size);
         });
         public Gen<SortedDictionary<K, V>> this[int start, int finish] => this[Gen.Int[start, finish]];
     }
@@ -1607,7 +1716,7 @@ namespace CsCheck
             this.generate = generate;
             AddOpNumber = addOpNumber;
         }
-        public override (string, Action<T>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, null, out size);
+        public override (string, Action<T>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
     }
 
     public class GenOperation<T1, T2> : Gen<(string, Action<T1, T2>)>
@@ -1620,6 +1729,6 @@ namespace CsCheck
             this.generate = generate;
             AddOpNumber = addOpNumber;
         }
-        public override (string, Action<T1, T2>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, null, out size);
+        public override (string, Action<T1, T2>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
     }
 }

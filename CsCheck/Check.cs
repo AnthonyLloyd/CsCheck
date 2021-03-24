@@ -63,7 +63,7 @@ namespace CsCheck
 
             PCG minPCG = null;
             ulong minState = 0UL;
-            Size minSize = CsCheck.Size.Max;
+            Size minSize = null;
             T minT = default;
             Exception minException = null;
             List<string> minInfo = null;
@@ -73,7 +73,7 @@ namespace CsCheck
             {
                 var pcg = PCG.Parse(seed);
                 ulong state = pcg.State;
-                Size s = CsCheck.Size.Zero;
+                Size s = null;
                 T t = default;
                 try
                 {
@@ -102,7 +102,7 @@ namespace CsCheck
                 try
                 {
                     t = gen.Generate(pcg, minSize, out s);
-                    if (s.IsLessThan(minSize))
+                    if (CsCheck.Size.IsLessThan(s, minSize))
                         assert(t);
                     else
                         skipped++;
@@ -111,7 +111,7 @@ namespace CsCheck
                 {
                     lock (lockObj)
                     {
-                        if (s.IsLessThan(minSize))
+                        if (CsCheck.Size.IsLessThan(s, minSize))
                         {
                             shrinks++;
                             minPCG = pcg;
@@ -149,7 +149,7 @@ namespace CsCheck
 
             PCG minPCG = null;
             ulong minState = 0UL;
-            Size minSize = CsCheck.Size.Max;
+            Size minSize = null;
             T minT = default;
             Exception minException = null;
             List<string> minInfo = null;
@@ -159,7 +159,7 @@ namespace CsCheck
             {
                 var pcg = PCG.Parse(seed);
                 ulong state = pcg.State;
-                Size s = CsCheck.Size.Zero;
+                Size s = null;
                 T t = default;
                 try
                 {
@@ -193,18 +193,18 @@ namespace CsCheck
             {
                 var pcg = PCG.ThreadPCG;
                 ulong state = pcg.State;
-                Size s = CsCheck.Size.Zero;
+                Size s = null;
                 T t = default;
                 try
                 {
                     t = gen.Generate(pcg, minSize, out s);
-                    if (s.IsLessThan(minSize))
+                    if (CsCheck.Size.IsLessThan(s, minSize))
                     {
                         if (!predicate(t))
                         {
                             lock (lockObj)
                             {
-                                if (s.IsLessThan(minSize))
+                                if (CsCheck.Size.IsLessThan(s, minSize))
                                 {
                                     shrinks++;
                                     minPCG = pcg;
@@ -222,7 +222,7 @@ namespace CsCheck
                 {
                     lock (lockObj)
                     {
-                        if (s.IsLessThan(minSize))
+                        if (CsCheck.Size.IsLessThan(s, minSize))
                         {
                             shrinks++;
                             minPCG = pcg;
