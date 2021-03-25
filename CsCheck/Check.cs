@@ -925,7 +925,7 @@ namespace CsCheck
             }
         }
 
-        /// <summary>Check a hash of a series of values. Cache values on a correct run and fail at first difference.</summary>
+        /// <summary>Check a hash of a series of values. Cache values on a correct run and fail with stack trace at first difference.</summary>
         public static void Hash(Action<Hash> action, long expected = 0, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "")
         {
             if (expected == 0)

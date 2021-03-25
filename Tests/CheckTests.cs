@@ -284,7 +284,7 @@ namespace Tests
     }
 }
 
-// TODO: For Hash maybe move decimal places / s.f. to top level and not each call. Fix unicode. Last string? Aggregate multiple fails?
+// TODO: For Hash maybe move decimal places / s.f. to top level and not each call.
 // TODO: Add slims
 // TODO: Metamorphic? Duplicate. Gen<A> -> Gen<Action<A, A, DD>> == Operation2<A>
 // TODO: More Gen.ConcurrentDictionary

@@ -30,6 +30,7 @@ Added Gen.Int.Positive and Gen.Int.NonNegative.
 Added Gen.Recursive.
 Added documentation xml file.
 Changed Size to an out parameter instead of tuple return value.
+Changed Hash cache file to UTF8 strings. Supports multiple Check.Hash per method.
 Replaced IGen interface with covariant IGen&lt;out T&gt;.
 Split Gen.OneOf into OneOf and OneOfConst.
 Split Gen.Frequency into Frequency and FrequencyConst.

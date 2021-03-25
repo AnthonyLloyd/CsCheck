@@ -36,6 +36,7 @@ namespace CsCheck
         readonly string threadId;
         readonly bool writing;
         readonly List<int> roundingFractions;
+        string lastString = "null";
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void Stream<T>(Action<Stream, T> serialize, Func<Stream, T> deserialize, T val)
         {
@@ -46,12 +47,12 @@ namespace CsCheck
                 {
                     var val2 = deserialize(stream);
                     if (!val.Equals(val2))
-                        throw new CsCheckException($"Actual {val} but Expected {val2}");
+                        throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
                 }
             }
         }
 
-
+        static readonly Dictionary<string, int> hashFileNameId = new();
         public Hash(int? expectedHash, int? offset = null, string memberName = "", string filePath = "")
         {
             Offset = offset ?? 0;
@@ -64,7 +65,15 @@ namespace CsCheck
             ExpectedHash = expectedHash.Value;
             filename = filePath.Substring(Path.GetPathRoot(filePath).Length);
             filename = Path.Combine(CacheDir, Path.GetDirectoryName(filename),
-                        Path.GetFileNameWithoutExtension(filename) + "__" + memberName + ".chs");
+                        Path.GetFileNameWithoutExtension(filename) + "." + memberName);
+            int id;
+            lock (hashFileNameId)
+            {
+                hashFileNameId.TryGetValue(filename, out id);
+                hashFileNameId[filename] = ++id;
+            }
+            if (id > 1) filename += id;
+            filename += ".has";
             var rwLock = replaceLock.GetOrAdd(filename, _ => new ReaderWriterLockSlim());
             rwLock.EnterUpgradeableReadLock();
             if (File.Exists(filename))
@@ -265,6 +274,7 @@ namespace CsCheck
         {
             Stream(StreamSerializer.WriteString, StreamSerializer.ReadString, val);
             foreach (char c in val) AddPrivate((uint)c);
+            lastString = val;
         }
 
         public void Add(IEnumerable<int> vals)
@@ -609,7 +619,7 @@ namespace CsCheck
             }
             public static void WriteString(Stream stream, string val)
             {
-                var bs = Encoding.Unicode.GetBytes(val);
+                var bs = Encoding.UTF8.GetBytes(val);
                 WriteInt(stream, bs.Length);
                 stream.Write(bs, 0, bs.Length);
             }
@@ -623,7 +633,7 @@ namespace CsCheck
                     bytesRead = stream.Read(bs, offset, l - offset);
                     offset += bytesRead;
                 } while (offset != bs.Length && bytesRead != 0);
-                return Encoding.Unicode.GetString(bs);
+                return Encoding.UTF8.GetString(bs);
             }
             public static void WriteVarint(Stream stream, uint val)
             {
