@@ -597,7 +597,7 @@ namespace Tests
         {
             Gen.SortedDictionary(Gen.UInt[1, 1000], Gen.Bool)[10, 100]
             .Sample(i => i.Count >= 10 && i.Count <= 100
-                      && i.All(j => j.Key >= 1 && j.Key <= 1000), size: 10000);
+                      && i.All(j => j.Key >= 1 && j.Key <= 1000));
         }
 
         [Fact]

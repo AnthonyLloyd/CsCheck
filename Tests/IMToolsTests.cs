@@ -55,7 +55,7 @@ namespace Tests
                 }
                 Assert.Equal(0, m.GetValueOrDefault(upperBound + 1));
                 Assert.Equal(0, m.GetValueOrDefault(-1));
-            }, size: 1_000/*, seed: "2Tt3UJ9PI4Hs3"*/);
+            }, iter: 1_000/*, seed: "2Tt3UJ9PI4Hs3"*/);
         }
 
         static Gen<ImHashMap234<int, int>> GenMap(int upperBound) =>
@@ -81,7 +81,7 @@ namespace Tests
                 var seq2 = map2.Enumerate().OrderBy(i => i.Key).Select(i => (i.Key, i.Value));
                 Assert.Equal(seq1, seq2);
             }
-            , size: 100_000
+            , iter: 100_000
             , print: t => t + "\n" + string.Join("\n", t.V0.Enumerate())
             , seed: "42ChASl6qJI5");
         }
@@ -110,7 +110,7 @@ namespace Tests
                     return he.Count == d.Count && !he.Except(d.Select(kv => (kv.Key, kv.Value))).Any();
                 }
                 , printActual: h => Check.Print(h.Im.Enumerate().Select(kv => (kv.Key, kv.Value)))
-                , size: 100_000
+                , iter: 100_000
             );
         }
     }
