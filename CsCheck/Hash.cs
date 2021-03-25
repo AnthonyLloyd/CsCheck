@@ -24,301 +24,6 @@ using System.Runtime.InteropServices;
 
 namespace CsCheck
 {
-    public static class StreamSerializer
-    {
-        public static void WriteBool(Stream stream, bool val)
-        {
-            stream.WriteByte((byte)(val ? 1 : 0));
-        }
-        public static bool ReadBool(Stream stream)
-        {
-            return stream.ReadByte() == 1;
-        }
-        public static void WriteSByte(Stream stream, sbyte val)
-        {
-            stream.WriteByte((byte)val);
-        }
-        public static sbyte ReadSByte(Stream stream)
-        {
-            return (sbyte)stream.ReadByte();
-        }
-        public static void WriteByte(Stream stream, byte val)
-        {
-            stream.WriteByte(val);
-        }
-        public static byte ReadByte(Stream stream)
-        {
-            return (byte)stream.ReadByte();
-        }
-        public static void WriteShort(Stream stream, short val)
-        {
-            stream.WriteByte((byte)val);
-            stream.WriteByte((byte)(val >> 8));
-        }
-        public static short ReadShort(Stream stream)
-        {
-            return (short)(stream.ReadByte() + (stream.ReadByte() << 8));
-        }
-        public static void WriteUShort(Stream stream, ushort val)
-        {
-            stream.WriteByte((byte)val);
-            stream.WriteByte((byte)(val >> 8));
-        }
-        public static ushort ReadUShort(Stream stream)
-        {
-            return (ushort)(stream.ReadByte() + (stream.ReadByte() << 8));
-        }
-        public static void WriteInt(Stream stream, int val)
-        {
-            stream.WriteByte((byte)val);
-            stream.WriteByte((byte)(val >> 8));
-            stream.WriteByte((byte)(val >> 16));
-            stream.WriteByte((byte)(val >> 24));
-        }
-        public static int ReadInt(Stream stream)
-        {
-            return stream.ReadByte()
-                + (stream.ReadByte() << 8)
-                + (stream.ReadByte() << 16)
-                + (stream.ReadByte() << 24);
-        }
-        public static void WriteUInt(Stream stream, uint val)
-        {
-            stream.WriteByte((byte)val);
-            stream.WriteByte((byte)(val >> 8));
-            stream.WriteByte((byte)(val >> 16));
-            stream.WriteByte((byte)(val >> 24));
-        }
-        public static uint ReadUInt(Stream stream)
-        {
-            return (uint)(stream.ReadByte()
-                + (stream.ReadByte() << 8)
-                + (stream.ReadByte() << 16)
-                + (stream.ReadByte() << 24));
-        }
-        public static void WriteLong(Stream stream, long val)
-        {
-            stream.WriteByte((byte)val);
-            stream.WriteByte((byte)(val >> 8));
-            stream.WriteByte((byte)(val >> 16));
-            stream.WriteByte((byte)(val >> 24));
-            stream.WriteByte((byte)(val >> 32));
-            stream.WriteByte((byte)(val >> 40));
-            stream.WriteByte((byte)(val >> 48));
-            stream.WriteByte((byte)(val >> 56));
-        }
-        public static long ReadLong(Stream stream)
-        {
-            return stream.ReadByte()
-                + ((long)stream.ReadByte() << 8)
-                + ((long)stream.ReadByte() << 16)
-                + ((long)stream.ReadByte() << 24)
-                + ((long)stream.ReadByte() << 32)
-                + ((long)stream.ReadByte() << 40)
-                + ((long)stream.ReadByte() << 48)
-                + ((long)stream.ReadByte() << 56);
-        }
-        public static void WriteULong(Stream stream, ulong val)
-        {
-            stream.WriteByte((byte)val);
-            stream.WriteByte((byte)(val >> 8));
-            stream.WriteByte((byte)(val >> 16));
-            stream.WriteByte((byte)(val >> 24));
-            stream.WriteByte((byte)(val >> 32));
-            stream.WriteByte((byte)(val >> 40));
-            stream.WriteByte((byte)(val >> 48));
-            stream.WriteByte((byte)(val >> 56));
-        }
-        public static ulong ReadULong(Stream stream)
-        {
-            return (ulong)stream.ReadByte()
-                + ((ulong)stream.ReadByte() << 8)
-                + ((ulong)stream.ReadByte() << 16)
-                + ((ulong)stream.ReadByte() << 24)
-                + ((ulong)stream.ReadByte() << 32)
-                + ((ulong)stream.ReadByte() << 40)
-                + ((ulong)stream.ReadByte() << 48)
-                + ((ulong)stream.ReadByte() << 56);
-        }
-        [StructLayout(LayoutKind.Explicit)]
-        struct FloatConverter
-        {
-            [FieldOffset(0)] public uint I;
-            [FieldOffset(0)] public float F;
-        }
-        public static void WriteFloat(Stream stream, float val)
-        {
-            WriteUInt(stream, new FloatConverter { F = val }.I);
-        }
-        public static float ReadFloat(Stream stream)
-        {
-            return new FloatConverter { I = ReadUInt(stream) }.F;
-        }
-        public static void WriteDouble(Stream stream, double val)
-        {
-            WriteLong(stream, BitConverter.DoubleToInt64Bits(val));
-        }
-        public static double ReadDouble(Stream stream)
-        {
-            return BitConverter.Int64BitsToDouble(ReadLong(stream));
-        }
-        [StructLayout(LayoutKind.Explicit)]
-        struct DecimalConverter
-        {
-            [FieldOffset(0)] public decimal D;
-            [FieldOffset(0)] public uint flags;
-            [FieldOffset(4)] public uint hi;
-            [FieldOffset(8)] public uint mid;
-            [FieldOffset(12)] public uint lo;
-        }
-        public static void WriteDecimal(Stream stream, decimal val)
-        {
-            var c = new DecimalConverter { D = val };
-            WriteUShort(stream, (ushort)(c.flags >> 16));
-            WriteUInt(stream, c.hi);
-            WriteUInt(stream, c.mid);
-            WriteUInt(stream, c.lo);
-        }
-        public static decimal ReadDecimal(Stream stream)
-        {
-            return new DecimalConverter
-            {
-                flags = (uint)ReadUShort(stream) << 16,
-                hi = ReadUInt(stream),
-                mid = ReadUInt(stream),
-                lo = ReadUInt(stream)
-            }.D;
-        }
-        public static void WriteDateTime(Stream stream, DateTime val)
-        {
-            WriteLong(stream, val.Ticks);
-        }
-        public static DateTime ReadDateTime(Stream stream)
-        {
-            return new DateTime(ReadLong(stream));
-        }
-        public static void WriteTimeSpan(Stream stream, TimeSpan val)
-        {
-            WriteLong(stream, val.Ticks);
-        }
-        public static TimeSpan ReadTimeSpan(Stream stream)
-        {
-            return new TimeSpan(ReadLong(stream));
-        }
-        public static void WriteDateTimeOffset(Stream stream, DateTimeOffset val)
-        {
-            WriteDateTime(stream, val.DateTime);
-            WriteTimeSpan(stream, val.Offset);
-        }
-        public static DateTimeOffset ReadDateTimeOffset(Stream stream)
-        {
-            return new DateTimeOffset(ReadDateTime(stream), ReadTimeSpan(stream));
-        }
-        [StructLayout(LayoutKind.Explicit)]
-        struct GuidConverter
-        {
-            [FieldOffset(0)] public Guid G;
-            [FieldOffset(0)] public uint I0;
-            [FieldOffset(4)] public uint I1;
-            [FieldOffset(8)] public uint I2;
-            [FieldOffset(12)] public uint I3;
-        }
-        public static void WriteGuid(Stream stream, Guid val)
-        {
-            var c = new GuidConverter { G = val };
-            WriteUInt(stream, c.I0);
-            WriteUInt(stream, c.I1);
-            WriteUInt(stream, c.I2);
-            WriteUInt(stream, c.I3);
-        }
-        public static Guid ReadGuid(Stream stream)
-        {
-            return new GuidConverter
-            {
-                I0 = ReadUInt(stream),
-                I1 = ReadUInt(stream),
-                I2 = ReadUInt(stream),
-                I3 = ReadUInt(stream),
-            }.G;
-        }
-        public static void WriteChar(Stream stream, char val)
-        {
-            var bs = BitConverter.GetBytes(val);
-            stream.WriteByte((byte)bs.Length);
-            stream.Write(bs, 0, bs.Length);
-        }
-        public static char ReadChar(Stream stream)
-        {
-            var l = stream.ReadByte();
-            var bs = new byte[l];
-            int offset = 0, bytesRead;
-            do
-            {
-                bytesRead = stream.Read(bs, offset, l - offset);
-                offset += bytesRead;
-            } while (offset != bs.Length && bytesRead != 0);
-            return BitConverter.ToChar(bs, 0);
-        }
-        public static void WriteString(Stream stream, string val)
-        {
-            var bs = Encoding.Unicode.GetBytes(val);
-            WriteInt(stream, bs.Length);
-            stream.Write(bs, 0, bs.Length);
-        }
-        public static string ReadString(Stream stream)
-        {
-            var l = ReadInt(stream);
-            var bs = new byte[l];
-            int offset = 0, bytesRead;
-            do
-            {
-                bytesRead = stream.Read(bs, offset, l - offset);
-                offset += bytesRead;
-            } while (offset != bs.Length && bytesRead != 0);
-            return Encoding.Unicode.GetString(bs);
-        }
-        public static void WriteVarint(Stream stream, uint val)
-        {
-            if (val < 128u) stream.WriteByte((byte)val);
-            else if (val < 0x4000u)
-            {
-                stream.WriteByte((byte)((val >> 7) | 128u));
-                stream.WriteByte((byte)(val & 127u));
-            }
-            else if (val < 0x200000u)
-            {
-                stream.WriteByte((byte)((val >> 14) | 128u));
-                stream.WriteByte((byte)((val >> 7) | 128u));
-                stream.WriteByte((byte)(val & 127u));
-            }
-            else if (val < 0x10000000u)
-            {
-                stream.WriteByte((byte)((val >> 21) | 128u));
-                stream.WriteByte((byte)((val >> 14) | 128u));
-                stream.WriteByte((byte)((val >> 7) | 128u));
-                stream.WriteByte((byte)(val & 127u));
-            }
-            else
-            {
-                stream.WriteByte((byte)((val >> 28) | 128u));
-                stream.WriteByte((byte)((val >> 21) | 128u));
-                stream.WriteByte((byte)((val >> 14) | 128u));
-                stream.WriteByte((byte)((val >> 7) | 128u));
-                stream.WriteByte((byte)(val & 127u));
-            }
-        }
-        public static uint ReadVarint(Stream stream)
-        {
-            uint i = 0;
-            while (true)
-            {
-                var b = (uint)stream.ReadByte();
-                if (b < 128u) return i + b;
-                i = (i + (b & 127u)) << 7;
-            }
-        }
-    }
-
     public class Hash
     {
         static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new();
@@ -689,6 +394,277 @@ namespace CsCheck
             Add((uint)col.Count);
             foreach (var val in col)
                 AddSignificantFigures(digits, val);
+        }
+
+        internal static class StreamSerializer
+        {
+            public static void WriteBool(Stream stream, bool val)
+            {
+                stream.WriteByte((byte)(val ? 1 : 0));
+            }
+            public static bool ReadBool(Stream stream)
+            {
+                return stream.ReadByte() == 1;
+            }
+            public static void WriteSByte(Stream stream, sbyte val)
+            {
+                stream.WriteByte((byte)val);
+            }
+            public static sbyte ReadSByte(Stream stream)
+            {
+                return (sbyte)stream.ReadByte();
+            }
+            public static void WriteByte(Stream stream, byte val)
+            {
+                stream.WriteByte(val);
+            }
+            public static byte ReadByte(Stream stream)
+            {
+                return (byte)stream.ReadByte();
+            }
+            public static void WriteShort(Stream stream, short val)
+            {
+                stream.WriteByte((byte)val);
+                stream.WriteByte((byte)(val >> 8));
+            }
+            public static short ReadShort(Stream stream)
+            {
+                return (short)(stream.ReadByte() + (stream.ReadByte() << 8));
+            }
+            public static void WriteUShort(Stream stream, ushort val)
+            {
+                stream.WriteByte((byte)val);
+                stream.WriteByte((byte)(val >> 8));
+            }
+            public static ushort ReadUShort(Stream stream)
+            {
+                return (ushort)(stream.ReadByte() + (stream.ReadByte() << 8));
+            }
+            public static void WriteInt(Stream stream, int val)
+            {
+                stream.WriteByte((byte)val);
+                stream.WriteByte((byte)(val >> 8));
+                stream.WriteByte((byte)(val >> 16));
+                stream.WriteByte((byte)(val >> 24));
+            }
+            public static int ReadInt(Stream stream)
+            {
+                return stream.ReadByte()
+                    + (stream.ReadByte() << 8)
+                    + (stream.ReadByte() << 16)
+                    + (stream.ReadByte() << 24);
+            }
+            public static void WriteUInt(Stream stream, uint val)
+            {
+                stream.WriteByte((byte)val);
+                stream.WriteByte((byte)(val >> 8));
+                stream.WriteByte((byte)(val >> 16));
+                stream.WriteByte((byte)(val >> 24));
+            }
+            public static uint ReadUInt(Stream stream)
+            {
+                return (uint)(stream.ReadByte()
+                    + (stream.ReadByte() << 8)
+                    + (stream.ReadByte() << 16)
+                    + (stream.ReadByte() << 24));
+            }
+            public static void WriteLong(Stream stream, long val)
+            {
+                stream.WriteByte((byte)val);
+                stream.WriteByte((byte)(val >> 8));
+                stream.WriteByte((byte)(val >> 16));
+                stream.WriteByte((byte)(val >> 24));
+                stream.WriteByte((byte)(val >> 32));
+                stream.WriteByte((byte)(val >> 40));
+                stream.WriteByte((byte)(val >> 48));
+                stream.WriteByte((byte)(val >> 56));
+            }
+            public static long ReadLong(Stream stream)
+            {
+                return stream.ReadByte()
+                    + ((long)stream.ReadByte() << 8)
+                    + ((long)stream.ReadByte() << 16)
+                    + ((long)stream.ReadByte() << 24)
+                    + ((long)stream.ReadByte() << 32)
+                    + ((long)stream.ReadByte() << 40)
+                    + ((long)stream.ReadByte() << 48)
+                    + ((long)stream.ReadByte() << 56);
+            }
+            public static void WriteULong(Stream stream, ulong val)
+            {
+                stream.WriteByte((byte)val);
+                stream.WriteByte((byte)(val >> 8));
+                stream.WriteByte((byte)(val >> 16));
+                stream.WriteByte((byte)(val >> 24));
+                stream.WriteByte((byte)(val >> 32));
+                stream.WriteByte((byte)(val >> 40));
+                stream.WriteByte((byte)(val >> 48));
+                stream.WriteByte((byte)(val >> 56));
+            }
+            public static ulong ReadULong(Stream stream)
+            {
+                return (ulong)stream.ReadByte()
+                    + ((ulong)stream.ReadByte() << 8)
+                    + ((ulong)stream.ReadByte() << 16)
+                    + ((ulong)stream.ReadByte() << 24)
+                    + ((ulong)stream.ReadByte() << 32)
+                    + ((ulong)stream.ReadByte() << 40)
+                    + ((ulong)stream.ReadByte() << 48)
+                    + ((ulong)stream.ReadByte() << 56);
+            }
+            public static void WriteFloat(Stream stream, float val)
+            {
+                WriteUInt(stream, new FloatConverter { F = val }.I);
+            }
+            public static float ReadFloat(Stream stream)
+            {
+                return new FloatConverter { I = ReadUInt(stream) }.F;
+            }
+            public static void WriteDouble(Stream stream, double val)
+            {
+                WriteLong(stream, BitConverter.DoubleToInt64Bits(val));
+            }
+            public static double ReadDouble(Stream stream)
+            {
+                return BitConverter.Int64BitsToDouble(ReadLong(stream));
+            }
+            public static void WriteDecimal(Stream stream, decimal val)
+            {
+                var c = new DecimalConverter { D = val };
+                WriteUShort(stream, (ushort)(c.flags >> 16));
+                WriteUInt(stream, c.hi);
+                WriteUInt(stream, c.mid);
+                WriteUInt(stream, c.lo);
+            }
+            public static decimal ReadDecimal(Stream stream)
+            {
+                return new DecimalConverter
+                {
+                    flags = (uint)ReadUShort(stream) << 16,
+                    hi = ReadUInt(stream),
+                    mid = ReadUInt(stream),
+                    lo = ReadUInt(stream)
+                }.D;
+            }
+            public static void WriteDateTime(Stream stream, DateTime val)
+            {
+                WriteLong(stream, val.Ticks);
+            }
+            public static DateTime ReadDateTime(Stream stream)
+            {
+                return new DateTime(ReadLong(stream));
+            }
+            public static void WriteTimeSpan(Stream stream, TimeSpan val)
+            {
+                WriteLong(stream, val.Ticks);
+            }
+            public static TimeSpan ReadTimeSpan(Stream stream)
+            {
+                return new TimeSpan(ReadLong(stream));
+            }
+            public static void WriteDateTimeOffset(Stream stream, DateTimeOffset val)
+            {
+                WriteDateTime(stream, val.DateTime);
+                WriteTimeSpan(stream, val.Offset);
+            }
+            public static DateTimeOffset ReadDateTimeOffset(Stream stream)
+            {
+                return new DateTimeOffset(ReadDateTime(stream), ReadTimeSpan(stream));
+            }
+            public static void WriteGuid(Stream stream, Guid val)
+            {
+                var c = new GuidConverter { G = val };
+                WriteUInt(stream, c.I0);
+                WriteUInt(stream, c.I1);
+                WriteUInt(stream, c.I2);
+                WriteUInt(stream, c.I3);
+            }
+            public static Guid ReadGuid(Stream stream)
+            {
+                return new GuidConverter
+                {
+                    I0 = ReadUInt(stream),
+                    I1 = ReadUInt(stream),
+                    I2 = ReadUInt(stream),
+                    I3 = ReadUInt(stream),
+                }.G;
+            }
+            public static void WriteChar(Stream stream, char val)
+            {
+                var bs = BitConverter.GetBytes(val);
+                stream.WriteByte((byte)bs.Length);
+                stream.Write(bs, 0, bs.Length);
+            }
+            public static char ReadChar(Stream stream)
+            {
+                var l = stream.ReadByte();
+                var bs = new byte[l];
+                int offset = 0, bytesRead;
+                do
+                {
+                    bytesRead = stream.Read(bs, offset, l - offset);
+                    offset += bytesRead;
+                } while (offset != bs.Length && bytesRead != 0);
+                return BitConverter.ToChar(bs, 0);
+            }
+            public static void WriteString(Stream stream, string val)
+            {
+                var bs = Encoding.Unicode.GetBytes(val);
+                WriteInt(stream, bs.Length);
+                stream.Write(bs, 0, bs.Length);
+            }
+            public static string ReadString(Stream stream)
+            {
+                var l = ReadInt(stream);
+                var bs = new byte[l];
+                int offset = 0, bytesRead;
+                do
+                {
+                    bytesRead = stream.Read(bs, offset, l - offset);
+                    offset += bytesRead;
+                } while (offset != bs.Length && bytesRead != 0);
+                return Encoding.Unicode.GetString(bs);
+            }
+            public static void WriteVarint(Stream stream, uint val)
+            {
+                if (val < 128u) stream.WriteByte((byte)val);
+                else if (val < 0x4000u)
+                {
+                    stream.WriteByte((byte)((val >> 7) | 128u));
+                    stream.WriteByte((byte)(val & 127u));
+                }
+                else if (val < 0x200000u)
+                {
+                    stream.WriteByte((byte)((val >> 14) | 128u));
+                    stream.WriteByte((byte)((val >> 7) | 128u));
+                    stream.WriteByte((byte)(val & 127u));
+                }
+                else if (val < 0x10000000u)
+                {
+                    stream.WriteByte((byte)((val >> 21) | 128u));
+                    stream.WriteByte((byte)((val >> 14) | 128u));
+                    stream.WriteByte((byte)((val >> 7) | 128u));
+                    stream.WriteByte((byte)(val & 127u));
+                }
+                else
+                {
+                    stream.WriteByte((byte)((val >> 28) | 128u));
+                    stream.WriteByte((byte)((val >> 21) | 128u));
+                    stream.WriteByte((byte)((val >> 14) | 128u));
+                    stream.WriteByte((byte)((val >> 7) | 128u));
+                    stream.WriteByte((byte)(val & 127u));
+                }
+            }
+            public static uint ReadVarint(Stream stream)
+            {
+                uint i = 0;
+                while (true)
+                {
+                    var b = (uint)stream.ReadByte();
+                    if (b < 128u) return i + b;
+                    i = (i + (b & 127u)) << 7;
+                }
+            }
         }
 
         #region xxHash implementation from framework HashCode

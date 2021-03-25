@@ -21,92 +21,92 @@ namespace Tests
         [Fact]
         public void Bool()
         {
-            TestRoundtrip(Gen.Bool, StreamSerializer.WriteBool, StreamSerializer.ReadBool);
+            TestRoundtrip(Gen.Bool, Hash.StreamSerializer.WriteBool, Hash.StreamSerializer.ReadBool);
         }
         [Fact]
         public void SByte()
         {
-            TestRoundtrip(Gen.SByte, StreamSerializer.WriteSByte, StreamSerializer.ReadSByte);
+            TestRoundtrip(Gen.SByte, Hash.StreamSerializer.WriteSByte, Hash.StreamSerializer.ReadSByte);
         }
         [Fact]
         public void Byte()
         {
-            TestRoundtrip(Gen.Byte, StreamSerializer.WriteByte, StreamSerializer.ReadByte);
+            TestRoundtrip(Gen.Byte, Hash.StreamSerializer.WriteByte, Hash.StreamSerializer.ReadByte);
         }
         [Fact]
         public void Short()
         {
-            TestRoundtrip(Gen.Short, StreamSerializer.WriteShort, StreamSerializer.ReadShort);
+            TestRoundtrip(Gen.Short, Hash.StreamSerializer.WriteShort, Hash.StreamSerializer.ReadShort);
         }
         [Fact]
         public void UShort()
         {
-            TestRoundtrip(Gen.UShort, StreamSerializer.WriteUShort, StreamSerializer.ReadUShort);
+            TestRoundtrip(Gen.UShort, Hash.StreamSerializer.WriteUShort, Hash.StreamSerializer.ReadUShort);
         }
         [Fact]
         public void Int()
         {
-            TestRoundtrip(Gen.Int, StreamSerializer.WriteInt, StreamSerializer.ReadInt);
+            TestRoundtrip(Gen.Int, Hash.StreamSerializer.WriteInt, Hash.StreamSerializer.ReadInt);
         }
         [Fact]
         public void UInt()
         {
-            TestRoundtrip(Gen.UInt, StreamSerializer.WriteUInt, StreamSerializer.ReadUInt);
+            TestRoundtrip(Gen.UInt, Hash.StreamSerializer.WriteUInt, Hash.StreamSerializer.ReadUInt);
         }
         [Fact]
         public void Long()
         {
-            TestRoundtrip(Gen.Long, StreamSerializer.WriteLong, StreamSerializer.ReadLong);
+            TestRoundtrip(Gen.Long, Hash.StreamSerializer.WriteLong, Hash.StreamSerializer.ReadLong);
         }
         [Fact]
         public void ULong()
         {
-            TestRoundtrip(Gen.ULong, StreamSerializer.WriteULong, StreamSerializer.ReadULong);
+            TestRoundtrip(Gen.ULong, Hash.StreamSerializer.WriteULong, Hash.StreamSerializer.ReadULong);
         }
         [Fact]
         public void Float()
         {
-            TestRoundtrip(Gen.Float, StreamSerializer.WriteFloat, StreamSerializer.ReadFloat);
+            TestRoundtrip(Gen.Float, Hash.StreamSerializer.WriteFloat, Hash.StreamSerializer.ReadFloat);
         }
         [Fact]
         public void Double()
         {
-            TestRoundtrip(Gen.Double, StreamSerializer.WriteDouble, StreamSerializer.ReadDouble);
+            TestRoundtrip(Gen.Double, Hash.StreamSerializer.WriteDouble, Hash.StreamSerializer.ReadDouble);
         }
         [Fact]
         public void DateTime()
         {
-            TestRoundtrip(Gen.DateTime, StreamSerializer.WriteDateTime, StreamSerializer.ReadDateTime);
+            TestRoundtrip(Gen.DateTime, Hash.StreamSerializer.WriteDateTime, Hash.StreamSerializer.ReadDateTime);
         }
         [Fact]
         public void TimeSpan()
         {
-            TestRoundtrip(Gen.TimeSpan, StreamSerializer.WriteTimeSpan, StreamSerializer.ReadTimeSpan);
+            TestRoundtrip(Gen.TimeSpan, Hash.StreamSerializer.WriteTimeSpan, Hash.StreamSerializer.ReadTimeSpan);
         }
         [Fact]
         public void DateTimeOffset()
         {
-            TestRoundtrip(Gen.DateTimeOffset, StreamSerializer.WriteDateTimeOffset, StreamSerializer.ReadDateTimeOffset);
+            TestRoundtrip(Gen.DateTimeOffset, Hash.StreamSerializer.WriteDateTimeOffset, Hash.StreamSerializer.ReadDateTimeOffset);
         }
         [Fact]
         public void Guid()
         {
-            TestRoundtrip(Gen.Guid, StreamSerializer.WriteGuid, StreamSerializer.ReadGuid);
+            TestRoundtrip(Gen.Guid, Hash.StreamSerializer.WriteGuid, Hash.StreamSerializer.ReadGuid);
         }
         [Fact]
         public void Char()
         {
-            TestRoundtrip(Gen.Char, StreamSerializer.WriteChar, StreamSerializer.ReadChar);
+            TestRoundtrip(Gen.Char, Hash.StreamSerializer.WriteChar, Hash.StreamSerializer.ReadChar);
         }
         [Fact]
         public void String()
         {
-            TestRoundtrip(Gen.String, StreamSerializer.WriteString, StreamSerializer.ReadString);
+            TestRoundtrip(Gen.String, Hash.StreamSerializer.WriteString, Hash.StreamSerializer.ReadString);
         }
         [Fact]
         public void Varint()
         {
-            TestRoundtrip(Gen.UInt, StreamSerializer.WriteVarint, StreamSerializer.ReadVarint);
+            TestRoundtrip(Gen.UInt, Hash.StreamSerializer.WriteVarint, Hash.StreamSerializer.ReadVarint);
         }
     }
 
