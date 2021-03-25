@@ -414,7 +414,7 @@ namespace CsCheck
             return (v0, v1, v2, v3, v4);
         });
 
-        public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen, Func<T0, Gen<T1>> selector)
+        public static Gen<(T0 V0, T1 V1)> SelectTuple<T0, T1>(this Gen<T0> gen, Func<T0, Gen<T1>> selector)
             => Create((PCG pcg, Size min, out Size size) =>
         {
             var v1 = gen.Generate(pcg, min, out size);
@@ -424,7 +424,7 @@ namespace CsCheck
             return (v1, vR);
         });
 
-        public static Gen<(T0 V0, T1 V1, T2 V2)> Select<T0, T1, T2>(this Gen<T0> gen0, Gen<T1> gen1,
+        public static Gen<(T0 V0, T1 V1, T2 V2)> SelectTuple<T0, T1, T2>(this Gen<T0> gen0, Gen<T1> gen1,
             Func<T0, T1, Gen<T2>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
             var v0 = gen0.Generate(pcg, min, out size);
@@ -436,7 +436,7 @@ namespace CsCheck
             return (v0, v1, v2);
         });
 
-        public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> Select<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1, Gen<T2> gen2,
+        public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> SelectTuple<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1, Gen<T2> gen2,
             Func<T0, T1, T2, Gen<T3>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
             var v0 = gen0.Generate(pcg, min, out size);

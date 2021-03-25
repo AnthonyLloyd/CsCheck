@@ -458,7 +458,7 @@ namespace CsCheck
                 var seed = pcg.Seed;
                 return (initial.Generate(pcg, null, out size), stream, seed);
             })
-            .Select(Gen.OneOf(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS].Select(ops => Gen.Int[1, Math.Min(threads, ops.Length)]), (a, b) =>
+            .Select(Gen.OneOf(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS].SelectTuple(ops => Gen.Int[1, Math.Min(threads, ops.Length)]), (a, b) =>
                 new ConcurrentData<T> { State = a.Item1, Stream = a.stream, Seed = a.seed, Operations = b.V0, Threads = b.V1 }
             )
             .Sample(cd =>

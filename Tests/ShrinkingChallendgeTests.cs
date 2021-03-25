@@ -202,7 +202,7 @@ namespace Tests
         [Fact(Skip = "Meant to fail")]
         public void No9_Deletion() // 100: (L=31 [-1803267, 81, 5568 ... 1, -3020390], 18) 14ms, 10_000_000: ([0, 0], 0) 11s.
         {
-            Gen.Int.List[1, 100].Select(l => Gen.Int[0, l.Count - 1])
+            Gen.Int.List[1, 100].SelectTuple(l => Gen.Int[0, l.Count - 1])
             .Sample(t =>
             {
                 var l = new List<int>(t.V0);
