@@ -95,10 +95,10 @@ namespace Tests
             double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
             Check.Hash(h =>
             {
-                h.AddDecimalPlaces(2, portfolio.Positions.Select(p => p.Profit));
-                h.AddDecimalPlaces(2, portfolio.Profit(fxRate));
-                h.AddDecimalPlaces(2, portfolio.RiskByPosition(fxRate));
-            }, 8262409355294024920);
+                h.Add(portfolio.Positions.Select(p => p.Profit));
+                h.Add(portfolio.Profit(fxRate));
+                h.Add(portfolio.RiskByPosition(fxRate));
+            }, 8262409355294024920, decimalPlaces: 2);
         }
     }
 }

@@ -30,6 +30,7 @@ namespace CsCheck
         static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
         public const int OFFSET_SIZE = 500_000_000;
         readonly int Offset;
+        readonly int? DecimalPlaces, SignificantFigures;
         readonly int ExpectedHash;
         readonly Stream stream;
         readonly string filename;
@@ -53,9 +54,11 @@ namespace CsCheck
         }
 
         static readonly Dictionary<string, int> hashFileNameId = new();
-        public Hash(int? expectedHash, int? offset = null, string memberName = "", string filePath = "")
+        public Hash(int? expectedHash, int? offset = null, int? decimalPlaces = null, int? significantFigures = null, string memberName = "", string filePath = "")
         {
             Offset = offset ?? 0;
+            DecimalPlaces = decimalPlaces;
+            SignificantFigures = significantFigures;
             if (offset == -1)
             {
                 roundingFractions = new List<int>();
@@ -197,40 +200,6 @@ namespace CsCheck
             AddPrivate((uint)val);
             AddPrivate((uint)(val >> 32));
         }
-        [StructLayout(LayoutKind.Explicit)]
-        struct FloatConverter
-        {
-            [FieldOffset(0)] public uint I;
-            [FieldOffset(0)] public float F;
-        }
-        public void Add(float val)
-        {
-            Stream(StreamSerializer.WriteFloat, StreamSerializer.ReadFloat, val);
-            AddPrivate(new FloatConverter { F = val }.I);
-        }
-        public void Add(double val)
-        {
-            Stream(StreamSerializer.WriteDouble, StreamSerializer.ReadDouble, val);
-            AddPrivate(BitConverter.DoubleToInt64Bits(val));
-        }
-        [StructLayout(LayoutKind.Explicit)]
-        struct DecimalConverter
-        {
-            [FieldOffset(0)] public decimal D;
-            [FieldOffset(0)] public uint flags;
-            [FieldOffset(4)] public uint hi;
-            [FieldOffset(8)] public uint mid;
-            [FieldOffset(12)] public uint lo;
-        }
-        public void Add(decimal val)
-        {
-            Stream(StreamSerializer.WriteDecimal, StreamSerializer.ReadDecimal, val);
-            var c = new DecimalConverter { D = val };
-            AddPrivate(c.flags);
-            AddPrivate(c.hi);
-            AddPrivate(c.mid);
-            AddPrivate(c.lo);
-        }
         public void Add(DateTime val)
         {
             Stream(StreamSerializer.WriteDateTime, StreamSerializer.ReadDateTime, val);
@@ -276,136 +245,238 @@ namespace CsCheck
             foreach (char c in val) AddPrivate((uint)c);
             lastString = val;
         }
-
-        public void Add(IEnumerable<int> vals)
-        {
-            var col = vals as ICollection<int> ?? vals.ToArray();
-            Add((uint)col.Count);
-            foreach (var val in col)
-                Add(val);
-        }
-
-        public void Add(IEnumerable<long> vals)
-        {
-            var col = vals as ICollection<long> ?? vals.ToArray();
-            Add((uint)col.Count);
-            foreach (var val in col)
-                Add(val);
-        }
-
-        public void Add(IEnumerable<DateTime> vals)
-        {
-            var col = vals as ICollection<DateTime> ?? vals.ToArray();
-            Add((uint)col.Count);
-            foreach (var val in col)
-                Add(val);
-        }
-
-        public void Add(IEnumerable<byte> vals)
-        {
-            var col = vals as ICollection<byte> ?? vals.ToArray();
-            Add((uint)col.Count);
-            foreach (var val in col)
-                Add(val);
-        }
-
-        public void AddDecimalPlaces(int digits, double val)
+        public void Add(double val)
         {
             if (Offset == -1)
             {
-                val *= Math.Pow(10, digits);
-                roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
-            }
-            else
-            {
-                var scale = Math.Pow(10, digits);
-                Add(Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale);
-            }
-        }
-
-        public void AddSignificantFigures(int digits, double val)
-        {
-            if (Offset == -1)
-            {
-                var scale = Math.Pow(10, digits - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
-                if (double.IsNaN(scale) || double.IsInfinity(scale)) roundingFractions.Add(0);
-                else
+                if (DecimalPlaces.HasValue)
                 {
-                    val *= scale;
+                    val *= Math.Pow(10, DecimalPlaces.Value);
                     roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
                 }
-
+                else if (SignificantFigures.HasValue)
+                {
+                    var scale = Math.Pow(10, SignificantFigures.Value - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
+                    if (double.IsNaN(scale) || double.IsInfinity(scale)) roundingFractions.Add(0);
+                    else
+                    {
+                        val *= scale;
+                        roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                    }
+                }
             }
             else
             {
-                var scale = Math.Pow(10, digits - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
-                if (double.IsNaN(scale) || double.IsInfinity(scale)) Add(0.0);
-                else Add(Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale);
+                if (DecimalPlaces.HasValue)
+                {
+                    var scale = Math.Pow(10, DecimalPlaces.Value);
+                    val = Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale;
+                }
+                else if (SignificantFigures.HasValue)
+                {
+                    var scale = Math.Pow(10, SignificantFigures.Value - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
+                    if (double.IsNaN(scale) || double.IsInfinity(scale)) val = 0.0;
+                    else val = Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale;
+                }
+                Stream(StreamSerializer.WriteDouble, StreamSerializer.ReadDouble, val);
+                AddPrivate(BitConverter.DoubleToInt64Bits(val));
             }
         }
-
-        public void AddDecimalPlaces(int digits, float val)
+        [StructLayout(LayoutKind.Explicit)]
+        struct FloatConverter
         {
-            AddDecimalPlaces(digits, (double)val);
+            [FieldOffset(0)] public uint I;
+            [FieldOffset(0)] public float F;
         }
-
-        public void AddDecimalPlaces(int digits, decimal val)
+        public void Add(float val)
         {
-            AddDecimalPlaces(digits, (double)val);
+            if (Offset == -1)
+            {
+                if (DecimalPlaces.HasValue)
+                {
+                    val *= (float)Math.Pow(10, DecimalPlaces.Value);
+                    roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                }
+                else if (SignificantFigures.HasValue)
+                {
+                    var scale = (float)Math.Pow(10, SignificantFigures.Value - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
+                    if (float.IsNaN(scale) || float.IsInfinity(scale)) roundingFractions.Add(0);
+                    else
+                    {
+                        val *= scale;
+                        roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                    }
+                }
+            }
+            else
+            {
+                if (DecimalPlaces.HasValue)
+                {
+                    var scale = (float)Math.Pow(10, DecimalPlaces.Value);
+                    val = (float)Math.Floor(val * scale + ((float)Offset / OFFSET_SIZE)) / scale;
+                }
+                else if (SignificantFigures.HasValue)
+                {
+                    var scale = (float)Math.Pow(10, SignificantFigures.Value - 1 - Math.Floor(Math.Log10(Math.Abs(val))));
+                    if (double.IsNaN(scale) || double.IsInfinity(scale)) val = 0.0f;
+                    else val = (float)Math.Floor(val * scale + ((float)Offset / OFFSET_SIZE)) / scale;
+                }
+                Stream(StreamSerializer.WriteFloat, StreamSerializer.ReadFloat, val);
+                AddPrivate(new FloatConverter { F = val }.I);
+            }
         }
-        public void AddDecimalPlaces(int digits, IEnumerable<float> vals)
+        [StructLayout(LayoutKind.Explicit)]
+        struct DecimalConverter
         {
-            var col = vals as ICollection<float> ?? vals.ToArray();
+            [FieldOffset(0)] public decimal D;
+            [FieldOffset(0)] public uint flags;
+            [FieldOffset(4)] public uint hi;
+            [FieldOffset(8)] public uint mid;
+            [FieldOffset(12)] public uint lo;
+        }
+        public void Add(decimal val)
+        {
+            if (Offset == -1)
+            {
+                if (DecimalPlaces.HasValue)
+                {
+                    val *= (decimal)Math.Pow(10, DecimalPlaces.Value);
+                    roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                }
+                else if (SignificantFigures.HasValue)
+                {
+                    val *= (decimal)Math.Pow(10, SignificantFigures.Value - 1 - Math.Floor(Math.Log10((double)Math.Abs(val))));
+                    roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                }
+            }
+            else
+            {
+                if (DecimalPlaces.HasValue)
+                {
+                    var scale = (decimal)Math.Pow(10, DecimalPlaces.Value);
+                    val = Math.Floor(val * scale + ((decimal)Offset / OFFSET_SIZE)) / scale;
+                }
+                else if (SignificantFigures.HasValue)
+                {
+                    var scale = (decimal)Math.Pow(10, SignificantFigures.Value - 1 - Math.Floor(Math.Log10((double)Math.Abs(val))));
+                    val = Math.Floor(val * scale + ((decimal)Offset / OFFSET_SIZE)) / scale;
+                }
+                Stream(StreamSerializer.WriteDecimal, StreamSerializer.ReadDecimal, val);
+                var c = new DecimalConverter { D = val };
+                AddPrivate(c.flags);
+                AddPrivate(c.hi);
+                AddPrivate(c.mid);
+                AddPrivate(c.lo);
+            }
+        }
+        public void Add(IEnumerable<bool> val)
+        {
+            var col = val as ICollection<bool> ?? val.ToArray();
             Add((uint)col.Count);
-            foreach (var val in col)
-                AddDecimalPlaces(digits, val);
+            foreach (var v in col) Add(v);
         }
-        public void AddDecimalPlaces(int digits, IEnumerable<double> vals)
+        public void Add(IEnumerable<byte> val)
         {
-            var col = vals as ICollection<double> ?? vals.ToArray();
+            var col = val as ICollection<byte> ?? val.ToArray();
             Add((uint)col.Count);
-            foreach (var val in col)
-                AddDecimalPlaces(digits, val);
+            foreach (var v in col) Add(v);
         }
-        public void AddDecimalPlaces(int digits, IEnumerable<decimal> vals)
+        public void Add(IEnumerable<sbyte> val)
         {
-            var col = vals as ICollection<decimal> ?? vals.ToArray();
+            var col = val as ICollection<sbyte> ?? val.ToArray();
             Add((uint)col.Count);
-            foreach (var val in col)
-                AddDecimalPlaces(digits, val);
+            foreach (var v in col) Add(v);
         }
-
-        public void AddSignificantFigures(int digits, float val)
+        public void Add(IEnumerable<short> val)
         {
-            AddSignificantFigures(digits, (double)val);
-        }
-
-        public void AddSignificantFigures(int digits, decimal val)
-        {
-            AddSignificantFigures(digits, (double)val);
-        }
-        public void AddSignificantFigures(int digits, IEnumerable<float> vals)
-        {
-            var col = vals as ICollection<float> ?? vals.ToArray();
+            var col = val as ICollection<short> ?? val.ToArray();
             Add((uint)col.Count);
-            foreach (var val in col)
-                AddSignificantFigures(digits, val);
+            foreach (var v in col) Add(v);
         }
-        public void AddSignificantFigures(int digits, IEnumerable<double> vals)
+        public void Add(IEnumerable<ushort> val)
         {
-            var col = vals as ICollection<double> ?? vals.ToArray();
+            var col = val as ICollection<ushort> ?? val.ToArray();
             Add((uint)col.Count);
-            foreach (var val in col)
-                AddSignificantFigures(digits, val);
+            foreach (var v in col) Add(v);
         }
-        public void AddSignificantFigures(int digits, IEnumerable<decimal> vals)
+        public void Add(IEnumerable<int> val)
         {
-            var col = vals as ICollection<decimal> ?? vals.ToArray();
+            var col = val as ICollection<int> ?? val.ToArray();
             Add((uint)col.Count);
-            foreach (var val in col)
-                AddSignificantFigures(digits, val);
+            foreach (var v in col) Add(v);
         }
-
+        public void Add(IEnumerable<uint> val)
+        {
+            var col = val as ICollection<uint> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<long> val)
+        {
+            var col = val as ICollection<long> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<ulong> val)
+        {
+            var col = val as ICollection<ulong> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<DateTime> val)
+        {
+            var col = val as ICollection<DateTime> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<DateTimeOffset> val)
+        {
+            var col = val as ICollection<DateTimeOffset> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<TimeSpan> val)
+        {
+            var col = val as ICollection<TimeSpan> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<Guid> val)
+        {
+            var col = val as ICollection<Guid> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<char> val)
+        {
+            var col = val as ICollection<char> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<string> val)
+        {
+            var col = val as ICollection<string> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<double> val)
+        {
+            var col = val as ICollection<double> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<float> val)
+        {
+            var col = val as ICollection<float> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<decimal> val)
+        {
+            var col = val as ICollection<decimal> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
         internal static class StreamSerializer
         {
             public static void WriteBool(Stream stream, bool val)

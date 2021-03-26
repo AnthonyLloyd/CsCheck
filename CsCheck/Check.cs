@@ -926,14 +926,14 @@ namespace CsCheck
         }
 
         /// <summary>Check a hash of a series of values. Cache values on a correct run and fail with stack trace at first difference.</summary>
-        public static void Hash(Action<Hash> action, long expected = 0, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "")
+        public static void Hash(Action<Hash> action, long expected = 0, int? decimalPlaces = null, int? significantFigures = null, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "")
         {
             if (expected == 0)
             {
-                var hash = new Hash(null, -1);
+                var hash = new Hash(null, -1, decimalPlaces, significantFigures);
                 action(hash);
                 var offset = hash.BestOffset();
-                hash = new Hash(null, offset);
+                hash = new Hash(null, offset, decimalPlaces, significantFigures);
                 action(hash);
                 var fullHashCode = CsCheck.Hash.FullHash(offset, hash.GetHashCode());
                 throw new CsCheckException("Hash is " + fullHashCode);
@@ -941,19 +941,19 @@ namespace CsCheck
             else
             {
                 var (offset, expectedHashCode) = CsCheck.Hash.OffsetHash(expected);
-                var hash = new Hash(expectedHashCode, offset, memberName, filePath);
+                var hash = new Hash(expectedHashCode, offset, decimalPlaces, significantFigures, memberName, filePath);
                 action(hash);
                 int actualHashCode = hash.GetHashCode();
                 hash.Close();
                 if (actualHashCode != expectedHashCode)
                 {
-                    hash = new Hash(null, -1);
+                    hash = new Hash(null, -1, decimalPlaces, significantFigures);
                     action(hash);
                     var offsetCheck = hash.BestOffset();
                     if (offsetCheck != offset)
                     {
                         offset = offsetCheck;
-                        hash = new Hash(null, offset);
+                        hash = new Hash(null, offset, decimalPlaces, significantFigures);
                         action(hash);
                         actualHashCode = hash.GetHashCode();
                     }
