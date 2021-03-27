@@ -257,11 +257,10 @@ namespace CsCheck
                 }
                 else if (SignificantFigures.HasValue)
                 {
-                    var scale = Pow10Double(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
-                    if (double.IsNaN(scale) || double.IsInfinity(scale)) roundingFractions.Add(0);
+                    if (val == 0.0) roundingFractions.Add(0);
                     else
                     {
-                        val *= scale;
+                        val *= Pow10Double(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
                         roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
                     }
                 }
@@ -275,9 +274,12 @@ namespace CsCheck
                 }
                 else if (SignificantFigures.HasValue)
                 {
-                    var scale = Pow10Double(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
-                    if (double.IsNaN(scale) || double.IsInfinity(scale)) val = 0.0;
-                    else val = Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale;
+                    
+                    if (val != 0.0)
+                    {
+                        var scale = Pow10Double(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
+                        val = Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale;
+                    }
                 }
                 Stream(StreamSerializer.WriteDouble, StreamSerializer.ReadDouble, val);
                 AddPrivate(BitConverter.DoubleToInt64Bits(val));
@@ -300,11 +302,10 @@ namespace CsCheck
                 }
                 else if (SignificantFigures.HasValue)
                 {
-                    var scale = Pow10Float(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
-                    if (float.IsNaN(scale) || float.IsInfinity(scale)) roundingFractions.Add(0);
+                    if (val == 0.0f) roundingFractions.Add(0);
                     else
                     {
-                        val *= scale;
+                        val *= Pow10Float(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
                         roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
                     }
                 }
@@ -318,9 +319,11 @@ namespace CsCheck
                 }
                 else if (SignificantFigures.HasValue)
                 {
-                    var scale = Pow10Float(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
-                    if (double.IsNaN(scale) || double.IsInfinity(scale)) val = 0.0f;
-                    else val = (float)Math.Floor(val * scale + ((float)Offset / OFFSET_SIZE)) / scale;
+                    if (val != 0.0f)
+                    {
+                        var scale = Pow10Float(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
+                        val = (float)Math.Floor(val * scale + ((float)Offset / OFFSET_SIZE)) / scale;
+                    }
                 }
                 Stream(StreamSerializer.WriteFloat, StreamSerializer.ReadFloat, val);
                 AddPrivate(new FloatConverter { F = val }.I);
@@ -346,8 +349,12 @@ namespace CsCheck
                 }
                 else if (SignificantFigures.HasValue)
                 {
-                    val *= Pow10Decimal(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10((double)Math.Abs(val))));
-                    roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                    if (val == 0.0M) roundingFractions.Add(0);
+                    else
+                    {
+                        val *= Pow10Decimal(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10((double)Math.Abs(val))));
+                        roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                    }
                 }
             }
             else
@@ -359,8 +366,11 @@ namespace CsCheck
                 }
                 else if (SignificantFigures.HasValue)
                 {
-                    var scale = Pow10Decimal(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10((double)Math.Abs(val))));
-                    val = Math.Floor(val * scale + ((decimal)Offset / OFFSET_SIZE)) / scale;
+                    if (val != 0.0M)
+                    {
+                        var scale = Pow10Decimal(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10((double)Math.Abs(val))));
+                        val = Math.Floor(val * scale + ((decimal)Offset / OFFSET_SIZE)) / scale;
+                    }
                 }
                 Stream(StreamSerializer.WriteDecimal, StreamSerializer.ReadDecimal, val);
                 var c = new DecimalConverter { D = val };
@@ -373,13 +383,13 @@ namespace CsCheck
 
         static readonly double[] pow10Double = new double[] { 1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14,
             1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22, 1e23, 1e24, 1e25, 1e26, 1e27, 1e28, 1e29, 1e30, 1e31 };
-        static double Pow10Double(int i) => i >= 0 ? pow10Double[i] : 1.0 / pow10Double[i];
+        static double Pow10Double(int i) => i >= 0 ? pow10Double[i] : 1.0 / pow10Double[-i];
         static readonly float[] pow10Float = new float[] { 1e0f, 1e1f, 1e2f, 1e3f, 1e4f, 1e5f, 1e6f, 1e7f, 1e8f, 1e9f, 1e10f, 1e11f, 1e12f, 1e13f, 1e14f,
             1e15f, 1e16f, 1e17f, 1e18f, 1e19f, 1e20f, 1e21f, 1e22f, 1e23f, 1e24f, 1e25f, 1e26f, 1e27f, 1e28f, 1e29f, 1e30f, 1e31f };
-        static float Pow10Float(int i) => i >= 0 ? pow10Float[i] : 1.0f / pow10Float[i];
+        static float Pow10Float(int i) => i >= 0 ? pow10Float[i] : 1.0f / pow10Float[-i];
         static readonly decimal[] pow10Decimal = new decimal[] { 1e0M, 1e1M, 1e2M, 1e3M, 1e4M, 1e5M, 1e6M, 1e7M, 1e8M, 1e9M, 1e10M, 1e11M, 1e12M, 1e13M, 1e14M,
             1e15M, 1e16M, 1e17M, 1e18M, 1e19M, 1e20M, 1e21M, 1e22M, 1e23M, 1e24M, 1e25M, 1e26M, 1e27M, 1e28M };
-        static decimal Pow10Decimal(int i) => i >= 0 ? pow10Decimal[i] : 1.0M / pow10Decimal[i];
+        static decimal Pow10Decimal(int i) => i >= 0 ? pow10Decimal[i] : 1.0M / pow10Decimal[-i];
 
         public void Add(IEnumerable<bool> val)
         {
