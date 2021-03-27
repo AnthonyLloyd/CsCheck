@@ -284,8 +284,8 @@ namespace Tests
     }
 }
 
-// TODO: Metamorphic? Duplicate. Gen<A> -> Gen<Action<A, A, DD>> == Operation2<A>
 // TODO: Add slims
 // TODO: More Print
 // TODO: More Equal, ModelEqual
 // TODO: More Docs
+// TODO: Add Causal Profiling

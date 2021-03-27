@@ -68,25 +68,21 @@ namespace Tests
                     return m;
                 }));
 
+        class ImHolder<T> { public T Im; }
+
         [Fact(Skip = "Experiment")]
         public void AddOrUpdate_Metamorphic()
         {
             const int upperBound = 100000;
-            Gen.Select(GenMap(upperBound), Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int)
-            .Sample(t =>
-            {
-                var map1 = t.V0.AddOrUpdate(t.V1, t.V2).AddOrUpdate(t.V3, t.V4);
-                var map2 = t.V1 == t.V3 ? t.V0.AddOrUpdate(t.V3, t.V4) : t.V0.AddOrUpdate(t.V3, t.V4).AddOrUpdate(t.V1, t.V2);
-                var seq1 = map1.Enumerate().OrderBy(i => i.Key).Select(i => (i.Key, i.Value));
-                var seq2 = map2.Enumerate().OrderBy(i => i.Key).Select(i => (i.Key, i.Value));
-                Assert.Equal(seq1, seq2);
-            }
-            , iter: 100_000
-            , print: t => t + "\n" + string.Join("\n", t.V0.Enumerate())
-            , seed: "42ChASl6qJI5");
+            GenMap(upperBound)
+            .Select(i => new ImHolder<ImHashMap234<int, int>> { Im = i })
+            .SampleMetamorphic(
+                Gen.Select(Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int).Metamorphic<ImHolder<ImHashMap234<int, int>>>(
+                    (d, t) => d.Im = d.Im.AddOrUpdate(t.V0, t.V1).AddOrUpdate(t.V2, t.V3),
+                    (d, t) => d.Im = t.V0 == t.V2 ? d.Im.AddOrUpdate(t.V2, t.V3) : d.Im.AddOrUpdate(t.V2, t.V3).AddOrUpdate(t.V0, t.V1)
+                )
+            );
         }
-
-        class ImHolder<T> { public T Im; }
 
         [Fact(Skip = "Experiment")]
         public void AddOrUpdate_ModelBased()

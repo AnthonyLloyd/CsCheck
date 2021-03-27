@@ -11,7 +11,7 @@ namespace Perf
             RunTests(new ArraySerializerTests(output));
             RunTests(new CheckTests(output));
             RunTests(new GenTests());
-            RunTests(new HashTests());
+            RunTests(new HashTests(output));
             RunTests(new ModelTests());
             RunTests(new PCGTests());
         }

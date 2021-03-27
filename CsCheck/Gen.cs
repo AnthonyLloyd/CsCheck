@@ -162,6 +162,12 @@ namespace CsCheck
             return (" " + t.ToString(), (a, m) => action(a, m, t));
         }, true);
 
+        public GenMetamorphic<S> Metamorphic<S>(Action<S, T> action1, Action<S, T> action2) => new((PCG pcg, Size min, out Size size) =>
+        {
+            var t = Generate(pcg, min, out size);
+            return (m => action1(m, t), m => action2(m, t));
+        });
+
         public GenArray<T> Array => new(this);
         public GenEnumerable<T> Enumerable => new(this);
         public GenArray2D<T> Array2D => new(this);
@@ -621,6 +627,16 @@ namespace CsCheck
             gen = f(Create((PCG pcg, Size min, out Size size) => map(gen.Generate(pcg, null, out size), ref size)));
             return gen;
         }
+
+        /// <summary>Create a second exact clone by running the generator again with the same seed.</summary>
+        public static Gen<(T V0, T V1)> Clone<T>(this Gen<T> gen) => Create((PCG pcg, Size min, out Size size) =>
+        {
+            var seed = pcg.Seed;
+            var stream = pcg.Stream;
+            var r1 = gen.Generate(pcg, min, out size);
+            var r2 = gen.Generate(new PCG(stream, seed), min, out _);
+            return (r1, r2);
+        });
 
         public static GenDictionary<K, V> Dictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new(genK, genV);
 
@@ -1730,5 +1746,13 @@ namespace CsCheck
             AddOpNumber = addOpNumber;
         }
         public override (string, Action<T1, T2>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
+    }
+
+    public class GenMetamorphic<T> : Gen<(Action<T>, Action<T>)>
+    {
+        readonly GenDelegate<(Action<T>, Action<T>)> generate;
+        internal GenMetamorphic(GenDelegate<(Action<T>, Action<T>)> generate) => this.generate = generate;
+        
+        public override (Action<T>, Action<T>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
     }
 }

@@ -411,6 +411,63 @@ namespace CsCheck
             => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
                 equal, seed, iter, time, threads, printActual, printModel);
 
+        class MetamorphicData<T> { public T State1; public T State2; public uint Stream; public ulong Seed; public Exception Exception; }
+
+        /// <summary>Sample metamorphic operations (two operations in opposite order) on a random initial state checking that both paths are equal.
+        /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+        public static void SampleMetamorphic<T>(this Gen<T> initial, GenMetamorphic<T> operations,
+            Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
+            Func<T, string> print = null)
+        {
+            if (equal is null) equal = ModelEqual;
+            if (seed is null) seed = Seed;
+            if (iter == -1) iter = Iter;
+            if (time == -1) time = Time;
+            if (threads == -1) threads = Threads;
+            if (print is null) print = Print;
+
+            Gen.Create((PCG pcg, Size min, out Size size) =>
+            {
+                var stream = pcg.Stream;
+                var seed = pcg.Seed;
+                var i1 = initial.Generate(pcg, null, out size);
+                var i2 = initial.Generate(new PCG(stream, seed), null, out size);
+                return new MetamorphicData<T> { State1 = i1, State2 = i2, Stream = stream, Seed = seed };
+            })
+            .Select(operations)
+            .Sample(d =>
+            {
+                try
+                {
+                    d.V1.Item1(d.V0.State1);
+                    d.V1.Item2(d.V0.State2);
+                    return equal(d.V0.State1, d.V0.State2);
+                }
+                catch (Exception e)
+                {
+                    d.V0.Exception = e;
+                    return false;
+                }
+            }, seed, iter, time, threads,
+            p =>
+            {
+                if (p.V0 == null) return "";
+                var sb = new StringBuilder();
+                var initialState = initial.Generate(new PCG(p.V0.Stream, p.V0.Seed), null, out _);
+                sb.Append("\nInitial State: ").Append(print(initialState));
+                if (p.V0.Exception is null)
+                {
+                    sb.Append("\n Final State 1: ").Append(print(p.V0.State1));
+                    sb.Append("\n Final State 2: ").Append(print(p.V0.State2));
+                }
+                else
+                {
+                    sb.Append("\n     Exception: ").Append(p.V0.Exception.ToString());
+                }
+                return sb.ToString();
+            });
+        }
+
         class ConcurrentData<T>
         {
             public T State; public uint Stream; public ulong Seed; public (string, Action<T>)[] Operations;
