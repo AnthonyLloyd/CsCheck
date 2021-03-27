@@ -284,7 +284,6 @@ namespace Tests
     }
 }
 
-// TODO: Math.Pow(10, int) is there a quicker and typed way?
 // TODO: Add slims
 // TODO: Metamorphic? Duplicate. Gen<A> -> Gen<Action<A, A, DD>> == Operation2<A>
 // TODO: More Print

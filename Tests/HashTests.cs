@@ -262,5 +262,36 @@ namespace Tests
                 Assert.Equal(expectedHash, hash);
             });
         }
+
+        [Fact]
+        public void Pow10_Double()
+        {
+            static double Sqr(double x) => x * x;
+            static double Pow1(int n) => n switch
+            {
+                0 => 1.0,
+                1 => 10.0,
+                2 => 100.0,
+                3 => 1000.0,
+                4 => 10000.0,
+                _ => n % 2 == 0 ? Sqr(Pow1(n/2)) : Sqr(Pow1(n/2)) * 10.0,
+            };
+            static double Pow2(int n)
+            {
+                double result = 1.0, baseVal = 10.0;
+                while(n > 0)
+                {
+                    if((n & 1) != 0) result *= baseVal;
+                    n >>= 1;
+                    baseVal *= baseVal;
+                }
+                return result;
+            }
+            double[] powCache = new double[] { 1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18,
+                1e19, 1e20, 1e21, 1e22, 1e23, 1e24, 1e25, 1e26, 1e27, 1e28, 1e29, 1e30, 1e31 };
+            double Pow3(int n) => powCache[n];
+            Gen.Int[0, 31].Faster(Pow2, Pow1, repeat: 50);
+            Gen.Int[0, 31].Faster(Pow3, Pow2, repeat: 50);
+        }
     }
 }

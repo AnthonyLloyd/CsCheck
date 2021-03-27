@@ -28,6 +28,7 @@ Added Check.SampleModelBased and Check.SampleConcurrent.
 Added more Gen.Select overloads.
 Added Gen.Int.Positive and Gen.Int.NonNegative.
 Added Gen.Recursive.
+Added Check.Faster hints for time resolution and inconsistent results.
 Added documentation xml file.
 Changed Size to an out parameter instead of tuple return value.
 Changed Hash cache file to UTF8 strings. Supports multiple Check.Hash per method. Move d.p. and s.f. to top level.

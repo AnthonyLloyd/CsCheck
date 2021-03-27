@@ -629,7 +629,7 @@ namespace CsCheck
                             slower();
                             ts = Stopwatch.GetTimestamp() - ts;
                             if (mre.IsSet) return;
-                            var e = (float)(ts - tf) / Math.Max(ts, tf);
+                            var e = (double)(ts - tf) / ts;
                             lock (r)
                             {
                                 r.Median.Add(e);
@@ -708,7 +708,7 @@ namespace CsCheck
                                     return;
                                 }
                             }
-                            var e = (float)(ts - tf) / Math.Max(ts, tf);
+                            var e = (double)(ts - tf) / ts;
                             lock (r)
                             {
                                 r.Median.Add(e);
@@ -766,7 +766,7 @@ namespace CsCheck
                             slower(t);
                             ts = Stopwatch.GetTimestamp() - ts;
                             if (mre.IsSet) return;
-                            var e = (float)(ts - tf) / Math.Max(ts, tf);
+                            var e = (double)(ts - tf) / ts;
                             lock (r)
                             {
                                 r.Median.Add(e);
@@ -853,7 +853,7 @@ namespace CsCheck
                                     return;
                                 }
                             }
-                            var e = (float)(ts - tf) / Math.Max(ts, tf);
+                            var e = (double)(ts - tf) / ts;
                             lock (r)
                             {
                                 r.Median.Add(e);
@@ -875,7 +875,7 @@ namespace CsCheck
             if (raiseexception)
             {
                 if (!completed) throw new CsCheckException("Timeout! " + r.ToString());
-                if (exception is not null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+                if (exception is not null || r.Slower > r.Faster || r.Median.Median < 0.0) throw exception ?? new CsCheckException(r.ToString());
             }
             return r;
         }
@@ -998,9 +998,11 @@ namespace CsCheck
         }
         public override string ToString()
         {
-            var result = $"%[{Median.LowerQuartile * 100.0:#0.0}%..{Median.UpperQuartile * 100.0:#0.0}%]";
-            result = Median.Median >= 0.0 ? (Median.Median * 100.0).ToString("#0.0") + result + " faster"
-                : (Median.Median * 100.0 / (-1.0 - Median.Median)).ToString("#0.0") + result + " slower";
+            var result = Median.Median >= 0.0
+                ? $"{Median.Median * 100.0:#0.0}%[{Median.LowerQuartile * 100.0:#0.0}%..{Median.UpperQuartile * 100.0:#0.0}%] faster"
+                : $"{-Median.Median * 100.0:#0.0}%[{-Median.LowerQuartile * 100.0:#0.0}%..{-Median.UpperQuartile * 100.0:#0.0}%] slower";
+            if (double.IsNaN(Median.Median)) result = "Time resolution too small try using repeat.\n" + result;
+            else if ((Median.Median >= 0.0) != (Faster > Slower)) result = "Inconsistent result try using repeat or increasing sigma.\n" + result;
             return result + $", sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
         }
         public void Output(Action<string> output)
