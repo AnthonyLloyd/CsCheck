@@ -3,11 +3,15 @@ using System.Linq;
 using System.Collections.Generic;
 using CsCheck;
 using Xunit;
+using System.Runtime.CompilerServices;
+using System.Collections;
 
 namespace Tests
 {
     public class SlimCollectionsTests
     {
+        readonly Action<string> writeLine;
+        public SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
         [Fact]
         public void ListSlim_ModelBased()
         {
@@ -21,8 +25,7 @@ namespace Tests
                 Gen.Int.Operation<ListSlim<int>, List<int>>((ls, l, i) => {
                     ls.Add(i);
                     l.Add(i);
-                }),
-                equal: (ls, l) => Check.ModelEqual(ls.ToArray(), l)
+                })
             );
         }
 
@@ -39,18 +42,41 @@ namespace Tests
                 Gen.Byte.Operation<ListSlim<byte>>((l, i) => { lock (l) l.Add(i); }),
                 Gen.Int.NonNegative.Operation<ListSlim<byte>>((l, i) => { if (i < l.Count) { var _ = l[i]; } }),
                 Gen.Int.NonNegative.Select(Gen.Byte).Operation<ListSlim<byte>>((l, t) => { if (t.V0 < l.Count) l[t.V0] = t.V1; }),
-                Gen.Operation<ListSlim<byte>>(l => l.ToArray()),
-                equal: (l1, l2) => Check.Equal(l1.ToArray(), l2.ToArray())
+                Gen.Operation<ListSlim<byte>>(l => l.ToArray())
             );
+        }
+
+        [Fact]
+        public void ListSlim_Faster()
+        {
+            Gen.Byte.Array
+            .Faster(
+                t =>
+                {
+                    var d = new ListSlim<byte>();
+                    for (int i = 0; i < t.Length; i++)
+                        d.Add(t[i]);
+                    return d.Count;
+                },
+                t =>
+                {
+                    var d = new List<byte>();
+                    for (int i = 0; i < t.Length; i++)
+                        d.Add(t[i]);
+                    return d.Count;
+                },
+                repeat: 50
+            ).Output(writeLine);
         }
     }
 
 
-    public class ListSlim<T>
+    public class ListSlim<T> : IReadOnlyList<T>
     {
-        int count;
+        static readonly T[] empty = Array.Empty<T>();
         T[] entries;
-        public ListSlim() => entries = Array.Empty<T>();
+        int count;
+        public ListSlim() => entries = empty;
         public ListSlim(int capacity) => entries = new T[capacity];
         public int Count => count;
         public T this[int i]
@@ -58,22 +84,38 @@ namespace Tests
             get => entries[i];
             set => entries[i] = value;
         }
-        public void Add(T item)
+
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void AddWithResize(T item)
         {
             int c = count;
-            if (c == entries.Length)
+            if (c == 0) entries = new T[4];
+            else
             {
-                if (c == 0) entries = new T[4];
-                else
-                {
-                    var newEntries = new T[c * 2];
-                    Array.Copy(entries, 0, newEntries, 0, c);
-                    entries = newEntries;
-                }
+                var newEntries = new T[c * 2];
+                Array.Copy(entries, 0, newEntries, 0, c);
+                entries = newEntries;
             }
             entries[c] = item;
             count = c + 1;
         }
+
+        public void Add(T item)
+        {
+            T[] e = entries;
+            int c = count;
+            if ((uint)c < (uint)e.Length)
+            {
+                e[c] = item;
+                count = c + 1;
+            }
+            else
+            {
+                AddWithResize(item);
+            }
+        }
+
         public T[] ToArray()
         {
             int c = count;
@@ -81,5 +123,13 @@ namespace Tests
             Array.Copy(entries, 0, a, 0, c);
             return a;
         }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            for (int i = 0; i < count; i++)
+                yield return entries[i];
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

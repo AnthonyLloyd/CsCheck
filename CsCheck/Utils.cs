@@ -45,6 +45,7 @@ namespace CsCheck
 
         static bool IsTuple(object o)
         {
+            
             var t = o.GetType();
             if (!t.IsGenericType) return false;
             var gt = t.GetGenericTypeDefinition();
@@ -119,6 +120,18 @@ namespace CsCheck
                         return false;
                 return true;
             }
+            else if (a.GetType().GetInterface(typeof(IReadOnlyList<>).Name) != null)
+            {
+                var e1 = ((IEnumerable)a).GetEnumerator();
+                var e2 = ((IEnumerable)b).GetEnumerator();
+                while(true)
+                {
+                    var e1MoveNext = e1.MoveNext();
+                    if (e1MoveNext != e2.MoveNext()) return false;
+                    if (!e1MoveNext) return true;
+                    if (!Equal(e1.Current, e2.Current)) return false;
+                }
+            }
             else if (a is ICollection aic && b is ICollection bic)
             {
                 return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
@@ -141,6 +154,19 @@ namespace CsCheck
                     if (!ail[i].Equals(bil[i]))
                         return false;
                 return true;
+            }
+            else if (a.GetType().GetInterface(typeof(IReadOnlyList<>).Name) != null
+                  && b.GetType().GetInterface(typeof(IReadOnlyList<>).Name) != null)
+            {
+                var e1 = ((IEnumerable)a).GetEnumerator();
+                var e2 = ((IEnumerable)b).GetEnumerator();
+                while (true)
+                {
+                    var e1MoveNext = e1.MoveNext();
+                    if (e1MoveNext != e2.MoveNext()) return false;
+                    if (!e1MoveNext) return true;
+                    if (!Equal(e1.Current, e2.Current)) return false;
+                }
             }
             else if (a is ICollection aic && b is ICollection bic)
             {
