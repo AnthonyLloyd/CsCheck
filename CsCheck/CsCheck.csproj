@@ -22,7 +22,7 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;concurrency;performance;regression;testing</PackageTags>
-        <Version>2.0.0-rc1</Version>
+        <Version>2.0.0-rc2</Version>
         <PackageReleaseNotes>
 Added Check.SampleModelBased.
 Added Check.SampleMetamorphic.

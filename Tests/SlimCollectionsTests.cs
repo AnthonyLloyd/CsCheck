@@ -68,6 +68,23 @@ namespace Tests
                 repeat: 50
             ).Output(writeLine);
         }
+
+        [Fact(Skip ="WIP")]
+        public void SetSlim_ModelBased()
+        {
+            Gen.Int.Array.Select(a =>
+            {
+                var l = new SetSlim<int>();
+                foreach (var i in a) l.Add(i);
+                return (l, new HashSet<int>(a));
+            })
+            .SampleModelBased(
+                Gen.Int.Operation<SetSlim<int>, HashSet<int>>((ls, l, i) => {
+                    ls.Add(i);
+                    l.Add(i);
+                })
+            );
+        }
     }
 
 
@@ -131,5 +148,90 @@ namespace Tests
         }
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+
+    public class SetSlim<T> : IReadOnlyCollection<T> where T : IEquatable<T>
+    {
+        static class SetSlimHolder { internal static Entry[] Initial = new Entry[1]; }
+        struct Entry { internal int Bucket; internal int Next; internal T Item; }
+        int count;
+        Entry[] entries;
+        public SetSlim()
+        {
+            count = 0;
+            entries = SetSlimHolder.Initial;
+        }
+        public SetSlim(int capacity)
+        {
+            count = 0;
+            if (capacity < 2) capacity = 2;
+            entries = new Entry[PowerOf2(capacity)];
+        }
+        static int PowerOf2(int capacity)
+        {
+            if ((capacity & (capacity - 1)) == 0) return capacity;
+            int i = 2;
+            while (i < capacity) i <<= 1;
+            return i;
+        }
+        void Resize()
+        {
+            var oldEntries = entries;
+            var newEntries = new Entry[oldEntries.Length * 2];
+            int i = oldEntries.Length;
+            while (i-- > 0)
+            {
+                newEntries[i].Item = oldEntries[i].Item;
+                var bi = newEntries[i].Item!.GetHashCode() & (newEntries.Length - 1);
+                newEntries[i].Next = newEntries[bi].Bucket - 1;
+                newEntries[i].Bucket = i + 1;
+            }
+            entries = newEntries;
+        }
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        int AddItem(T item, int hashCode)
+        {
+            var i = count;
+            if (i == 0 && entries.Length == 1)
+                entries = new Entry[2];
+            else if (i == entries.Length)
+                Resize();
+            var ent = entries;
+            ent[i].Item = item;
+            var bucketIndex = hashCode & (ent.Length - 1);
+            ent[i].Next = ent[bucketIndex].Bucket - 1;
+            ent[bucketIndex].Bucket = i + 1;
+            count = i + 1;
+            return i;
+        }
+
+        public int Add(T item)
+        {
+            var ent = entries;
+            var hashCode = item.GetHashCode();
+            var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
+            while (i >= 0 && !item.Equals(ent[i].Item)) i = ent[i].Next;
+            return i >= 0 ? i : AddItem(item, hashCode);
+        }
+
+        public int IndexOf(T item)
+        {
+            var ent = entries;
+            var hashCode = item.GetHashCode();
+            var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
+            while (i >= 0 && !item.Equals(ent[i].Item)) i = ent[i].Next;
+            return i;
+        }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            for (int i = 0; i < count; i++)
+                yield return entries[i].Item;
+        }
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public T this[int i] => entries[i].Item;
+        public int Count => count;
     }
 }
