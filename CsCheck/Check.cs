@@ -1038,8 +1038,7 @@ namespace CsCheck
 
     public class FasterResult
     {
-        public int Faster;
-        public int Slower;
+        public int Faster, Slower;
         public MedianEstimator Median;
         internal float SigmaSquared
         {
@@ -1062,9 +1061,6 @@ namespace CsCheck
             else if ((Median.Median >= 0.0) != (Faster > Slower)) result = "Inconsistent result try using repeat or increasing sigma.\n" + result;
             return result + $", sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
         }
-        public void Output(Action<string> output)
-        {
-            output(ToString());
-        }
+        public void Output(Action<string> output) => output(ToString());
     }
 }

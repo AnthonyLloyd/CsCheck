@@ -284,8 +284,8 @@ namespace Tests
     }
 }
 
-// TODO: Add slims
+// TODO: Add Causal Profiling
+// TODO: More Xml Docs
 // TODO: More Print
 // TODO: More Equal, ModelEqual
-// TODO: More Docs
-// TODO: Add Causal Profiling
+// TODO: Add slims
