@@ -29,16 +29,17 @@ namespace CsCheck
         public CsCheckException(string message, Exception exception) : base(message, exception) { }
     }
 
+    /// <summary>Main random testing Check functions.</summary>
     public static partial class Check
     {
         const int MAX_LENGTH = 5000;
-        /// <summary>The number of iterations to run each sample for (default 100).</summary>
+        /// <summary>The number of iterations to run in the sample (default 100).</summary>
         public static long Iter = 100;
-        /// <summary>The number of seconds to run each sample for.</summary>
+        /// <summary>The number of seconds to run the sample.</summary>
         public static int Time = -1;
         /// <summary>The number of times to retry the seed to reproduce a SampleConcurrent fail (default 100).</summary>
         public static int Replay = 100;
-        /// <summary>The number of threads to run the samples on (default number logical CPUs).</summary>
+        /// <summary>The number of threads to run the sample on (default number logical CPUs).</summary>
         public static int Threads = Environment.ProcessorCount;
         /// <summary>The initial seed to use for the first iteration.</summary>
         public static string Seed;
@@ -65,10 +66,10 @@ namespace CsCheck
         /// <param name="gen">The sample input data generator.</param>
         /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="print">A function to convert the input data to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
         public static void Sample<T>(this Gen<T> gen, Action<T> assert,
             string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null)
         {
@@ -170,10 +171,10 @@ namespace CsCheck
         /// <param name="gen">The sample input data generator.</param>
         /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="print">A function to convert the input data to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
         public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate,
             string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null)
         {
@@ -298,7 +299,7 @@ namespace CsCheck
         /// <param name="gen">The sample input data generator.</param>
         /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="print">A function to convert the input data to a string in exception reporting (default Check.Print).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
         public static void SampleOne<T>(this Gen<T> gen, Action<T> assert, string seed = null, Func<T, string> print = null)
             => Sample(gen, assert, seed, 1, -1, 1, print);
 
@@ -306,7 +307,7 @@ namespace CsCheck
         /// <param name="gen">The sample input data generator.</param>
         /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="print">A function to convert the input data to a string in exception reporting (default Check.Print).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
         public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, Func<T, string> print = null)
             => Sample(gen, predicate, seed, 1, -1, 1, print);
 
@@ -322,11 +323,11 @@ namespace CsCheck
         /// <param name="operations">The operation generators that can act on the state.</param>
         /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="printActual">A function to convert the actual state to a string in exception reporting (default Check.Print).</param>
-        /// <param name="printModel">A function to convert the model state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+        /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model>[] operations,
             Func<Actual, Model, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
             Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
@@ -403,11 +404,11 @@ namespace CsCheck
         /// <param name="operation">The operation generator that can act on the state.</param>
         /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="printActual">A function to convert the actual state to a string in exception reporting (default Check.Print).</param>
-        /// <param name="printModel">A function to convert the model state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+        /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation,
             Func<Actual, Model, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
             Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
@@ -420,11 +421,11 @@ namespace CsCheck
         /// <param name="operation2">An operation generator that can act on the state.</param>
         /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="printActual">A function to convert the actual state to a string in exception reporting (default Check.Print).</param>
-        /// <param name="printModel">A function to convert the model state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+        /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
             GenOperation<Actual, Model> operation2,
             Func<Actual, Model, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
@@ -439,11 +440,11 @@ namespace CsCheck
         /// <param name="operation3">An operation generator that can act on the state.</param>
         /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="printActual">A function to convert the actual state to a string in exception reporting (default Check.Print).</param>
-        /// <param name="printModel">A function to convert the model state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+        /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
             GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3,
             Func<Actual, Model, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
@@ -459,11 +460,11 @@ namespace CsCheck
         /// <param name="operation4">An operation generator that can act on the state.</param>
         /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="printActual">A function to convert the actual state to a string in exception reporting (default Check.Print).</param>
-        /// <param name="printModel">A function to convert the model state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+        /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
             GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
             Func<Actual, Model, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
@@ -480,11 +481,11 @@ namespace CsCheck
         /// <param name="operation5">An operation generator that can act on the state.</param>
         /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="printActual">A function to convert the actual state to a string in exception reporting (default Check.Print).</param>
-        /// <param name="printModel">A function to convert the model state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+        /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
             GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
             GenOperation<Actual, Model> operation5,
@@ -504,11 +505,11 @@ namespace CsCheck
         /// <param name="operation6">An operation generator that can act on the state.</param>
         /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="printActual">A function to convert the actual state to a string in exception reporting (default Check.Print).</param>
-        /// <param name="printModel">A function to convert the model state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+        /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
         public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
             GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
             GenOperation<Actual, Model> operation5, GenOperation<Actual, Model> operation6,
@@ -525,10 +526,10 @@ namespace CsCheck
         /// <param name="operations">A metamorphic operation generator that can act on the state.</param>
         /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="print">A function to convert the state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
         public static void SampleMetamorphic<T>(this Gen<T> initial, GenMetamorphic<T> operations,
             Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
             Func<T, string> print = null)
@@ -599,10 +600,10 @@ namespace CsCheck
         /// <param name="operations">The operation generators that can act on the state concurrently.</param>
         /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="print">A function to convert the state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
         /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T>[] operations,
             Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
@@ -717,10 +718,10 @@ namespace CsCheck
         /// <param name="operation">An operation generator that can act on the state concurrently.</param>
         /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="print">A function to convert the state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
         /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation,
             Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
@@ -735,10 +736,10 @@ namespace CsCheck
         /// <param name="operation2">An operation generator that can act on the state concurrently.</param>
         /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="print">A function to convert the state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
         /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
@@ -754,10 +755,10 @@ namespace CsCheck
         /// <param name="operation3">An operation generator that can act on the state concurrently.</param>
         /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="print">A function to convert the state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
         /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             GenOperation<T> operation3,
@@ -775,10 +776,10 @@ namespace CsCheck
         /// <param name="operation4">An operation generator that can act on the state concurrently.</param>
         /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="print">A function to convert the state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
         /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             GenOperation<T> operation3, GenOperation<T> operation4,
@@ -797,10 +798,10 @@ namespace CsCheck
         /// <param name="operation5">An operation generator that can act on the state concurrently.</param>
         /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="print">A function to convert the state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
         /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5,
@@ -821,10 +822,10 @@ namespace CsCheck
         /// <param name="operation6">An operation generator that can act on the state concurrently.</param>
         /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
         /// <param name="seed">The initial seed to use for the first iteration.</param>
-        /// <param name="iter">The number of iterations to run each sample for (default 100).</param>
-        /// <param name="time">The number of seconds to run each sample for.</param>
-        /// <param name="threads">The number of threads to run the samples on (default number logical CPUs).</param>
-        /// <param name="print">A function to convert the state to a string in exception reporting (default Check.Print).</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
         /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
         public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
             GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5, GenOperation<T> operation6,

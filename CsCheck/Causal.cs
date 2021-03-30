@@ -21,6 +21,7 @@ using System.Collections.Generic;
 
 namespace CsCheck
 {
+    /// <summary>Causal profiling functionality.</summary>
     public static class Causal
     {
         const int SUMMARY_STAT_COUNT = 6;
@@ -34,7 +35,7 @@ namespace CsCheck
         public struct Region { public string Name; public long Start; public long TotalDelay; public long OnSince; }
 
         /// <summary>Marks the start of causal profiling region.</summary>
-        /// <param name="name">region name</param>
+        /// <param name="name">The region name.</param>
         public static Region RegionStart(string name)
         {
             if (runType == RunType.Nothing) return new Region();
@@ -51,7 +52,7 @@ namespace CsCheck
         }
 
         /// <summary>Marks the end of causal profiling region.</summary>
-        /// <param name="region">region returned by RegionStart</param>
+        /// <param name="region">The region returned from RegionStart.</param>
         public static void RegionEnd(Region region)
         {
             if (runType == RunType.Nothing) return;
@@ -96,9 +97,9 @@ namespace CsCheck
         }
 
         /// <summary>Run causal profiling on a the code in action for a number of iterations or time.</summary>
-        /// <param name="action">code to be profiled</param>
-        /// <param name="iter">number of iteration to collect statistics</param>
-        /// <param name="time">number of seconds to collect statistics</param>
+        /// <param name="action">The code to be causal profiled.</param>
+        /// <param name="iter">The number of iteration to collect statistics.</param>
+        /// <param name="time">The number of seconds to collect statistics.</param>
         public static Result Profile(Action action, long iter = -1, int time = -1)
         {
             if (iter == -1) iter = Check.Iter;
@@ -174,10 +175,10 @@ namespace CsCheck
         }
 
         /// <summary>Run causal profiling on a the code in action using gen input data for a number of iterations or time.</summary>
-        /// <param name="gen">input data generator</param>
-        /// <param name="action">code to be profiled</param>
-        /// <param name="iter">number of iteration to collect statistics</param>
-        /// <param name="time">number of seconds to collect statistics</param>
+        /// <param name="gen">The input data generator.</param>
+        /// <param name="action">The code to be causal profiled.</param>
+        /// <param name="iter">The number of iteration to collect statistics.</param>
+        /// <param name="time">The number of seconds to collect statistics.</param>
         public static Result Profile<T>(this Gen<T> gen, Action<T> action, long iter = -1, int time = -1)
         {
             var pcg = PCG.ThreadPCG;

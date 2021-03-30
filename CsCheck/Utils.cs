@@ -306,6 +306,7 @@ namespace CsCheck
         }
     }
 
+    /// <summary>A median and quartile estimator.</summary>
     public class MedianEstimator
     {
         int N, n2 = 2, n3 = 3, n4 = 4;

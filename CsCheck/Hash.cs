@@ -1,4 +1,5 @@
 ﻿// Copyright 2021 Anthony Lloyd
+// Copyright 2021 Anthony Lloyd
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +25,7 @@ using System.Runtime.InteropServices;
 
 namespace CsCheck
 {
+    /// <summary>Functionality for hash testing data with detailed information of any changes.</summary>
     public class Hash
     {
         static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new();
@@ -867,6 +869,7 @@ namespace CsCheck
         #endregion
     }
 
+    /// <summary>A stream for hash testing.</summary>
     public class HashStream : Stream
     {
         public override bool CanRead => true;

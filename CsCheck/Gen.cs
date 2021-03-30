@@ -19,6 +19,7 @@ using System.Runtime.CompilerServices;
 
 namespace CsCheck
 {
+    /// <summary>Size representation of Gen generated data.</summary>
     public class Size
     {
         public readonly static Size Zero = new(0UL);
@@ -127,6 +128,7 @@ namespace CsCheck
         T Generate(PCG pcg, Size min, out Size size);
     }
 
+    /// <summary>Data and Size generator from a PCG random number generator.</summary>
     public abstract class Gen<T> : IGen<T>
     {
         public abstract T Generate(PCG pcg, Size min, out Size size);
@@ -185,6 +187,7 @@ namespace CsCheck
     public delegate T GenDelegate<out T>(PCG pcg, Size min, out Size size);
     public delegate T GenMap<T>(T pcg, ref Size size);
 
+    /// <summary>Provides a set of static methods for composing generators.</summary>
     public static class Gen
     {
         class GenCreate<T> : Gen<T>
@@ -195,6 +198,13 @@ namespace CsCheck
         }
 
         public static Gen<T> Create<T>(GenDelegate<T> gen) => new GenCreate<T>(gen);
+
+        public static Gen<T> Create<T>(Func<PCG,(T,Size)> gen) => new GenCreate<T>((PCG pcg, Size min, out Size size) =>
+        {
+            T t;
+            (t, size) = gen(pcg);
+            return t;
+        });
 
         public static Gen<R> Select<T, R>(this Gen<T> gen, Func<T, R> selector) =>
             Create((PCG pcg, Size min, out Size size) => selector(gen.Generate(pcg, min, out size)));
