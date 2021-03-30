@@ -439,8 +439,8 @@ namespace CsCheck
             {
                 try
                 {
-                    d.V1.Item1(d.V0.State1);
-                    d.V1.Item2(d.V0.State2);
+                    d.V1.Item2(d.V0.State1);
+                    d.V1.Item3(d.V0.State2);
                     return equal(d.V0.State1, d.V0.State2);
                 }
                 catch (Exception e)
@@ -455,14 +455,15 @@ namespace CsCheck
                 var sb = new StringBuilder();
                 var initialState = initial.Generate(new PCG(p.V0.Stream, p.V0.Seed), null, out _);
                 sb.Append("\nInitial State: ").Append(print(initialState));
+                sb.Append("\n   Operations: ").Append(p.V1.Item1);
                 if (p.V0.Exception is null)
                 {
-                    sb.Append("\n Final State 1: ").Append(print(p.V0.State1));
-                    sb.Append("\n Final State 2: ").Append(print(p.V0.State2));
+                    sb.Append("\nFinal State 1: ").Append(print(p.V0.State1));
+                    sb.Append("\nFinal State 2: ").Append(print(p.V0.State2));
                 }
                 else
                 {
-                    sb.Append("\n     Exception: ").Append(p.V0.Exception.ToString());
+                    sb.Append("\n    Exception: ").Append(p.V0.Exception.ToString());
                 }
                 return sb.ToString();
             });

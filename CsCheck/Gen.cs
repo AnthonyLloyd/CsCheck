@@ -145,7 +145,7 @@ namespace CsCheck
         public GenOperation<S> Operation<S>(Action<S, T> action) => new((PCG pcg, Size min, out Size size) =>
         {
             var t = Generate(pcg, min, out size);
-            return (" " + t.ToString(), m => action(m, t));
+            return (" " + Check.Print(t), m => action(m, t));
         }, true);
 
         public GenOperation<Actual, Model> Operation<Actual, Model>(Func<T, string> name, Action<Actual, Model, T> action)
@@ -159,13 +159,19 @@ namespace CsCheck
             => new((PCG pcg, Size min, out Size size) =>
         {
             var t = Generate(pcg, min, out size);
-            return (" " + t.ToString(), (a, m) => action(a, m, t));
+            return (" " + Check.Print(t), (a, m) => action(a, m, t));
         }, true);
+
+        public GenMetamorphic<S> Metamorphic<S>(Func<T, string> name, Action<S, T> action1, Action<S, T> action2) => new((PCG pcg, Size min, out Size size) =>
+        {
+            var t = Generate(pcg, min, out size);
+            return (name(t), m => action1(m, t), m => action2(m, t));
+        });
 
         public GenMetamorphic<S> Metamorphic<S>(Action<S, T> action1, Action<S, T> action2) => new((PCG pcg, Size min, out Size size) =>
         {
             var t = Generate(pcg, min, out size);
-            return (m => action1(m, t), m => action2(m, t));
+            return (Check.Print(t), m => action1(m, t), m => action2(m, t));
         });
 
         public GenArray<T> Array => new(this);
@@ -1748,11 +1754,11 @@ namespace CsCheck
         public override (string, Action<T1, T2>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
     }
 
-    public class GenMetamorphic<T> : Gen<(Action<T>, Action<T>)>
+    public class GenMetamorphic<T> : Gen<(string, Action<T>, Action<T>)>
     {
-        readonly GenDelegate<(Action<T>, Action<T>)> generate;
-        internal GenMetamorphic(GenDelegate<(Action<T>, Action<T>)> generate) => this.generate = generate;
+        readonly GenDelegate<(string, Action<T>, Action<T>)> generate;
+        internal GenMetamorphic(GenDelegate<(string, Action<T>, Action<T>)> generate) => this.generate = generate;
         
-        public override (Action<T>, Action<T>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
+        public override (string, Action<T>, Action<T>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
     }
 }

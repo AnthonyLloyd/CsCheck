@@ -7,6 +7,33 @@ using Xunit;
 
 namespace Tests
 {
+    public class UtilsTests
+    {
+        [Fact]
+        public void Equal()
+        {
+            Assert.True(Check.Equal(new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } }, new Dictionary<int, byte> { { 3, 4 }, { 1, 2 } }));
+            Assert.True(Check.Equal(new[] { (1, 2), (3, 4) }, new[] { (1, 2), (3, 4) }));
+            Assert.False(Check.Equal(new[] { (1, 2), (3, 4) }, new[] { (3, 4), (1, 2) }));
+
+        }
+
+        [Fact]
+        public void ModelEqual()
+        {
+            Assert.True(Check.ModelEqual(new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } }, new[] { KeyValuePair.Create(3, (byte)4), KeyValuePair.Create(1, (byte)2) }));
+            Assert.True(Check.ModelEqual(new[] { KeyValuePair.Create(1, (byte)2), KeyValuePair.Create(3, (byte)4) }, new[] { KeyValuePair.Create(1, (byte)2), KeyValuePair.Create(3, (byte)4) }));
+            Assert.False(Check.ModelEqual(new [] { KeyValuePair.Create(1, (byte)2), KeyValuePair.Create(3, (byte)4) }, new[] { KeyValuePair.Create(3, (byte)4), KeyValuePair.Create(1, (byte)2) }));
+        }
+
+        [Fact]
+        public void Print()
+        {
+            Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new[] { KeyValuePair.Create(1, 2), KeyValuePair.Create(3, 4) }));
+            Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new[] { Tuple.Create(1, 2), Tuple.Create(3, 4) }));
+            Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new[] { (1, 2), (3, 4) }));
+        }
+    }
 
     public class ThreadStatsTests
     {

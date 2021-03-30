@@ -43,23 +43,13 @@ namespace CsCheck
             return sb.ToString();
         }
 
-        static bool IsTuple(object o)
+        static bool IsPropertyType(object o)
         {
             
             var t = o.GetType();
             if (!t.IsGenericType) return false;
             var gt = t.GetGenericTypeDefinition();
             return gt == typeof(KeyValuePair<,>)
-                || gt == typeof(ValueTuple<>)
-                || gt == typeof(ValueTuple<,>)
-                || gt == typeof(ValueTuple<,,>)
-                || gt == typeof(ValueTuple<,,,>)
-                || gt == typeof(ValueTuple<,,,,>)
-                || gt == typeof(ValueTuple<,,,,>)
-                || gt == typeof(ValueTuple<,,,,>)
-                || gt == typeof(ValueTuple<,,,,,>)
-                || gt == typeof(ValueTuple<,,,,,,>)
-                || gt == typeof(ValueTuple<,,,,,,,>)
                 || gt == typeof(Tuple<>)
                 || gt == typeof(Tuple<,>)
                 || gt == typeof(Tuple<,,>)
@@ -70,10 +60,41 @@ namespace CsCheck
                 || gt == typeof(Tuple<,,,,,,,>);
         }
 
-        static string PrintTuple(object o)
+        static string PrintProperties(object o)
         {
             var sb = new StringBuilder("(");
             var fields = o.GetType().GetProperties();
+            sb.Append(Print(fields[0].GetValue(o)));
+            for (int i = 1; i < fields.Length; i++)
+            {
+                sb.Append(", ");
+                sb.Append(Print(fields[i].GetValue(o)));
+            }
+            sb.Append(")");
+            return sb.ToString();
+        }
+
+        static bool IsFieldType(object o)
+        {
+            var t = o.GetType();
+            if (!t.IsGenericType) return false;
+            var gt = t.GetGenericTypeDefinition();
+            return gt == typeof(ValueTuple<>)
+                || gt == typeof(ValueTuple<,>)
+                || gt == typeof(ValueTuple<,,>)
+                || gt == typeof(ValueTuple<,,,>)
+                || gt == typeof(ValueTuple<,,,,>)
+                || gt == typeof(ValueTuple<,,,,>)
+                || gt == typeof(ValueTuple<,,,,>)
+                || gt == typeof(ValueTuple<,,,,,>)
+                || gt == typeof(ValueTuple<,,,,,,>)
+                || gt == typeof(ValueTuple<,,,,,,,>);
+        }
+
+        static string PrintFields(object o)
+        {
+            var sb = new StringBuilder("(");
+            var fields = o.GetType().GetFields();
             sb.Append(Print(fields[0].GetValue(o)));
             for (int i = 1; i < fields.Length; i++)
             {
@@ -95,7 +116,8 @@ namespace CsCheck
             IEnumerable<object> e when e.Take(999).Count() <= 999 => "L=" + e.Count() + " {" + string.Join(", ", e.Select(Print)) + "}",
             IEnumerable<object> e => "L>999 {" + string.Join(", ", e.Take(6).Select(Print)) + " ... }",
             IEnumerable e => Print(e.Cast<object>()),
-            T tuple when IsTuple(tuple) => PrintTuple(tuple),
+            T pt when IsPropertyType(pt) => PrintProperties(pt),
+            T ft when IsFieldType(ft) => PrintFields(ft),
             _ => t.ToString(),
         };
 
@@ -145,9 +167,9 @@ namespace CsCheck
             return a.Equals(b);
         }
 
-        internal static bool ModelEqual<T, M>(T a, M b)
+        internal static bool ModelEqual<T, M>(T actual, M model)
         {
-            if (a is IList ail && b is IList bil)
+            if (actual is IList ail && model is IList bil)
             {
                 if (ail.Count != bil.Count) return false;
                 for (int i = 0; i < ail.Count; i++)
@@ -155,11 +177,11 @@ namespace CsCheck
                         return false;
                 return true;
             }
-            else if (a.GetType().GetInterface(typeof(IReadOnlyList<>).Name) != null
-                  && b.GetType().GetInterface(typeof(IReadOnlyList<>).Name) != null)
+            else if (actual.GetType().GetInterface(typeof(IReadOnlyList<>).Name) != null
+                  && model.GetType().GetInterface(typeof(IReadOnlyList<>).Name) != null)
             {
-                var e1 = ((IEnumerable)a).GetEnumerator();
-                var e2 = ((IEnumerable)b).GetEnumerator();
+                var e1 = ((IEnumerable)actual).GetEnumerator();
+                var e2 = ((IEnumerable)model).GetEnumerator();
                 while (true)
                 {
                     var e1MoveNext = e1.MoveNext();
@@ -168,17 +190,17 @@ namespace CsCheck
                     if (!Equal(e1.Current, e2.Current)) return false;
                 }
             }
-            else if (a is ICollection aic && b is ICollection bic)
+            else if (actual is ICollection aic && model is ICollection bic)
             {
                 return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
             }
-            else if (a is IEnumerable aie && b is IEnumerable bie)
+            else if (actual is IEnumerable aie && model is IEnumerable bie)
             {
                 var aieo = aie.Cast<object>().ToList();
                 var bieo = bie.Cast<object>().ToList();
                 return aieo.Count == bieo.Count && !aieo.Except(bieo).Any();
             }
-            return a.Equals(b);
+            return actual.Equals(model);
         }
 
         static readonly int[] DummyArray = new int[MAX_CONCURRENT_OPERATIONS];

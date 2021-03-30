@@ -5,6 +5,7 @@ using Xunit;
 using CsCheck;
 using System.Linq;
 using ImTools;
+using System.Globalization;
 
 namespace Tests
 {
@@ -81,6 +82,8 @@ namespace Tests
                     (d, t) => d.Im = d.Im.AddOrUpdate(t.V0, t.V1).AddOrUpdate(t.V2, t.V3),
                     (d, t) => d.Im = t.V0 == t.V2 ? d.Im.AddOrUpdate(t.V2, t.V3) : d.Im.AddOrUpdate(t.V2, t.V3).AddOrUpdate(t.V0, t.V1)
                 )
+                , equal: (a, b) => Check.Equal(a.Im.Enumerate().Select(j => (j.Key, j.Value)), b.Im.Enumerate().Select(j => (j.Key, j.Value)))
+                , print: i => Check.Print(i.Im.Enumerate().Select(j => (j.Key, j.Value)))
             );
         }
 
