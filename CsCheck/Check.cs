@@ -203,7 +203,7 @@ namespace CsCheck
                 info = null;
             }
             int skipped = 0;
-            bool isIter = Time < 0;
+            bool isIter = time < 0;
             long target = isIter ? seed is null ? iter : iter - 1
                         : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
             long total = seed is null ? 0 : 1;

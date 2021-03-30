@@ -1,15 +1,15 @@
 ﻿using System;
+using System.Text;
 using System.Linq;
 using System.Threading;
 using System.Diagnostics;
 using System.Collections.Generic;
-using System.Text;
 
 namespace CsCheck
 {
     public static class Causal
     {
-        public struct Region { public string Name; public long Start; public long TotalDelay; public long OnSince; }
+        const int SUMMARY_STAT_COUNT = 6;
         enum RunType { Nothing, CollectTimes, Delay }
         static RunType runType;
         static SpinLock spinLock = new(false);
@@ -17,6 +17,7 @@ namespace CsCheck
         static int delayTime, delayCount;
         static long onSince, totalDelay;
         static readonly List<(string, long)> times = new();
+        public struct Region { public string Name; public long Start; public long TotalDelay; public long OnSince; }
 
         public static Region RegionStart(string name)
         {
@@ -25,13 +26,8 @@ namespace CsCheck
             var lockTaken = false;
             spinLock.Enter(ref lockTaken);
             if (delayName == name && delayTime < 0)
-            {
                 if (delayCount++ == 0)
-                {
-                    if (onSince != 0L) throw new Exception($"um {onSince}"); // remove me
                     onSince = now;
-                }
-            }
             var localTotalDelay = totalDelay;
             var localOnSince = onSince;
             if (lockTaken) spinLock.Exit(false);
@@ -77,15 +73,14 @@ namespace CsCheck
                     var wait = now + (now - region.Start) * delayTime / 100L;
                     while (Stopwatch.GetTimestamp() < wait) { };
                 }
-                else
-                {
-                    if (lockTaken) spinLock.Exit(false);
-                }
+                else if (lockTaken) spinLock.Exit(false);
             }
         }
 
-        public static CausalResult Profile(int n, Action action)
+        public static Result Profile(Action action, long iter = -1, int time = -1)
         {
+            if (iter == -1) iter = Check.Iter;
+            if (time == -1) time = Check.Time;
             int Run(RunType run, string name, int time)
             {
                 runType = run;
@@ -99,82 +94,76 @@ namespace CsCheck
                 return (int)(Stopwatch.GetTimestamp() - start - totalDelay);
             }
             Run(RunType.CollectTimes, null, 0);
+            var summary = times.Select(i => i.Item1).Distinct().Select(i => new Result.Row { Region = i }).ToArray();
             times.Clear();
-            List<CausalResultRow> Times()
+            for (int j = 0; j < SUMMARY_STAT_COUNT; j++)
             {
                 var totalTimePct = Run(RunType.CollectTimes, null, 0) * Environment.ProcessorCount * 0.01;
-                var summaries = times.GroupBy(t => t.Item1, (r, s) =>
-                    new CausalResultRow { Region = r, Count = s.Count(), Time = s.Sum(i => i.Item2) / totalTimePct })
-                    .ToList();
+                foreach (var row in summary)
+                    foreach (var (s, t) in times)
+                        if (row.Region == s)
+                        {
+                            row.Count++;
+                            row.Time += t / totalTimePct;
+                        }
                 times.Clear();
-                return summaries;
             }
-
-            var summary =
-                Enumerable.Range(0, 6).SelectMany(_ => Times())
-                .GroupBy(i => i.Region, (r, s) =>
-                    new CausalResultRow { Region = r, Count = s.Sum(i => i.Count) / s.Count(), Time = Median(s.Select(i => i.Time)) })
-                .ToDictionary(i => i.Region);
-
-            var delays = new (string, int, MedianEstimator)[1 + 6 * summary.Count];
+            var delays = new (string, int, MedianEstimator)[1 + 6 * summary.Length];
             delays[0] = (null, 0, new());
             int i = 1;
-            foreach (var r in summary.Keys) delays[i++] = (r, 5, new());
-            foreach (var r in summary.Keys) delays[i++] = (r, -5, new());
-            foreach (var r in summary.Keys) delays[i++] = (r, 10, new());
-            foreach (var r in summary.Keys) delays[i++] = (r, -10, new());
-            foreach (var r in summary.Keys) delays[i++] = (r, -15, new());
-            foreach (var r in summary.Keys) delays[i++] = (r, -20, new());
-
-            for (i = 1; i <= n; i++)
-                for (int j = 0; j < delays.Length; j++)
-                {
-                    var (name, time, estimator) = delays[j];
-                    estimator.Add(Run(RunType.Delay, name, time));
-                }
-
-            runType = RunType.Nothing;
-
-            static MedianEstimate Estimate(MedianEstimator e) => new() { Median = e.Median, Error = e.UpperQuartile - e.LowerQuartile };
-            var totalPct = Estimate(delays[0].Item3) * 0.01;
-            return new CausalResult
+            foreach (var row in summary)
             {
-                Rows = summary.Values
-                .Select(s =>
-                {
-                    var r = new CausalResultRow
-                    {
-                        Region = s.Region,
-                        Count = s.Count,
-                        Time = s.Time,
-                        P10 = 100.0 - Estimate(delays.First(i => i.Item1 == s.Region && i.Item2 == 10).Item3) / totalPct,
-                        P5 = 100.0 - Estimate(delays.First(i => i.Item1 == s.Region && i.Item2 == 5).Item3) / totalPct,
-                        N5 = 100.0 - Estimate(delays.First(i => i.Item1 == s.Region && i.Item2 == -5).Item3) / totalPct,
-                        N10 = 100.0 - Estimate(delays.First(i => i.Item1 == s.Region && i.Item2 == -10).Item3) / totalPct,
-                        N15 = 100.0 - Estimate(delays.First(i => i.Item1 == s.Region && i.Item2 == -15).Item3) / totalPct,
-                        N20 = 100.0 - Estimate(delays.First(i => i.Item1 == s.Region && i.Item2 == -20).Item3) / totalPct,
-                    };
-                    return r;
-                })
-                .ToArray()
-            };
+                row.Count /= SUMMARY_STAT_COUNT;
+                row.Time /= SUMMARY_STAT_COUNT;
+                delays[i] = (row.Region, 5, new());
+                delays[i + summary.Length] = (row.Region, -5, new());
+                delays[i + summary.Length * 2] = (row.Region, 10, new());
+                delays[i + summary.Length * 3] = (row.Region, -10, new());
+                delays[i + summary.Length * 4] = (row.Region, -15, new());
+                delays[i++ + summary.Length * 5] = (row.Region, -20, new());
+            }
+            if (time < 0)
+            {
+                for (i = 0; i < iter; i++)
+                    foreach (var (name, delay, estimator) in delays)
+                        estimator.Add(Run(RunType.Delay, name, delay));
+            }
+            else
+            {
+                long target = Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
+                while (Stopwatch.GetTimestamp() < target)
+                    foreach (var (name, delay, estimator) in delays)
+                        estimator.Add(Run(RunType.Delay, name, delay));
+            }
+            runType = RunType.Nothing;
+            MedianEstimate Estimate(int i) => new(delays[i].Item3);
+            var totalPct = Estimate(0) * 0.01;
+            for (i = 0; i < summary.Length; i++)
+            {
+                var row = summary[i];
+                row.P5 = 100.0 - Estimate(1 + i) / totalPct;
+                row.N5 = 100.0 - Estimate(1 + i + summary.Length) / totalPct;
+                row.P10 = 100.0 - Estimate(1 + i + summary.Length * 2) / totalPct;
+                row.N10 = 100.0 - Estimate(1 + i + summary.Length * 3) / totalPct;
+                row.N15 = 100.0 - Estimate(1 + i + summary.Length * 4) / totalPct;
+                row.N20 = 100.0 - Estimate(1 + i + summary.Length * 5) / totalPct;
+            }
+            return new Result { Rows = summary };
         }
 
-        static double Median(IEnumerable<double> s)
+        public static Result Profile<T>(this Gen<T> gen, Action<T> action, long iter = -1, int time = -1)
         {
-            var a = s.ToArray();
-            Array.Sort(a);
-            return a.Length % 2 == 0 ? (a[a.Length / 2] + a[a.Length / 2 - 1]) * 0.5 : a[a.Length / 2];
+            var pcg = PCG.ThreadPCG;
+            return Profile(() => action(gen.Generate(pcg, null, out _)), iter, time);
         }
 
-        public class CausalResultRow { public string Region; public int Count; public double Time; public MedianEstimate P10, P5, N5, N10, N15, N20; }
-
-        public class CausalResult
+        public class Result
         {
-            public CausalResultRow[] Rows;
+            public class Row { public string Region; public int Count; public double Time; public MedianEstimate P10, P5, N5, N10, N15, N20; }
+            public Row[] Rows;
             public override string ToString()
             {
-                var sb = new StringBuilder("| Region         |  Count  |  Time%  |     +10%     |      +5%     |      -5%     |     -10%     |     -15%     |     -20%     |\n|:---------------|--------:|--------:|-------------:|-------------:|-------------:|-------------:|-------------:|-------------:|      \n");
+                var sb = new StringBuilder("\n| Region         |  Count  |  Time%  |    +10%     |     +5%     |     -5%     |    -10%     |    -15%     |    -20%     |\n|:---------------|--------:|--------:|------------:|------------:|------------:|------------:|------------:|------------:|\n");
                 foreach (var r in Rows)
                 {
                     sb.Append("| ");
@@ -185,27 +174,11 @@ namespace CsCheck
                     sb.Append(r.Time.ToString("0.0").PadLeft(7));
                     sb.Append(" | ").Append(r.P10).Append(" | ").Append(r.P5);
                     sb.Append(" | ").Append(r.N5).Append(" | ").Append(r.N10).Append(" | ").Append(r.N15).Append(" | ").Append(r.N20);
-                    sb.Append("\n");
+                    sb.Append(" |\n");
                 }
                 return sb.ToString();
             }
             public void Output(Action<string> output) => output(ToString());
-        }
-
-        public struct MedianEstimate
-        {
-            public double Median;
-            public double Error;
-            static double Sqr(double x) => x * x;
-            public static MedianEstimate operator -(double a, MedianEstimate e) => new() { Median = a - e.Median, Error = e.Error };
-            public static MedianEstimate operator -(MedianEstimate e, double a) => new() { Median = e.Median - a, Error = e.Error };
-            public static MedianEstimate operator -(MedianEstimate a, MedianEstimate b) =>
-                new() { Median = a.Median - b.Median, Error = Math.Sqrt(Sqr(a.Error) + Sqr(b.Error)) };
-            public static MedianEstimate operator *(MedianEstimate e, double a) => new() { Median = e.Median * a, Error = e.Error * a };
-            public static MedianEstimate operator /(MedianEstimate a, MedianEstimate b) =>
-                new() { Median = a.Median / b.Median, Error = Math.Sqrt(Sqr(a.Error / a.Median) * Sqr(b.Error / b.Median)) * Math.Abs(a.Median / b.Median) };
-            public override string ToString() =>
-                Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0").PadLeft(5) + " ±" + Math.Min(Error, 99.9).ToString("0.0").PadLeft(4);
         }
     }
 }

@@ -368,4 +368,23 @@ namespace CsCheck
             }
         }
     }
+
+    public struct MedianEstimate
+    {
+        public double Median, Error;
+        public MedianEstimate(MedianEstimator e)
+        {
+            Median = e.Median;
+            Error = (e.UpperQuartile - e.LowerQuartile) * 0.5;
+        }
+        static double Sqr(double x) => x * x;
+        public static MedianEstimate operator -(double a, MedianEstimate e) => new() { Median = a - e.Median, Error = e.Error };
+        public static MedianEstimate operator *(MedianEstimate e, double a) => new() { Median = e.Median * a, Error = e.Error * a };
+        public static MedianEstimate operator /(MedianEstimate a, MedianEstimate b) => new() {
+            Median = a.Median / b.Median,
+            Error = Math.Sqrt(Sqr(a.Error / a.Median) * Sqr(b.Error / b.Median)) * Math.Abs(a.Median / b.Median)
+        };
+        public override string ToString() => Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0").PadLeft(5)
+                                           + " ±" + Math.Min(Error, 99.9).ToString("0.0").PadLeft(4);
+    }
 }

@@ -13,7 +13,7 @@
         [Fact(Skip = "Long running test.")]
         public void ReverseComplement_Faster()
         {
-            if (!File.Exists(FastaUtils.Fasta.Filename)) FastaUtils.Fasta.NotMain(new[] { "25000000" });
+            if (!File.Exists(FastaUtils.Fasta.Filename)) FastaUtils.Fasta.NotMain(25_000_000, FastaUtils.Fasta.Filename);
 
             Check.Faster(
                 ReverseComplementNew.RevComp.NotMain,
@@ -21,6 +21,18 @@
                 threads: 1, timeout: 600_000, sigma: 6
             )
             .Output(writeLine);
+        }
+    }
+
+    public class CausalTests
+    {
+        readonly Action<string> writeLine;
+        public CausalTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
+
+        [Fact(Skip = "Long running test.")]
+        public void Fasta()
+        {
+            Causal.Profile(() => FastaUtils.Fasta.NotMain(10_000_000, null)).Output(writeLine);
         }
     }
 }
@@ -398,6 +410,7 @@ namespace FastaUtils
     using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading;
+    using CsCheck;
 
     public class Fasta
     {
@@ -433,6 +446,7 @@ namespace FastaUtils
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int[] Rnds(int i, int j, ref int seed)
         {
+            var region = Causal.RegionStart("rnds");
             var a = intPool.Rent(BlockSize1);
             var s = a.AsSpan(0, i);
             s[0] = j;
@@ -448,6 +462,7 @@ namespace FastaUtils
                     s[i] = seed = (seed * IA + IC) % IM;
                 }
             }
+            Causal.RegionEnd(region);
             return a;
         }
 
@@ -462,10 +477,12 @@ namespace FastaUtils
 
             void create(object o)
             {
+                var region = Causal.RegionStart("bytes");
                 var rnds = (int[])o;
                 blocks[rnds[0]] =
                     Tuple.Create(Bytes(BlockSize1, rnds, ps, vs), BlockSize1);
                 intPool.Return(rnds);
+                Causal.RegionEnd(region);
             }
 
             var createDel = (WaitCallback)create;
@@ -488,10 +505,9 @@ namespace FastaUtils
             return seed;
         }
 
-        public static void NotMain(string[] args)
+        public static void NotMain(int n, string filename)
         {
-            int n = args.Length == 0 ? 1000 : int.Parse(args[0]);
-            using var o = File.Create(Filename);//Console.OpenStandardOutput();
+            using var o = filename == null ? (Stream)new MemoryStream() : File.Create(filename);
             var blocks = new Tuple<byte[], int>[
                 (3 * n - 1) / BlockSize + (5 * n - 1) / BlockSize + 3];
 
@@ -513,6 +529,7 @@ namespace FastaUtils
                         1.0F }, blocks);
             });
 
+            var region = Causal.RegionStart("one");
             o.Write(Encoding.ASCII.GetBytes(">ONE Homo sapiens alu"), 0, 21);
             var table = Encoding.ASCII.GetBytes(
                 "GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGG" +
@@ -534,6 +551,7 @@ namespace FastaUtils
             o.Write(repeatedBytes, 0, remaining + (remaining - 1) / Width + 1);
             bytePool.Return(repeatedBytes);
             o.Write(Encoding.ASCII.GetBytes("\n>TWO IUB ambiguity codes"), 0, 25);
+            Causal.RegionEnd(region);
 
             blocks[(3 * n - 1) / BlockSize + 1] = Tuple.Create
                 (Encoding.ASCII.GetBytes("\n>THREE Homo sapiens frequency"), 30);
@@ -542,9 +560,11 @@ namespace FastaUtils
             {
                 Tuple<byte[], int> t;
                 while ((t = blocks[i]) == null) Thread.Sleep(0);
+                region = Causal.RegionStart("write");
                 t.Item1[0] = (byte)'\n';
                 o.Write(t.Item1, 0, t.Item2);
                 if (t.Item2 == BlockSize1) bytePool.Return(t.Item1);
+                Causal.RegionEnd(region);
             }
 
             o.WriteByte((byte)'\n');
