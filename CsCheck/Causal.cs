@@ -1,4 +1,18 @@
-﻿using System;
+﻿// Copyright 2021 Anthony Lloyd
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+using System;
 using System.Text;
 using System.Linq;
 using System.Threading;
@@ -19,6 +33,8 @@ namespace CsCheck
         static readonly List<(string, long)> times = new();
         public struct Region { public string Name; public long Start; public long TotalDelay; public long OnSince; }
 
+        /// <summary>Marks the start of causal profiling region.</summary>
+        /// <param name="name">region name</param>
         public static Region RegionStart(string name)
         {
             if (runType == RunType.Nothing) return new Region();
@@ -34,6 +50,8 @@ namespace CsCheck
             return new Region { Name = name, Start = now, TotalDelay = localTotalDelay, OnSince = localOnSince };
         }
 
+        /// <summary>Marks the end of causal profiling region.</summary>
+        /// <param name="region">region returned by RegionStart</param>
         public static void RegionEnd(Region region)
         {
             if (runType == RunType.Nothing) return;
@@ -77,6 +95,10 @@ namespace CsCheck
             }
         }
 
+        /// <summary>Run causal profiling on a the code in action for a number of iterations or time.</summary>
+        /// <param name="action">code to be profiled</param>
+        /// <param name="iter">number of iteration to collect statistics</param>
+        /// <param name="time">number of seconds to collect statistics</param>
         public static Result Profile(Action action, long iter = -1, int time = -1)
         {
             if (iter == -1) iter = Check.Iter;
@@ -151,6 +173,11 @@ namespace CsCheck
             return new Result { Rows = summary };
         }
 
+        /// <summary>Run causal profiling on a the code in action using gen input data for a number of iterations or time.</summary>
+        /// <param name="gen">input data generator</param>
+        /// <param name="action">code to be profiled</param>
+        /// <param name="iter">number of iteration to collect statistics</param>
+        /// <param name="time">number of seconds to collect statistics</param>
         public static Result Profile<T>(this Gen<T> gen, Action<T> action, long iter = -1, int time = -1)
         {
             var pcg = PCG.ThreadPCG;
