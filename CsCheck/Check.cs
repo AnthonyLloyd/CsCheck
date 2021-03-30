@@ -520,7 +520,7 @@ namespace CsCheck
 
         class MetamorphicData<T> { public T State1; public T State2; public uint Stream; public ulong Seed; public Exception Exception; }
 
-        /// <summary>Sample metamorphic operations (two operations in applied in opposite order) on a random initial state checking that both paths are equal.
+        /// <summary>Sample metamorphic (two path) operations on a random initial state checking that both paths are equal.
         /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
         /// <param name="initial">The initial state generator.</param>
         /// <param name="operations">A metamorphic operation generator that can act on the state.</param>

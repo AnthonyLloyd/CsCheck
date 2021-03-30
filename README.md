@@ -5,7 +5,7 @@
 <a href="https://www.nuget.org/packages/CsCheck"><img src="https://buildstats.info/nuget/CsCheck?includePreReleases=true"></a>
 </p>
 
-NOTE: Please try the 2.0.0-rc1 release. The 2.0.0 release will be very soon after integrating any feedback. The examples below need a revamp which will happen over the next week.
+NOTE: Please try the 2.0.0-rc2 release. The 2.0.0 release will be very soon after integrating any feedback. The examples below need a revamp which will happen over the next week.
 
 CsCheck is a C# random testing library inspired by QuickCheck.
 
@@ -26,7 +26,9 @@ CsCheck also has functionality to make multiple types of testing simple and fast
 
 - [Random testing](#Random-testing)
 - [Model-based testing](#Model-based-testing)
+- [Metamorphic testing](#Metamorphic-testing)
 - [Concurrency testing](#Concurrency-testing)
+- [Causal profiling](#Causal-profiling)
 - [Regression testing](#Regression-testing)
 - [Performance testing](#Performance-testing)
 - [Configuration](#Configuration)
@@ -99,7 +101,7 @@ public void DateTime()
 }
 ```
 
-## Model-based testing
+## Metamorphic testing
 
 ### Sample Map AddOrUpdate test.
 ```csharp
@@ -157,6 +159,8 @@ Actual:   SelectIPartitionIterator<ValueEntry<Int32, Int32>, ValueTuple<Int32, I
    at CsCheck.Check.<>c__DisplayClass5_0`1.<Sample>b__0(Int32 _) in C:\Users\Ant\src\CsCheck\CsCheck\Check.cs:line 113
 ```
 
+## Model-based testing
+
 For this case there is also a very good Model-based approach. This gives the best coverage but it is not always possible to find a model that is not just a reimplementation.
 
 ```csharp
@@ -206,6 +210,10 @@ public void Multithreading_DictionarySlim()
     );
 }
 ```
+
+## Causal profiling
+
+Coming soon...
 
 ## Regression testing
 
