@@ -15,14 +15,10 @@ namespace Tests
         [Fact]
         public void ListSlim_ModelBased()
         {
-            Gen.Int.Array.Select(a =>
-            {
-                var l = new ListSlim<int>(a.Length);
-                foreach (var i in a) l.Add(i);
-                return (l, a.ToList());
-            })
+            Gen.Int.Array.Select(a => (new ListSlim<int>(a), new List<int>(a)))
             .SampleModelBased(
-                Gen.Int.Operation<ListSlim<int>, List<int>>((ls, l, i) => {
+                Gen.Int.Operation<ListSlim<int>, List<int>>((ls, l, i) =>
+                {
                     ls.Add(i);
                     l.Add(i);
                 })
@@ -32,12 +28,7 @@ namespace Tests
         [Fact]
         public void ListSlim_Concurrency()
         {
-            Gen.Byte.Array.Select(a =>
-            {
-                var l = new ListSlim<byte>(a.Length);
-                foreach (var i in a) l.Add(i);
-                return l;
-            })
+            Gen.Byte.Array.Select(a => new ListSlim<byte>(a))
             .SampleConcurrent(
                 Gen.Byte.Operation<ListSlim<byte>>((l, i) => { lock (l) l.Add(i); }),
                 Gen.Int.NonNegative.Operation<ListSlim<byte>>((l, i) => { if (i < l.Count) { var _ = l[i]; } }),
@@ -47,20 +38,20 @@ namespace Tests
         }
 
         [Fact]
-        public void ListSlim_Faster()
+        public void ListSlim_Performance_Add()
         {
-            Gen.Byte.Array
+            Gen.Int.Array
             .Faster(
                 t =>
                 {
-                    var d = new ListSlim<byte>();
+                    var d = new ListSlim<int>();
                     for (int i = 0; i < t.Length; i++)
                         d.Add(t[i]);
                     return d.Count;
                 },
                 t =>
                 {
-                    var d = new List<byte>();
+                    var d = new List<int>();
                     for (int i = 0; i < t.Length; i++)
                         d.Add(t[i]);
                     return d.Count;
@@ -69,21 +60,88 @@ namespace Tests
             ).Output(writeLine);
         }
 
-        [Fact(Skip ="WIP")]
+        [Fact]
+        public void ListSlim_Performance_Get()
+        {
+            Gen.Int.Array[100]
+            .Select(a => (new ListSlim<int>(a), new List<int>(a)))
+            .Faster(
+                t =>
+                {
+                    var s = t.Item1;
+                    for (int i = 0; i < s.Count; i++) { var _ = s[i]; };
+                },
+                t =>
+                {
+                    var s = t.Item2;
+                    for (int i = 0; i < s.Count; i++) { var _ = s[i]; };
+                },
+                repeat: 50
+            ).Output(writeLine);
+        }
+
+        [Fact]
         public void SetSlim_ModelBased()
         {
-            Gen.Int.Array.Select(a =>
-            {
-                var l = new SetSlim<int>();
-                foreach (var i in a) l.Add(i);
-                return (l, new HashSet<int>(a));
-            })
+            Gen.Int.Array.Select(a => (new SetSlim<int>(a), new HashSet<int>(a)))
             .SampleModelBased(
-                Gen.Int.Operation<SetSlim<int>, HashSet<int>>((ls, l, i) => {
+                Gen.Int.Operation<SetSlim<int>, HashSet<int>>((ls, l, i) =>
+                {
                     ls.Add(i);
                     l.Add(i);
                 })
             );
+        }
+
+        [Fact]
+        public void SetSlim_Concurrency()
+        {
+            Gen.Byte.Array.Select(a => new SetSlim<byte>(a))
+            .SampleConcurrent(
+                Gen.Byte.Operation<SetSlim<byte>>((l, i) => { lock (l) l.Add(i); }),
+                Gen.Int.NonNegative.Operation<SetSlim<byte>>((l, i) => { if (i < l.Count) { var _ = l[i]; } }),
+                Gen.Byte.Operation<SetSlim<byte>>((l, i) => { var _ = l.IndexOf(i); }),
+                Gen.Operation<SetSlim<byte>>(l => l.ToArray())
+            );
+        }
+
+        [Fact(Skip ="WIP")]
+        public void SetSlim_Performance_Add()
+        {
+            Gen.Int.Array[10]
+            .Faster(
+                a =>
+                {
+                    var s = new SetSlim<int>(a.Length);
+                    foreach (var i in a) s.Add(i);
+                },
+                a =>
+                {
+                    var s = new HashSet<int>(a.Length);
+                    foreach (var i in a) s.Add(i);
+                },
+                repeat: 1000, sigma: 15
+            ).Output(writeLine);
+        }
+
+        [Fact]
+        public void SetSlim_Performance_Contains()
+        {
+            Gen.Int[0, 100].Array
+            .Select(a => (a, new SetSlim<int>(a), new HashSet<int>(a)))
+            .Faster(
+                t =>
+                {
+                    var s = t.Item2;
+                    foreach (var i in t.a) s.Contains(i);
+                },
+                t =>
+                {
+                    var s = t.Item3;
+                    foreach (var i in t.a) s.Contains(i);
+                },
+                repeat: 1000
+            ).Output(writeLine);
         }
     }
 
@@ -95,6 +153,16 @@ namespace Tests
         int count;
         public ListSlim() => entries = empty;
         public ListSlim(int capacity) => entries = new T[capacity];
+        public ListSlim(IEnumerable<T> items)
+        {
+            if (items is ICollection<T> ts)
+            {
+                entries = new T[ts.Count];
+                ts.CopyTo(entries, 0);
+            }
+            else entries = items.ToArray();
+            count = entries.Length;
+        }
         public int Count => count;
         public T this[int i]
         {
@@ -157,17 +225,23 @@ namespace Tests
         struct Entry { internal int Bucket; internal int Next; internal T Item; }
         int count;
         Entry[] entries;
-        public SetSlim()
-        {
-            count = 0;
-            entries = SetSlimHolder.Initial;
-        }
+        public SetSlim() => entries = SetSlimHolder.Initial;
+
         public SetSlim(int capacity)
         {
-            count = 0;
             if (capacity < 2) capacity = 2;
             entries = new Entry[PowerOf2(capacity)];
         }
+
+        public SetSlim(IEnumerable<T> items)
+        {
+            var ts = items as ICollection<T> ?? items.ToList();
+            var capacity = ts.Count;
+            if (capacity < 2) capacity = 2;
+            entries = new Entry[PowerOf2(capacity)];
+            foreach (var i in ts) Add(i);
+        }
+        
         static int PowerOf2(int capacity)
         {
             if ((capacity & (capacity - 1)) == 0) return capacity;
@@ -175,6 +249,7 @@ namespace Tests
             while (i < capacity) i <<= 1;
             return i;
         }
+
         void Resize()
         {
             var oldEntries = entries;
@@ -183,26 +258,25 @@ namespace Tests
             while (i-- > 0)
             {
                 newEntries[i].Item = oldEntries[i].Item;
-                var bi = newEntries[i].Item!.GetHashCode() & (newEntries.Length - 1);
-                newEntries[i].Next = newEntries[bi].Bucket - 1;
-                newEntries[i].Bucket = i + 1;
+                var bucketIndex = newEntries[i].Item.GetHashCode() & (newEntries.Length - 1);
+                newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
+                newEntries[bucketIndex].Bucket = i + 1;
             }
             entries = newEntries;
         }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         int AddItem(T item, int hashCode)
         {
             var i = count;
-            if (i == 0 && entries.Length == 1)
-                entries = new Entry[2];
-            else if (i == entries.Length)
-                Resize();
+            if (i == 0 && entries.Length == 1) entries = new Entry[2];
+            else if (i == entries.Length) Resize();
             var ent = entries;
             ent[i].Item = item;
             var bucketIndex = hashCode & (ent.Length - 1);
             ent[i].Next = ent[bucketIndex].Bucket - 1;
             ent[bucketIndex].Bucket = i + 1;
-            count = i + 1;
+            count++;
             return i;
         }
 
@@ -222,6 +296,15 @@ namespace Tests
             var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
             while (i >= 0 && !item.Equals(ent[i].Item)) i = ent[i].Next;
             return i;
+        }
+
+        public bool Contains(T item)
+        {
+            var ent = entries;
+            var hashCode = item.GetHashCode();
+            var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
+            while (i >= 0 && !item.Equals(ent[i].Item)) i = ent[i].Next;
+            return i >= 0;
         }
 
         public IEnumerator<T> GetEnumerator()

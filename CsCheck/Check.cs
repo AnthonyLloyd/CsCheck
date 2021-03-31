@@ -889,13 +889,7 @@ namespace CsCheck
                             slower();
                             ts = Stopwatch.GetTimestamp() - ts;
                             if (mre.IsSet) return;
-                            var e = (double)(ts - tf) / ts;
-                            lock (r)
-                            {
-                                r.Median.Add(e);
-                                if (tf < ts) r.Faster++;
-                                else if (tf > ts) r.Slower++;
-                            }
+                            r.Add(tf, ts);
                             if (r.SigmaSquared >= sigma) mre.Set();
                         }
                     }
@@ -976,13 +970,7 @@ namespace CsCheck
                                     return;
                                 }
                             }
-                            var e = (double)(ts - tf) / ts;
-                            lock (r)
-                            {
-                                r.Median.Add(e);
-                                if (tf < ts) r.Faster++;
-                                else if (tf > ts) r.Slower++;
-                            }
+                            r.Add(tf, ts);
                             if (r.SigmaSquared >= sigma) mre.Set();
                         }
                     }
@@ -1043,13 +1031,7 @@ namespace CsCheck
                             slower(t);
                             ts = Stopwatch.GetTimestamp() - ts;
                             if (mre.IsSet) return;
-                            var e = (double)(ts - tf) / ts;
-                            lock (r)
-                            {
-                                r.Median.Add(e);
-                                if (tf < ts) r.Faster++;
-                                else if (tf > ts) r.Slower++;
-                            }
+                            r.Add(tf, ts);
                             if (r.SigmaSquared >= sigma) mre.Set();
                         }
                     }
@@ -1140,13 +1122,7 @@ namespace CsCheck
                                     return;
                                 }
                             }
-                            var e = (double)(ts - tf) / ts;
-                            lock (r)
-                            {
-                                r.Median.Add(e);
-                                if (tf < ts) r.Faster++;
-                                else if (tf > ts) r.Slower++;
-                            }
+                            r.Add(tf, ts);
                             if (r.SigmaSquared >= sigma) mre.Set();
                         }
                     }
@@ -1280,7 +1256,7 @@ namespace CsCheck
     {
         public int Faster, Slower;
         public MedianEstimator Median;
-        internal float SigmaSquared
+        public float SigmaSquared
         {
             // Binomial distribution: Mean = n p, Variance = n p q
             // in this case H0 has n = Faster + Slower, p = 0.5, and q = 0.5
@@ -1292,11 +1268,30 @@ namespace CsCheck
                 return d * d / (Faster + Slower);
             }
         }
+        public void Add(long faster, long slower)
+        {
+            lock (Median)
+            {
+                if (faster < slower)
+                {
+                    Faster++;
+                    Median.Add(((double)(slower - faster)) / slower);
+                }
+                else if (slower < faster)
+                {
+                    Slower++;
+                    Median.Add(((double)(slower - faster)) / faster);
+                }
+                else
+                {
+                    Median.Add(0.0);
+                }
+            }
+        }
         public override string ToString()
         {
-            var result = Median.Median >= 0.0
-                ? $"{Median.Median * 100.0:#0.0}%[{Median.LowerQuartile * 100.0:#0.0}%..{Median.UpperQuartile * 100.0:#0.0}%] faster"
-                : $"{-Median.Median * 100.0:#0.0}%[{-Median.LowerQuartile * 100.0:#0.0}%..{-Median.UpperQuartile * 100.0:#0.0}%] slower";
+            var result = $"{Median.Median * 100.0:#0.0}%[{Median.LowerQuartile * 100.0:#0.0}%..{Median.UpperQuartile * 100.0:#0.0}%] ";
+            result += Median.Median >= 0.0 ? "faster" : "slower"; 
             if (double.IsNaN(Median.Median)) result = "Time resolution too small try using repeat.\n" + result;
             else if ((Median.Median >= 0.0) != (Faster > Slower)) result = "Inconsistent result try using repeat or increasing sigma.\n" + result;
             return result + $", sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";

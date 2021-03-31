@@ -105,7 +105,8 @@ namespace CsCheck
             return sb.ToString();
         }
 
-        internal static string Print<T>(T t) => t switch
+        /// <summary>Default print implementation. Handles most collections and tuple like types.</summary>
+        public static string Print<T>(T t) => t switch
         {
             null => "null",
             string s => s,
@@ -121,7 +122,8 @@ namespace CsCheck
             _ => t.ToString(),
         };
 
-        internal static bool Equal<T>(T a, T b)
+        /// <summary>Default equal implementation. Handles most collections ordered for IList like or unordered for ICollection based.</summary>
+        public static bool Equal<T>(T a, T b)
         {
             if (a is IEquatable<T> aieq) return aieq.Equals(b);
             else if (a is Array aa2 && b is Array ba2 && aa2.Rank == 2)
@@ -167,7 +169,8 @@ namespace CsCheck
             return a.Equals(b);
         }
 
-        internal static bool ModelEqual<T, M>(T actual, M model)
+        /// <summary>Default model equal implementation. Handles most collections ordered when actual is IList like or unordered when actual is ICollection based.</summary>
+        public static bool ModelEqual<T, M>(T actual, M model)
         {
             if (actual is IList ail && model is IList bil)
             {
@@ -370,6 +373,7 @@ namespace CsCheck
         }
     }
 
+    /// <summary>Median estimate with error. Supports mathematical operators.</summary>
     public struct MedianEstimate
     {
         public double Median, Error;

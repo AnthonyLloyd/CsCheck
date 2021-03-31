@@ -284,6 +284,8 @@ namespace Tests
     }
 }
 
+// TODO: Add slims
+// TODO: Performance profile and remove Perf
+// TODO: Write Shrinking Challendge PR
 // TODO: More Print
 // TODO: More Equal, ModelEqual
-// TODO: Add slims
