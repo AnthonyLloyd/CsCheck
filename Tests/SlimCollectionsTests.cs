@@ -100,7 +100,7 @@ namespace Tests
                     var s = new HashSet<int>();
                     foreach (var i in a) s.Add(i);
                 },
-                repeat: 100
+                repeat: 1000
             ).Output(writeLine);
         }
 

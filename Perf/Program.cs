@@ -12,8 +12,12 @@ namespace Perf
             RunTests(new CheckTests(output));
             RunTests(new GenTests());
             RunTests(new HashTests(output));
+            RunTests(new StreamSerializerTests());
             RunTests(new ModelTests());
             RunTests(new PCGTests());
+            RunTests(new SlimCollectionsTests(output));
+            RunTests(new UtilsTests());
+            RunTests(new ThreadStatsTests());
         }
 
         private static void RunTests(object testClass)
