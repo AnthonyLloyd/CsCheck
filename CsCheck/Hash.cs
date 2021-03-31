@@ -275,7 +275,7 @@ namespace CsCheck
                 }
                 else if (SignificantFigures.HasValue)
                 {
-                    
+
                     if (val != 0.0)
                     {
                         var scale = Pow10Double(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));

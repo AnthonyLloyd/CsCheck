@@ -199,12 +199,12 @@ namespace CsCheck
 
         public static Gen<T> Create<T>(GenDelegate<T> gen) => new GenCreate<T>(gen);
 
-        public static Gen<T> Create<T>(Func<PCG,(T,Size)> gen) => new GenCreate<T>((PCG pcg, Size min, out Size size) =>
-        {
-            T t;
-            (t, size) = gen(pcg);
-            return t;
-        });
+        public static Gen<T> Create<T>(Func<PCG, (T, Size)> gen) => new GenCreate<T>((PCG pcg, Size min, out Size size) =>
+          {
+              T t;
+              (t, size) = gen(pcg);
+              return t;
+          });
 
         public static Gen<R> Select<T, R>(this Gen<T> gen, Func<T, R> selector) =>
             Create((PCG pcg, Size min, out Size size) => selector(gen.Generate(pcg, min, out size)));
@@ -212,7 +212,7 @@ namespace CsCheck
         public static Gen<R> Select<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2,
             Func<T1, T2, R> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
-            if(min != null)
+            if (min != null)
             {
                 if (min.I < 0x2_0000_0000UL) { size = new Size(0x2_0000_0000UL); return default; }
                 min = min.I == 0x2_0000_0000UL ? min.Next : null;
@@ -1768,7 +1768,7 @@ namespace CsCheck
     {
         readonly GenDelegate<(string, Action<T>, Action<T>)> generate;
         internal GenMetamorphic(GenDelegate<(string, Action<T>, Action<T>)> generate) => this.generate = generate;
-        
+
         public override (string, Action<T>, Action<T>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
     }
 }

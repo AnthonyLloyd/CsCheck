@@ -13,8 +13,8 @@
 // limitations under the License.
 
 using System;
-using System.Diagnostics;
 using System.Threading;
+using System.Diagnostics;
 
 namespace CsCheck
 {

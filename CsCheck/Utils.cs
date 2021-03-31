@@ -13,12 +13,12 @@
 // limitations under the License.
 
 using System;
+using System.Text;
+using System.Linq;
 using System.Threading;
+using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Collections;
-using System.Linq;
-using System.Text;
 
 [assembly: InternalsVisibleTo("Tests, PublicKey=002400000480000094000000060200000024000052534131000400000100010089f5f142bc30ab84c70e4ccd0b09a684c3d822a99d269cac850f155421fced34048c0e3869a38db5cca81cd8ffcb7469a79422c3a2438a234c7534885471c1cc856ae40461a1ec4a4c5b1d897ba50f70ff486801a482505e0ec506c22da4a6ac5a1d8417e47985aa95caffd180dab750815989d43fcf0a7ee06ce8f1825106d0")]
 namespace CsCheck
@@ -45,7 +45,7 @@ namespace CsCheck
 
         static bool IsPropertyType(object o)
         {
-            
+
             var t = o.GetType();
             if (!t.IsGenericType) return false;
             var gt = t.GetGenericTypeDefinition();
@@ -148,7 +148,7 @@ namespace CsCheck
             {
                 var e1 = ((IEnumerable)a).GetEnumerator();
                 var e2 = ((IEnumerable)b).GetEnumerator();
-                while(true)
+                while (true)
                 {
                     var e1MoveNext = e1.MoveNext();
                     if (e1MoveNext != e2.MoveNext()) return false;
@@ -385,7 +385,8 @@ namespace CsCheck
         static double Sqr(double x) => x * x;
         public static MedianEstimate operator -(double a, MedianEstimate e) => new() { Median = a - e.Median, Error = e.Error };
         public static MedianEstimate operator *(MedianEstimate e, double a) => new() { Median = e.Median * a, Error = e.Error * a };
-        public static MedianEstimate operator /(MedianEstimate a, MedianEstimate b) => new() {
+        public static MedianEstimate operator /(MedianEstimate a, MedianEstimate b) => new()
+        {
             Median = a.Median / b.Median,
             Error = Math.Sqrt(Sqr(a.Error / a.Median) * Sqr(b.Error / b.Median)) * Math.Abs(a.Median / b.Median)
         };

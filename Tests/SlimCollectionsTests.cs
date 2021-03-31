@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using CsCheck;
 using Xunit;
-using System.Runtime.CompilerServices;
-using System.Collections;
 
 namespace Tests
 {
@@ -56,27 +56,7 @@ namespace Tests
                         d.Add(t[i]);
                     return d.Count;
                 },
-                repeat: 50
-            ).Output(writeLine);
-        }
-
-        [Fact]
-        public void ListSlim_Performance_Get()
-        {
-            Gen.Int.Array[100]
-            .Select(a => (new ListSlim<int>(a), new List<int>(a)))
-            .Faster(
-                t =>
-                {
-                    var s = t.Item1;
-                    for (int i = 0; i < s.Count; i++) { var _ = s[i]; };
-                },
-                t =>
-                {
-                    var s = t.Item2;
-                    for (int i = 0; i < s.Count; i++) { var _ = s[i]; };
-                },
-                repeat: 50
+                repeat: 100
             ).Output(writeLine);
         }
 
@@ -105,29 +85,29 @@ namespace Tests
             );
         }
 
-        [Fact(Skip ="WIP")]
+        [Fact]
         public void SetSlim_Performance_Add()
         {
-            Gen.Int.Array[10]
+            Gen.Int.Array
             .Faster(
                 a =>
                 {
-                    var s = new SetSlim<int>(a.Length);
+                    var s = new SetSlim<int>();
                     foreach (var i in a) s.Add(i);
                 },
                 a =>
                 {
-                    var s = new HashSet<int>(a.Length);
+                    var s = new HashSet<int>();
                     foreach (var i in a) s.Add(i);
                 },
-                repeat: 1000, sigma: 15
+                repeat: 100
             ).Output(writeLine);
         }
 
         [Fact]
         public void SetSlim_Performance_Contains()
         {
-            Gen.Int[0, 100].Array
+            Gen.Int.Array
             .Select(a => (a, new SetSlim<int>(a), new HashSet<int>(a)))
             .Faster(
                 t =>
@@ -140,7 +120,7 @@ namespace Tests
                     var s = t.Item3;
                     foreach (var i in t.a) s.Contains(i);
                 },
-                repeat: 1000
+                repeat: 100
             ).Output(writeLine);
         }
     }
@@ -235,13 +215,10 @@ namespace Tests
 
         public SetSlim(IEnumerable<T> items)
         {
-            var ts = items as ICollection<T> ?? items.ToList();
-            var capacity = ts.Count;
-            if (capacity < 2) capacity = 2;
-            entries = new Entry[PowerOf2(capacity)];
-            foreach (var i in ts) Add(i);
+            entries = new Entry[2];
+            foreach (var i in items) Add(i);
         }
-        
+
         static int PowerOf2(int capacity)
         {
             if ((capacity & (capacity - 1)) == 0) return capacity;

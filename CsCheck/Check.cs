@@ -105,7 +105,7 @@ namespace CsCheck
                     minSize = s;
                     minT = t;
                     minException = e;
-                    if(info != null) minInfo = info;
+                    if (info != null) minInfo = info;
                 }
                 info = null;
             }
@@ -616,7 +616,7 @@ namespace CsCheck
             if (print is null) print = Print;
             if (replay == -1) replay = Replay;
             int[] replayThreads = null;
-            if(seed is not null && seed.Contains("["))
+            if (seed is not null && seed.Contains("["))
             {
                 int i = seed.IndexOf('[');
                 int j = seed.IndexOf(']', i + 1);
@@ -1104,7 +1104,7 @@ namespace CsCheck
                                     vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
                                     var vss = Print(vs);
                                     vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
-                                    exception = new CsCheckException("Return values differ: CsCheck_Seed = \"" + pcg.ToString(state)+ "\"" + vfs + vss);
+                                    exception = new CsCheckException("Return values differ: CsCheck_Seed = \"" + pcg.ToString(state) + "\"" + vfs + vss);
                                     mre.Set();
                                     return;
                                 }
@@ -1291,7 +1291,7 @@ namespace CsCheck
         public override string ToString()
         {
             var result = $"{Median.Median * 100.0:#0.0}%[{Median.LowerQuartile * 100.0:#0.0}%..{Median.UpperQuartile * 100.0:#0.0}%] ";
-            result += Median.Median >= 0.0 ? "faster" : "slower"; 
+            result += Median.Median >= 0.0 ? "faster" : "slower";
             if (double.IsNaN(Median.Median)) result = "Time resolution too small try using repeat.\n" + result;
             else if ((Median.Median >= 0.0) != (Faster > Slower)) result = "Inconsistent result try using repeat or increasing sigma.\n" + result;
             return result + $", sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
