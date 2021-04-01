@@ -6,10 +6,10 @@ using Xunit;
 
 namespace Tests
 {
-    public class ShrinkingChallendgeTests
+    public class ShrinkingChallengeTests
     {
-        [Fact(Skip = "Meant to fail")]
-        public void No1_Bound5() // 100: ([-13779], [-3082], [-1712], [-25666], [-3272, 7, -443]) 13ms, 10_000_000 ([], [], [], [-294], [-32503]) 6s.
+        [Fact(Skip="fails")]
+        public void No1_Bound5()
         {
             static short Sum(short[] l)
             {
@@ -26,8 +26,8 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "Meant to fail")]
-        public void No2_LargeUnionList() // 100: large 25ms, 10_000_000 [[0, 1, -1, 2, -2]], 10_000_000 10 mins+.
+        [Fact(Skip="fails")]
+        public void No2_LargeUnionList()
         {
             Gen.Int.Array.Array
             .Sample(aa =>
@@ -42,8 +42,8 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "Meant to fail")]
-        public void No3_Reverse() // 100: [-635, -504805, 59415836] 10ms, 10_000_000: [0, 1] 9s.
+        [Fact(Skip="fails")]
+        public void No3_Reverse()
         {
             Gen.Int.Array
             .Sample(a =>
@@ -56,8 +56,8 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "Meant to fail")]
-        public void No4_Calculator() // 100: large example 13ms, 10_000_000: (/, 0, (+, 0, 0)) 3s.
+        [Fact(Skip="fails")]
+        public void No4_Calculator()
         {
             static bool DivSubTerms(object o) => o switch
             {
@@ -89,8 +89,8 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "Meant to fail")]
-        public void No5_LengthList() // 100: [15497] 11ms, 10_000_000: [900] 6s.
+        [Fact(Skip="fails")]
+        public void No5_LengthList()
         {
             Gen.Int.Array
             .Sample(a =>
@@ -101,22 +101,22 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "Meant to fail")]
-        public void No6_Difference_MustNotBeZero() // 100: pass 9ms, 10_000_000: (10, 10) 658ms.
+        [Fact(Skip="fails")]
+        public void No6_Difference_MustNotBeZero()
         {
             Gen.Int.Positive.Select(Gen.Int.Positive)
             .Sample(t => t.V0 < 10 || t.V0 != t.V1);
         }
 
-        [Fact(Skip = "Meant to fail")]
-        public void No6_Difference_MustNotBeSmall() // 100: pass 9ms, 10_000_000: (10, 6) 586ms.
+        [Fact(Skip="fails")]
+        public void No6_Difference_MustNotBeSmall()
         {
             Gen.Int.Positive.Select(Gen.Int.Positive)
             .Sample(t => t.V0 < 10 || Math.Abs(t.V0 - t.V1) > 4 || t.V0 == t.V1);
         }
 
-        [Fact(Skip = "Meant to fail")]
-        public void No6_Difference_MustNotBeOne() // 100: pass 9ms, 10_000_000: (10, 9) 648ms.
+        [Fact(Skip="fails")]
+        public void No6_Difference_MustNotBeOne()
         {
             Gen.Int.Positive.Select(Gen.Int.Positive)
             .Sample(t => t.V0 < 10 || Math.Abs(t.V0 - t.V1) != 1);
@@ -124,8 +124,8 @@ namespace Tests
 
         class Heap { public int Head; public Heap Left; public Heap Right; }
 
-        [Fact(Skip = "Meant to fail")]
-        public void No7_BinHeap() // 100: (1, None, (-92290, None, None)) 12ms, 100_000: (0, None, (-1, None, None)) 31ms.
+        [Fact(Skip="fails")]
+        public void No7_BinHeap()
         {
             static uint Count(Heap h) => h is null ? 0 : 1 + Count(h.Left) + Count(h.Right);
 
@@ -186,8 +186,8 @@ namespace Tests
             }, print: Print);
         }
 
-        [Fact(Skip = "Meant to fail")]
-        public void No8_Coupling() // 100: L=15 [12, 2, 13 ... 12, 1] 12ms, 10_000_000 [1, 0] 7s.
+        [Fact(Skip="fails")]
+        public void No8_Coupling()
         {
             Gen.Int[0, 100].SelectMany(l => Gen.Int[0, l - 1].Array[l])
             .Sample(a =>
@@ -201,8 +201,8 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "Meant to fail")]
-        public void No9_Deletion() // 100: (L=31 [-1803267, 81, 5568 ... 1, -3020390], 18) 14ms, 10_000_000: ([0, 0], 0) 11s.
+        [Fact(Skip="fails")]
+        public void No9_Deletion()
         {
             Gen.Int.List[1, 100].SelectTuple(l => Gen.Int[0, l.Count - 1])
             .Sample(t =>
@@ -214,15 +214,15 @@ namespace Tests
             });
         }
 
-        [Fact(Skip = "Meant to fail")]
-        public void No10_Distinct() // 100: [55741750, 166, 5] 13ms, 10_000_000: [1, 0, -1] 7s.
+        [Fact(Skip="fails")]
+        public void No10_Distinct()
         {
             Gen.Int.Array
             .Sample(a => a.ToHashSet().Count < 3);
         }
 
-        [Fact(Skip = "Meant to fail")]
-        public void No11_NestedLists() // 100: [L=115 [298, 1, -148635 ... -1364696, 86]] 26ms, 10_000_000: not [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+        [Fact(Skip="fails")]
+        public void No11_NestedLists()
         {
             Gen.Int.Array.Array
             .Sample(aa =>
