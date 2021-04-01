@@ -118,12 +118,12 @@ namespace CsCheck
             while (threads-- > 0)
                 ThreadPool.UnsafeQueueUserWorkItem(_ =>
                 {
+                    var pcg = PCG.ThreadPCG;
+                    Size s = null;
+                    T t = default;
                     while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
                     {
-                        var pcg = PCG.ThreadPCG;
                         ulong state = pcg.State;
-                        Size s = null;
-                        T t = default;
                         try
                         {
                             t = gen.Generate(pcg, minSize, out s);
@@ -232,12 +232,12 @@ namespace CsCheck
             while (threads-- > 0)
                 ThreadPool.UnsafeQueueUserWorkItem(_ =>
                 {
+                    var pcg = PCG.ThreadPCG;
+                    Size s = null;
+                    T t = default;
                     while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
                     {
-                        var pcg = PCG.ThreadPCG;
                         ulong state = pcg.State;
-                        Size s = null;
-                        T t = default;
                         try
                         {
                             t = gen.Generate(pcg, minSize, out s);

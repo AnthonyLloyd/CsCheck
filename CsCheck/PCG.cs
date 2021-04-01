@@ -26,7 +26,7 @@ namespace CsCheck
         static PCG threadPCG;
         public static PCG ThreadPCG => threadPCG ??= new PCG((uint)Interlocked.Increment(ref threadCount));
         readonly ulong Inc;
-        public ulong State { get; private set; }
+        public ulong State;
         public uint Stream => (uint)(Inc >> 1);
         public ulong Seed => State - Inc;
         PCG(ulong inc, ulong state)
@@ -45,7 +45,7 @@ namespace CsCheck
             State = State * 6364136223846793005UL + Inc;
             uint xorshifted = (uint)((State ^ (State >> 18)) >> 27);
             int rot = (int)(State >> 59);
-            return (xorshifted >> rot) | (xorshifted << (-rot & 31));
+            return (xorshifted >> rot) | (xorshifted << (32 - rot));
         }
         public ulong Next64() => ((ulong)Next() << 32) + Next();
         public uint Next(uint maxExclusive)

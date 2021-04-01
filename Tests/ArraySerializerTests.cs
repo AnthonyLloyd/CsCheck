@@ -53,7 +53,7 @@ namespace Tests
                 ArraySerializer.WriteVarint(bytes, ref pos, i);
                 pos = 0;
                 return ArraySerializer.ReadVarint(bytes, ref pos);
-            }, threads: 1, sigma: 50, repeat: 10_000, raiseexception: false)
+            }, threads: 1, sigma: 10, repeat: 100, raiseexception: false)
             .Output(writeLine);
         }
         [Fact]

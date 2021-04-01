@@ -285,7 +285,7 @@ namespace Tests
 }
 
 // TODO: Add slims
-// TODO: Performance profile and remove Perf
+// TODO: Could rent arrays for permutations?
 // TODO: Write Shrinking Challendge PR
 // TODO: More Print
 // TODO: More Equal, ModelEqual

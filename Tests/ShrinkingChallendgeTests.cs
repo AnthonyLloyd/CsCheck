@@ -48,9 +48,11 @@ namespace Tests
             Gen.Int.Array
             .Sample(a =>
             {
-                var r = (int[])a.Clone();
-                Array.Reverse(r);
-                return Check.Equal(a, r);
+                var c = new int[a.Length];
+                for (int i = 0; i < a.Length; i++)
+                    c[i] = a[i];
+                Array.Reverse(c);
+                return Check.Equal(a, c);
             });
         }
 

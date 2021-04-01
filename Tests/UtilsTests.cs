@@ -41,7 +41,7 @@ namespace Tests
         {
             var seq = new int[ids.Length];
             Array.Copy(ids, seq, ids.Length);
-            Assert.Equal(Check.Permutations(ids, seq), expected, IntArrayComparer.Default);
+            Assert.Equal(expected, Check.Permutations(ids, seq), IntArrayComparer.Default);
         }
 
         [Fact]

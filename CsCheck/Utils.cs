@@ -301,11 +301,13 @@ namespace CsCheck
 
         static T[] CopySwap<T>(T[] array, int i)
         {
-            array = (T[])array.Clone();
-            var s = array[i];
-            array[i] = array[i + 1];
-            array[i + 1] = s;
-            return array;
+            var copy = new T[array.Length];
+            for (int j = 0; j < array.Length; j++)
+                copy[j] = array[j];
+            var s = copy[i];
+            copy[i] = copy[i + 1];
+            copy[i + 1] = s;
+            return copy;
         }
     }
 

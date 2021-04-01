@@ -7,17 +7,19 @@ namespace Perf
     {
         static void Main()
         {
-            var output = new FakeOutputHelper();
-            RunTests(new ArraySerializerTests(output));
-            RunTests(new CheckTests(output));
-            RunTests(new GenTests());
-            RunTests(new HashTests(output));
-            RunTests(new StreamSerializerTests());
-            RunTests(new ModelTests());
-            RunTests(new PCGTests());
-            RunTests(new SlimCollectionsTests(output));
-            RunTests(new UtilsTests());
-            RunTests(new ThreadStatsTests());
+            for (int i = 0; i < 10; i++)
+            {
+                var output = new FakeOutputHelper();
+                RunTests(new ArraySerializerTests(output));
+                RunTests(new CheckTests(output));
+                RunTests(new GenTests());
+                RunTests(new HashTests(output));
+                RunTests(new StreamSerializerTests());
+                RunTests(new ModelTests());
+                RunTests(new PCGTests());
+                RunTests(new UtilsTests());
+                RunTests(new ThreadStatsTests());
+            }
         }
 
         private static void RunTests(object testClass)
