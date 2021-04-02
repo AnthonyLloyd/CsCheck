@@ -22,14 +22,10 @@ namespace CsCheck
     /// <summary>Size representation of Gen generated data.</summary>
     public class Size
     {
-        public readonly static Size Zero = new(0UL);
-        public readonly ulong I;
-        public readonly Size Next;
+        public ulong I;
+        public Size Next;
 
-        public Size(ulong i)
-        {
-            I = i;
-        }
+        public Size(ulong i) => I = i;
 
         public Size(ulong i, Size next)
         {
@@ -37,90 +33,23 @@ namespace CsCheck
             Next = next;
         }
 
-        public static Size Sum(Size s1, Size s2) =>
-              s1 is null ? s2
-            : s2 is null ? s1
-            : new Size(s1.I + s2.I, Sum(s1.Next, s2.Next));
-
-        public static Size Sum(Size s1, Size s2, Size s3) =>
-              s1 is null ? Sum(s2, s3)
-            : s2 is null ? Sum(s1, s3)
-            : s3 is null ? Sum(s1, s2)
-            : new Size(s1.I + s2.I + s3.I, Sum(s1.Next, s2.Next, s3.Next));
-
-        public static Size Sum(Size s1, Size s2, Size s3, Size s4) =>
-              s1 is null ? Sum(s2, s3, s4)
-            : s2 is null ? Sum(s1, s3, s4)
-            : s3 is null ? Sum(s1, s2, s4)
-            : s4 is null ? Sum(s1, s2, s3)
-            : new Size(s1.I + s2.I + s3.I + s4.I, Sum(s1.Next, s2.Next, s3.Next, s4.Next));
-
-        public static Size Sum(Size s1, Size s2, Size s3, Size s4, Size s5) =>
-              s1 is null ? Sum(s2, s3, s4, s5)
-            : s2 is null ? Sum(s1, s3, s4, s5)
-            : s3 is null ? Sum(s1, s2, s4, s5)
-            : s4 is null ? Sum(s1, s2, s3, s5)
-            : s5 is null ? Sum(s1, s2, s3, s4)
-            : new Size(s1.I + s2.I + s3.I + s4.I + s5.I, Sum(s1.Next, s2.Next, s3.Next, s4.Next, s5.Next));
-
-        public static Size Sum(Size s1, Size s2, Size s3, Size s4, Size s5, Size s6) =>
-              s1 is null ? Sum(s2, s3, s4, s5, s6)
-            : s2 is null ? Sum(s1, s3, s4, s5, s6)
-            : s3 is null ? Sum(s1, s2, s4, s5, s6)
-            : s4 is null ? Sum(s1, s2, s3, s5, s6)
-            : s5 is null ? Sum(s1, s2, s3, s4, s6)
-            : s6 is null ? Sum(s1, s2, s3, s4, s5)
-            : new Size(s1.I + s2.I + s3.I + s4.I + s5.I + s6.I, Sum(s1.Next, s2.Next, s3.Next, s4.Next, s5.Next, s6.Next));
-
-        public static Size Sum(Size s1, Size s2, Size s3, Size s4, Size s5, Size s6, Size s7) =>
-              s1 is null ? Sum(s2, s3, s4, s5, s6, s7)
-            : s2 is null ? Sum(s1, s3, s4, s5, s6, s7)
-            : s3 is null ? Sum(s1, s2, s4, s5, s6, s7)
-            : s4 is null ? Sum(s1, s2, s3, s5, s6, s7)
-            : s5 is null ? Sum(s1, s2, s3, s4, s6, s7)
-            : s6 is null ? Sum(s1, s2, s3, s4, s5, s7)
-            : s7 is null ? Sum(s1, s2, s3, s4, s5, s6)
-            : new Size(s1.I + s2.I + s3.I + s4.I + s5.I + s6.I + s7.I, Sum(s1.Next, s2.Next, s3.Next, s4.Next, s5.Next, s6.Next, s7.Next));
-
-        public static Size Sum(Size s1, Size s2, Size s3, Size s4, Size s5, Size s6, Size s7, Size s8) =>
-              s1 is null ? Sum(s2, s3, s4, s5, s6, s7, s8)
-            : s2 is null ? Sum(s1, s3, s4, s5, s6, s7, s8)
-            : s3 is null ? Sum(s1, s2, s4, s5, s6, s7, s8)
-            : s4 is null ? Sum(s1, s2, s3, s5, s6, s7, s8)
-            : s5 is null ? Sum(s1, s2, s3, s4, s6, s7, s8)
-            : s6 is null ? Sum(s1, s2, s3, s4, s5, s7, s8)
-            : s7 is null ? Sum(s1, s2, s3, s4, s5, s6, s8)
-            : s8 is null ? Sum(s1, s2, s3, s4, s5, s6, s7)
-            : new Size(s1.I + s2.I + s3.I + s4.I + s5.I + s6.I + s7.I + s8.I, Sum(s1.Next, s2.Next, s3.Next, s4.Next, s5.Next, s6.Next, s7.Next, s8.Next));
-
-        public static Size Sum(Size s1, Size s2, Size s3, Size s4, Size s5, Size s6, Size s7, Size s8, Size s9) =>
-              s1 is null ? Sum(s2, s3, s4, s5, s6, s7, s8, s9)
-            : s2 is null ? Sum(s1, s3, s4, s5, s6, s7, s8, s9)
-            : s3 is null ? Sum(s1, s2, s4, s5, s6, s7, s8, s9)
-            : s4 is null ? Sum(s1, s2, s3, s5, s6, s7, s8, s9)
-            : s5 is null ? Sum(s1, s2, s3, s4, s6, s7, s8, s9)
-            : s6 is null ? Sum(s1, s2, s3, s4, s5, s7, s8, s9)
-            : s7 is null ? Sum(s1, s2, s3, s4, s5, s6, s8, s9)
-            : s8 is null ? Sum(s1, s2, s3, s4, s5, s6, s7, s9)
-            : s9 is null ? Sum(s1, s2, s3, s4, s5, s6, s7, s8)
-            : new Size(s1.I + s2.I + s3.I + s4.I + s5.I + s6.I + s7.I + s8.I + s9.I, Sum(s1.Next, s2.Next, s3.Next, s4.Next, s5.Next, s6.Next, s7.Next, s8.Next, s9.Next));
-
-        public static Size Sum(Size s1, Size s2, Size s3, Size s4, Size s5, Size s6, Size s7, Size s8, Size s9, Size s10) =>
-              s1 is null ? Sum(s2, s3, s4, s5, s6, s7, s8, s9, s10)
-            : s2 is null ? Sum(s1, s3, s4, s5, s6, s7, s8, s9, s10)
-            : s3 is null ? Sum(s1, s2, s4, s5, s6, s7, s8, s9, s10)
-            : s4 is null ? Sum(s1, s2, s3, s5, s6, s7, s8, s9, s10)
-            : s5 is null ? Sum(s1, s2, s3, s4, s6, s7, s8, s9, s10)
-            : s6 is null ? Sum(s1, s2, s3, s4, s5, s7, s8, s9, s10)
-            : s7 is null ? Sum(s1, s2, s3, s4, s5, s6, s8, s9, s10)
-            : s8 is null ? Sum(s1, s2, s3, s4, s5, s6, s7, s9, s10)
-            : s9 is null ? Sum(s1, s2, s3, s4, s5, s6, s7, s8, s10)
-            : s10 is null ? Sum(s1, s2, s3, s4, s5, s6, s7, s8, s9)
-            : new Size(s1.I + s2.I + s3.I + s4.I + s5.I + s6.I + s7.I + s8.I + s9.I + s10.I, Sum(s1.Next, s2.Next, s3.Next, s4.Next, s5.Next, s6.Next, s7.Next, s8.Next, s9.Next, s10.Next));
+        public void Add(Size a)
+        {
+            I += a.I;
+            if (a.Next is not null)
+            {
+                if (Next is null) Next = a.Next;
+                else Next.Add(a.Next);
+            }
+        }
+        public void Append(Size s)
+        {
+            var final = this;
+            while (final.Next is not null) final = final.Next;
+            final.Next = s;
+        }
 
         public static bool IsLessThan(Size s1, Size s2) => s1 is not null && (s2 is null || s1.I < s2.I || (s1.I == s2.I && IsLessThan(s1.Next, s2.Next)));
-
-        public Size Append(Size s) => new(I, Next is null ? s : Next.Append(s));
     }
 
     public interface IGen<out T>
@@ -217,9 +146,10 @@ namespace CsCheck
                 if (min.I < 0x2_0000_0000UL) { size = new Size(0x2_0000_0000UL); return default; }
                 min = min.I == 0x2_0000_0000UL ? min.Next : null;
             }
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            size = new Size(0x2_0000_0000UL, Size.Sum(s1, s2));
+            var v1 = gen1.Generate(pcg, min, out size);
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            size = new Size(0x2_0000_0000UL, size);
             return selector(v1, v2);
         });
 
@@ -231,10 +161,12 @@ namespace CsCheck
                 if (min.I < 0x3_0000_0000UL) { size = new Size(0x3_0000_0000UL); return default; }
                 min = min.I == 0x3_0000_0000UL ? min.Next : null;
             }
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            var v3 = gen3.Generate(pcg, min, out Size s3);
-            size = new Size(0x3_0000_0000UL, Size.Sum(s1, s2, s3));
+            var v1 = gen1.Generate(pcg, min, out size);
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            size = new Size(0x3_0000_0000UL, size);
             return selector(v1, v2, v3);
         });
 
@@ -246,11 +178,14 @@ namespace CsCheck
                 if (min.I < 0x4_0000_0000UL) { size = new Size(0x4_0000_0000UL); return default; }
                 min = min.I == 0x4_0000_0000UL ? min.Next : null;
             }
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            var v3 = gen3.Generate(pcg, min, out Size s3);
-            var v4 = gen4.Generate(pcg, min, out Size s4);
-            size = new Size(0x4_0000_0000UL, Size.Sum(s1, s2, s3, s4));
+            var v1 = gen1.Generate(pcg, min, out size);
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            size = new Size(0x4_0000_0000UL, size);
             return selector(v1, v2, v3, v4);
         });
 
@@ -262,12 +197,16 @@ namespace CsCheck
                 if (min.I < 0x5_0000_0000UL) { size = new Size(0x5_0000_0000UL); return default; }
                 min = min.I == 0x5_0000_0000UL ? min.Next : null;
             }
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            var v3 = gen3.Generate(pcg, min, out Size s3);
-            var v4 = gen4.Generate(pcg, min, out Size s4);
-            var v5 = gen5.Generate(pcg, min, out Size s5);
-            size = new Size(0x5_0000_0000UL, Size.Sum(s1, s2, s3, s4, s5));
+            var v1 = gen1.Generate(pcg, min, out size);
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            size = new Size(0x5_0000_0000UL, size);
             return selector(v1, v2, v3, v4, v5);
         });
 
@@ -279,13 +218,18 @@ namespace CsCheck
                 if (min.I < 0x6_0000_0000UL) { size = new Size(0x6_0000_0000UL); return default; }
                 min = min.I == 0x6_0000_0000UL ? min.Next : null;
             }
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            var v3 = gen3.Generate(pcg, min, out Size s3);
-            var v4 = gen4.Generate(pcg, min, out Size s4);
-            var v5 = gen5.Generate(pcg, min, out Size s5);
-            var v6 = gen6.Generate(pcg, min, out Size s6);
-            size = new Size(0x6_0000_0000UL, Size.Sum(s1, s2, s3, s4, s5, s6));
+            var v1 = gen1.Generate(pcg, min, out size);
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            size = new Size(0x6_0000_0000UL, size);
             return selector(v1, v2, v3, v4, v5, v6);
         });
 
@@ -298,14 +242,20 @@ namespace CsCheck
                 if (min.I < 0x7_0000_0000UL) { size = new Size(0x7_0000_0000UL); return default; }
                 min = min.I == 0x7_0000_0000UL ? min.Next : null;
             }
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            var v3 = gen3.Generate(pcg, min, out Size s3);
-            var v4 = gen4.Generate(pcg, min, out Size s4);
-            var v5 = gen5.Generate(pcg, min, out Size s5);
-            var v6 = gen6.Generate(pcg, min, out Size s6);
-            var v7 = gen7.Generate(pcg, min, out Size s7);
-            size = new Size(0x7_0000_0000UL, Size.Sum(s1, s2, s3, s4, s5, s6, s7));
+            var v1 = gen1.Generate(pcg, min, out size);
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            var v7 = gen7.Generate(pcg, min, out s);
+            size.Add(s);
+            size = new Size(0x7_0000_0000UL, size);
             return selector(v1, v2, v3, v4, v5, v6, v7);
         });
 
@@ -318,15 +268,22 @@ namespace CsCheck
                 if (min.I < 0x8_0000_0000UL) { size = new Size(0x8_0000_0000UL); return default; }
                 min = min.I == 0x8_0000_0000UL ? min.Next : null;
             }
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            var v3 = gen3.Generate(pcg, min, out Size s3);
-            var v4 = gen4.Generate(pcg, min, out Size s4);
-            var v5 = gen5.Generate(pcg, min, out Size s5);
-            var v6 = gen6.Generate(pcg, min, out Size s6);
-            var v7 = gen7.Generate(pcg, min, out Size s7);
-            var v8 = gen8.Generate(pcg, min, out Size s8);
-            size = new Size(0x8_0000_0000UL, Size.Sum(s1, s2, s3, s4, s5, s6, s7, s8));
+            var v1 = gen1.Generate(pcg, min, out size);
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            var v7 = gen7.Generate(pcg, min, out s);
+            size.Add(s);
+            var v8 = gen8.Generate(pcg, min, out s);
+            size.Add(s);
+            size = new Size(0x8_0000_0000UL, size);
             return selector(v1, v2, v3, v4, v5, v6, v7, v8);
         });
 
@@ -339,16 +296,24 @@ namespace CsCheck
                 if (min.I < 0x9_0000_0000UL) { size = new Size(0x9_0000_0000UL); return default; }
                 min = min.I == 0x9_0000_0000UL ? min.Next : null;
             }
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            var v3 = gen3.Generate(pcg, min, out Size s3);
-            var v4 = gen4.Generate(pcg, min, out Size s4);
-            var v5 = gen5.Generate(pcg, min, out Size s5);
-            var v6 = gen6.Generate(pcg, min, out Size s6);
-            var v7 = gen7.Generate(pcg, min, out Size s7);
-            var v8 = gen8.Generate(pcg, min, out Size s8);
-            var v9 = gen9.Generate(pcg, min, out Size s9);
-            size = new Size(0x9_0000_0000UL, Size.Sum(s1, s2, s3, s4, s5, s6, s7, s8, s9));
+            var v1 = gen1.Generate(pcg, min, out size);
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            var v7 = gen7.Generate(pcg, min, out s);
+            size.Add(s);
+            var v8 = gen8.Generate(pcg, min, out s);
+            size.Add(s);
+            var v9 = gen9.Generate(pcg, min, out s);
+            size.Add(s);
+            size = new Size(0x9_0000_0000UL, size);
             return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9);
         });
 
@@ -361,17 +326,26 @@ namespace CsCheck
                 if (min.I < 0xA_0000_0000UL) { size = new Size(0xA_0000_0000UL); return default; }
                 min = min.I == 0xA_0000_0000UL ? min.Next : null;
             }
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            var v3 = gen3.Generate(pcg, min, out Size s3);
-            var v4 = gen4.Generate(pcg, min, out Size s4);
-            var v5 = gen5.Generate(pcg, min, out Size s5);
-            var v6 = gen6.Generate(pcg, min, out Size s6);
-            var v7 = gen7.Generate(pcg, min, out Size s7);
-            var v8 = gen8.Generate(pcg, min, out Size s8);
-            var v9 = gen9.Generate(pcg, min, out Size s9);
-            var v10 = gen10.Generate(pcg, min, out Size s10);
-            size = new Size(0xA_0000_0000UL, Size.Sum(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10));
+            var v1 = gen1.Generate(pcg, min, out size);
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            var v7 = gen7.Generate(pcg, min, out s);
+            size.Add(s);
+            var v8 = gen8.Generate(pcg, min, out s);
+            size.Add(s);
+            var v9 = gen9.Generate(pcg, min, out s);
+            size.Add(s);
+            var v10 = gen10.Generate(pcg, min, out s);
+            size.Add(s);
+            size = new Size(0xA_0000_0000UL, size);
             return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10);
         });
 
@@ -382,9 +356,10 @@ namespace CsCheck
                 if (min.I < 0x2_0000_0000UL) { size = new Size(0x2_0000_0000UL); return default; }
                 min = min.I == 0x2_0000_0000UL ? min.Next : null;
             }
-            var v0 = gen0.Generate(pcg, min, out Size s0);
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            size = new Size(0x2_0000_0000UL, Size.Sum(s0, s1));
+            var v0 = gen0.Generate(pcg, min, out size);
+            var v1 = gen1.Generate(pcg, min, out var s);
+            size.Add(s);
+            size = new Size(0x2_0000_0000UL, size);
             return (v0, v1);
         });
 
@@ -396,10 +371,12 @@ namespace CsCheck
                 if (min.I < 0x3_0000_0000UL) { size = new Size(0x3_0000_0000UL); return default; }
                 min = min.I == 0x3_0000_0000UL ? min.Next : null;
             }
-            var v0 = gen0.Generate(pcg, min, out Size s0);
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            size = new Size(0x3_0000_0000UL, Size.Sum(s0, s1, s2));
+            var v0 = gen0.Generate(pcg, min, out size);
+            var v1 = gen1.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v2 = gen2.Generate(pcg, min, out s);
+            size.Add(s);
+            size = new Size(0x3_0000_0000UL, size);
             return (v0, v1, v2);
         });
 
@@ -411,11 +388,14 @@ namespace CsCheck
                 if (min.I < 0x4_0000_0000UL) { size = new Size(0x4_0000_0000UL); return default; }
                 min = min.I == 0x4_0000_0000UL ? min.Next : null;
             }
-            var v0 = gen0.Generate(pcg, min, out Size s0);
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            var v3 = gen3.Generate(pcg, min, out Size s3);
-            size = new Size(0x4_0000_0000UL, Size.Sum(s0, s1, s2, s3));
+            var v0 = gen0.Generate(pcg, min, out size);
+            var v1 = gen1.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v2 = gen2.Generate(pcg, min, out s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            size = new Size(0x4_0000_0000UL, size);
             return (v0, v1, v2, v3);
         });
 
@@ -427,12 +407,16 @@ namespace CsCheck
                 if (min.I < 0x5_0000_0000UL) { size = new Size(0x5_0000_0000UL); return default; }
                 min = min.I == 0x5_0000_0000UL ? min.Next : null;
             }
-            var v0 = gen0.Generate(pcg, min, out Size s0);
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            var v3 = gen3.Generate(pcg, min, out Size s3);
-            var v4 = gen4.Generate(pcg, min, out Size s4);
-            size = new Size(0x5_0000_0000UL, Size.Sum(s0, s1, s2, s3, s4));
+            var v0 = gen0.Generate(pcg, min, out size);
+            var v1 = gen1.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v2 = gen2.Generate(pcg, min, out s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            size = new Size(0x5_0000_0000UL, size);
             return (v0, v1, v2, v3, v4);
         });
 
@@ -442,7 +426,7 @@ namespace CsCheck
             var v1 = gen.Generate(pcg, min, out size);
             if (min != null && min.I < size.I) return default;
             var vR = selector(v1).Generate(pcg, null, out Size sR);
-            size = size.Append(sR);
+            size.Append(sR);
             return (v1, vR);
         });
 
@@ -450,11 +434,11 @@ namespace CsCheck
             Func<T0, T1, Gen<T2>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
             var v0 = gen0.Generate(pcg, min, out size);
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            size = Size.Sum(size, s1);
+            var v1 = gen1.Generate(pcg, min, out var s);
+            size.Add(s);
             if (min != null && min.I < size.I) return default;
-            var v2 = selector(v0, v1).Generate(pcg, null, out Size s2);
-            size = size.Append(s2);
+            var v2 = selector(v0, v1).Generate(pcg, null, out s);
+            size.Append(s);
             return (v0, v1, v2);
         });
 
@@ -462,12 +446,13 @@ namespace CsCheck
             Func<T0, T1, T2, Gen<T3>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
             var v0 = gen0.Generate(pcg, min, out size);
-            var v1 = gen1.Generate(pcg, min, out Size s1);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            size = Size.Sum(size, s1, s2);
+            var v1 = gen1.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v2 = gen2.Generate(pcg, min, out s);
+            size.Add(s);
             if (min != null && min.I < size.I) return default;
-            var v3 = selector(v0, v1, v2).Generate(pcg, null, out Size s3);
-            size = size.Append(s3);
+            var v3 = selector(v0, v1, v2).Generate(pcg, null, out s);
+            size.Append(s);
             return (v0, v1, v2, v3);
         });
 
@@ -476,7 +461,7 @@ namespace CsCheck
             var v1 = gen.Generate(pcg, min, out size);
             if (min != null && min.I < size.I) return default;
             var vR = selector(v1).Generate(pcg, null, out var sR);
-            size = size.Append(sR);
+            size.Append(sR);
             return vR;
         });
 
@@ -484,11 +469,11 @@ namespace CsCheck
             => Create((PCG pcg, Size min, out Size size) =>
         {
             var v1 = gen1.Generate(pcg, min, out size);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            size = Size.Sum(size, s2);
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
             if (min != null && min.I < size.I) return default;
-            var vR = selector(v1, v2).Generate(pcg, null, out Size sR);
-            size = size.Append(sR);
+            var vR = selector(v1, v2).Generate(pcg, null, out s);
+            size.Append(s);
             return vR;
         });
 
@@ -496,12 +481,13 @@ namespace CsCheck
             Func<T1, T2, T3, Gen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
             var v1 = gen1.Generate(pcg, min, out size);
-            var v2 = gen2.Generate(pcg, min, out Size s2);
-            var v3 = gen3.Generate(pcg, min, out Size s3);
-            size = Size.Sum(size, s2, s3);
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
             if (min != null && min.I < size.I) return default;
-            var vR = selector(v1, v2, v3).Generate(pcg, null, out Size sR);
-            size = size.Append(sR);
+            var vR = selector(v1, v2, v3).Generate(pcg, null, out s);
+            size.Append(s);
             return vR;
         });
 
@@ -509,13 +495,15 @@ namespace CsCheck
             Func<T1, T2, T3, T4, Gen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
             var v1 = gen1.Generate(pcg, null, out size);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
-            var v4 = gen4.Generate(pcg, null, out Size s4);
-            size = Size.Sum(size, s2, s3, s4);
+            var v2 = gen2.Generate(pcg, null, out var s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, null, out s);
+            size.Add(s);
+            var v4 = gen4.Generate(pcg, null, out s);
+            size.Add(s);
             if (min != null && min.I < size.I) return default;
-            var vR = selector(v1, v2, v3, v4).Generate(pcg, null, out Size sR);
-            size = size.Append(sR);
+            var vR = selector(v1, v2, v3, v4).Generate(pcg, null, out s);
+            size.Append(s);
             return vR;
         });
 
@@ -523,14 +511,17 @@ namespace CsCheck
             Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
             var v1 = gen1.Generate(pcg, null, out size);
-            var v2 = gen2.Generate(pcg, null, out Size s2);
-            var v3 = gen3.Generate(pcg, null, out Size s3);
-            var v4 = gen4.Generate(pcg, null, out Size s4);
-            var v5 = gen5.Generate(pcg, null, out Size s5);
-            size = Size.Sum(size, s2, s3, s4, s5);
+            var v2 = gen2.Generate(pcg, null, out var s);
+            size.Add(s);
+            var v3 = gen3.Generate(pcg, null, out s);
+            size.Add(s);
+            var v4 = gen4.Generate(pcg, null, out s);
+            size.Add(s);
+            var v5 = gen5.Generate(pcg, null, out s);
+            size.Add(s);
             if (min != null && min.I < size.I) return default;
-            var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, null, out Size sR);
-            size = size.Append(sR);
+            var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, null, out s);
+            size.Append(s);
             return vR;
         });
 
@@ -539,8 +530,8 @@ namespace CsCheck
         {
             var v1 = gen1.Generate(pcg, null, out size);
             if (min != null && min.I < size.I) return default;
-            var v2 = genSelector(v1).Generate(pcg, null, out Size s2);
-            size = size.Append(s2);
+            var v2 = genSelector(v1).Generate(pcg, null, out var s);
+            size.Append(s);
             return resultSelector(v1, v2);
         });
 
@@ -553,9 +544,9 @@ namespace CsCheck
             }
         });
 
-        public static Gen<T> Const<T>(T value) => Create((PCG pcg, Size min, out Size size) => { size = Size.Zero; return value; });
+        public static Gen<T> Const<T>(T value) => Create((PCG pcg, Size min, out Size size) => { size = new Size(0L); return value; });
 
-        public static Gen<T> Const<T>(Func<T> value) => Create((PCG pcg, Size min, out Size size) => { size = Size.Zero; return value(); });
+        public static Gen<T> Const<T>(Func<T> value) => Create((PCG pcg, Size min, out Size size) => { size = new Size(0L); return value(); });
 
         public static Gen<T> OneOfConst<T>(params T[] ts) => Create((PCG pcg, Size min, out Size size) =>
         {
@@ -625,7 +616,7 @@ namespace CsCheck
                         return r;
                     }
                 }
-                size = Size.Zero;
+                size = new Size(0L);
                 return default;
             });
         }
@@ -675,7 +666,7 @@ namespace CsCheck
         public static Gen<T[]> Shuffle<T>(T[] a) => Create((PCG pcg, Size min, out Size size) =>
         {
             Shuffle(a, pcg, 0);
-            size = Size.Zero;
+            size = new Size(0L);
             return a;
         });
 
@@ -688,7 +679,7 @@ namespace CsCheck
 
         public static Gen<T[]> Shuffle<T>(T[] a, int length) => Create((PCG pcg, Size min, out Size size) =>
         {
-            size = Size.Zero;
+            size = new Size(0L);
             int lower = Math.Max(a.Length - length, 0);
             Shuffle(a, pcg, lower);
             if (lower == 0) return a;
@@ -710,7 +701,7 @@ namespace CsCheck
         public static Gen<List<T>> Shuffle<T>(List<T> a) => Create((PCG pcg, Size min, out Size size) =>
         {
             Shuffle(a, pcg, 0);
-            size = Size.Zero;
+            size = new Size(0L);
             return a;
         });
 
@@ -723,7 +714,7 @@ namespace CsCheck
 
         public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => Create((PCG pcg, Size min, out Size size) =>
         {
-            size = Size.Zero;
+            size = new Size(0L);
             int lower = Math.Max(a.Count - length, 0);
             Shuffle(a, pcg, lower);
             if (lower == 0) return a;
@@ -743,16 +734,16 @@ namespace CsCheck
             SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
 
         public static GenOperation<T> Operation<T>(string name, Action<T> action)
-            => new((PCG pcg, Size min, out Size size) => { size = Size.Zero; return (name, action); });
+            => new((PCG pcg, Size min, out Size size) => { size = new Size(0L); return (name, action); });
 
         public static GenOperation<T> Operation<T>(Action<T> action)
-            => new((PCG pcg, Size min, out Size size) => { size = Size.Zero; return ("", action); }, true);
+            => new((PCG pcg, Size min, out Size size) => { size = new Size(0L); return ("", action); }, true);
 
         public static GenOperation<Actual, Model> Operation<Actual, Model>(string name, Action<Actual, Model> action)
-            => new((PCG pcg, Size min, out Size size) => { size = Size.Zero; return (name, action); });
+            => new((PCG pcg, Size min, out Size size) => { size = new Size(0L); return (name, action); });
 
         public static GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, Model> action)
-            => new((PCG pcg, Size min, out Size size) => { size = Size.Zero; return ("", action); }, true);
+            => new((PCG pcg, Size min, out Size size) => { size = new Size(0L); return ("", action); }, true);
 
         public static readonly GenBool Bool = new();
         public static readonly GenSByte SByte = new();
@@ -1430,13 +1421,13 @@ namespace CsCheck
                 min = min.I == sizeI ? min.Next : null;
             }
             var vs = new T[length];
-            size = Size.Zero;
+            var total = new Size(0L);
             for (int i = 0; i < vs.Length; i++)
             {
                 vs[i] = gen.Generate(pcg, min, out var si);
-                size = Size.Sum(size, si);
+                total.Add(si);
             }
-            size = new Size(sizeI, size);
+            size = new Size(sizeI, total);
             return vs;
         }
         public override T[] Generate(PCG pcg, Size min, out Size size)
@@ -1464,18 +1455,18 @@ namespace CsCheck
             var sizeI = ((ulong)length << 32) + 1UL;
             if (min != null && min.I < sizeI) { size = new Size(sizeI); return null; }
             var vs = new T[length];
-            size = Size.Zero;
+            size = new Size(0L);
             var hs = new HashSet<T>();
             int i = 0;
             while (i < length)
             {
 
-                var v = gen.Generate(pcg, null, out Size s);
+                var v = gen.Generate(pcg, null, out var s);
                 var bad = 0;
                 if (hs.Add(v))
                 {
                     vs[i++] = v;
-                    size = Size.Sum(size, s);
+                    size.Add(s);
                 }
                 else if (++bad == 1000) throw new CsCheckException("Failing to add to ArrayUnique");
             }
@@ -1511,11 +1502,11 @@ namespace CsCheck
                 min = min.I == sizeI ? min.Next : null;
             }
             var vs = new T[length];
-            size = Size.Zero;
+            size = new Size(0L);
             for (int i = 0; i < vs.Length; i++)
             {
-                vs[i] = gen.Generate(pcg, min, out var si);
-                size = Size.Sum(size, si);
+                vs[i] = gen.Generate(pcg, min, out var s);
+                size.Add(s);
             }
             size = new Size(sizeI, size);
             return vs;
@@ -1578,11 +1569,11 @@ namespace CsCheck
                 min = min.I == sizeI ? min.Next : null;
             }
             var vs = new List<T>(length);
-            size = Size.Zero;
+            size = new Size(0L);
             for (int i = 0; i < length; i++)
             {
-                vs.Add(gen.Generate(pcg, min, out var si));
-                size = Size.Sum(size, si);
+                vs.Add(gen.Generate(pcg, min, out var s));
+                size.Add(s);
             }
             size = new Size(sizeI, size);
             return vs;
@@ -1612,13 +1603,13 @@ namespace CsCheck
             var sizeI = ((ulong)length << 32) + 1UL;
             if (min != null && min.I < sizeI) { size = new Size(sizeI); return null; }
             var vs = new HashSet<T>();
-            size = Size.Zero;
+            size = new Size(0L);
             var bad = 0;
             while (length > 0)
             {
-                if (vs.Add(gen.Generate(pcg, null, out Size s)))
+                if (vs.Add(gen.Generate(pcg, null, out var s)))
                 {
-                    size = Size.Sum(size, s);
+                    size.Add(s);
                     length--;
                     bad = 0;
                 }
@@ -1657,16 +1648,17 @@ namespace CsCheck
             var sizeI = ((ulong)length << 32) + 1UL;
             if (min != null && min.I < sizeI) { size = new Size(sizeI); return null; }
             var vs = new Dictionary<K, V>(length);
-            size = Size.Zero;
+            size = new Size(0L);
             var i = length;
             var bad = 0;
             while (i > 0)
             {
-                var k = genK.Generate(pcg, null, out Size sk);
+                var k = genK.Generate(pcg, null, out var s);
                 if (!vs.ContainsKey(k))
                 {
-                    vs.Add(k, genV.Generate(pcg, null, out Size sv));
-                    size = Size.Sum(size, sk, sv);
+                    size.Add(s);
+                    vs.Add(k, genV.Generate(pcg, null, out s));
+                    size.Add(s);
                     i--;
                     bad = 0;
                 }
@@ -1705,16 +1697,17 @@ namespace CsCheck
             var sizeI = ((ulong)length << 32) + 1UL;
             if (min != null && min.I < sizeI) { size = new Size(sizeI); return null; }
             var vs = new SortedDictionary<K, V>();
-            size = Size.Zero;
+            size = new Size(0L);
             var i = length;
             var bad = 0;
             while (i > 0)
             {
-                var k = genK.Generate(pcg, null, out Size sk);
+                var k = genK.Generate(pcg, null, out var s);
                 if (!vs.ContainsKey(k))
                 {
-                    vs.Add(k, genV.Generate(pcg, null, out Size sv));
-                    size = Size.Sum(size, sk, sv);
+                    size.Add(s);
+                    vs.Add(k, genV.Generate(pcg, null, out s));
+                    size.Add(s);
                     i--;
                     bad = 0;
                 }

@@ -283,9 +283,3 @@ namespace Tests
         }
     }
 }
-
-// TODO: Add slims
-// TODO: Could rent arrays for permutations?
-// TODO: Write Shrinking Challendge PR
-// TODO: More Print
-// TODO: More Equal, ModelEqual
