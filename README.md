@@ -380,14 +380,14 @@ More to see in the [Tests](Tests). There are also 1,000+ F# tests using CsCheck 
 
 Check functions accept configuration optional parameters e.g. size: 100_000, seed: "0N0XIzNsQ0O2", print: t => string.Join(", ", t):
 
-iter - The number of iterations to run in the sample (default 100).
-time - The number of seconds to run the sample.
-seed - The seed to use for the first iteration.
-threads - The number of threads to run the sample on (default number logical CPUs).
-print - A function to convert the state to a string for error reporting (default Check.Print).
-equal - A function to check if the two states are the same (default Check.Equal).
-sigma - For Faster sigma is the number of standard deviations from the null hypothosis (default 6).
-replay - The number of times to retry the seed to reproduce a SampleConcurrent fail (default 100).
+iter - The number of iterations to run in the sample (default 100).  
+time - The number of seconds to run the sample.  
+seed - The seed to use for the first iteration.  
+threads - The number of threads to run the sample on (default number logical CPUs).  
+print - A function to convert the state to a string for error reporting (default Check.Print).  
+equal - A function to check if the two states are the same (default Check.Equal).  
+sigma - For Faster sigma is the number of standard deviations from the null hypothosis (default 6).  
+replay - The number of times to retry the seed to reproduce a SampleConcurrent fail (default 100).  
 
 Global defaults can also be set via environment variables:
 
