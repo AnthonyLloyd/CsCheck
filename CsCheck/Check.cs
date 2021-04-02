@@ -301,7 +301,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
         public static void SampleOne<T>(this Gen<T> gen, Action<T> assert, string seed = null, Func<T, string> print = null)
-            => Sample(gen, assert, seed, 1, -1, 1, print);
+            => Sample(gen, assert, seed, 1, -2, 1, print);
 
         /// <summary>Sample the gen once calling the predicate.</summary>
         /// <param name="gen">The sample input data generator.</param>
@@ -309,7 +309,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
         public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, Func<T, string> print = null)
-            => Sample(gen, predicate, seed, 1, -1, 1, print);
+            => Sample(gen, predicate, seed, 1, -2, 1, print);
 
         class ModelBasedData<Actual, Model>
         {
