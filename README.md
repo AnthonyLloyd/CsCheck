@@ -5,8 +5,6 @@
 <a href="https://www.nuget.org/packages/CsCheck"><img src="https://buildstats.info/nuget/CsCheck?includePreReleases=true"></a>
 </p>
 
-NOTE: Please try the 2.0.0-rc2 release. The 2.0.0 release will be very soon after integrating any feedback. The examples below need a revamp which will happen over the next week.
-
 CsCheck is a C# random testing library inspired by QuickCheck.
 
 It differs in that generation and shrinking are both based on [PCG](https://www.pcg-random.org), a fast random number generator.
@@ -35,7 +33,7 @@ CsCheck also has functionality to make multiple types of testing simple and fast
 
 ## Random testing
 
-### Sample test of the range of a unit single. The default sample size is 100.
+### Unit Single
 ```csharp
 [Fact]
 public void Single_Unit_Range()
@@ -44,7 +42,7 @@ public void Single_Unit_Range()
 }
 ```
 
-### Sample test for long ranges.
+### Long Range
 ```csharp
 [Fact]
 public void Long_Range()
@@ -58,7 +56,7 @@ public void Long_Range()
 }
 ```
 
-### Sample one test for int value distribution.
+### Int Distribution
 ```csharp
 [Fact]
 public void Int_Distribution()
@@ -72,7 +70,7 @@ public void Int_Distribution()
 }
 ```
 
-### Sample roundtrip serialization testing.
+### Serialization Roundtrip
 ```csharp
 static void TestRoundtrip<T>(Gen<T> gen, Action<Stream, T> serialize, Func<Stream, T> deserialize)
 {
@@ -101,9 +99,54 @@ public void DateTime()
 }
 ```
 
+### Shrinking Challenge
+```csharp
+[Fact]
+public void No2_LargeUnionList()
+{
+    Gen.Int.Array.Array
+    .Sample(aa =>
+    {
+        var hs = new HashSet<int>();
+        foreach (var a in aa)
+        {
+            foreach (var i in a) hs.Add(i);
+            if (hs.Count >= 5) return false;
+        }
+        return true;
+    });
+}
+```
+
+## Model-based testing
+
+Model-based is the most efficient form of random testing. Only a small amount of code is needed to fully test functionality.
+SampleModelBased generates an initial actual and model and then applies a random sequence of operations to both checking that the actual and model are still equal.
+
+### SetSlim Add
+```csharp
+[Fact]
+public void SetSlim_ModelBased()
+{
+    Gen.Int.Array.Select(a => (new SetSlim<int>(a), new HashSet<int>(a)))
+    .SampleModelBased(
+        Gen.Int.Operation<SetSlim<int>, HashSet<int>>((ls, l, i) =>
+        {
+            ls.Add(i);
+            l.Add(i);
+        })
+    );
+}
+```
+
 ## Metamorphic testing
 
-### Sample Map AddOrUpdate test.
+The second most efficient form of testing is metamorphic which means doing something two ways and checking they are equal.
+This can be needed when no model can be found that is not just a reimplimentation.
+
+More about how useful metamorphic tests can be here: [How to specify it!](https://youtu.be/G0NUOst-53U?t=1639).
+
+### ImTool AddOrUpdate
 ```csharp
 static Gen<ImHashMap234<int, int>> GenMap(int upperBound) =>
     Gen.Int[0, upperBound].ArrayUnique.SelectMany(ks =>
@@ -119,105 +162,83 @@ static Gen<ImHashMap234<int, int>> GenMap(int upperBound) =>
 public void AddOrUpdate_Metamorphic()
 {
     const int upperBound = 100000;
-    Gen.Select(GenMap(upperBound), Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int)
-    .Sample(t =>
-    {
-        var map1 = t.V0.AddOrUpdate(t.V1, t.V2).AddOrUpdate(t.V3, t.V4);
-        var map2 = t.V1 == t.V3 ? t.V0.AddOrUpdate(t.V3, t.V4)
-                                : t.V0.AddOrUpdate(t.V3, t.V4).AddOrUpdate(t.V1, t.V2);
-        var seq1 = map1.Enumerate().OrderBy(i => i.Key).Select(i => (i.Key, i.Value));
-        var seq2 = map2.Enumerate().OrderBy(i => i.Key).Select(i => (i.Key, i.Value));
-        Assert.Equal(seq1, seq2);
-    }
-    , size: 100_000
-    , print: t => t + "\n" + string.Join("\n", t.V0.Enumerate())
-    , seed: "42ChASl6qJI5");
-}
-```
-
-This test compares the items in a Map after two key values are added in opposite order.
-It shows the use of configuration parameters including print to override the display of the shrunk sample.
-
-This is an example of a metamorphic test which provides very good coverage of functionality.
-More about how useful metamorphic tests can be here: [How to specify it!](https://youtu.be/G0NUOst-53U?t=1639).
-
-```
-Failed Tests.IMToolsTests.AddOrUpdate_Metamorphic [45 s]
-Error Message:
-   CsCheck.CsCheckException : Set seed: "2sGfeoVz3gUh" or $env:CsCheck_Seed = "2sGfeoVz3gUh" to reproduce (5 shrinks, 98,371 skipped, 100,000 total)
-Sample: (leaf2{[637]637:591741395; [811]811:49258608}, 42626, 143418877, 70259, -2062982101)
-[637]637:591741395
-[811]811:49258608
----- Assert.Equal() Failure
-Expected: SelectIPartitionIterator<ValueEntry<Int32, Int32>, ValueTuple<Int32, Int32>> [(637, 591741395), (811, 49258608), (42626, 143418877), (70259, -2062982101)]
-Actual:   SelectIPartitionIterator<ValueEntry<Int32, Int32>, ValueTuple<Int32, Int32>> [(637, 591741395), (811, 49258608), (42626, 143418877)]
-  Stack Trace:
-     at CsCheck.Check.Sample[T](Gen`1 gen, Action`1 assert, String seed, Int32 size, Int32 threads, Func`2 print) in C:\Users\Ant\src\CsCheck\CsCheck\Check.cs:line 119
-   at Tests.IMToolsTests.AddOrUpdate_Metamorphic() in C:\Users\Ant\src\CsCheck\Tests\IMToolsTests.cs:line 66
------ Inner Stack Trace -----
-   at Tests.IMToolsTests.<>c.<AddOrUpdate_Metamorphic>b__5_1(ValueTuple`5 t) in C:\Users\Ant\src\CsCheck\Tests\IMToolsTests.cs:line 70
-   at CsCheck.Check.<>c__DisplayClass5_0`1.<Sample>b__0(Int32 _) in C:\Users\Ant\src\CsCheck\CsCheck\Check.cs:line 113
-```
-
-## Model-based testing
-
-For this case there is also a very good Model-based approach. This gives the best coverage but it is not always possible to find a model that is not just a reimplementation.
-
-```csharp
-[Fact]
-public void AddOrUpdate_ModelBased()
-{
-    const int upperBound = 100000;
-    Gen.Select(GenMap(upperBound), Gen.Int[0, upperBound], Gen.Int)
-    .Sample(t =>
-    {
-        var dic1 = new Dictionary<int, int>();
-        foreach (var entry in t.V0.Enumerate()) dic1.Add(entry.Key, entry.Value);
-        dic1[t.V1] = t.V2;
-        var dic2 = new Dictionary<int, int>();
-        foreach (var entry in t.V0.AddOrUpdate(t.V1, t.V2).Enumerate())
-            dic2.Add(entry.Key, entry.Value);
-        Assert.Equal(dic1, dic2);
-    }
-    , size: 100_000
-    , print: t => t + "\n" + string.Join("\n", t.V0.Enumerate()));
+    GenMap(upperBound)
+    .Select(i => new ImHolder<ImHashMap234<int, int>> { Im = i })
+    .SampleMetamorphic(
+        Gen.Select(Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int).Metamorphic<ImHolder<ImHashMap234<int, int>>>(
+            (d, t) => d.Im = d.Im.AddOrUpdate(t.V0, t.V1).AddOrUpdate(t.V2, t.V3),
+            (d, t) => d.Im = t.V0 == t.V2 ? d.Im.AddOrUpdate(t.V2, t.V3) : d.Im.AddOrUpdate(t.V2, t.V3).AddOrUpdate(t.V0, t.V1)
+        )
+        , equal: (a, b) => Check.Equal(a.Im.Enumerate().Select(j => (j.Key, j.Value)), b.Im.Enumerate().Select(j => (j.Key, j.Value)))
+        , print: i => Check.Print(i.Im.Enumerate().Select(j => (j.Key, j.Value)))
+    );
 }
 ```
 
 ## Concurrency testing
 
-Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603). The following need updated for 2.0.0.
+CsCheck has support for concurrency testing with full shrinking capability.
+A concurrent sequence of operations are run on an initial state and the result is compared to all the possible linearized versions.
+At least ones of these must be equal to the concurrent version.
 
-### Multithreading test for DictionarySlim. Gen and Action pairs will be run randomly across multiple threads.
+Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603).
+
+### SetSlim
 ```csharp
 [Fact]
-public void Multithreading_DictionarySlim()
+public void SetSlim_Concurrency()
 {
-    var d = new DictionarySlim<int, int>();
-    Check.Sample(
-        Gen.Int[1, 10],
-        i =>
-        {
-            ref var v = ref d.GetOrAddValueRef(i);
-            v = 1 - v;
-        },
-        Gen.Int[1, 10],
-        i =>
-        {
-            d.TryGetValue(i, out var v);
-            Assert.True(v == 0 || v == 1);
-        }
+    Gen.Byte.Array.Select(a => new SetSlim<byte>(a))
+    .SampleConcurrent(
+        Gen.Byte.Operation<SetSlim<byte>>((l, i) => { lock (l) l.Add(i); }),
+        Gen.Int.NonNegative.Operation<SetSlim<byte>>((l, i) => { if (i < l.Count) { var _ = l[i]; } }),
+        Gen.Byte.Operation<SetSlim<byte>>((l, i) => { var _ = l.IndexOf(i); }),
+        Gen.Operation<SetSlim<byte>>(l => l.ToArray())
     );
 }
 ```
 
 ## Causal profiling
 
-Coming soon...
+Causal profiling is a technique to investigate the effect of speeding up a number of concurrent regions of code.
+It shows which regions are the bottleneck and what overall performance gain could be achieved from each region.
+
+[Blog posts](http://anthonylloyd.github.io/blog/2019/10/11/causal-profiling)
+
+### Fasta
+```csharp
+[Fact]
+public void Fasta()
+{
+    Causal.Profile(() => FastaUtils.Fasta.NotMain(10_000_000, null)).Output(writeLine);
+}
+
+static int[] Rnds(int i, int j, ref int seed)
+{
+    var region = Causal.RegionStart("rnds");
+    var a = intPool.Rent(BlockSize1);
+    var s = a.AsSpan(0, i);
+    s[0] = j;
+    for (i = 1, j = Width; i < s.Length; i++)
+    {
+        if (j-- == 0)
+        {
+            j = Width;
+            s[i] = IM * 3 / 2;
+        }
+        else
+        {
+            s[i] = seed = (seed * IA + IC) % IM;
+        }
+    }
+    Causal.RegionEnd(region);
+    return a;
+}
+```
 
 ## Regression testing
 
-### Regression test of portfolio profit and risk.  
+### Portfolio Calculation
 **Example** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
 **Hash** is used to find and check a hash for a number of results.
 It saves a cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
@@ -238,16 +259,16 @@ public void Portfolio_Small_Mixed_Example()
     double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
     Check.Hash(h =>
     {
-        h.AddDecimalPlaces(2, portfolio.Positions.Select(p => p.Profit));
-        h.AddDecimalPlaces(2, portfolio.Profit(fxRate));
-        h.AddDecimalPlaces(2, portfolio.RiskByPosition(fxRate));
+        h.Add(portfolio.Positions.Select(p => p.Profit));
+        h.Add(portfolio.Profit(fxRate));
+        h.Add(portfolio.RiskByPosition(fxRate));
     }, 5857230471108592669);
 }
 ```
 
 ## Performance testing
 
-### Performance test of linq expressions checking the results are always the same. The first expression is asserted to be faster than the second.
+### Linq Sum
 ```csharp
 [Fact]
 public void Faster_Linq_Random()
@@ -272,7 +293,7 @@ Standard Output Messages:
  The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
  distribution for the null hypothosis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
 
-### Performance test of two different ways of multiplying a matrix for a sample of matrix sizes checking the results are always the same.
+### Matrix Multiply
 An external equal assert is used.
 ```csharp
 [Fact]
@@ -291,7 +312,7 @@ public void Faster_Matrix_Multiply_Range()
 }
 ```
 
-### Performance test of a new Benchmarks Game submission.
+### Benchmarks Game
 ```csharp
 [Fact]
 public void ReverseComplement_Faster()
@@ -313,7 +334,7 @@ Standard Output Messages:
 25.1%[20.5%..31.6%] faster, sigma=6.0 (36 vs 0)
 ```
 
-### Performance test of PrefixVarint vs Varint for a given distribution skew.
+### PrefixVarint
 Repeat is used as the functions are very quick.
 ```csharp
 void PrefixVarint_Faster(double skew)
@@ -357,12 +378,23 @@ More to see in the [Tests](Tests). There are also 1,000+ F# tests using CsCheck 
 
 ## Configuration
 
-Sample and Faster functions accept configuration optional parameters e.g. size: 100_000, seed: "0N0XIzNsQ0O2", print: t => string.Join(", ", t).
+Check functions accept configuration optional parameters e.g. size: 100_000, seed: "0N0XIzNsQ0O2", print: t => string.Join(", ", t):
 
-Global defaults can also be set via environment variables.
+iter - The number of iterations to run in the sample (default 100).
+time - The number of seconds to run the sample.
+seed - The seed to use for the first iteration.
+threads - The number of threads to run the sample on (default number logical CPUs).
+print - A function to convert the state to a string for error reporting (default Check.Print).
+equal - A function to check if the two states are the same (default Check.Equal).
+sigma - For Faster sigma is the number of standard deviations from the null hypothosis (default 6).
+replay - The number of times to retry the seed to reproduce a SampleConcurrent fail (default 100).
+
+Global defaults can also be set via environment variables:
 
 ```powershell
-$env:CsCheck_Size = 10000; dotnet test -c Release --filter Multithreading; rm env:CsCheck*
+$env:CsCheck_Iter = 10000; dotnet test -c Release --filter Multithreading; rm env:CsCheck*
+
+$env:CsCheck_Time = 60; dotnet test -c Release --filter Multithreading; rm env:CsCheck*
 
 $env:CsCheck_Seed = "0N0XIzNsQ0O2"; dotnet test -c Release --filter List; rm env:CsCheck*
 
