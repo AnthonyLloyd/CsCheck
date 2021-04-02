@@ -17,7 +17,7 @@ This gives the following advantages:
 - Shrinking can be continued later to give simpler cases for high dimensional problems.
 - Concurrency testing and random shrinking work well together.
 
-See the [comparison](Comparison.md) with other random testing libraries.
+See the [comparison](Comparison.md) with other random testing libraries, or how CsCheck does in the [shrinking challenge](https://github.com/jlink/shrinking-challenge).
 The low ceremony generators make CsCheck a good choice for C#, but the superior automatic shrinking and performance will make it a good choice for all languages.
 
 CsCheck also has functionality to make multiple types of testing simple and fast:

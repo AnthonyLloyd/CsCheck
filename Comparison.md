@@ -1,5 +1,7 @@
 ﻿# Comparison with other random testing libraries
 
+See the [shrinking challenge](https://github.com/jlink/shrinking-challenge) for a set of example shrinking problems across testing libraries.
+
 ## Arbitrary
 
 Arb is basically the generator and the shrinker. You only have this when the shrinker is not integrated (automatic).
