@@ -141,36 +141,23 @@ public void SetSlim_ModelBased()
 
 ## Metamorphic testing
 
-The second most efficient form of testing is metamorphic which means doing something two ways and checking they are equal.
-This can be needed when no model can be found that is not just a reimplimentation.
+The second most efficient form of random testing is metamorphic which means doing something two ways and checking they are equal.
+This can be needed when no model can be found that is not just a reimplementation.
 
 More about how useful metamorphic tests can be here: [How to specify it!](https://youtu.be/G0NUOst-53U?t=1639).
 
-### ImTool AddOrUpdate
+### MapSlim Update
 ```csharp
-static Gen<ImHashMap234<int, int>> GenMap(int upperBound) =>
-    Gen.Int[0, upperBound].ArrayUnique.SelectMany(ks =>
-        Gen.Int.Array[ks.Length].Select(vs =>
-        {
-            var m = ImHashMap234<int, int>.Empty;
-            for (int i = 0; i < ks.Length; i++)
-                m = m.AddOrUpdate(ks[i], vs[i]);
-            return m;
-        }));
-
 [Fact]
-public void AddOrUpdate_Metamorphic()
+public void MapSlim_Metamorphic()
 {
-    const int upperBound = 100000;
-    GenMap(upperBound)
-    .Select(i => new ImHolder<ImHashMap234<int, int>> { Im = i })
+    Gen.Dictionary(Gen.Int, Gen.Byte)
+    .Select(d => new MapSlim<int, byte>(d))
     .SampleMetamorphic(
-        Gen.Select(Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int).Metamorphic<ImHolder<ImHashMap234<int, int>>>(
-            (d, t) => d.Im = d.Im.AddOrUpdate(t.V0, t.V1).AddOrUpdate(t.V2, t.V3),
-            (d, t) => d.Im = t.V0 == t.V2 ? d.Im.AddOrUpdate(t.V2, t.V3) : d.Im.AddOrUpdate(t.V2, t.V3).AddOrUpdate(t.V0, t.V1)
+        Gen.Select(Gen.Int[0, 100], Gen.Byte, Gen.Int[0, 100], Gen.Byte).Metamorphic<MapSlim<int, byte>>(
+            (d, t) => { d[t.V0] = t.V1; d[t.V2] = t.V3; },
+            (d, t) => { if (t.V0 == t.V2) d[t.V2] = t.V3; else { d[t.V2] = t.V3; d[t.V0] = t.V1; } }
         )
-        , equal: (a, b) => Check.Equal(a.Im.Enumerate().Select(j => (j.Key, j.Value)), b.Im.Enumerate().Select(j => (j.Key, j.Value)))
-        , print: i => Check.Print(i.Im.Enumerate().Select(j => (j.Key, j.Value)))
     );
 }
 ```
