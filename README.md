@@ -187,10 +187,10 @@ public void SetSlim_Concurrency()
 
 ## Causal profiling
 
-Causal profiling is a technique to investigate the effect of speeding up a number of concurrent regions of code.
+Causal profiling is a technique to investigate the effect of speeding up one or more concurrent regions of code.
 It shows which regions are the bottleneck and what overall performance gain could be achieved from each region.
 
-[Blog posts](http://anthonylloyd.github.io/blog/2019/10/11/causal-profiling)
+Idea from Emery Berger. My blog posts on this [here](http://anthonylloyd.github.io/blog/2019/10/11/causal-profiling).
 
 ### Fasta
 ```csharp
