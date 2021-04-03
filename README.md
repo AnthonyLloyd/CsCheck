@@ -31,6 +31,10 @@ CsCheck also has functionality to make multiple types of testing simple and fast
 - [Performance testing](#Performance-testing)
 - [Configuration](#Configuration)
 
+The following tests are in xUnit but could equally be used in any testing framework.
+
+More to see in the [Tests](Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
+
 ## Random testing
 
 ### Unit Single
@@ -358,10 +362,6 @@ Tests.ArraySerializerTests.PrefixVarint_Faster_Skew10 [1s 829ms]
 Standard Output Messages:
 25.5%[-1.1%..+39.6%] faster, sigma=50.0 (8,394 vs 3,046)
 ```
-
-These tests are in xUnit but could equally be used in any testing framework.
-
-More to see in the [Tests](Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
 
 ## Configuration
 
