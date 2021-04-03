@@ -365,7 +365,7 @@ More to see in the [Tests](Tests). There are also 1,000+ F# tests using CsCheck 
 
 ## Configuration
 
-Check functions accept configuration optional parameters e.g. size: 100_000, seed: "0N0XIzNsQ0O2", print: t => string.Join(", ", t):
+Check functions accept configuration optional parameters e.g. iter: 100_000, seed: "0N0XIzNsQ0O2", print: t => string.Join(", ", t):
 
 iter - The number of iterations to run in the sample (default 100).  
 time - The number of seconds to run the sample.  
