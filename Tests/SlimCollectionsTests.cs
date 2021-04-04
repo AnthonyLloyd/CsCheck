@@ -56,7 +56,7 @@ namespace Tests
                         d.Add(t[i]);
                     return d.Count;
                 },
-                repeat: 100
+                repeat: 200, sigma: 7
             ).Output(writeLine);
         }
 
@@ -81,7 +81,7 @@ namespace Tests
                 Gen.Byte.Operation<SetSlim<byte>>((l, i) => { lock (l) l.Add(i); }),
                 Gen.Int.NonNegative.Operation<SetSlim<byte>>((l, i) => { if (i < l.Count) { var _ = l[i]; } }),
                 Gen.Byte.Operation<SetSlim<byte>>((l, i) => { var _ = l.IndexOf(i); }),
-                Gen.Operation<SetSlim<byte>>(l => l.ToArray())
+                Gen.Operation<SetSlim<byte>>(l => { var _ = l.ToArray(); })
             );
         }
 
@@ -100,7 +100,7 @@ namespace Tests
                     var s = new HashSet<int>();
                     foreach (var i in a) s.Add(i);
                 },
-                repeat: 1000
+                repeat: 100
             ).Output(writeLine);
         }
 
@@ -119,6 +119,83 @@ namespace Tests
                 {
                     var s = t.Item3;
                     foreach (var i in t.a) s.Contains(i);
+                },
+                repeat: 100
+            ).Output(writeLine);
+        }
+
+        [Fact]
+        public void MapSlim_ModelBased()
+        {
+            Gen.Dictionary(Gen.Int, Gen.Byte)
+            .Select(d => (new MapSlim<int, byte>(d), new Dictionary<int, byte>(d)))
+            .SampleModelBased(
+                Gen.Select(Gen.Int[0, 100], Gen.Byte).Operation<MapSlim<int, byte>, Dictionary<int, byte>>((m, d, t) =>
+                {
+                    m[t.V0] = t.V1;
+                    d[t.V0] = t.V1;
+                })
+            );
+        }
+
+        [Fact]
+        public void MapSlim_Metamorphic()
+        {
+            Gen.Dictionary(Gen.Int, Gen.Byte).Select(d => new MapSlim<int, byte>(d))
+            .SampleMetamorphic(
+                Gen.Select(Gen.Int[0, 100], Gen.Byte, Gen.Int[0, 100], Gen.Byte).Metamorphic<MapSlim<int, byte>>(
+                    (d, t) => { d[t.V0] = t.V1; d[t.V2] = t.V3; },
+                    (d, t) => { if (t.V0 == t.V2) d[t.V2] = t.V3; else { d[t.V2] = t.V3; d[t.V0] = t.V1; } }
+                )
+            );
+        }
+
+        [Fact]
+        public void MapSlim_Concurrency()
+        {
+            Gen.Dictionary(Gen.Int, Gen.Byte).Select(d => new MapSlim<int, byte>(d))
+            .SampleConcurrent(
+                Gen.Int.Select(Gen.Byte).Operation<MapSlim<int, byte>>((m, t) => { lock (m) m[t.V0] = t.V1; }),
+                Gen.Int.NonNegative.Operation<MapSlim<int, byte>>((m, i) => { if (i < m.Count) { var _ = m.Key(i); } }),
+                Gen.Int.Operation<MapSlim<int, byte>>((m, i) => { var _ = m.IndexOf(i); }),
+                Gen.Operation<MapSlim<int, byte>>(m => { var _ = m.ToArray(); })
+            );
+        }
+
+        [Fact]
+        public void MapSlim_Performance_Add()
+        {
+            Gen.Int.Select(Gen.Byte).Array
+            .Faster(
+                a =>
+                {
+                    var m = new MapSlim<int, byte>();
+                    foreach (var (k, v) in a) m[k] = v;
+                },
+                a =>
+                {
+                    var m = new Dictionary<int, byte>();
+                    foreach (var (k, v) in a) m[k] = v;
+                },
+                repeat: 100
+            ).Output(writeLine);
+        }
+
+        [Fact]
+        public void MapSlim_Performance_IndexOf()
+        {
+            Gen.Dictionary(Gen.Int, Gen.Byte)
+            .Select(a => (a, new MapSlim<int, byte>(a), new Dictionary<int, byte>(a)))
+            .Faster(
+                t =>
+                {
+                    var m = t.Item2;
+                    foreach (var (k, _) in t.a) m.IndexOf(k);
+                },
+                t =>
+                {
+                    var m = t.Item3;
+                    foreach (var (k, _) in t.a) m.ContainsKey(k);
                 },
                 repeat: 100
             ).Output(writeLine);
@@ -197,7 +274,6 @@ namespace Tests
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
-
 
     public class SetSlim<T> : IReadOnlyCollection<T> where T : IEquatable<T>
     {
@@ -293,5 +369,108 @@ namespace Tests
 
         public T this[int i] => entries[i].Item;
         public int Count => count;
+    }
+
+    public class MapSlim<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
+    {
+        static class SetSlimHolder { internal static Entry[] Initial = new Entry[1]; }
+        struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
+        int count;
+        Entry[] entries;
+        public MapSlim() => entries = SetSlimHolder.Initial;
+
+        public MapSlim(int capacity)
+        {
+            if (capacity < 2) capacity = 2;
+            entries = new Entry[PowerOf2(capacity)];
+        }
+
+        public MapSlim(IEnumerable<KeyValuePair<K, V>> items)
+        {
+            entries = new Entry[2];
+            foreach (var (k, v) in items) this[k] = v;
+        }
+
+        public int Count => count;
+
+        static int PowerOf2(int capacity)
+        {
+            if ((capacity & (capacity - 1)) == 0) return capacity;
+            int i = 2;
+            while (i < capacity) i <<= 1;
+            return i;
+        }
+
+        void Resize()
+        {
+            var oldEntries = entries;
+            var newEntries = new Entry[oldEntries.Length * 2];
+            int i = oldEntries.Length;
+            while (i-- > 0)
+            {
+                newEntries[i].Key = oldEntries[i].Key;
+                newEntries[i].Value = oldEntries[i].Value;
+                var bucketIndex = newEntries[i].Key.GetHashCode() & (newEntries.Length - 1);
+                newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
+                newEntries[bucketIndex].Bucket = i + 1;
+            }
+            entries = newEntries;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        void AddItem(K key, V value, int hashCode)
+        {
+            var i = count;
+            if (i == 0 && entries.Length == 1) entries = new Entry[2];
+            else if (i == entries.Length) Resize();
+            var ent = entries;
+            ent[i].Key = key;
+            ent[i].Value = value;
+            var bucketIndex = hashCode & (ent.Length - 1);
+            ent[i].Next = ent[bucketIndex].Bucket - 1;
+            ent[bucketIndex].Bucket = i + 1;
+            count++;
+        }
+
+        public V this[K key]
+        {
+            get
+            {
+                var ent = entries;
+                var hashCode = key.GetHashCode();
+                var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
+                while (i >= 0 && !key.Equals(ent[i].Key)) i = ent[i].Next;
+                return ent[i].Value;
+            }
+            set
+            {
+                var ent = entries;
+                var hashCode = key.GetHashCode();
+                var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
+                while (i >= 0 && !key.Equals(ent[i].Key)) i = ent[i].Next;
+                if (i >= 0) ent[i].Value = value;
+                else AddItem(key, value, hashCode);
+            }
+        }
+
+        public int IndexOf(K key)
+        {
+            var ent = entries;
+            var hashCode = key.GetHashCode();
+            var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
+            while (i >= 0 && !key.Equals(ent[i].Key)) i = ent[i].Next;
+            return i;
+        }
+
+        public K Key(int i) => entries[i].Key;
+        public V Value(int i) => entries[i].Value;
+
+        public IEnumerator<KeyValuePair<K, V>> GetEnumerator()
+        {
+            for (int i = 0; i < count; i++)
+                yield return KeyValuePair.Create(entries[i].Key, entries[i].Value);
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }
