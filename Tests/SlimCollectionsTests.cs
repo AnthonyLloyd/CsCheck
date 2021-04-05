@@ -56,7 +56,7 @@ namespace Tests
                         d.Add(t[i]);
                     return d.Count;
                 },
-                repeat: 200, sigma: 7
+                repeat: 200, sigma: 10
             ).Output(writeLine);
         }
 

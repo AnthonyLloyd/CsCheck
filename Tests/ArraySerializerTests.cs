@@ -37,29 +37,27 @@ namespace Tests
             });
         }
 
-        void PrefixVarint_Faster(double skew)
+        [Fact]
+        public void PrefixVarint_Faster()
         {
-            var bytes = new byte[8];
-            Gen.UInt.Skew[skew].Faster(i =>
+            Gen.UInt.Select(Gen.Const(() => new byte[8])).Faster(t =>
             {
+                var (i, bytes) = t;
                 int pos = 0;
                 ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
                 pos = 0;
                 return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
             }
-            , i =>
+            , t =>
             {
+                var (i, bytes) = t;
                 int pos = 0;
                 ArraySerializer.WriteVarint(bytes, ref pos, i);
                 pos = 0;
                 return ArraySerializer.ReadVarint(bytes, ref pos);
-            }, threads: 1, sigma: 10, repeat: 100, raiseexception: false)
+            }, sigma: 10, repeat: 100, raiseexception: false)
             .Output(writeLine);
         }
-        [Fact]
-        public void PrefixVarint_Faster_NoSkew() => PrefixVarint_Faster(0);
-        [Fact]
-        public void PrefixVarint_Faster_Skew10() => PrefixVarint_Faster(5);
     }
 
     public static class ArraySerializer

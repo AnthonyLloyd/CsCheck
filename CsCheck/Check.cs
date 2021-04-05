@@ -879,15 +879,23 @@ namespace CsCheck
                     {
                         while (!mre.IsSet)
                         {
-                            var tf = Stopwatch.GetTimestamp();
-                            for (int i = 1; i < repeat; i++) faster();
+                            long tf = 0L, ts = 0L, st = 0L;
+                            for (int i = 1; i < repeat; i++)
+                            {
+                                st = Stopwatch.GetTimestamp();
+                                faster();
+                                tf += Stopwatch.GetTimestamp() - st;
+                                st = Stopwatch.GetTimestamp();
+                                slower();
+                                ts += Stopwatch.GetTimestamp() - st;
+                                if (mre.IsSet) return;
+                            }
+                            st = Stopwatch.GetTimestamp();
                             faster();
-                            tf = Stopwatch.GetTimestamp() - tf;
-                            if (mre.IsSet) return;
-                            var ts = Stopwatch.GetTimestamp();
-                            for (int i = 1; i < repeat; i++) slower();
+                            tf += Stopwatch.GetTimestamp() - st;
+                            st = Stopwatch.GetTimestamp();
                             slower();
-                            ts = Stopwatch.GetTimestamp() - ts;
+                            ts += Stopwatch.GetTimestamp() - st;
                             if (mre.IsSet) return;
                             r.Add(tf, ts);
                             if (r.SigmaSquared >= sigma) mre.Set();
@@ -903,7 +911,7 @@ namespace CsCheck
             if (raiseexception)
             {
                 if (!completed) throw new CsCheckException("Timeout! " + r.ToString());
-                if (exception is not null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+                if (exception is not null || r.Slower > r.Faster || r.Median.Median < 0.0) throw exception ?? new CsCheckException(r.ToString());
             }
             return r;
         }
@@ -934,15 +942,23 @@ namespace CsCheck
                     {
                         while (!mre.IsSet)
                         {
-                            var tf = Stopwatch.GetTimestamp();
-                            for (int i = 1; i < repeat; i++) faster();
+                            long tf = 0L, ts = 0L, st = 0L;
+                            for (int i = 1; i < repeat; i++)
+                            {
+                                st = Stopwatch.GetTimestamp();
+                                faster();
+                                tf += Stopwatch.GetTimestamp() - st;
+                                st = Stopwatch.GetTimestamp();
+                                slower();
+                                ts += Stopwatch.GetTimestamp() - st;
+                                if (mre.IsSet) return;
+                            }
+                            st = Stopwatch.GetTimestamp();
                             var vf = faster();
-                            tf = Stopwatch.GetTimestamp() - tf;
-                            if (mre.IsSet) return;
-                            var ts = Stopwatch.GetTimestamp();
-                            for (int i = 1; i < repeat; i++) slower();
+                            tf += Stopwatch.GetTimestamp() - st;
+                            st = Stopwatch.GetTimestamp();
                             var vs = slower();
-                            ts = Stopwatch.GetTimestamp() - ts;
+                            ts += Stopwatch.GetTimestamp() - st;
                             if (mre.IsSet) return;
                             if (assertEqual is null)
                             {
@@ -984,11 +1000,11 @@ namespace CsCheck
             if (raiseexception)
             {
                 if (!completed) throw new CsCheckException("Timeout! " + r.ToString());
-                if (exception is not null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+                if (exception is not null || r.Slower > r.Faster || r.Median.Median < 0.0) throw exception ?? new CsCheckException(r.ToString());
             }
             return r;
         }
-        /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6) across a sampel of input data.</summary>
+        /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
         /// <param name="gen">The input data generator.</param>
         /// <param name="faster">The presumed faster code to test.</param>
         /// <param name="slower">The presumed slower code to test.</param>
@@ -1021,15 +1037,23 @@ namespace CsCheck
                         {
                             state = pcg.State;
                             t = gen.Generate(pcg, null, out _);
-                            var tf = Stopwatch.GetTimestamp();
-                            for (int i = 1; i < repeat; i++) faster(t);
+                            long tf = 0L, ts = 0L, st = 0L;
+                            for (int i = 1; i < repeat; i++)
+                            {
+                                st = Stopwatch.GetTimestamp();
+                                faster(t);
+                                tf += Stopwatch.GetTimestamp() - st;
+                                st = Stopwatch.GetTimestamp();
+                                slower(t);
+                                ts += Stopwatch.GetTimestamp() - st;
+                                if (mre.IsSet) return;
+                            }
+                            st = Stopwatch.GetTimestamp();
                             faster(t);
-                            tf = Stopwatch.GetTimestamp() - tf;
-                            if (mre.IsSet) return;
-                            var ts = Stopwatch.GetTimestamp();
-                            for (int i = 1; i < repeat; i++) slower(t);
+                            tf += Stopwatch.GetTimestamp() - st;
+                            st = Stopwatch.GetTimestamp();
                             slower(t);
-                            ts = Stopwatch.GetTimestamp() - ts;
+                            ts += Stopwatch.GetTimestamp() - st;
                             if (mre.IsSet) return;
                             r.Add(tf, ts);
                             if (r.SigmaSquared >= sigma) mre.Set();
@@ -1047,7 +1071,7 @@ namespace CsCheck
             if (raiseexception)
             {
                 if (!completed) throw new CsCheckException("Timeout! " + r.ToString());
-                if (exception is not null || r.Slower > r.Faster) throw exception ?? new CsCheckException(r.ToString());
+                if (exception is not null || r.Slower > r.Faster || r.Median.Median < 0.0) throw exception ?? new CsCheckException(r.ToString());
             }
             return r;
         }
@@ -1086,15 +1110,23 @@ namespace CsCheck
                         {
                             state = pcg.State;
                             t = gen.Generate(pcg, null, out _);
-                            var tf = Stopwatch.GetTimestamp();
-                            for (int i = 1; i < repeat; i++) faster(t);
+                            long tf = 0L, ts = 0L, st = 0L;
+                            for (int i = 1; i < repeat; i++)
+                            {
+                                st = Stopwatch.GetTimestamp();
+                                faster(t);
+                                tf += Stopwatch.GetTimestamp() - st;
+                                st = Stopwatch.GetTimestamp();
+                                slower(t);
+                                ts += Stopwatch.GetTimestamp() - st;
+                                if (mre.IsSet) return;
+                            }
+                            st = Stopwatch.GetTimestamp();
                             var vf = faster(t);
-                            tf = Stopwatch.GetTimestamp() - tf;
-                            if (mre.IsSet) return;
-                            var ts = Stopwatch.GetTimestamp();
-                            for (int i = 1; i < repeat; i++) slower(t);
+                            tf += Stopwatch.GetTimestamp() - st;
+                            st = Stopwatch.GetTimestamp();
                             var vs = slower(t);
-                            ts = Stopwatch.GetTimestamp() - ts;
+                            ts += Stopwatch.GetTimestamp() - st;
                             if (mre.IsSet) return;
                             if (assertEqual is null)
                             {
