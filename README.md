@@ -139,6 +139,7 @@ public void SetSlim_ModelBased()
             ls.Add(i);
             l.Add(i);
         })
+        // ... other operations
     );
 }
 ```
