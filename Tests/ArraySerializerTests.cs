@@ -56,7 +56,7 @@ namespace Tests
                 ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
                 pos = 0;
                 return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
-            }, sigma: 10, repeat: 200)
+            }, sigma: 10, repeat: 500, raiseexception: false)
             .Output(writeLine);
         }
     }
