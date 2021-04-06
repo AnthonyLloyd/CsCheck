@@ -325,42 +325,37 @@ Standard Output Messages:
 25.1%[20.5%..31.6%] faster, sigma=6.0 (36 vs 0)
 ```
 
-### PrefixVarint
+### Varint
 Repeat is used as the functions are very quick.
 ```csharp
-void PrefixVarint_Faster(double skew)
+[Fact]
+public void Varint_Faster()
 {
-    var bytes = new byte[8];
-    Gen.UInt.Skew[skew].Faster(i =>
+    Gen.UInt.Select(Gen.Const(() => new byte[8]))
+    .Faster(t =>
     {
-        int pos = 0;
-        ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
-        pos = 0;
-        return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
-    }
-    , i =>
-    {
+        var (i, bytes) = t;
         int pos = 0;
         ArraySerializer.WriteVarint(bytes, ref pos, i);
         pos = 0;
         return ArraySerializer.ReadVarint(bytes, ref pos);
-    }, threads: 1, sigma: 50, repeat: 10_000)
+    },
+    t =>
+    {
+        var (i, bytes) = t;
+        int pos = 0;
+        ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
+        pos = 0;
+        return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
+    }, sigma: 10, repeat: 200)
     .Output(writeLine);
 }
-[Fact]
-public void PrefixVarint_Faster_NoSkew() => PrefixVarint_Faster(0);
-[Fact]
-public void PrefixVarint_Faster_Skew10() => PrefixVarint_Faster(10);
 ```
 
 ```
-Tests.ArraySerializerTests.PrefixVarint_Faster_NoSkew [483ms]
+Tests.ArraySerializerTests.Varint_Faster [45 ms]
 Standard Output Messages:
-51.9%[48.7%..54.9%] faster, sigma=50.0 (2,539 vs 13)
-
-Tests.ArraySerializerTests.PrefixVarint_Faster_Skew10 [1s 829ms]
-Standard Output Messages:
-25.5%[-1.1%..+39.6%] faster, sigma=50.0 (8,394 vs 3,046)
+10.9%[-3.2%..25.8%] faster, sigma=10.0 (442 vs 190)
 ```
 
 ## Configuration
@@ -383,7 +378,7 @@ $env:CsCheck_Iter = 10000; dotnet test -c Release --filter Multithreading; rm en
 
 $env:CsCheck_Time = 60; dotnet test -c Release --filter Multithreading; rm env:CsCheck*
 
-$env:CsCheck_Seed = "0N0XIzNsQ0O2"; dotnet test -c Release --filter List; rm env:CsCheck*
+$env:CsCheck_Seed = '0N0XIzNsQ0O2'; dotnet test -c Release --filter List; rm env:CsCheck*
 
 $env:CsCheck_Sigma = 50; dotnet test -c Release -l 'console;verbosity=detailed' --filter Faster; rm env:CsCheck*
 
