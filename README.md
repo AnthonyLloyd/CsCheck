@@ -18,7 +18,7 @@ This gives the following advantages:
 - Concurrency testing and random shrinking work well together.
 
 See the [comparison](Comparison.md) with other random testing libraries, or how CsCheck does in the [shrinking challenge](https://github.com/jlink/shrinking-challenge).
-The low ceremony generators make CsCheck a good choice for C#, but the superior automatic shrinking and performance will make it a good choice for all languages.
+The low ceremony generators make CsCheck a good choice for C#, but the superior automatic shrinking, performance and features will make it a good choice for all .NET languages.
 
 CsCheck also has functionality to make multiple types of testing simple and fast:
 
@@ -253,7 +253,7 @@ public void Portfolio_Small_Mixed_Example()
         h.Add(portfolio.Positions.Select(p => p.Profit));
         h.Add(portfolio.Profit(fxRate));
         h.Add(portfolio.RiskByPosition(fxRate));
-    }, 5857230471108592669);
+    }, 5857230471108592669, decimalPlaces: 2);
 }
 ```
 
@@ -331,7 +331,7 @@ Repeat is used as the functions are very quick.
 [Fact]
 public void Varint_Faster()
 {
-    Gen.UInt.Select(Gen.Const(() => new byte[8]))
+    Gen.Select(Gen.UInt, Gen.Const(() => new byte[8]))
     .Faster(t =>
     {
         var (i, bytes) = t;
