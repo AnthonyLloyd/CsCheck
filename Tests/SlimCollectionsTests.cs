@@ -88,7 +88,7 @@ namespace Tests
         [Fact]
         public void SetSlim_Performance_Add()
         {
-            Gen.Int.Array[50, 100]
+            Gen.Int.Array
             .Faster(
                 a =>
                 {
@@ -100,7 +100,7 @@ namespace Tests
                     var s = new HashSet<int>();
                     foreach (var i in a) s.Add(i);
                 },
-                repeat: 100
+                repeat: 250
             ).Output(writeLine);
         }
 
