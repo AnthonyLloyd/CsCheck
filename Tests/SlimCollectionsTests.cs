@@ -37,7 +37,7 @@ namespace Tests
             );
         }
 
-        [Fact]
+        [Fact(Skip="only 4% faster, takes a while")]
         public void ListSlim_Performance_Add()
         {
             Gen.Int.Array
@@ -88,7 +88,7 @@ namespace Tests
         [Fact]
         public void SetSlim_Performance_Add()
         {
-            Gen.Int.Array
+            Gen.Int.Array[50, 100]
             .Faster(
                 a =>
                 {
@@ -100,7 +100,7 @@ namespace Tests
                     var s = new HashSet<int>();
                     foreach (var i in a) s.Add(i);
                 },
-                repeat: 500, sigma: 20
+                repeat: 100
             ).Output(writeLine);
         }
 
@@ -205,10 +205,10 @@ namespace Tests
 
     public class ListSlim<T> : IReadOnlyList<T>
     {
-        static readonly T[] empty = Array.Empty<T>();
+        static class Holder { internal static T[] Initial = Array.Empty<T>(); }
         T[] entries;
         int count;
-        public ListSlim() => entries = empty;
+        public ListSlim() => entries = Holder.Initial;
         public ListSlim(int capacity) => entries = new T[capacity];
         public ListSlim(IEnumerable<T> items)
         {
@@ -227,20 +227,23 @@ namespace Tests
             set => entries[i] = value;
         }
 
-
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void AddWithResize(T item)
+        void AddWithResize(T item)
         {
-            int c = count;
-            if (c == 0) entries = new T[4];
+            if (count == 0)
+            {
+                entries = new T[2];
+                entries[0] = item;
+                count = 1;
+            }
             else
             {
-                var newEntries = new T[c * 2];
-                Array.Copy(entries, 0, newEntries, 0, c);
+                var newEntries = new T[count * 2];
+                Array.Copy(entries, 0, newEntries, 0, count);
+                newEntries[count] = item;
                 entries = newEntries;
+                count++;
             }
-            entries[c] = item;
-            count = c + 1;
         }
 
         public void Add(T item)
@@ -252,10 +255,7 @@ namespace Tests
                 e[c] = item;
                 count = c + 1;
             }
-            else
-            {
-                AddWithResize(item);
-            }
+            else AddWithResize(item);
         }
 
         public T[] ToArray()
@@ -277,11 +277,11 @@ namespace Tests
 
     public class SetSlim<T> : IReadOnlyCollection<T> where T : IEquatable<T>
     {
-        static class SetSlimHolder { internal static Entry[] Initial = new Entry[1]; }
+        static class Holder { internal static Entry[] Initial = new Entry[1]; }
         struct Entry { internal int Bucket; internal int Next; internal T Item; }
         int count;
         Entry[] entries;
-        public SetSlim() => entries = SetSlimHolder.Initial;
+        public SetSlim() => entries = Holder.Initial;
 
         public SetSlim(int capacity)
         {
@@ -373,11 +373,11 @@ namespace Tests
 
     public class MapSlim<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
     {
-        static class SetSlimHolder { internal static Entry[] Initial = new Entry[1]; }
+        static class Holder { internal static Entry[] Initial = new Entry[1]; }
         struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
         int count;
         Entry[] entries;
-        public MapSlim() => entries = SetSlimHolder.Initial;
+        public MapSlim() => entries = Holder.Initial;
 
         public MapSlim(int capacity)
         {
