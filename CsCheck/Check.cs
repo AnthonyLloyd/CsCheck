@@ -35,7 +35,7 @@ namespace CsCheck
         const int MAX_LENGTH = 5000;
         /// <summary>The number of iterations to run in the sample (default 100).</summary>
         public static long Iter = 100;
-        /// <summary>The number of seconds to run the sample. Timeout for Faster.</summary>
+        /// <summary>The number of seconds to run the sample.</summary>
         public static int Time = -1;
         /// <summary>The number of times to retry the seed to reproduce a SampleConcurrent fail (default 100).</summary>
         public static int Replay = 100;
@@ -863,14 +863,12 @@ namespace CsCheck
         /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster(Action faster, Action slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, bool raiseexception = true)
         {
             if (sigma == -1.0) sigma = Sigma;
             sigma *= sigma;
             if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
-            if (timeout == -1) timeout = Time;
-            if (timeout == -1) timeout = 60;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
             Exception exception = null;
@@ -928,14 +926,12 @@ namespace CsCheck
         /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Action<T, T> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, bool raiseexception = true)
         {
             if (sigma == -1.0) sigma = Sigma;
             sigma *= sigma;
             if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
-            if (timeout == -1) timeout = Time;
-            if (timeout == -1) timeout = 60;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
             Exception exception = null;
@@ -1019,15 +1015,13 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
         {
             if (sigma == -1.0) sigma = Sigma;
             sigma *= sigma; // using sigma as sigma squared now
             if (seed is null) seed = Seed;
             if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
-            if (timeout == -1) timeout = Time;
-            if (timeout == -1) timeout = 60;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
             Exception exception = null;
@@ -1093,15 +1087,13 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2>(this Gen<T1> gen, Func<T1, T2> faster, Func<T1, T2> slower, Action<T2, T2> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
         {
             if (sigma == -1.0) sigma = Sigma;
             sigma *= sigma; // using sigma as sigma squared now
             if (seed is null) seed = Seed;
             if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
-            if (timeout == -1) timeout = Time;
-            if (timeout == -1) timeout = 60;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
             Exception exception = null;

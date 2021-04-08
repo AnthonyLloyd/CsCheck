@@ -177,7 +177,7 @@ namespace Tests
                     var m = new Dictionary<int, byte>();
                     foreach (var (k, v) in a) m[k] = v;
                 },
-                repeat: 100
+                repeat: 100, raiseexception: false
             ).Output(writeLine);
         }
 
