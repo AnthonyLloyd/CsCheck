@@ -364,7 +364,7 @@ Standard Output Messages:
 Check functions accept configuration optional parameters e.g. iter: 100_000, seed: "0N0XIzNsQ0O2", print: t => string.Join(", ", t):
 
 iter - The number of iterations to run in the sample (default 100).  
-time - The number of seconds to run the sample.  
+time - The number of seconds to run the sample. Timeout for Faster  
 seed - The seed to use for the first iteration.  
 threads - The number of threads to run the sample on (default number logical CPUs).  
 print - A function to convert the state to a string for error reporting (default Check.Print).  

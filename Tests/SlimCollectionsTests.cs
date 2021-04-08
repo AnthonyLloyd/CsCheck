@@ -100,7 +100,7 @@ namespace Tests
                     var s = new HashSet<int>();
                     foreach (var i in a) s.Add(i);
                 },
-                repeat: 500, sigma: 10, raiseexception: false
+                repeat: 100, raiseexception: false
             ).Output(writeLine);
         }
 
@@ -277,8 +277,8 @@ namespace Tests
 
     public class SetSlim<T> : IReadOnlyCollection<T> where T : IEquatable<T>
     {
-        static class Holder { internal static Entry[] Initial = new Entry[1]; }
         struct Entry { internal int Bucket; internal int Next; internal T Item; }
+        static class Holder { internal static Entry[] Initial = new Entry[1]; }
         int count;
         Entry[] entries;
         public SetSlim() => entries = Holder.Initial;
@@ -303,33 +303,35 @@ namespace Tests
             return i;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         void Resize()
         {
-            var oldEntries = entries;
-            var newEntries = new Entry[oldEntries.Length * 2];
-            int i = oldEntries.Length;
-            while (i-- > 0)
+            if (entries.Length == 1) entries = new Entry[2];
+            else
             {
-                newEntries[i].Item = oldEntries[i].Item;
-                var bucketIndex = newEntries[i].Item.GetHashCode() & (newEntries.Length - 1);
-                newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
-                newEntries[bucketIndex].Bucket = i + 1;
+                var oldEntries = entries;
+                var newEntries = new Entry[oldEntries.Length * 2];
+                for (int i = 0; i < oldEntries.Length;)
+                {
+                    var bucketIndex = oldEntries[i].Item.GetHashCode() & (newEntries.Length - 1);
+                    newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
+                    newEntries[i].Item = oldEntries[i].Item;
+                    newEntries[bucketIndex].Bucket = ++i;
+                }
+                entries = newEntries;
             }
-            entries = newEntries;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         int AddItem(T item, int hashCode)
         {
             var i = count;
-            if (i == 0 && entries.Length == 1) entries = new Entry[2];
-            else if (i == entries.Length) Resize();
+            if (entries.Length == i || entries.Length == 1) Resize();
             var ent = entries;
-            ent[i].Item = item;
             var bucketIndex = hashCode & (ent.Length - 1);
             ent[i].Next = ent[bucketIndex].Bucket - 1;
-            ent[bucketIndex].Bucket = i + 1;
-            count++;
+            ent[i].Item = item;
+            ent[bucketIndex].Bucket = ++count;
             return i;
         }
 
@@ -373,8 +375,8 @@ namespace Tests
 
     public class MapSlim<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
     {
-        static class Holder { internal static Entry[] Initial = new Entry[1]; }
         struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
+        static class Holder { internal static Entry[] Initial = new Entry[1]; }
         int count;
         Entry[] entries;
         public MapSlim() => entries = Holder.Initial;
@@ -401,35 +403,37 @@ namespace Tests
             return i;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         void Resize()
         {
-            var oldEntries = entries;
-            var newEntries = new Entry[oldEntries.Length * 2];
-            int i = oldEntries.Length;
-            while (i-- > 0)
+            if (entries.Length == 1) entries = new Entry[2];
+            else
             {
-                newEntries[i].Key = oldEntries[i].Key;
-                newEntries[i].Value = oldEntries[i].Value;
-                var bucketIndex = newEntries[i].Key.GetHashCode() & (newEntries.Length - 1);
-                newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
-                newEntries[bucketIndex].Bucket = i + 1;
+                var oldEntries = entries;
+                var newEntries = new Entry[oldEntries.Length * 2];
+                for (int i = 0; i < oldEntries.Length;)
+                {
+                    var bucketIndex = oldEntries[i].Key.GetHashCode() & (newEntries.Length - 1);
+                    newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
+                    newEntries[i].Key = oldEntries[i].Key;
+                    newEntries[i].Value = oldEntries[i].Value;
+                    newEntries[bucketIndex].Bucket = ++i;
+                }
+                entries = newEntries;
             }
-            entries = newEntries;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         void AddItem(K key, V value, int hashCode)
         {
             var i = count;
-            if (i == 0 && entries.Length == 1) entries = new Entry[2];
-            else if (i == entries.Length) Resize();
+            if (entries.Length == i || entries.Length == 1) Resize();
             var ent = entries;
-            ent[i].Key = key;
-            ent[i].Value = value;
             var bucketIndex = hashCode & (ent.Length - 1);
             ent[i].Next = ent[bucketIndex].Bucket - 1;
-            ent[bucketIndex].Bucket = i + 1;
-            count++;
+            ent[i].Key = key;
+            ent[i].Value = value;
+            ent[bucketIndex].Bucket = ++count;
         }
 
         public V this[K key]
