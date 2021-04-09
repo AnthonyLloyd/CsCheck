@@ -218,8 +218,8 @@ namespace Tests
                     var m = t.Item3;
                     foreach (var b in t.a)
                     {
-                        if (m.TryGetValue(b, out int c)) m[b] = c + 1;
-                        else m[b] = 1;
+                        m.TryGetValue(b, out int c);
+                        m[b] = c + 1;
                     }
                 },
                 repeat: 100

@@ -304,6 +304,41 @@ public void Faster_Matrix_Multiply_Range()
 }
 ```
 
+### MapSlim Increment
+
+```csharp
+[Fact]
+public void MapSlim_Performance_Increment()
+{
+    Gen.Byte.Array
+    .Select(a => (a, new MapSlim<byte, int>(), new Dictionary<int, int>()))
+    .Faster(
+        t =>
+        {
+            var m = t.Item2;
+            foreach (var b in t.a)
+                m.GetValueOrNullRef(b)++;
+        },
+        t =>
+        {
+            var m = t.Item3;
+            foreach (var b in t.a)
+            {
+                m.TryGetValue(b, out int c);
+                m[b] = c + 1;
+            }
+        },
+        repeat: 100
+    ).Output(writeLine);
+}
+```
+
+```
+Tests.SlimCollectionsTests.MapSlim_Performance_Increment [27 s]
+Standard Output Messages:
+66.0%[56.4%..74.8%] faster, sigma=200.0 (72,690 vs 13,853)
+```
+
 ### Benchmarks Game
 ```csharp
 [Fact]
