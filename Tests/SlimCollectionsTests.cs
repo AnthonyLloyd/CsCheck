@@ -200,6 +200,31 @@ namespace Tests
                 repeat: 100
             ).Output(writeLine);
         }
+
+        [Fact]
+        public void MapSlim_Performance_Increment()
+        {
+            Gen.Byte.Array
+            .Select(a => (a, new MapSlim<byte, int>(), new Dictionary<int, int>()))
+            .Faster(
+                t =>
+                {
+                    var m = t.Item2;
+                    foreach (var b in t.a)
+                        m.GetValueOrNullRef(b)++;
+                },
+                t =>
+                {
+                    var m = t.Item3;
+                    foreach (var b in t.a)
+                    {
+                        if (m.TryGetValue(b, out int c)) m[b] = c + 1;
+                        else m[b] = 1;
+                    }
+                },
+                repeat: 100
+            ).Output(writeLine);
+        }
     }
 
 
@@ -304,30 +329,27 @@ namespace Tests
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        void Resize()
+        Entry[] Resize()
         {
-            if (entries.Length == 1) entries = new Entry[2];
-            else
+            if (entries.Length == 1) return entries = new Entry[2];
+            var oldEntries = entries;
+            var newEntries = new Entry[oldEntries.Length * 2];
+            for (int i = 0; i < oldEntries.Length;)
             {
-                var oldEntries = entries;
-                var newEntries = new Entry[oldEntries.Length * 2];
-                for (int i = 0; i < oldEntries.Length;)
-                {
-                    var bucketIndex = oldEntries[i].Item.GetHashCode() & (newEntries.Length - 1);
-                    newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
-                    newEntries[i].Item = oldEntries[i].Item;
-                    newEntries[bucketIndex].Bucket = ++i;
-                }
-                entries = newEntries;
+                var bucketIndex = oldEntries[i].Item.GetHashCode() & (newEntries.Length - 1);
+                newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
+                newEntries[i].Item = oldEntries[i].Item;
+                newEntries[bucketIndex].Bucket = ++i;
             }
+            return entries = newEntries;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         int AddItem(T item, int hashCode)
         {
             var i = count;
-            if (entries.Length == i || entries.Length == 1) Resize();
             var ent = entries;
+            if (ent.Length == i || ent.Length == 1) ent = Resize();
             var bucketIndex = hashCode & (ent.Length - 1);
             ent[i].Next = ent[bucketIndex].Bucket - 1;
             ent[i].Item = item;
@@ -404,31 +426,28 @@ namespace Tests
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        void Resize()
+        Entry[] Resize()
         {
-            if (entries.Length == 1) entries = new Entry[2];
-            else
+            var oldEntries = entries;
+            if (oldEntries.Length == 1) return entries = new Entry[2];
+            var newEntries = new Entry[oldEntries.Length * 2];
+            for (int i = 0; i < oldEntries.Length;)
             {
-                var oldEntries = entries;
-                var newEntries = new Entry[oldEntries.Length * 2];
-                for (int i = 0; i < oldEntries.Length;)
-                {
-                    var bucketIndex = oldEntries[i].Key.GetHashCode() & (newEntries.Length - 1);
-                    newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
-                    newEntries[i].Key = oldEntries[i].Key;
-                    newEntries[i].Value = oldEntries[i].Value;
-                    newEntries[bucketIndex].Bucket = ++i;
-                }
-                entries = newEntries;
+                var bucketIndex = oldEntries[i].Key.GetHashCode() & (newEntries.Length - 1);
+                newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
+                newEntries[i].Key = oldEntries[i].Key;
+                newEntries[i].Value = oldEntries[i].Value;
+                newEntries[bucketIndex].Bucket = ++i;
             }
+            return entries = newEntries;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         void AddItem(K key, V value, int hashCode)
         {
             var i = count;
-            if (entries.Length == i || entries.Length == 1) Resize();
             var ent = entries;
+            if (ent.Length == i || ent.Length == 1) ent = Resize();
             var bucketIndex = hashCode & (ent.Length - 1);
             ent[i].Next = ent[bucketIndex].Bucket - 1;
             ent[i].Key = key;
@@ -454,6 +473,26 @@ namespace Tests
                 while (i >= 0 && !key.Equals(ent[i].Key)) i = ent[i].Next;
                 if (i >= 0) ent[i].Value = value;
                 else AddItem(key, value, hashCode);
+            }
+        }
+
+        public ref V GetValueOrNullRef(K key)
+        {
+            var ent = entries;
+            var hashCode = key.GetHashCode();
+            var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
+            while (i >= 0 && !key.Equals(ent[i].Key)) i = ent[i].Next;
+            if (i >= 0) return ref ent[i].Value;
+            else
+            {
+                i = count;
+                if (ent.Length == i || ent.Length == 1) ent = Resize();
+                var bucketIndex = hashCode & (ent.Length - 1);
+                ent[i].Next = ent[bucketIndex].Bucket - 1;
+                ent[i].Key = key;
+                ent[i].Value = default;
+                ent[bucketIndex].Bucket = ++count;
+                return ref ent[i].Value;
             }
         }
 
