@@ -124,7 +124,8 @@ public void No2_LargeUnionList()
 
 ## Model-based testing
 
-Model-based is the most efficient form of random testing. Only a small amount of code is needed to fully test functionality.
+Model-based is the most efficient form of random testing.
+Only a small amount of code is needed to fully test functionality.
 SampleModelBased generates an initial actual and model and then applies a random sequence of operations to both checking that the actual and model are still equal.
 
 ### SetSlim Add
@@ -146,7 +147,8 @@ public void SetSlim_ModelBased()
 
 ## Metamorphic testing
 
-The second most efficient form of random testing is metamorphic which means doing something two ways and checking they are equal.
+The second most efficient form of random testing is metamorphic which means doing something two different ways and checking they produce the same result.
+SampleMetamorphic generates two identical initial samples and then applies the two functions and asserts the results are equal.
 This can be needed when no model can be found that is not just a reimplementation.
 
 More about how useful metamorphic tests can be here: [How to specify it!](https://youtu.be/G0NUOst-53U?t=1639).
