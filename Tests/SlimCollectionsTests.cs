@@ -41,6 +41,14 @@ namespace Tests
         public void ListSlim_Performance_Add()
         {
             Gen.Int.Array
+            .DebugClassify(a => a.Length switch
+            {
+                0 => "zero length",
+                1 => "single length",
+                < 10 => "less ten",
+                > 100 => "over 100",
+                _ => "10 - 100",
+            })
             .Faster(
                 t =>
                 {
@@ -56,8 +64,10 @@ namespace Tests
                         d.Add(t[i]);
                     return d.Count;
                 },
-                repeat: 500, sigma: 20
+                repeat: 500, sigma: 20, raiseexception: false
             ).Output(writeLine);
+
+            Dbg.Output(writeLine);
         }
 
         [Fact]

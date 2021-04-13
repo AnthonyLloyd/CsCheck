@@ -105,9 +105,7 @@ namespace CsCheck
                     minSize = s;
                     minT = t;
                     minException = e;
-                    if (info != null) minInfo = info;
                 }
-                info = null;
             }
             int skipped = 0;
             bool isIter = time < 0;
@@ -144,11 +142,9 @@ namespace CsCheck
                                     minSize = s;
                                     minT = t;
                                     minException = e;
-                                    if (info != null) minInfo = info;
                                 }
                             }
                         }
-                        info = null;
                         Interlocked.Increment(ref total);
                     }
                     cde.Signal();
@@ -164,7 +160,6 @@ namespace CsCheck
                 if (minInfo != null) info = "          Info: " + string.Join("\n              : ", minInfo);
                 throw new CsCheckException(summary + info + tString, minException);
             }
-            info = null;
         }
 
         /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -208,7 +203,6 @@ namespace CsCheck
                         minState = state;
                         minSize = s;
                         minT = t;
-                        if (info is not null) minInfo = info;
                     }
                 }
                 catch (Exception e)
@@ -219,9 +213,7 @@ namespace CsCheck
                     minSize = s;
                     minT = t;
                     minException = e;
-                    if (info is not null) minInfo = info;
                 }
-                info = null;
             }
             int skipped = 0;
             bool isIter = time < 0;
@@ -254,7 +246,6 @@ namespace CsCheck
                                             minState = state;
                                             minSize = s;
                                             minT = t;
-                                            if (info is not null) minInfo = info;
                                         }
                                     }
                                 }
@@ -273,11 +264,9 @@ namespace CsCheck
                                     minSize = s;
                                     minT = t;
                                     minException = e;
-                                    if (info is not null) minInfo = info;
                                 }
                             }
                         }
-                        info = null;
                         Interlocked.Increment(ref total);
                     }
                     cde.Signal();
@@ -1265,22 +1254,6 @@ namespace CsCheck
                     throw new CsCheckException("Actual " + actualFullHash + " but expected " + expected);
                 }
             }
-        }
-
-        static List<string> info;
-        /// <summary>Save useful information to be displayed on shrunk failure.</summary>
-        public static void Info(string s)
-        {
-            if (info is null) info = new List<string>();
-            info.Add(s);
-        }
-
-        /// <summary>Retrieve all of the information messages.</summary>
-        public static List<string> InfoRetrieve()
-        {
-            var r = info;
-            info = null;
-            return r;
         }
     }
 
