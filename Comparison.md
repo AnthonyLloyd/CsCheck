@@ -1,7 +1,6 @@
 ﻿# Comparison with other random testing libraries
 
 See the [shrinking challenge](https://github.com/jlink/shrinking-challenge) for a set of example shrinking problems across testing libraries.
-In one test CsCheck managed to shrink to a new smaller example than was reached and thought possible by the other testing libraries.
 
 ## Arbitrary
 
