@@ -79,8 +79,8 @@ Standard Output Messages:
  Fail: 0.0.0
 ```
 
-The [shrinking challenge test](https://github.com/jlink/shrinking-challenge/blob/main/challenges/binheap.md) where CsCheck managed to shrink to a new smaller example is another example.
-Most other libraries are more faithful to the original QuickCheck design and they all stop at the same larger example.
+The [shrinking challenge test](https://github.com/jlink/shrinking-challenge/blob/main/challenges/binheap.md) where CsCheck managed to shrink to a new smaller case is another example.
+Most other libraries are more faithful to the original QuickCheck design and they all stop at a similar larger example.
 
 Size is also a better representation of comparison especially for collections or a number of axes.
 There are examples where increasing on one axis while decreasing on others can lead to smaller cases e.g. if Version fails for `2 * ma + mi + bu ≥ 255 * 2`
