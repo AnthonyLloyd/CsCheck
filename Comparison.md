@@ -79,11 +79,14 @@ Standard Output Messages:
  Fail: 0.0.0
 ```
 
+The [shrinking challenge test](https://github.com/jlink/shrinking-challenge/blob/main/challenges/binheap.md) where CsCheck managed to shrink to a new smaller example is another example.
+Most other libraries are more faithful to the original QuickCheck design and they all stop at the same larger example.
+
 Size is also a better representation of comparison especially for collections or a number of axes.
 There are examples where increasing on one axis while decreasing on others can lead to smaller cases e.g. if Version fails for `2 * ma + mi + bu ≥ 255 * 2`
 CsCheck will be able to shrink to `255.0.0` but [Hedgehog](https://github.com/hedgehogqa) won't.
 
-For concurrency testing random shrinkers also has an advantage. Concurrency tests may not fail determinately.
+For concurrency testing random shrinkers also has an advantage. Concurrency tests may not fail deterministically.
 This is a real problem for path explorer shrinkers. The only solution is to repeat each test multiple times (10 for QuickCheck) since they need to follow defined paths.
 For a random shrinker you can just continue testing different random cases until one fails and limit the size to that each time.
 
@@ -91,7 +94,3 @@ For CsCheck it has to generate and check size in a loop. This has to be as fast 
 This is why CsCheck uses a fast random generator ([PCG](https://www.pcg-random.org)) and good Size algorithm. It can shrink more complex spaces.
 It has the advantage over the tree way in that we know the seed for the shrunk case. It means you can continue the shrinking later after a CI failure.
 It is much better at shrinking more complex types, you just have to leave it shrinking for a short time.
-
-One outstanding issue for the Monte-Carlo way is that for very rare failures it can take a long time to find the next value and failure.
-It doesn't cut down the total space well (tree way cuts it too much).
-This can be worked around by once you know some dimensions of the failure you can limit the test to these and continue.
