@@ -37,7 +37,7 @@ namespace Tests
             );
         }
 
-        [Fact(Skip="only 4% faster, takes a while")]
+        [Fact(Skip="very close")]
         public void ListSlim_Performance_Add()
         {
             Gen.Int.Array
@@ -514,7 +514,7 @@ namespace Tests
         public IEnumerator<KeyValuePair<K, V>> GetEnumerator()
         {
             for (int i = 0; i < count; i++)
-                yield return KeyValuePair.Create(entries[i].Key, entries[i].Value);
+                yield return new(entries[i].Key, entries[i].Value);
         }
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

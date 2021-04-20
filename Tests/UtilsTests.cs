@@ -15,22 +15,21 @@ namespace Tests
             Assert.True(Check.Equal(new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } }, new Dictionary<int, byte> { { 3, 4 }, { 1, 2 } }));
             Assert.True(Check.Equal(new[] { (1, 2), (3, 4) }, new[] { (1, 2), (3, 4) }));
             Assert.False(Check.Equal(new[] { (1, 2), (3, 4) }, new[] { (3, 4), (1, 2) }));
-
         }
 
         [Fact]
         public void ModelEqual()
         {
-            Assert.True(Check.ModelEqual(new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } }, new[] { KeyValuePair.Create(3, (byte)4), KeyValuePair.Create(1, (byte)2) }));
-            Assert.True(Check.ModelEqual(new[] { KeyValuePair.Create(1, (byte)2), KeyValuePair.Create(3, (byte)4) }, new[] { KeyValuePair.Create(1, (byte)2), KeyValuePair.Create(3, (byte)4) }));
-            Assert.False(Check.ModelEqual(new [] { KeyValuePair.Create(1, (byte)2), KeyValuePair.Create(3, (byte)4) }, new[] { KeyValuePair.Create(3, (byte)4), KeyValuePair.Create(1, (byte)2) }));
+            Assert.True(Check.ModelEqual(new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } }, new KeyValuePair<int, byte>[] { new(3, 4), new(1, 2) }));
+            Assert.True(Check.ModelEqual(new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }, new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }));
+            Assert.False(Check.ModelEqual(new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }, new KeyValuePair<int, byte>[] { new(3, 4), new(1, 2) }));
         }
 
         [Fact]
         public void Print()
         {
-            Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new[] { KeyValuePair.Create(1, 2), KeyValuePair.Create(3, 4) }));
-            Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new[] { Tuple.Create(1, 2), Tuple.Create(3, 4) }));
+            Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new KeyValuePair<int, int>[] { new(1, 2), new(3, 4) }));
+            Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new Tuple<int, int>[] { new(1, 2), new(3, 4) }));
             Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new[] { (1, 2), (3, 4) }));
         }
     }
@@ -47,99 +46,99 @@ namespace Tests
         [Fact]
         public void Permutations_11()
         {
-            Test(new int[] { 1, 1 }, new[] {
-                new int[] { 1, 1 },
+            Test(new[] { 1, 1 }, new[] {
+                new[] { 1, 1 },
             });
         }
 
         [Fact]
         public void Permutations_12()
         {
-            Test(new int[] { 1, 2 }, new[] {
-                new int[] { 1, 2 },
-                new int[] { 2, 1 },
+            Test(new[] { 1, 2 }, new[] {
+                new[] { 1, 2 },
+                new[] { 2, 1 },
             });
         }
 
         [Fact]
         public void Permutations_112()
         {
-            Test(new int[] { 1, 1, 2 }, new[] {
-                new int[] { 1, 1, 2 },
-                new int[] { 1, 2, 1 },
+            Test(new[] { 1, 1, 2 }, new[] {
+                new[] { 1, 1, 2 },
+                new[] { 1, 2, 1 },
             });
         }
 
         [Fact]
         public void Permutations_121()
         {
-            Test(new int[] { 1, 2, 1 }, new[] {
-                new int[] { 1, 2, 1 },
-                new int[] { 2, 1, 1 },
-                new int[] { 1, 1, 2 },
+            Test(new[] { 1, 2, 1 }, new[] {
+                new[] { 1, 2, 1 },
+                new[] { 2, 1, 1 },
+                new[] { 1, 1, 2 },
             });
         }
 
         [Fact]
         public void Permutations_123()
         {
-            Test(new int[] { 1, 2, 3 }, new[] {
-                new int[] { 1, 2, 3 },
-                new int[] { 2, 1, 3 },
-                new int[] { 1, 3, 2 },
-                new int[] { 3, 1, 2 },
-                new int[] { 2, 3, 1 },
-                new int[] { 3, 2, 1 },
+            Test(new[] { 1, 2, 3 }, new[] {
+                new[] { 1, 2, 3 },
+                new[] { 2, 1, 3 },
+                new[] { 1, 3, 2 },
+                new[] { 3, 1, 2 },
+                new[] { 2, 3, 1 },
+                new[] { 3, 2, 1 },
             });
         }
 
         [Fact]
         public void Permutations_1212()
         {
-            Test(new int[] { 1, 2, 1, 2 }, new[] {
-                new int[] { 1, 2, 1, 2 },
-                new int[] { 2, 1, 1, 2 },
-                new int[] { 1, 1, 2, 2 },
-                new int[] { 1, 2, 2, 1 },
-                new int[] { 2, 1, 2, 1 },
+            Test(new[] { 1, 2, 1, 2 }, new[] {
+                new[] { 1, 2, 1, 2 },
+                new[] { 2, 1, 1, 2 },
+                new[] { 1, 1, 2, 2 },
+                new[] { 1, 2, 2, 1 },
+                new[] { 2, 1, 2, 1 },
             });
         }
 
         [Fact]
         public void Permutations_1231()
         {
-            Test(new int[] { 1, 2, 3, 1 }, new[] {
-                new int[] { 1, 2, 3, 1 },
-                new int[] { 2, 1, 3, 1 },
-                new int[] { 1, 3, 2, 1 },
-                new int[] { 3, 1, 2, 1 },
-                new int[] { 1, 2, 1, 3 },
-                new int[] { 1, 1, 2, 3 },
-                new int[] { 2, 3, 1, 1 },
-                new int[] { 2, 1, 1, 3 },
-                new int[] { 1, 3, 1, 2 },
-                new int[] { 3, 2, 1, 1 },
-                new int[] { 3, 1, 1, 2 },
-                new int[] { 1, 1, 3, 2 },
+            Test(new[] { 1, 2, 3, 1 }, new[] {
+                new[] { 1, 2, 3, 1 },
+                new[] { 2, 1, 3, 1 },
+                new[] { 1, 3, 2, 1 },
+                new[] { 3, 1, 2, 1 },
+                new[] { 1, 2, 1, 3 },
+                new[] { 1, 1, 2, 3 },
+                new[] { 2, 3, 1, 1 },
+                new[] { 2, 1, 1, 3 },
+                new[] { 1, 3, 1, 2 },
+                new[] { 3, 2, 1, 1 },
+                new[] { 3, 1, 1, 2 },
+                new[] { 1, 1, 3, 2 },
             });
         }
 
         [Fact]
         public void Permutations_1232()
         {
-            Test(new int[] { 1, 2, 3, 2 }, new[] {
-                new int[] { 1, 2, 3, 2 },
-                new int[] { 2, 1, 3, 2 },
-                new int[] { 1, 3, 2, 2 },
-                new int[] { 3, 1, 2, 2 },
-                new int[] { 1, 2, 2, 3 },
-                new int[] { 2, 3, 1, 2 },
-                new int[] { 2, 1, 2, 3 },
-                new int[] { 2, 2, 1, 3 },
-                new int[] { 3, 2, 1, 2 },
-                new int[] { 2, 3, 2, 1 },
-                new int[] { 2, 2, 3, 1 },
-                new int[] { 3, 2, 2, 1 },
+            Test(new[] { 1, 2, 3, 2 }, new[] {
+                new[] { 1, 2, 3, 2 },
+                new[] { 2, 1, 3, 2 },
+                new[] { 1, 3, 2, 2 },
+                new[] { 3, 1, 2, 2 },
+                new[] { 1, 2, 2, 3 },
+                new[] { 2, 3, 1, 2 },
+                new[] { 2, 1, 2, 3 },
+                new[] { 2, 2, 1, 3 },
+                new[] { 3, 2, 1, 2 },
+                new[] { 2, 3, 2, 1 },
+                new[] { 2, 2, 3, 1 },
+                new[] { 3, 2, 2, 1 },
             });
         }
 
