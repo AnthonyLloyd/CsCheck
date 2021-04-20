@@ -245,11 +245,11 @@ namespace Tests
         public void Hash_Roundtrip_Offset()
         {
             Gen.Int[0, Hash.OFFSET_SIZE - 1].Select(Gen.Int)
-            .Sample(oh =>
+            .Sample((offset, hash) =>
             {
-                var (offset, hash) = Hash.OffsetHash(Hash.FullHash(oh.V0, oh.V1));
-                Assert.Equal(oh.V0, offset);
-                Assert.Equal(oh.V1, hash);
+                var (offset2, hash2) = Hash.OffsetHash(Hash.FullHash(offset, hash));
+                Assert.Equal(offset, offset2);
+                Assert.Equal(hash, hash2);
             });
         }
 

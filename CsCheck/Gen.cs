@@ -420,6 +420,29 @@ namespace CsCheck
             return (v0, v1, v2, v3, v4);
         });
 
+        public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3, T4 V4, T5 V5)> Select<T0, T1, T2, T3, T4, T5>(this Gen<T0> gen0, Gen<T1> gen1,
+            Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5) => Create((PCG pcg, Size min, out Size size) =>
+            {
+                if (min != null)
+                {
+                    if (min.I < 0x6_0000_0000UL) { size = new Size(0x6_0000_0000UL); return default; }
+                    min = min.I == 0x6_0000_0000UL ? min.Next : null;
+                }
+                var v0 = gen0.Generate(pcg, min, out size);
+                var v1 = gen1.Generate(pcg, min, out var s);
+                size.Add(s);
+                var v2 = gen2.Generate(pcg, min, out s);
+                size.Add(s);
+                var v3 = gen3.Generate(pcg, min, out s);
+                size.Add(s);
+                var v4 = gen4.Generate(pcg, min, out s);
+                size.Add(s);
+                var v5 = gen5.Generate(pcg, min, out s);
+                size.Add(s);
+                size = new Size(0x6_0000_0000UL, size);
+                return (v0, v1, v2, v3, v4, v5);
+            });
+
         public static Gen<(T0 V0, T1 V1)> SelectTuple<T0, T1>(this Gen<T0> gen, Func<T0, Gen<T1>> selector)
             => Create((PCG pcg, Size min, out Size size) =>
         {

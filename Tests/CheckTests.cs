@@ -15,7 +15,7 @@ namespace Tests
         static void Assert_Commutative<T, R>(Gen<T> gen, Func<T, T, R> operation)
         {
             Gen.Select(gen, gen)
-            .Sample(t => Assert.Equal(operation(t.V0, t.V1), operation(t.V1, t.V0)));
+            .Sample((op1, op2) => Assert.Equal(operation(op1, op2), operation(op2, op1)));
         }
 
         [Fact]
@@ -51,8 +51,8 @@ namespace Tests
         static void Assert_Associative<T>(Gen<T> gen, Func<T, T, T> operation)
         {
             Gen.Select(gen, gen, gen)
-            .Sample(t => Assert.Equal(operation(t.V0, operation(t.V1, t.V2)),
-                                      operation(operation(t.V0, t.V1), t.V2)));
+            .Sample((op1, op2, op3) =>
+                Assert.Equal(operation(op1, operation(op2, op3)), operation(operation(op1, op2), op3)));
         }
 
         [Fact]

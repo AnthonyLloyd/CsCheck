@@ -629,9 +629,8 @@ namespace Tests
         public void Shuffle()
         {
             Gen.Int.Array.SelectMany(a1 => Gen.Shuffle(a1).Select(a2 => (a1, a2)))
-            .Sample(t =>
+            .Sample((a1, a2) =>
             {
-                var (a1, a2) = t;
                 Array.Sort(a1);
                 Array.Sort(a2);
                 Assert.Equal(a1, a2);

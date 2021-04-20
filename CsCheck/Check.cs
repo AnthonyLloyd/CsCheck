@@ -162,6 +162,66 @@ namespace CsCheck
             }
         }
 
+        /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> assert,
+            string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string> print = null)
+            => Sample(gen, t => assert(t.Item1, t.Item2), seed, iter, time, threads, print);
+
+        /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> assert,
+            string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string> print = null)
+            => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3), seed, iter, time, threads, print);
+
+        /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> assert,
+            string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string> print = null)
+            => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), seed, iter, time, threads, print);
+
+        /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> assert,
+            string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string> print = null)
+            => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), seed, iter, time, threads, print);
+
+        /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> assert,
+            string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string> print = null)
+            => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), seed, iter, time, threads, print);
+
         /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
         /// <param name="gen">The sample input data generator.</param>
         /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
@@ -283,6 +343,66 @@ namespace CsCheck
                 throw new CsCheckException(summary + info + tString, minException);
             }
         }
+
+        /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate,
+            string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string> print = null)
+            => Sample(gen, t => predicate(t.Item1, t.Item2), seed, iter, time, threads, print);
+
+        /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate,
+            string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string> print = null)
+            => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3), seed, iter, time, threads, print);
+
+        /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate,
+            string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string> print = null)
+            => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), seed, iter, time, threads, print);
+
+        /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate,
+            string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string> print = null)
+            => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), seed, iter, time, threads, print);
+
+        /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate,
+            string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string> print = null)
+            => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), seed, iter, time, threads, print);
 
         /// <summary>Sample the gen once calling the assert.</summary>
         /// <param name="gen">The sample input data generator.</param>
