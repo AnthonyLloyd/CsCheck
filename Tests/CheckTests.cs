@@ -125,12 +125,10 @@ namespace Tests
         {
             var genDim = Gen.Int[5, 30];
             var genArray = Gen.Double.Unit.Array2D;
-            Gen.SelectMany(genDim, genDim, genDim, (i, j, k) =>
-                Gen.Select(genArray[i, j], genArray[j, k])
-            )
+            Gen.SelectMany(genDim, genDim, genDim, (i, j, k) => Gen.Select(genArray[i, j], genArray[j, k]))
             .Faster(
-                t => MulIKJ(t.V0, t.V1),
-                t => MulIJK(t.V0, t.V1)
+                MulIKJ,
+                MulIJK
             )
             .Output(writeLine);
         }

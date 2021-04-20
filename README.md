@@ -289,21 +289,18 @@ Standard Output Messages:
  distribution for the null hypothosis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
 
 ### Matrix Multiply
-An external equal assert is used.
+
 ```csharp
 [Fact]
 public void Faster_Matrix_Multiply_Range()
 {
     var genDim = Gen.Int[5, 30];
     var genArray = Gen.Double.Unit.Array2D;
-    Gen.SelectMany(genDim, genDim, genDim, (i, j, k) =>
-        Gen.Select(genArray[i, j], genArray[j, k])
-    )
+    Gen.SelectMany(genDim, genDim, genDim, (i, j, k) => Gen.Select(genArray[i, j], genArray[j, k]))
     .Faster(
-        t => MulIKJ(t.V0, t.V1),
-        t => MulIJK(t.V0, t.V1),
-        Assert.Equal
-    )
+        MulIKJ,
+        MulIJK
+    );
 }
 ```
 
@@ -316,19 +313,17 @@ public void MapSlim_Performance_Increment()
     Gen.Byte.Array
     .Select(a => (a, new MapSlim<byte, int>(), new Dictionary<int, int>()))
     .Faster(
-        t =>
+        (items, mapslim, _) =>
         {
-            var m = t.Item2;
-            foreach (var b in t.a)
-                m.GetValueOrNullRef(b)++;
+            foreach (var b in items)
+                mapslim.GetValueOrNullRef(b)++;
         },
-        t =>
+        (items, _, dict) =>
         {
-            var m = t.Item3;
-            foreach (var b in t.a)
+            foreach (var b in items)
             {
-                m.TryGetValue(b, out int c);
-                m[b] = c + 1;
+                dict.TryGetValue(b, out int c);
+                dict[b] = c + 1;
             }
         },
         repeat: 100
@@ -371,22 +366,21 @@ Repeat is used as the functions are very quick.
 public void Varint_Faster()
 {
     Gen.Select(Gen.UInt, Gen.Const(() => new byte[8]))
-    .Faster(t =>
-    {
-        var (i, bytes) = t;
-        int pos = 0;
-        ArraySerializer.WriteVarint(bytes, ref pos, i);
-        pos = 0;
-        return ArraySerializer.ReadVarint(bytes, ref pos);
-    },
-    t =>
-    {
-        var (i, bytes) = t;
-        int pos = 0;
-        ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
-        pos = 0;
-        return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
-    }, sigma: 10, repeat: 200)
+    .Faster(
+        (i, bytes) =>
+        {
+            int pos = 0;
+            ArraySerializer.WriteVarint(bytes, ref pos, i);
+            pos = 0;
+            return ArraySerializer.ReadVarint(bytes, ref pos);
+        },
+        (i, bytes) =>
+        {
+            int pos = 0;
+            ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
+            pos = 0;
+            return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
+        }, sigma: 10, repeat: 200)
     .Output(writeLine);
 }
 ```

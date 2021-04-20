@@ -50,18 +50,18 @@ namespace Tests
                 _ => "10 - 100",
             })
             .Faster(
-                t =>
+                array =>
                 {
                     var d = new ListSlim<int>();
-                    for (int i = 0; i < t.Length; i++)
-                        d.Add(t[i]);
+                    for (int i = 0; i < array.Length; i++)
+                        d.Add(array[i]);
                     return d.Count;
                 },
-                t =>
+                array =>
                 {
                     var d = new List<int>();
-                    for (int i = 0; i < t.Length; i++)
-                        d.Add(t[i]);
+                    for (int i = 0; i < array.Length; i++)
+                        d.Add(array[i]);
                     return d.Count;
                 },
                 repeat: 500, sigma: 20, raiseexception: false
@@ -117,18 +117,15 @@ namespace Tests
         [Fact]
         public void SetSlim_Performance_Contains()
         {
-            Gen.Int.Array
-            .Select(a => (a, new SetSlim<int>(a), new HashSet<int>(a)))
+            Gen.Int.Array.Select(a => (a, new SetSlim<int>(a), new HashSet<int>(a)))
             .Faster(
-                t =>
+                (items, setslim, _) =>
                 {
-                    var s = t.Item2;
-                    foreach (var i in t.a) s.Contains(i);
+                    foreach (var i in items) setslim.Contains(i);
                 },
-                t =>
+                (items, _, hashset) =>
                 {
-                    var s = t.Item3;
-                    foreach (var i in t.a) s.Contains(i);
+                    foreach (var i in items) hashset.Contains(i);
                 },
                 repeat: 100
             ).Output(writeLine);
@@ -177,15 +174,15 @@ namespace Tests
         {
             Gen.Int.Select(Gen.Byte).Array
             .Faster(
-                a =>
+                items =>
                 {
                     var m = new MapSlim<int, byte>();
-                    foreach (var (k, v) in a) m[k] = v;
+                    foreach (var (k, v) in items) m[k] = v;
                 },
-                a =>
+                items =>
                 {
                     var m = new Dictionary<int, byte>();
-                    foreach (var (k, v) in a) m[k] = v;
+                    foreach (var (k, v) in items) m[k] = v;
                 },
                 repeat: 100, raiseexception: false
             ).Output(writeLine);
@@ -197,15 +194,13 @@ namespace Tests
             Gen.Dictionary(Gen.Int, Gen.Byte)
             .Select(a => (a, new MapSlim<int, byte>(a), new Dictionary<int, byte>(a)))
             .Faster(
-                t =>
+                (items, mapslim, _) =>
                 {
-                    var m = t.Item2;
-                    foreach (var (k, _) in t.a) m.IndexOf(k);
+                    foreach (var (k, _) in items) mapslim.IndexOf(k);
                 },
-                t =>
+                (items, _, dict) =>
                 {
-                    var m = t.Item3;
-                    foreach (var (k, _) in t.a) m.ContainsKey(k);
+                    foreach (var (k, _) in items) dict.ContainsKey(k);
                 },
                 repeat: 100
             ).Output(writeLine);
@@ -217,21 +212,19 @@ namespace Tests
             Gen.Byte.Array
             .Select(a => (a, new MapSlim<byte, int>(), new Dictionary<int, int>()))
             .Faster(
-                t =>
-                {
-                    var m = t.Item2;
-                    foreach (var b in t.a)
-                        m.GetValueOrNullRef(b)++;
-                },
-                t =>
-                {
-                    var m = t.Item3;
-                    foreach (var b in t.a)
-                    {
-                        m.TryGetValue(b, out int c);
-                        m[b] = c + 1;
-                    }
-                },
+        (items, mapslim, _) =>
+        {
+            foreach (var b in items)
+                mapslim.GetValueOrNullRef(b)++;
+        },
+        (items, _, dict) =>
+        {
+            foreach (var b in items)
+            {
+                dict.TryGetValue(b, out int c);
+                dict[b] = c + 1;
+            }
+        },
                 repeat: 100
             ).Output(writeLine);
         }

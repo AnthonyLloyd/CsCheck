@@ -41,22 +41,21 @@ namespace Tests
         public void Varint_Faster()
         {
             Gen.UInt.Select(Gen.Const(() => new byte[8]))
-            .Faster(t =>
-            {
-                var (i, bytes) = t;
-                int pos = 0;
-                ArraySerializer.WriteVarint(bytes, ref pos, i);
-                pos = 0;
-                return ArraySerializer.ReadVarint(bytes, ref pos);
-            },
-            t =>
-            {
-                var (i, bytes) = t;
-                int pos = 0;
-                ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
-                pos = 0;
-                return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
-            }, sigma: 10, repeat: 500, raiseexception: false)
+            .Faster(
+                (i, bytes) =>
+                {
+                    int pos = 0;
+                    ArraySerializer.WriteVarint(bytes, ref pos, i);
+                    pos = 0;
+                    return ArraySerializer.ReadVarint(bytes, ref pos);
+                },
+                (i, bytes) =>
+                {
+                    int pos = 0;
+                    ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
+                    pos = 0;
+                    return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
+                }, sigma: 10, repeat: 500, raiseexception: false)
             .Output(writeLine);
         }
     }
