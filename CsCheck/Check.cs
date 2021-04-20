@@ -17,8 +17,6 @@ using System.Text;
 using System.Linq;
 using System.Threading;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace CsCheck
@@ -84,7 +82,6 @@ namespace CsCheck
             Size minSize = null;
             T minT = default;
             Exception minException = null;
-            List<string> minInfo = null;
 
             int shrinks = -1;
             if (seed is not null)
@@ -156,9 +153,7 @@ namespace CsCheck
                 var tString = print(minT);
                 if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
                 var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
-                string info = null;
-                if (minInfo != null) info = "          Info: " + string.Join("\n              : ", minInfo);
-                throw new CsCheckException(summary + info + tString, minException);
+                throw new CsCheckException(summary + tString, minException);
             }
         }
 
@@ -244,7 +239,6 @@ namespace CsCheck
             Size minSize = null;
             T minT = default;
             Exception minException = null;
-            List<string> minInfo = null;
 
             int shrinks = -1;
             if (seed is not null)
@@ -338,9 +332,7 @@ namespace CsCheck
                 var tString = print(minT);
                 if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
                 var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
-                string info = null;
-                if (minInfo != null) info = "          Info: " + string.Join("\n              : ", minInfo);
-                throw new CsCheckException(summary + info + tString, minException);
+                throw new CsCheckException(summary + tString, minException);
             }
         }
 
@@ -769,7 +761,7 @@ namespace CsCheck
                         cd.Exception = e;
                         break;
                     }
-                    Parallel.ForEach(Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
+                    System.Threading.Tasks.Parallel.ForEach(Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
                     {
                         var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed), null, out _);
                         try
@@ -982,7 +974,7 @@ namespace CsCheck
             var mre = new ManualResetEventSlim();
             Exception exception = null;
             while (threads-- > 0)
-                Task.Run(() =>
+                ThreadPool.UnsafeQueueUserWorkItem(_ =>
                 {
                     try
                     {
@@ -1015,7 +1007,7 @@ namespace CsCheck
                         exception = e;
                         mre.Set();
                     }
-                });
+                }, null);
             bool completed = mre.Wait(timeout * 1000);
             if (raiseexception)
             {
@@ -1045,7 +1037,7 @@ namespace CsCheck
             var mre = new ManualResetEventSlim();
             Exception exception = null;
             while (threads-- > 0)
-                Task.Run(() =>
+                ThreadPool.UnsafeQueueUserWorkItem(_ =>
                 {
                     try
                     {
@@ -1104,7 +1096,7 @@ namespace CsCheck
                         exception = e;
                         mre.Set();
                     }
-                });
+                }, null);
             bool completed = mre.Wait(timeout * 1000);
             if (raiseexception)
             {
@@ -1136,7 +1128,7 @@ namespace CsCheck
             var mre = new ManualResetEventSlim();
             Exception exception = null;
             while (threads-- > 0)
-                Task.Run(() =>
+                ThreadPool.UnsafeQueueUserWorkItem(__ =>
                 {
                     var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
                     ulong state = 0;
@@ -1176,7 +1168,7 @@ namespace CsCheck
                         exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tstring, e);
                         mre.Set();
                     }
-                });
+                }, null);
             var completed = mre.Wait(timeout * 1000);
             if (raiseexception)
             {
@@ -1251,7 +1243,7 @@ namespace CsCheck
             var mre = new ManualResetEventSlim();
             Exception exception = null;
             while (threads-- > 0)
-                Task.Run(() =>
+                ThreadPool.UnsafeQueueUserWorkItem(__ =>
                 {
                     var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
                     ulong state = 0;
@@ -1318,7 +1310,7 @@ namespace CsCheck
                         exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tstring, e);
                         mre.Set();
                     }
-                });
+                }, null);
             var completed = mre.Wait(timeout * 1000);
             if (raiseexception)
             {
@@ -1386,7 +1378,7 @@ namespace CsCheck
                 string message = null;
                 var threads = Environment.ProcessorCount;
                 while (threads-- > 0)
-                    Task.Run(() =>
+                    ThreadPool.UnsafeQueueUserWorkItem(__ =>
                     {
                         var pcg = PCG.ThreadPCG;
                         while (true)
@@ -1408,7 +1400,7 @@ namespace CsCheck
 
                             }
                         }
-                    });
+                    }, null);
                 mre.Wait();
                 throw new CsCheckException(message);
             }
