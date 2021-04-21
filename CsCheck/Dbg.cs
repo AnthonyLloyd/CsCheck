@@ -1,16 +1,24 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using CsCheck;
 
+/// <summary>Debug utility functions to output debug info, classify generators, define and remotely call functions, and perform regression testing.
+/// CsCheck can temporarily be added as a reference to use this in non test code.
+/// Note this module is only for temporary debug use and may change between minor versions.</summary>
 public static class Dbg
 {
     static ListSlim<string> info = new();
     static MapSlim<string, int> count = new();
     static MapSlim<string, Action> function = new();
 
+    /// <summary>Debugger break.</summary>
+    public static void Break() => System.Diagnostics.Debugger.Break();
+
+    /// <summary>Output held debug info.</summary>
     public static void Output(Action<string> output)
     {
         foreach (var s in info)
@@ -30,6 +38,7 @@ public static class Dbg
         Clear();
     }
 
+    /// <summary>Clear debug info.</summary>
     public static void Clear()
     {
         info = new();
@@ -37,17 +46,20 @@ public static class Dbg
         function = new();
     }
 
+    /// <summary>Add debug info.</summary>
     public static void Add(string s)
     {
         lock (info) info.Add(s);
     }
 
+    /// <summary>Increment debug info counter.</summary>
     public static void Count<T>(T t)
     {
         var s = Check.Print(t);
         lock (count) count.GetValueOrNullRef(s)++;
     }
 
+    /// <summary>Add IEnumerable item debug info.</summary>
     public static IEnumerable<T> Debug<T>(this IEnumerable<T> source, string name)
     {
         foreach (var t in source)
@@ -57,6 +69,7 @@ public static class Dbg
         }
     }
 
+    /// <summary>Classify and count generated types debug info.</summary>
     public static Gen<T> DebugClassify<T>(this Gen<T> gen, Func<T, string> name) =>
         Gen.Create((PCG pcg, Size min, out Size size) =>
     {
@@ -65,24 +78,28 @@ public static class Dbg
         return t;
     });
 
+    /// <summary>Method debug info.</summary>
     public static void Add<T>(string name, Action<T> f, T t)
     {
         Add(string.Concat(name, " : ", Check.Print(t)));
         f(t);
     }
 
+    /// <summary>Method debug info.</summary>
     public static void Add<T1, T2>(string name, Action<T1, T2> f, T1 t1, T2 t2)
     {
         Add(string.Concat(name, " : ", Check.Print(t1), ", ", Check.Print(t2)));
         f(t1, t2);
     }
 
+    /// <summary>Method debug info.</summary>
     public static void Add<T1, T2, T3>(string name, Action<T1, T2, T3> f, T1 t1, T2 t2, T3 t3)
     {
         Add(string.Concat(name, " : ", Check.Print(t1), ", ", Check.Print(t2), ", ", Check.Print(t3)));
         f(t1, t2, t3);
     }
 
+    /// <summary>Function debug info.</summary>
     public static R Add<R>(string name, Func<R> f)
     {
         var r = f();
@@ -90,6 +107,7 @@ public static class Dbg
         return r;
     }
 
+    /// <summary>Function debug info.</summary>
     public static R Add<T, R>(string name, Func<T, R> f, T t)
     {
         var r = f(t);
@@ -97,6 +115,7 @@ public static class Dbg
         return r;
     }
 
+    /// <summary>Function debug info.</summary>
     public static R Add<T1, T2, R>(string name, Func<T1, T2, R> f, T1 t1, T2 t2)
     {
         var r = f(t1, t2);
@@ -104,6 +123,7 @@ public static class Dbg
         return r;
     }
 
+    /// <summary>Function debug info.</summary>
     public static R Add<T1, T2, T3, R>(string name, Func<T1, T2, T3, R> f, T1 t1, T2 t2, T3 t3)
     {
         var r = f(t1, t2, t3);
@@ -111,12 +131,357 @@ public static class Dbg
         return r;
     }
 
+    /// <summary>Define and store debug function by name.</summary>
     public static void Function(string name, Action action)
     {
         lock (function) function[name] = action;
     }
 
+    /// <summary>Call a stored debug function.</summary>
     public static void Function(string name) => function[name]();
+
+    static RegressionStream regressionStream;
+    /// <summary>Debug regression stream. Saves a sequence of values on the first run and compares them on susequent runs. Must be Disposed to close the file stream.</summary>
+    public static RegressionStream Regression => regressionStream ??= new RegressionStream();
+
+    public class RegressionStream : IDisposable
+    {
+        readonly bool reading;
+        readonly Stream stream;
+        string lastString = "null";
+        double absolute = 1e-12, relative = 1e-9;
+        public RegressionStream()
+        {
+            var filename = Path.Combine(Hash.CacheDir, "Dbg.Regression.has");
+            reading = File.Exists(filename);
+            stream = reading ? File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read)
+                   : File.Create(filename);
+        }
+
+        public void Delete()
+        {
+            stream.Dispose();
+            regressionStream = null;
+            var filename = Path.Combine(Hash.CacheDir, "Dbg.Regression.has");
+            if (File.Exists(filename)) File.Delete(filename);
+        }
+
+        public void Tolerance(double absolute = 0.0, double relative = 0.0)
+        {
+            this.absolute = absolute;
+            this.relative = relative;
+        }
+
+        public void Dispose() => stream.Dispose();
+
+        public void Add(bool val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadBool(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteBool(stream, val);
+        }
+
+        public void Add(sbyte val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadSByte(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteSByte(stream, val);
+        }
+
+        public void Add(byte val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadByte(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteByte(stream, val);
+        }
+
+        public void Add(short val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadShort(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteShort(stream, val);
+        }
+
+        public void Add(ushort val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadUShort(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteUShort(stream, val);
+        }
+
+        public void Add(int val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadInt(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteInt(stream, val);
+        }
+
+        public void Add(uint val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadUInt(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteUInt(stream, val);
+        }
+
+        public void Add(long val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadLong(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteLong(stream, val);
+        }
+
+        public void Add(ulong val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadULong(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteULong(stream, val);
+        }
+
+        public void Add(DateTime val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadDateTime(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteDateTime(stream, val);
+        }
+
+        public void Add(TimeSpan val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadTimeSpan(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteTimeSpan(stream, val);
+        }
+
+        public void Add(DateTimeOffset val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadDateTimeOffset(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteDateTimeOffset(stream, val);
+        }
+
+        public void Add(Guid val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadGuid(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteGuid(stream, val);
+        }
+
+        public void Add(char val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadChar(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteChar(stream, val);
+        }
+
+        public void Add(string val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadString(stream);
+                if (val != val2)
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteString(stream, val);
+            lastString = val;
+        }
+
+        public void Add(double val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadDouble(stream);
+                if (Math.Abs(val - val2) > absolute + relative * (Math.Abs(val) + Math.Abs(val2)))
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteDouble(stream, val);
+        }
+
+        public void Add(float val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadFloat(stream);
+                if (Math.Abs(val - val2) > absolute + relative * (Math.Abs(val) + Math.Abs(val2)))
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteFloat(stream, val);
+        }
+
+        public void Add(decimal val)
+        {
+            if (reading)
+            {
+                var val2 = Hash.StreamSerializer.ReadDecimal(stream);
+                if ((double)Math.Abs(val - val2) > absolute + relative * (double)(Math.Abs(val) + Math.Abs(val2)))
+                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+            }
+            else Hash.StreamSerializer.WriteDecimal(stream, val);
+        }
+
+        public void Add(IEnumerable<bool> val)
+        {
+            var col = val as ICollection<bool> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<byte> val)
+        {
+            var col = val as ICollection<byte> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<sbyte> val)
+        {
+            var col = val as ICollection<sbyte> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<short> val)
+        {
+            var col = val as ICollection<short> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<ushort> val)
+        {
+            var col = val as ICollection<ushort> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<int> val)
+        {
+            var col = val as ICollection<int> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<uint> val)
+        {
+            var col = val as ICollection<uint> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<long> val)
+        {
+            var col = val as ICollection<long> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<ulong> val)
+        {
+            var col = val as ICollection<ulong> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<DateTime> val)
+        {
+            var col = val as ICollection<DateTime> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<DateTimeOffset> val)
+        {
+            var col = val as ICollection<DateTimeOffset> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<TimeSpan> val)
+        {
+            var col = val as ICollection<TimeSpan> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<Guid> val)
+        {
+            var col = val as ICollection<Guid> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<char> val)
+        {
+            var col = val as ICollection<char> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<string> val)
+        {
+            var col = val as ICollection<string> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<double> val)
+        {
+            var col = val as ICollection<double> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<float> val)
+        {
+            var col = val as ICollection<float> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+        public void Add(IEnumerable<decimal> val)
+        {
+            var col = val as ICollection<decimal> ?? val.ToArray();
+            Add((uint)col.Count);
+            foreach (var v in col) Add(v);
+        }
+    }
 
     class ListSlim<T> : IReadOnlyList<T>
     {

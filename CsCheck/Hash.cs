@@ -28,7 +28,7 @@ namespace CsCheck
     public class Hash
     {
         static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new();
-        static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
+        internal static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
         public const int OFFSET_SIZE = 500_000_000;
         readonly int Offset;
         readonly int? DecimalPlaces, SignificantFigures;
