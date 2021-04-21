@@ -6,14 +6,15 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using CsCheck;
 
-/// <summary>Debug utility functions to output debug info, classify generators, define and remotely call functions, and perform regression testing.
+/// <summary>Debug utility functions to collect, count and output debug info, classify generators, define and remotely call functions, and perform in code regression testing.
 /// CsCheck can temporarily be added as a reference to use this in non test code.
 /// Note this module is only for temporary debug use and may change between minor versions.</summary>
 public static class Dbg
 {
     static ListSlim<string> info = new();
-    static MapSlim<string, int> count = new();
-    static MapSlim<string, Action> function = new();
+    static MapSlim<string, int> counts = new();
+    static MapSlim<string, object> objects = new();
+    static MapSlim<string, Action> functions = new();
 
     /// <summary>Debugger break.</summary>
     public static void Break() => System.Diagnostics.Debugger.Break();
@@ -24,13 +25,13 @@ public static class Dbg
         foreach (var s in info)
             output(string.Concat("Dbg: ", s));
         int maxLength = 0, totalCount = 0;
-        foreach (var kv in count)
+        foreach (var kv in counts)
         {
             totalCount += kv.Value;
             if (kv.Key.Length > maxLength)
                 maxLength = kv.Key.Length;
         }
-        foreach (var kc in count.OrderByDescending(i => i.Value))
+        foreach (var kc in counts.OrderByDescending(i => i.Value))
         {
             var percent = ((float)kc.Value / totalCount).ToString("0.0%").PadLeft(7);
             output(string.Concat(kc.Key.PadRight(maxLength), percent, " ", kc.Value));
@@ -42,21 +43,28 @@ public static class Dbg
     public static void Clear()
     {
         info = new();
-        count = new();
-        function = new();
+        counts = new();
+        objects = new();
+        functions = new();
     }
 
     /// <summary>Add debug info.</summary>
-    public static void Add(string s)
+    public static void Info(string s)
     {
         lock (info) info.Add(s);
     }
+
+    /// <summary>Save object by name.</summary>
+    public static object Set(string name, object o) => objects[name] = o;
+
+    /// <summary>Get object by name.</summary>
+    public static object Get(string name) => objects[name];
 
     /// <summary>Increment debug info counter.</summary>
     public static void Count<T>(T t)
     {
         var s = Check.Print(t);
-        lock (count) count.GetValueOrNullRef(s)++;
+        lock (counts) counts.GetValueOrNullRef(s)++;
     }
 
     /// <summary>Add IEnumerable item debug info.</summary>
@@ -64,7 +72,7 @@ public static class Dbg
     {
         foreach (var t in source)
         {
-            Add(string.Concat(name, " : ", Check.Print(t)));
+            Info(string.Concat(name, " : ", Check.Print(t)));
             yield return t;
         }
     }
@@ -79,90 +87,89 @@ public static class Dbg
     });
 
     /// <summary>Method debug info.</summary>
-    public static void Add<T>(string name, Action<T> f, T t)
+    public static void Info<T>(string name, Action<T> f, T t)
     {
-        Add(string.Concat(name, " : ", Check.Print(t)));
+        Info(string.Concat(name, " : ", Check.Print(t)));
         f(t);
     }
 
     /// <summary>Method debug info.</summary>
-    public static void Add<T1, T2>(string name, Action<T1, T2> f, T1 t1, T2 t2)
+    public static void Info<T1, T2>(string name, Action<T1, T2> f, T1 t1, T2 t2)
     {
-        Add(string.Concat(name, " : ", Check.Print(t1), ", ", Check.Print(t2)));
+        Info(string.Concat(name, " : ", Check.Print(t1), ", ", Check.Print(t2)));
         f(t1, t2);
     }
 
     /// <summary>Method debug info.</summary>
-    public static void Add<T1, T2, T3>(string name, Action<T1, T2, T3> f, T1 t1, T2 t2, T3 t3)
+    public static void Info<T1, T2, T3>(string name, Action<T1, T2, T3> f, T1 t1, T2 t2, T3 t3)
     {
-        Add(string.Concat(name, " : ", Check.Print(t1), ", ", Check.Print(t2), ", ", Check.Print(t3)));
+        Info(string.Concat(name, " : ", Check.Print(t1), ", ", Check.Print(t2), ", ", Check.Print(t3)));
         f(t1, t2, t3);
     }
 
     /// <summary>Function debug info.</summary>
-    public static R Add<R>(string name, Func<R> f)
+    public static R Info<R>(string name, Func<R> f)
     {
         var r = f();
-        Add(string.Concat(name, " : ", Check.Print(r)));
+        Info(string.Concat(name, " : ", Check.Print(r)));
         return r;
     }
 
     /// <summary>Function debug info.</summary>
-    public static R Add<T, R>(string name, Func<T, R> f, T t)
+    public static R Info<T, R>(string name, Func<T, R> f, T t)
     {
         var r = f(t);
-        Add(string.Concat(name, " : ", Check.Print(t), " -> ", Check.Print(r)));
+        Info(string.Concat(name, " : ", Check.Print(t), " -> ", Check.Print(r)));
         return r;
     }
 
     /// <summary>Function debug info.</summary>
-    public static R Add<T1, T2, R>(string name, Func<T1, T2, R> f, T1 t1, T2 t2)
+    public static R Info<T1, T2, R>(string name, Func<T1, T2, R> f, T1 t1, T2 t2)
     {
         var r = f(t1, t2);
-        Add(string.Concat(name, " : ", Check.Print(t1), " -> ", Check.Print(t2), " -> ", Check.Print(r)));
+        Info(string.Concat(name, " : ", Check.Print(t1), " -> ", Check.Print(t2), " -> ", Check.Print(r)));
         return r;
     }
 
     /// <summary>Function debug info.</summary>
-    public static R Add<T1, T2, T3, R>(string name, Func<T1, T2, T3, R> f, T1 t1, T2 t2, T3 t3)
+    public static R Info<T1, T2, T3, R>(string name, Func<T1, T2, T3, R> f, T1 t1, T2 t2, T3 t3)
     {
         var r = f(t1, t2, t3);
-        Add(string.Concat(name, " : ", Check.Print(t1), " -> ", Check.Print(t2), " -> ", Check.Print(t3), " -> ", Check.Print(r)));
+        Info(string.Concat(name, " : ", Check.Print(t1), " -> ", Check.Print(t2), " -> ", Check.Print(t3), " -> ", Check.Print(r)));
         return r;
     }
 
-    /// <summary>Define and store debug function by name.</summary>
-    public static void Function(string name, Action action)
+    /// <summary>Define and store debug call by name.</summary>
+    public static void CallDefine(string name, Action action)
     {
-        lock (function) function[name] = action;
+        lock (functions) functions[name] = action;
     }
 
-    /// <summary>Call a stored debug function.</summary>
-    public static void Function(string name) => function[name]();
+    /// <summary>Call a stored debug call.</summary>
+    public static void Call(string name) => functions[name]();
 
     static RegressionStream regressionStream;
     /// <summary>Debug regression stream. Saves a sequence of values on the first run and compares them on susequent runs. Must be Disposed to close the file stream.</summary>
-    public static RegressionStream Regression => regressionStream ??= new RegressionStream();
+    public static RegressionStream Regression => regressionStream ??= new RegressionStream(Path.Combine(Hash.CacheDir, "Dbg.Regression.has"));
 
-    public class RegressionStream : IDisposable
+    public class RegressionStream : IAdd, IDisposable
     {
         readonly bool reading;
-        readonly Stream stream;
+        readonly FileStream stream;
         string lastString = "null";
         double absolute = 1e-12, relative = 1e-9;
-        public RegressionStream()
+        public RegressionStream(string filename)
         {
-            var filename = Path.Combine(Hash.CacheDir, "Dbg.Regression.has");
             reading = File.Exists(filename);
             stream = reading ? File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read)
-                   : File.Create(filename);
+                             : File.Create(filename);
         }
 
         public void Delete()
         {
-            stream.Dispose();
             regressionStream = null;
-            var filename = Path.Combine(Hash.CacheDir, "Dbg.Regression.has");
+            var filename = stream.Name;
+            stream.Dispose();
             if (File.Exists(filename)) File.Delete(filename);
         }
 
@@ -172,7 +179,12 @@ public static class Dbg
             this.relative = relative;
         }
 
-        public void Dispose() => stream.Dispose();
+        public void Dispose()
+        {
+            if (reading && stream.Length != stream.Position)
+                throw new CsCheckException($"file (length {stream.Length}) contains more data than read (length {stream.Position})");
+            stream.Dispose();
+        }
 
         public void Add(bool val)
         {

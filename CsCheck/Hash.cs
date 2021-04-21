@@ -24,8 +24,48 @@ using System.Runtime.InteropServices;
 
 namespace CsCheck
 {
+    public interface IAdd
+    {
+        void Add(bool val);
+        void Add(byte val);
+        void Add(char val);
+        void Add(DateTime val);
+        void Add(DateTimeOffset val);
+        void Add(decimal val);
+        void Add(double val);
+        void Add(float val);
+        void Add(Guid val);
+        void Add(IEnumerable<bool> val);
+        void Add(IEnumerable<byte> val);
+        void Add(IEnumerable<char> val);
+        void Add(IEnumerable<DateTime> val);
+        void Add(IEnumerable<DateTimeOffset> val);
+        void Add(IEnumerable<decimal> val);
+        void Add(IEnumerable<double> val);
+        void Add(IEnumerable<float> val);
+        void Add(IEnumerable<Guid> val);
+        void Add(IEnumerable<int> val);
+        void Add(IEnumerable<long> val);
+        void Add(IEnumerable<sbyte> val);
+        void Add(IEnumerable<short> val);
+        void Add(IEnumerable<string> val);
+        void Add(IEnumerable<TimeSpan> val);
+        void Add(IEnumerable<uint> val);
+        void Add(IEnumerable<ulong> val);
+        void Add(IEnumerable<ushort> val);
+        void Add(int val);
+        void Add(long val);
+        void Add(sbyte val);
+        void Add(short val);
+        void Add(string val);
+        void Add(TimeSpan val);
+        void Add(uint val);
+        void Add(ulong val);
+        void Add(ushort val);
+    }
+
     /// <summary>Functionality for hash testing data with detailed information of any changes.</summary>
-    public class Hash
+    public class Hash : IAdd
     {
         static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new();
         internal static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
