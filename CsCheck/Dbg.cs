@@ -46,6 +46,11 @@ public static class Dbg
         counts = new();
         objects = new();
         functions = new();
+        if(regressionStream != null)
+        {
+            regressionStream.Close();
+            regressionStream = null;
+        }
     }
 
     /// <summary>Add debug info.</summary>
@@ -140,7 +145,7 @@ public static class Dbg
     }
 
     /// <summary>Define and store debug call by name.</summary>
-    public static void CallDefine(string name, Action action)
+    public static void CallAdd(string name, Action action)
     {
         lock (functions) functions[name] = action;
     }
@@ -149,41 +154,42 @@ public static class Dbg
     public static void Call(string name) => functions[name]();
 
     static RegressionStream regressionStream;
-    /// <summary>Debug regression stream. Saves a sequence of values on the first run and compares them on susequent runs. Must be Disposed to close the file stream.</summary>
+    /// <summary>Saves a sequence of values on the first run and compares them on subsequent runs.</summary>
     public static RegressionStream Regression => regressionStream ??= new RegressionStream(Path.Combine(Hash.CacheDir, "Dbg.Regression.has"));
 
-    public class RegressionStream : IAdd, IDisposable
+    public class RegressionStream : IAdd
     {
+        readonly string filename;
         readonly bool reading;
         readonly FileStream stream;
         string lastString = "null";
         double absolute = 1e-12, relative = 1e-9;
         public RegressionStream(string filename)
         {
+            this.filename = filename;
             reading = File.Exists(filename);
-            stream = reading ? File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read)
-                             : File.Create(filename);
+            if (reading) stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
         }
 
         public void Delete()
         {
             regressionStream = null;
-            var filename = stream.Name;
-            stream.Dispose();
+            stream?.Dispose();
             if (File.Exists(filename)) File.Delete(filename);
+        }
+
+        public void Close()
+        {
+            if (reading && stream.Length != stream.Position)
+                throw new CsCheckException($"file (length {stream.Length}) contains more data than read (length {stream.Position})");
+            regressionStream = null;
+            stream?.Dispose();
         }
 
         public void Tolerance(double absolute = 0.0, double relative = 0.0)
         {
             this.absolute = absolute;
             this.relative = relative;
-        }
-
-        public void Dispose()
-        {
-            if (reading && stream.Length != stream.Position)
-                throw new CsCheckException($"file (length {stream.Length}) contains more data than read (length {stream.Position})");
-            stream.Dispose();
         }
 
         public void Add(bool val)
@@ -194,7 +200,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteBool(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteBool(stream, val);
+            }
         }
 
         public void Add(sbyte val)
@@ -205,7 +215,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteSByte(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteSByte(stream, val);
+            }
         }
 
         public void Add(byte val)
@@ -216,7 +230,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteByte(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteByte(stream, val);
+            }
         }
 
         public void Add(short val)
@@ -227,7 +245,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteShort(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteShort(stream, val);
+            }
         }
 
         public void Add(ushort val)
@@ -238,7 +260,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteUShort(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteUShort(stream, val);
+            }
         }
 
         public void Add(int val)
@@ -249,7 +275,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteInt(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteInt(stream, val);
+            }
         }
 
         public void Add(uint val)
@@ -260,7 +290,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteUInt(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteUInt(stream, val);
+            }
         }
 
         public void Add(long val)
@@ -271,7 +305,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteLong(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteLong(stream, val);
+            }
         }
 
         public void Add(ulong val)
@@ -282,7 +320,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteULong(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteULong(stream, val);
+            }
         }
 
         public void Add(DateTime val)
@@ -293,7 +335,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteDateTime(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteDateTime(stream, val);
+            }
         }
 
         public void Add(TimeSpan val)
@@ -304,7 +350,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteTimeSpan(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteTimeSpan(stream, val);
+            }
         }
 
         public void Add(DateTimeOffset val)
@@ -315,7 +365,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteDateTimeOffset(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteDateTimeOffset(stream, val);
+            }
         }
 
         public void Add(Guid val)
@@ -326,7 +380,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteGuid(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteGuid(stream, val);
+            }
         }
 
         public void Add(char val)
@@ -337,7 +395,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteChar(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteChar(stream, val);
+            }
         }
 
         public void Add(string val)
@@ -348,7 +410,11 @@ public static class Dbg
                 if (val != val2)
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteString(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteString(stream, val);
+            }
             lastString = val;
         }
 
@@ -360,7 +426,11 @@ public static class Dbg
                 if (Math.Abs(val - val2) > absolute + relative * (Math.Abs(val) + Math.Abs(val2)))
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteDouble(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteDouble(stream, val);
+            }
         }
 
         public void Add(float val)
@@ -371,7 +441,11 @@ public static class Dbg
                 if (Math.Abs(val - val2) > absolute + relative * (Math.Abs(val) + Math.Abs(val2)))
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteFloat(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteFloat(stream, val);
+            }
         }
 
         public void Add(decimal val)
@@ -382,7 +456,11 @@ public static class Dbg
                 if ((double)Math.Abs(val - val2) > absolute + relative * (double)(Math.Abs(val) + Math.Abs(val2)))
                     throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
             }
-            else Hash.StreamSerializer.WriteDecimal(stream, val);
+            else
+            {
+                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                Hash.StreamSerializer.WriteDecimal(stream, val);
+            }
         }
 
         public void Add(IEnumerable<bool> val)
