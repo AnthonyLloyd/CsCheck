@@ -169,6 +169,7 @@ public static class Dbg
             this.filename = filename;
             reading = File.Exists(filename);
             if (reading) stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
+            else Directory.CreateDirectory(Path.GetDirectoryName(filename));
         }
 
         public void Delete()
