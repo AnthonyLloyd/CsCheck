@@ -407,10 +407,10 @@ public void Normal_Code()
     Dbg.Call("helpful");
     Dbg.Regression.Add("ONE");
     Dbg.Regression.Add(1.243M);
-    Dbg.CallAdd("cache", () =>
+    Dbg.CallAdd("test cache", () =>
     {
-        Dbg.Regression.Add((double)Dbg.Get("d"));
-        Dbg.Regression.Add("TWO");
+        Dbg.Info(Dbg.Get("d").ToString());
+        // Dbg.Info(cacheItems);
     });
 }
 
@@ -421,10 +421,11 @@ public void Test()
     {
         var d = (double)Dbg.Get("d");
         // ...
+        Dbg.Set("d", d);
     });
     Normal_Code();
-    Dbg.Call("cache");
-    Dbg.Output(wrietLine);
+    Dbg.Call("test cache");
+    Dbg.Output(writeLine);
 }
 ```
 
