@@ -30,6 +30,7 @@ CsCheck also has functionality to make multiple types of testing simple and fast
 - [Causal profiling](#Causal-profiling)
 - [Regression testing](#Regression-testing)
 - [Performance testing](#Performance-testing)
+- [Debug utilities](#Debug-utilities)
 - [Configuration](#Configuration)
 
 The following tests are in xUnit but could equally be used in any testing framework.
@@ -389,6 +390,42 @@ public void Varint_Faster()
 Tests.ArraySerializerTests.Varint_Faster [45 ms]
 Standard Output Messages:
 10.9%[-3.2%..25.8%] faster, sigma=10.0 (442 vs 190)
+```
+
+## Debug utilities
+
+The Dbg module is a set of utilities to collect, count and output debug info, classify generators, define and remotely call functions, and perform in code regression during testing.
+CsCheck can temporarily be added as a reference to run in non test code.
+Note this module is only for temporary debug use and the API may change between minor versions.
+
+```csharp
+public void Normal_Code()
+{
+    Dbg.Info("some info");
+    Dbg.Count("Normal_Code()");
+    Dbg.Set("d", 1.23);
+    Dbg.Call("helpful");
+    Dbg.Regression.Add("ONE");
+    Dbg.Regression.Add(1.243M);
+    Dbg.CallAdd("cache", () =>
+    {
+        Dbg.Regression.Add((double)Dbg.Get("d"));
+        Dbg.Regression.Add("TWO");
+    });
+}
+
+[Fact]
+public void Test()
+{
+    Dbg.CallAdd("helpful", () =>
+    {
+        var d = (double)Dbg.Get("d");
+        // ...
+    });
+    Normal_Code();
+    Dbg.Call("cache");
+    Dbg.Output(wrietLine);
+}
 ```
 
 ## Configuration
