@@ -1420,8 +1420,9 @@ namespace CsCheck
         /// <param name="significantFigures">The number of significant figures to round for double, float and decimal.</param>
         /// <param name="memberName">Automatically set to the method name.</param>
         /// <param name="filePath">Automatically set to the file path.</param>
+        /// <param name="lineNumber">Automatically set to the file path.</param>
         public static void Hash(Action<Hash> action, long expected = 0, int? decimalPlaces = null, int? significantFigures = null,
-            [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "")
+            [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "", [CallerLineNumber] int lineNumber = 0)
         {
             if (expected == 0)
             {

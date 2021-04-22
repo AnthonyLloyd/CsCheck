@@ -94,8 +94,9 @@ namespace CsCheck
             }
         }
 
-        static readonly Dictionary<string, int> hashFileNameId = new();
-        public Hash(int? expectedHash, int? offset = null, int? decimalPlaces = null, int? significantFigures = null, string memberName = "", string filePath = "")
+        static readonly Dictionary<string, List<int>> hashFileNameId = new();
+        public Hash(int? expectedHash, int? offset = null, int? decimalPlaces = null, int? significantFigures = null
+            , string memberName = "", string filePath = "", int lineNumber = 0)
         {
             Offset = offset ?? 0;
             DecimalPlaces = decimalPlaces;
@@ -113,8 +114,18 @@ namespace CsCheck
             int id;
             lock (hashFileNameId)
             {
-                hashFileNameId.TryGetValue(filename, out id);
-                hashFileNameId[filename] = ++id;
+                if(!hashFileNameId.TryGetValue(filename, out var list))
+                {
+                    list = new List<int>();
+                    hashFileNameId.Add(filename, list);
+                }
+
+                id = list.IndexOf(lineNumber) + 1;
+                if(id == 0)
+                {
+                    list.Add(lineNumber);
+                    id = list.Count;
+                }
             }
             if (id > 1) filename += id;
             filename += ".has";
