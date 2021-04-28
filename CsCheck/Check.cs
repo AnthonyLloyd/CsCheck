@@ -18,6 +18,7 @@ using System.Linq;
 using System.Threading;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.IO;
 
 namespace CsCheck
 {
@@ -1437,7 +1438,16 @@ namespace CsCheck
             else
             {
                 var (offset, expectedHashCode) = CsCheck.Hash.OffsetHash(expected);
-                var hash = new Hash(expectedHashCode, offset, decimalPlaces, significantFigures, memberName, filePath);
+
+                // Check hash without opening the file if it already exists for better IO performance for most common code path.
+                if (File.Exists(CsCheck.Hash.Filename(memberName, filePath, lineNumber)))
+                {
+                    var hasher = new Hash(null, offset, decimalPlaces, significantFigures);
+                    action(hasher);
+                    if (hasher.GetHashCode() == expectedHashCode) return;
+                }
+
+                var hash = new Hash(expectedHashCode, offset, decimalPlaces, significantFigures, memberName, filePath, lineNumber);
                 action(hash);
                 int actualHashCode = hash.GetHashCode();
                 hash.Close();

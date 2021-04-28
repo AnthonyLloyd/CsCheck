@@ -108,27 +108,7 @@ namespace CsCheck
             }
             if (!expectedHash.HasValue) return;
             ExpectedHash = expectedHash.Value;
-            filename = filePath.Substring(Path.GetPathRoot(filePath).Length);
-            filename = Path.Combine(CacheDir, Path.GetDirectoryName(filename),
-                        Path.GetFileNameWithoutExtension(filename) + "." + memberName);
-            int id;
-            lock (hashFileNameId)
-            {
-                if(!hashFileNameId.TryGetValue(filename, out var list))
-                {
-                    list = new List<int>();
-                    hashFileNameId.Add(filename, list);
-                }
-
-                id = list.IndexOf(lineNumber) + 1;
-                if(id == 0)
-                {
-                    list.Add(lineNumber);
-                    id = list.Count;
-                }
-            }
-            if (id > 1) filename += id;
-            filename += ".has";
+            filename = Filename(memberName, filePath, lineNumber);
             var rwLock = replaceLock.GetOrAdd(filename, _ => new ReaderWriterLockSlim());
             rwLock.EnterUpgradeableReadLock();
             if (File.Exists(filename))
@@ -146,6 +126,32 @@ namespace CsCheck
             stream = File.Create(tempfile);
             StreamSerializer.WriteInt(stream, ExpectedHash);
             writing = true;
+        }
+
+        internal static string Filename(string memberName, string filePath, int lineNumber)
+        {
+            var filename = filePath.Substring(Path.GetPathRoot(filePath).Length);
+            filename = Path.Combine(CacheDir, Path.GetDirectoryName(filename),
+                        Path.GetFileNameWithoutExtension(filename) + "." + memberName);
+            int id;
+            lock (hashFileNameId)
+            {
+                if (!hashFileNameId.TryGetValue(filename, out var list))
+                {
+                    list = new List<int>();
+                    hashFileNameId.Add(filename, list);
+                }
+
+                id = list.IndexOf(lineNumber) + 1;
+                if (id == 0)
+                {
+                    list.Add(lineNumber);
+                    id = list.Count;
+                }
+            }
+            if (id > 1) filename += id;
+            filename += ".has";
+            return filename;
         }
 
 
