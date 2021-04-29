@@ -54,9 +54,9 @@ public static class Dbg
     }
 
     /// <summary>Add debug info.</summary>
-    public static void Info(string s)
+    public static void Info<T>(T t)
     {
-        lock (info) info.Add(s);
+        lock (info) info.Add(t.ToString());
     }
 
     /// <summary>Save object by name.</summary>

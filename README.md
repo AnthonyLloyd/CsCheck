@@ -409,7 +409,7 @@ public void Normal_Code()
     Dbg.Regression.Add(1.243M);
     Dbg.CallAdd("test cache", () =>
     {
-        Dbg.Info(Dbg.Get("d").ToString());
+        Dbg.Info(Dbg.Get("d"));
         // Dbg.Info(cacheItems);
     });
 }

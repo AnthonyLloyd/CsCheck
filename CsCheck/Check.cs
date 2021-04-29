@@ -1414,6 +1414,37 @@ namespace CsCheck
             }
         }
 
+        /// <summary>Check Equals, IEquatable and GetHashCode are consistent.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Equality<T>(this Gen<T> gen, string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T, T), string> print = null)
+        {
+            if (iter == -1) iter = Iter;
+            if (iter > 1) iter /= 2;
+            if (time == -1) time = Time;
+            if (time > 1) time /= 2;
+
+            gen.Clone().Sample((t1, t2) =>
+                t1.Equals(t2) && t2.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()
+                && (t1 is not IEquatable<T> e || (e.Equals(t2) && ((IEquatable<T>)t2).Equals(t1)))
+            , seed, iter, time, threads, print);
+
+            gen.Select(gen).Sample((t1, t2) =>
+            {
+                bool equal = t1.Equals(t2);
+                return
+                (!equal && !t2.Equals(t1) && !Equals(t1, t2)
+                 && (t1 is not IEquatable<T> e2 || (!e2.Equals(t2) && !((IEquatable<T>)t2).Equals(t1))))
+                ||
+                (equal && t2.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()
+                 && (t1 is not IEquatable<T> e || (e.Equals(t2) && ((IEquatable<T>)t2).Equals(t1))));
+            }, seed, iter, time, threads, print);
+        }
+
         /// <summary>Check a hash of a series of values. Cache values on a correct run and fail with stack trace at first difference.</summary>
         /// <param name="action">The code called to add values into the hash.</param>
         /// <param name="expected">The expected hash value set after an initial run to find it.</param>

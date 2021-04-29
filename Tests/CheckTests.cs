@@ -279,5 +279,13 @@ namespace Tests
                 Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
             );
         }
+
+        [Fact]
+        public void Equality()
+        {
+            Check.Equality(Gen.Int);
+            Check.Equality(Gen.Double);
+            Check.Equality(Gen.String);
+        }
     }
 }
