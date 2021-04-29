@@ -94,9 +94,8 @@ namespace CsCheck
             }
         }
 
-        static readonly Dictionary<string, List<int>> hashFileNameId = new();
         public Hash(int? expectedHash, int? offset = null, int? decimalPlaces = null, int? significantFigures = null
-            , string memberName = "", string filePath = "", int lineNumber = 0)
+            , string memberName = "", string filePath = "")
         {
             Offset = offset ?? 0;
             DecimalPlaces = decimalPlaces;
@@ -108,15 +107,13 @@ namespace CsCheck
             }
             if (!expectedHash.HasValue) return;
             ExpectedHash = expectedHash.Value;
-            filename = Filename(memberName, filePath, lineNumber);
+            filename = Filename(FullHash(offset, ExpectedHash), memberName, filePath);
             var rwLock = replaceLock.GetOrAdd(filename, _ => new ReaderWriterLockSlim());
             rwLock.EnterUpgradeableReadLock();
             if (File.Exists(filename))
             {
                 stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
-                var fileHash = StreamSerializer.ReadInt(stream);
-                if (fileHash == ExpectedHash) return;
-                stream.Dispose();
+                return;
             }
             rwLock.EnterWriteLock();
             threadId = Thread.CurrentThread.ManagedThreadId.ToString();
@@ -124,34 +121,14 @@ namespace CsCheck
             if (File.Exists(tempfile)) File.Delete(tempfile);
             Directory.CreateDirectory(Path.GetDirectoryName(tempfile));
             stream = File.Create(tempfile);
-            StreamSerializer.WriteInt(stream, ExpectedHash);
             writing = true;
         }
 
-        internal static string Filename(string memberName, string filePath, int lineNumber)
+        internal static string Filename(long expectedHashCode, string memberName, string filePath)
         {
-            var filename = filePath.Substring(Path.GetPathRoot(filePath).Length);
-            filename = Path.Combine(CacheDir, Path.GetDirectoryName(filename),
-                        Path.GetFileNameWithoutExtension(filename) + "." + memberName);
-            int id;
-            lock (hashFileNameId)
-            {
-                if (!hashFileNameId.TryGetValue(filename, out var list))
-                {
-                    list = new List<int>();
-                    hashFileNameId.Add(filename, list);
-                }
-
-                id = list.IndexOf(lineNumber) + 1;
-                if (id == 0)
-                {
-                    list.Add(lineNumber);
-                    id = list.Count;
-                }
-            }
-            if (id > 1) filename += id;
-            filename += ".has";
-            return filename;
+            filePath = filePath.Substring(Path.GetPathRoot(filePath).Length);
+            return Path.Combine(CacheDir, Path.GetDirectoryName(filePath),
+                Path.GetFileNameWithoutExtension(filePath) + "." + memberName + "=" + expectedHashCode + ".has");
         }
 
 

@@ -1421,9 +1421,8 @@ namespace CsCheck
         /// <param name="significantFigures">The number of significant figures to round for double, float and decimal.</param>
         /// <param name="memberName">Automatically set to the method name.</param>
         /// <param name="filePath">Automatically set to the file path.</param>
-        /// <param name="lineNumber">Automatically set to the file path.</param>
         public static void Hash(Action<Hash> action, long expected = 0, int? decimalPlaces = null, int? significantFigures = null,
-            [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "", [CallerLineNumber] int lineNumber = 0)
+            [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "")
         {
             if (expected == 0)
             {
@@ -1440,14 +1439,14 @@ namespace CsCheck
                 var (offset, expectedHashCode) = CsCheck.Hash.OffsetHash(expected);
 
                 // Check hash without opening the file if it already exists for better IO performance for most common code path.
-                if (File.Exists(CsCheck.Hash.Filename(memberName, filePath, lineNumber)))
+                if (File.Exists(CsCheck.Hash.Filename(expected, memberName, filePath)))
                 {
                     var hasher = new Hash(null, offset, decimalPlaces, significantFigures);
                     action(hasher);
                     if (hasher.GetHashCode() == expectedHashCode) return;
                 }
 
-                var hash = new Hash(expectedHashCode, offset, decimalPlaces, significantFigures, memberName, filePath, lineNumber);
+                var hash = new Hash(expectedHashCode, offset, decimalPlaces, significantFigures, memberName, filePath);
                 action(hash);
                 int actualHashCode = hash.GetHashCode();
                 hash.Close();

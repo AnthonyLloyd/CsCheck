@@ -24,7 +24,7 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
         <Version>2.1.1</Version>
         <PackageReleaseNotes>
-Check.Hash IO performance improvement - only open hash file if hash code doesn't match.
+Check.Hash IO performance improvement - only open hash file if hash code check fails.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>9.0</LangVersion>
