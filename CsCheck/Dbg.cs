@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Collections;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using CsCheck;
@@ -15,26 +16,43 @@ public static class Dbg
     static MapSlim<string, int> counts = new();
     static MapSlim<string, object> objects = new();
     static MapSlim<string, Action> functions = new();
+    static MapSlim<string, (int, int)> times = new();
+    static Stack<string> timeNameStack = new();
 
     /// <summary>Debugger break.</summary>
-    public static void Break() => System.Diagnostics.Debugger.Break();
+    public static void Break() => Debugger.Break();
 
     /// <summary>Output held debug info.</summary>
     public static void Output(Action<string> output)
     {
+        TimeEnd();
         foreach (var s in info)
             output(string.Concat("Dbg: ", s));
-        int maxLength = 0, totalCount = 0;
+        int maxLength = 0, total = 0;
         foreach (var kv in counts)
         {
-            totalCount += kv.Value;
+            total += kv.Value;
             if (kv.Key.Length > maxLength)
                 maxLength = kv.Key.Length;
         }
         foreach (var kc in counts.OrderByDescending(i => i.Value))
         {
-            var percent = ((float)kc.Value / totalCount).ToString("0.0%").PadLeft(7);
-            output(string.Concat(kc.Key.PadRight(maxLength), percent, " ", kc.Value));
+            var percent = ((float)kc.Value / total).ToString("0.0%").PadLeft(7);
+            output(string.Concat("Count: ", kc.Key.PadRight(maxLength), percent, " ", kc.Value));
+        }
+        maxLength = 0; total = 0;
+        foreach (var kv in times)
+        {
+            total += kv.Value.Item1;
+            if (kv.Key.Length > maxLength)
+                maxLength = kv.Key.Length;
+        }
+        foreach (var kc in times)
+        {
+            var percent = ((float)kc.Value.Item1 / total).ToString("0.0%").PadLeft(7);
+            var time = (kc.Value.Item1 * 1000 / Stopwatch.Frequency).ToString().PadLeft(7);
+            var count = kc.Value.Item2.ToString().PadLeft(3);
+            output(string.Concat("Time: ", kc.Key.PadRight(maxLength), time, "ms", percent, " ", count));
         }
         Clear();
     }
@@ -46,6 +64,8 @@ public static class Dbg
         counts = new();
         objects = new();
         functions = new();
+        times = new();
+        timeNameStack = new();
         if(regressionStream != null)
         {
             regressionStream.Close();
@@ -56,7 +76,8 @@ public static class Dbg
     /// <summary>Add debug info.</summary>
     public static void Info<T>(T t)
     {
-        lock (info) info.Add(t.ToString());
+        var s = Check.Print(t);
+        lock (info) info.Add(s);
     }
 
     /// <summary>Save object by name.</summary>
@@ -70,6 +91,31 @@ public static class Dbg
     {
         var s = Check.Print(t);
         lock (counts) counts.GetValueOrNullRef(s)++;
+    }
+
+    static long timeLast;
+
+    public static void TimeEnd()
+    {
+        if (timeNameStack.Count != 0)
+        {
+            var time = (int)(Stopwatch.GetTimestamp() - timeLast);
+            times.GetValueOrNullRef(timeNameStack.Pop()).Item1 += time;
+        }
+        timeLast = Stopwatch.GetTimestamp();
+    }
+
+    public static void Time<T>(T t)
+    {
+        if (timeNameStack.Count != 0)
+        {
+            var time = (int)(Stopwatch.GetTimestamp() - timeLast);
+            times.GetValueOrNullRef(timeNameStack.Peek()).Item1 += time;
+        }
+        var name = Check.Print(t);
+        timeNameStack.Push(name);
+        times.GetValueOrNullRef(name).Item2++;
+        timeLast = Stopwatch.GetTimestamp();
     }
 
     /// <summary>Add IEnumerable item debug info.</summary>
