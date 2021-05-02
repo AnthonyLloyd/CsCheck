@@ -25,7 +25,7 @@ public static class Dbg
     /// <summary>Output held debug info.</summary>
     public static void Output(Action<string> output)
     {
-        TimeEnd();
+        if (timeNameStack.Count != 0) TimeEnd();
         foreach (var s in info)
             output(string.Concat("Dbg: ", s));
         int maxLength = 0, total = 0;
