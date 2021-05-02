@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Collections;
 using System.Diagnostics;
 using System.Collections.Generic;
@@ -17,7 +18,7 @@ public static class Dbg
     static MapSlim<string, object> objects = new();
     static MapSlim<string, Action> functions = new();
     static MapSlim<string, (int, int)> times = new();
-    static Stack<string> timeNameStack = new();
+    static MapSlim<int, (long, Stack<string>)> timeNameStacks = new();
 
     /// <summary>Debugger break.</summary>
     public static void Break() => Debugger.Break();
@@ -25,7 +26,7 @@ public static class Dbg
     /// <summary>Output held debug info.</summary>
     public static void Output(Action<string> output)
     {
-        if (timeNameStack.Count != 0) TimeEnd();
+        TimeEnd();
         foreach (var s in info)
             output(string.Concat("Dbg: ", s));
         int maxLength = 0, total = 0;
@@ -73,7 +74,7 @@ public static class Dbg
         objects = new();
         functions = new();
         times = new();
-        timeNameStack = new();
+        timeNameStacks = new();
         if(regressionStream != null)
         {
             regressionStream.Close();
@@ -101,38 +102,56 @@ public static class Dbg
         lock (counts) counts.GetValueOrNullRef(s)++;
     }
 
-    static long timeLast;
-
-    public static void TimeEnd()
+    static ref (long, Stack<string>) TimeNameStack()
     {
-        var time = (int)(Stopwatch.GetTimestamp() - timeLast);
-        times.GetValueOrNullRef(timeNameStack.Pop()).Item1 += time;
-        timeLast = Stopwatch.GetTimestamp();
+        lock (timeNameStacks)
+        {
+            ref var stack = ref timeNameStacks.GetValueOrNullRef(Thread.CurrentThread.ManagedThreadId);
+            if (stack.Item2 is null) stack.Item2 = new();
+            return ref stack;
+        }
     }
 
+    /// <summary>Start a time measurement. These calls can be nested.</summary>
     public static void TimeStart<T>(T t)
     {
-        if (timeNameStack.Count != 0)
-        {
-            var time = (int)(Stopwatch.GetTimestamp() - timeLast);
-            times.GetValueOrNullRef(timeNameStack.Peek()).Item1 += time;
-        }
+        var timestamp = Stopwatch.GetTimestamp();
+        ref var stack = ref TimeNameStack();
+        var time = (int)(timestamp - stack.Item1);
+        if (stack.Item2.Count != 0) times.GetValueOrNullRef(stack.Item2.Peek()).Item1 += time;
         var name = Check.Print(t);
-        timeNameStack.Push(name);
+        stack.Item2.Push(name);
         times.GetValueOrNullRef(name).Item2++;
-        timeLast = Stopwatch.GetTimestamp();
+        stack.Item1 = Stopwatch.GetTimestamp();
     }
 
-    public static void TimeStart([CallerMemberName] string memberName = "") => TimeStart<string>(memberName);
+    /// <summary>Start a time measurement. These calls can be nested. Function name when parameter not set.</summary>
+    public static void TimeStart([CallerMemberName] string name = "") => TimeStart<string>(name);
 
+    /// <summary>End the last time measurement.</summary>
+    public static void TimeEnd()
+    {
+        var timestamp = Stopwatch.GetTimestamp();
+        ref var stack = ref TimeNameStack();
+        if (stack.Item2.Count != 0)
+        {
+            var time = (int)(timestamp - stack.Item1);
+            times.GetValueOrNullRef(stack.Item2.Pop()).Item1 += time;
+        }
+        stack.Item1 = Stopwatch.GetTimestamp();
+    }
+
+    /// <summary>End the last time measurement and start a time measurement.</summary>
     public static void TimeEndStart<T>(T t)
     {
-        var time = (int)(Stopwatch.GetTimestamp() - timeLast);
-        times.GetValueOrNullRef(timeNameStack.Pop()).Item1 += time;
+        var timestamp = Stopwatch.GetTimestamp();
+        ref var stack = ref TimeNameStack();
+        var time = (int)(timestamp - stack.Item1);
+        times.GetValueOrNullRef(stack.Item2.Pop()).Item1 += time;
         var name = Check.Print(t);
-        timeNameStack.Push(name);
+        stack.Item2.Push(name);
         times.GetValueOrNullRef(name).Item2++;
-        timeLast = Stopwatch.GetTimestamp();
+        stack.Item1 = Stopwatch.GetTimestamp();
     }
 
     /// <summary>Add IEnumerable item debug info.</summary>
