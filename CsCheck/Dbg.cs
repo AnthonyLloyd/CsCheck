@@ -41,18 +41,26 @@ public static class Dbg
             output(string.Concat("Count: ", kc.Key.PadRight(maxLength), percent, " ", kc.Value));
         }
         maxLength = 0; total = 0;
+        int maxPercent = 0, maxTime = 0, maxCount = 0;
         foreach (var kv in times)
         {
             total += kv.Value.Item1;
             if (kv.Key.Length > maxLength)
                 maxLength = kv.Key.Length;
+            if ((kv.Value.Item1 * 1000L / Stopwatch.Frequency).ToString("#,0").Length > maxTime)
+                maxTime = (kv.Value.Item1 * 1000L / Stopwatch.Frequency).ToString("#,0").Length;
+            if (kv.Value.Item2.ToString().Length > maxCount)
+                maxCount = kv.Value.Item2.ToString().Length;
         }
+        foreach(var kv in times)
+            if (((float)kv.Value.Item1 / total).ToString("0.0%").Length > maxPercent)
+                maxPercent = ((float)kv.Value.Item1 / total).ToString("0.0%").Length;
         foreach (var kc in times)
         {
-            var percent = ((float)kc.Value.Item1 / total).ToString("0.0%").PadLeft(7);
-            var time = (kc.Value.Item1 * 1000 / Stopwatch.Frequency).ToString().PadLeft(7);
-            var count = kc.Value.Item2.ToString().PadLeft(3);
-            output(string.Concat("Time: ", kc.Key.PadRight(maxLength), time, "ms", percent, " ", count));
+            var time = (kc.Value.Item1 * 1000L / Stopwatch.Frequency).ToString("#,0").PadLeft(maxTime + 1);
+            var percent = ((float)kc.Value.Item1 / total).ToString("0.0%").PadLeft(maxPercent + 1);
+            var count = kc.Value.Item2.ToString().PadLeft(maxCount + 1);
+            output(string.Concat("Time: ", kc.Key.PadRight(maxLength), time, "ms", percent, count));
         }
         Clear();
     }
@@ -97,21 +105,30 @@ public static class Dbg
 
     public static void TimeEnd()
     {
-        if (timeNameStack.Count != 0)
-        {
-            var time = (int)(Stopwatch.GetTimestamp() - timeLast);
-            times.GetValueOrNullRef(timeNameStack.Pop()).Item1 += time;
-        }
+        var time = (int)(Stopwatch.GetTimestamp() - timeLast);
+        times.GetValueOrNullRef(timeNameStack.Pop()).Item1 += time;
         timeLast = Stopwatch.GetTimestamp();
     }
 
-    public static void Time<T>(T t)
+    public static void TimeStart<T>(T t)
     {
         if (timeNameStack.Count != 0)
         {
             var time = (int)(Stopwatch.GetTimestamp() - timeLast);
             times.GetValueOrNullRef(timeNameStack.Peek()).Item1 += time;
         }
+        var name = Check.Print(t);
+        timeNameStack.Push(name);
+        times.GetValueOrNullRef(name).Item2++;
+        timeLast = Stopwatch.GetTimestamp();
+    }
+
+    public static void TimeStart([CallerMemberName] string memberName = "") => TimeStart<string>(memberName);
+
+    public static void TimeEndStart<T>(T t)
+    {
+        var time = (int)(Stopwatch.GetTimestamp() - timeLast);
+        times.GetValueOrNullRef(timeNameStack.Pop()).Item1 += time;
         var name = Check.Print(t);
         timeNameStack.Push(name);
         times.GetValueOrNullRef(name).Item2++;
