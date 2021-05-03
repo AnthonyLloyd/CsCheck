@@ -11,29 +11,30 @@ namespace Tests
         [Fact]
         public void DbgWalkthrough()
         {
-            //Dbg.TimeStart();
+            //var time = Dbg.Time();
             Dbg.Regression.Delete();
 
             for (int i = 0; i < 2; i++)
             {
                 Dbg.Info("some info");
-                //Dbg.TimeStart("one");
+                //var t = Dbg.Time("one");
                 Dbg.Regression.Add("ONE");
                 Dbg.Set("d", 1.23);
-                //Dbg.TimeEndStart("two");
+                //t = t.EndStart("two");
                 Dbg.CallAdd("cache", () =>
                 {
                     Dbg.Regression.Add((double)Dbg.Get("d"));
                     Dbg.Regression.Add("TWO");
                 });
-                //Dbg.TimeEnd();
+                //t.End();
                 //System.Threading.Thread.Sleep(70000);
                 Dbg.Call("cache");
                 Dbg.Regression.Add(1.243M);
-                Dbg.Output(s => Assert.Equal("Dbg: some info", s));
+                //Dbg.Output(s => Assert.Equal("Dbg: some info", s));
             }
             Dbg.Regression.Delete();
-            //Dbg.Output(writeLine);
+            //time.End();
+            Dbg.Output(writeLine);
         }
     }
 }

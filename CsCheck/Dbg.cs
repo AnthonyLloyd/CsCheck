@@ -18,48 +18,42 @@ public static class Dbg
     static MapSlim<string, object> objects = new();
     static MapSlim<string, Action> functions = new();
     static MapSlim<string, (int, int)> times = new();
-    static MapSlim<int, (long, Stack<string>)> timeNameStacks = new();
 
     /// <summary>Debugger break.</summary>
-    public static void Break() => Debugger.Break();
+        public static void Break() => Debugger.Break();
 
     /// <summary>Output held debug info.</summary>
     public static void Output(Action<string> output)
     {
-        TimeEnd();
         foreach (var s in info)
             output(string.Concat("Dbg: ", s));
         int maxLength = 0, total = 0;
         foreach (var kv in counts)
         {
             total += kv.Value;
-            if (kv.Key.Length > maxLength)
-                maxLength = kv.Key.Length;
+            if (kv.Key.Length > maxLength) maxLength = kv.Key.Length;
         }
         foreach (var kc in counts.OrderByDescending(i => i.Value))
         {
             var percent = ((float)kc.Value / total).ToString("0.0%").PadLeft(7);
             output(string.Concat("Count: ", kc.Key.PadRight(maxLength), percent, " ", kc.Value));
         }
-        maxLength = 0; total = 0;
+        maxLength = 0;
         int maxPercent = 0, maxTime = 0, maxCount = 0;
         foreach (var kv in times)
         {
-            total += kv.Value.Item1;
-            if (kv.Key.Length > maxLength)
-                maxLength = kv.Key.Length;
+            if (kv.Key.Length > maxLength) maxLength = kv.Key.Length;
             if ((kv.Value.Item1 * 1000L / Stopwatch.Frequency).ToString("#,0").Length > maxTime)
                 maxTime = (kv.Value.Item1 * 1000L / Stopwatch.Frequency).ToString("#,0").Length;
+            if (((float)kv.Value.Item1 / times.Value(0).Item1).ToString("0.0%").Length > maxPercent)
+                maxPercent = ((float)kv.Value.Item1 / times.Value(0).Item1).ToString("0.0%").Length;
             if (kv.Value.Item2.ToString().Length > maxCount)
                 maxCount = kv.Value.Item2.ToString().Length;
         }
-        foreach(var kv in times)
-            if (((float)kv.Value.Item1 / total).ToString("0.0%").Length > maxPercent)
-                maxPercent = ((float)kv.Value.Item1 / total).ToString("0.0%").Length;
         foreach (var kc in times)
         {
             var time = (kc.Value.Item1 * 1000L / Stopwatch.Frequency).ToString("#,0").PadLeft(maxTime + 1);
-            var percent = ((float)kc.Value.Item1 / total).ToString("0.0%").PadLeft(maxPercent + 1);
+            var percent = ((float)kc.Value.Item1 / times.Value(0).Item1).ToString("0.0%").PadLeft(maxPercent + 1);
             var count = kc.Value.Item2.ToString().PadLeft(maxCount + 1);
             output(string.Concat("Time: ", kc.Key.PadRight(maxLength), time, "ms", percent, count));
         }
@@ -74,7 +68,6 @@ public static class Dbg
         objects = new();
         functions = new();
         times = new();
-        timeNameStacks = new();
         if(regressionStream != null)
         {
             regressionStream.Close();
@@ -102,57 +95,43 @@ public static class Dbg
         lock (counts) counts.GetValueOrNullRef(s)++;
     }
 
-    static ref (long, Stack<string>) TimeNameStack()
+    public struct TimeRegion : IDisposable
     {
-        lock (timeNameStacks)
+        public string Name;
+        public long Start;
+
+        /// <summary>End the time measurement.</summary>
+        public void End()
         {
-            ref var stack = ref timeNameStacks.GetValueOrNullRef(Thread.CurrentThread.ManagedThreadId);
-            if (stack.Item2 is null) stack.Item2 = new();
-            return ref stack;
+            var timestamp = Stopwatch.GetTimestamp();
+            lock (times)
+            {
+                ref var timeCount = ref times.GetValueOrNullRef(Name);
+                timeCount.Item1 += (int)(timestamp - Start);
+                timeCount.Item2++;
+            }
+        }
+
+        public void Dispose() => End();
+
+        /// <summary>End the time measurement and start a new one.</summary>
+        public TimeRegion EndStart<T>(T t)
+        {
+            End();
+            return new() { Name = Check.Print(t), Start = Stopwatch.GetTimestamp() };
         }
     }
 
-    /// <summary>Start a time measurement. These calls can be nested.</summary>
-    public static void TimeStart<T>(T t)
+    /// <summary>Start a time measurement.</summary>
+    public static TimeRegion Time<T>(T t)
     {
-        var timestamp = Stopwatch.GetTimestamp();
-        ref var stack = ref TimeNameStack();
-        var time = (int)(timestamp - stack.Item1);
-        if (stack.Item2.Count != 0) times.GetValueOrNullRef(stack.Item2.Peek()).Item1 += time;
         var name = Check.Print(t);
-        stack.Item2.Push(name);
-        times.GetValueOrNullRef(name).Item2++;
-        stack.Item1 = Stopwatch.GetTimestamp();
+        if (times.Count == 0) times.GetValueOrNullRef(name);
+        return new() { Name = name, Start = Stopwatch.GetTimestamp() };
     }
 
-    /// <summary>Start a time measurement. These calls can be nested. Function name when parameter not set.</summary>
-    public static void TimeStart([CallerMemberName] string name = "") => TimeStart<string>(name);
-
-    /// <summary>End the last time measurement.</summary>
-    public static void TimeEnd()
-    {
-        var timestamp = Stopwatch.GetTimestamp();
-        ref var stack = ref TimeNameStack();
-        if (stack.Item2.Count != 0)
-        {
-            var time = (int)(timestamp - stack.Item1);
-            times.GetValueOrNullRef(stack.Item2.Pop()).Item1 += time;
-        }
-        stack.Item1 = Stopwatch.GetTimestamp();
-    }
-
-    /// <summary>End the last time measurement and start a time measurement.</summary>
-    public static void TimeEndStart<T>(T t)
-    {
-        var timestamp = Stopwatch.GetTimestamp();
-        ref var stack = ref TimeNameStack();
-        var time = (int)(timestamp - stack.Item1);
-        times.GetValueOrNullRef(stack.Item2.Pop()).Item1 += time;
-        var name = Check.Print(t);
-        stack.Item2.Push(name);
-        times.GetValueOrNullRef(name).Item2++;
-        stack.Item1 = Stopwatch.GetTimestamp();
-    }
+    /// <summary>Start a time measurement. Function name when parameter not set.</summary>
+    public static TimeRegion Time([CallerMemberName] string name = "") => Time<string>(name);
 
     /// <summary>Add IEnumerable item debug info.</summary>
     public static IEnumerable<T> Debug<T>(this IEnumerable<T> source, string name)
@@ -788,6 +767,8 @@ public static class Dbg
                 return ref ent[i].Value;
             }
         }
+
+        public V Value(int i) => entries[i].Value;
 
         public IEnumerator<KeyValuePair<K, V>> GetEnumerator()
         {
