@@ -103,11 +103,18 @@ public static class Dbg
         public void End()
         {
             var timestamp = Stopwatch.GetTimestamp();
+            lock (times) times.GetValueOrNullRef(Name).Item1 += timestamp - Start;
+        }
+
+        /// <summary>Record time to this line.</summary>
+        public void Line([CallerLineNumber] int line = 0)
+        {
+            var timestamp = Stopwatch.GetTimestamp();
             lock (times)
             {
-                ref var timeCount = ref times.GetValueOrNullRef(Name);
-                timeCount.Item1 += timestamp - Start;
-                timeCount.Item2++;
+                ref var time = ref times.GetValueOrNullRef(string.Concat(Name, " line ", line.ToString()));
+                time.Item1 += timestamp - Start;
+                time.Item2++;
             }
         }
 
@@ -117,7 +124,7 @@ public static class Dbg
         public TimeRegion EndStart<T>(T t)
         {
             End();
-            return new() { Name = Check.Print(t), Start = Stopwatch.GetTimestamp() };
+            return Time(t);
         }
     }
 
@@ -125,10 +132,7 @@ public static class Dbg
     public static TimeRegion Time<T>(T t)
     {
         var name = Check.Print(t);
-        lock (times)
-        {
-            if (times.Count == 0) times.GetValueOrNullRef(name);
-        }
+        lock (times) times.GetValueOrNullRef(name).Item2++;
         return new() { Name = name, Start = Stopwatch.GetTimestamp() };
     }
 
