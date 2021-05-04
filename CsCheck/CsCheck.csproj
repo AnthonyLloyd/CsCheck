@@ -24,7 +24,7 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
         <Version>2.2.3</Version>
         <PackageReleaseNotes>
-Bug fux Dbg.Time.
+Bug fix Dbg.Time.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>9.0</LangVersion>
