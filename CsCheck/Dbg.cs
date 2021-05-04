@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Collections;
 using System.Diagnostics;
 using System.Collections.Generic;
@@ -17,7 +16,7 @@ public static class Dbg
     static MapSlim<string, int> counts = new();
     static MapSlim<string, object> objects = new();
     static MapSlim<string, Action> functions = new();
-    static MapSlim<string, (int, int)> times = new();
+    static MapSlim<string, (long, int)> times = new();
 
     /// <summary>Debugger break.</summary>
         public static void Break() => Debugger.Break();
@@ -107,7 +106,7 @@ public static class Dbg
             lock (times)
             {
                 ref var timeCount = ref times.GetValueOrNullRef(Name);
-                timeCount.Item1 += (int)(timestamp - Start);
+                timeCount.Item1 += timestamp - Start;
                 timeCount.Item2++;
             }
         }
@@ -126,7 +125,10 @@ public static class Dbg
     public static TimeRegion Time<T>(T t)
     {
         var name = Check.Print(t);
-        if (times.Count == 0) times.GetValueOrNullRef(name);
+        lock (times)
+        {
+            if (times.Count == 0) times.GetValueOrNullRef(name);
+        }
         return new() { Name = name, Start = Stopwatch.GetTimestamp() };
     }
 
