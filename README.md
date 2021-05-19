@@ -398,19 +398,19 @@ The Dbg module is a set of utilities to collect, count and output debug info, cl
 CsCheck can temporarily be added as a reference to run in non test code.
 Note this module is only for temporary debug use and the API may change between minor versions.
 
+
+### Count, Info, Set, Get, CallAdd, Call
 ```csharp
 public void Normal_Code()
 {
-    Dbg.Info("some info");
-    Dbg.Count("Normal_Code()");
+    Dbg.Count();
     Dbg.Set("d", 1.23);
     Dbg.Call("helpful");
-    Dbg.Regression.Add("ONE");
-    Dbg.Regression.Add(1.243M);
+    Dbg.Info("some info");
     Dbg.CallAdd("test cache", () =>
     {
         Dbg.Info(Dbg.Get("d"));
-        // Dbg.Info(cacheItems);
+        Dbg.Info(cacheItems);
     });
 }
 
@@ -425,6 +425,73 @@ public void Test()
     });
     Normal_Code();
     Dbg.Call("test cache");
+    Dbg.Output(writeLine);
+}
+```
+
+### Regression
+```csharp
+public double[] Calculation(InputData input)
+{
+    var part1 = CalcPart1(input);
+    // Add items to the regression on first pass, throw/break here if different on subsequent.
+    Dbg.Regression.Add(part1);
+    var part2 = CalcPart2(part1);
+    Dbg.Regression.Add(part2);
+    // ...
+    var final = CalcFinal(partN);
+    Dbg.Regression.Add(final);
+    return final;
+}
+
+[Fact]
+public void Test()
+{
+    // Remove any previously saved regression data.
+    Dbg.Regression.Delete();
+
+    Calcuation(InputSource1());
+
+    // End first pass save mode (only needed if second pass is in this process run).
+    Dbg.Regression.Close();
+
+    // Second pass could be now or a code change and rerun (without the Delete).
+    Calcuation(InputSource2());
+
+    // Check full number of items have been reconciled (optional).
+    Dbg.Regression.Close();
+}
+```
+
+### Time
+```csharp
+
+public Result CalcPart2(InputData input)
+{
+    using var time = Dbg.Time();
+    // Calc
+    time.Line();
+    // Calc more
+    time.Line();
+    // ...
+    return result;
+}
+
+
+public void LongProcess()
+{
+    using var time = Dbg.Time();
+    var part1 = CalcPart1(input);
+    time.Line();
+    var part2 = CalcPart2(part1);
+    time.Line();
+    return CalcFinal(partN);
+}
+
+[Fact]
+public void Test()
+{
+    LongProcess();
     Dbg.Output(writeLine);
 }
 ```

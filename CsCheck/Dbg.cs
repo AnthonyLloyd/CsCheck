@@ -87,12 +87,15 @@ public static class Dbg
     /// <summary>Get object by name.</summary>
     public static object Get(string name) => objects[name];
 
-    /// <summary>Increment debug info counter.</summary>
+    /// <summary>Increment debug info counter. Function name when parameter not set.</summary>
     public static void Count<T>(T t)
     {
         var s = Check.Print(t);
         lock (counts) counts.GetValueOrNullRef(s)++;
     }
+
+    /// <summary>Increment debug info counter. Function name when parameter not set.</summary>
+    public static void Count([CallerMemberName] string name = "") => Count<string>(name);
 
     public struct TimeRegion : IDisposable
     {
