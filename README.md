@@ -450,13 +450,13 @@ public void Test()
     // Remove any previously saved regression data.
     Dbg.Regression.Delete();
 
-    Calcuation(InputSource1());
+    Calculation(InputSource1());
 
     // End first pass save mode (only needed if second pass is in this process run).
     Dbg.Regression.Close();
 
     // Subsequent pass could be now or a code change and rerun (without the Delete).
-    Calcuation(InputSource2());
+    Calculation(InputSource2());
 
     // Check full number of items have been reconciled (optional).
     Dbg.Regression.Close();
