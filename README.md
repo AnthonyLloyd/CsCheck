@@ -455,7 +455,7 @@ public void Test()
     // End first pass save mode (only needed if second pass is in this process run).
     Dbg.Regression.Close();
 
-    // Second pass could be now or a code change and rerun (without the Delete).
+    // Subsequent pass could be now or a code change and rerun (without the Delete).
     Calcuation(InputSource2());
 
     // Check full number of items have been reconciled (optional).
@@ -483,8 +483,11 @@ public void LongProcess()
     using var time = Dbg.Time();
     var part1 = CalcPart1(input);
     time.Line();
-    var part2 = CalcPart2(part1);
+    var part2 = new List<Result>();
+    foreach(var item in part1)
+        part2.Add(CalcPart2(item));
     time.Line();
+    // ...
     return CalcFinal(partN);
 }
 
