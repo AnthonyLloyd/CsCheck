@@ -436,12 +436,9 @@ public double[] Calculation(InputData input)
     var part1 = CalcPart1(input);
     // Add items to the regression on first pass, throw/break here if different on subsequent.
     Dbg.Regression.Add(part1);
-    var part2 = CalcPart2(part1);
-    Dbg.Regression.Add(part2);
+    var part2 = CalcPart2(part1).Tee(Dbg.Regression.Add); // Tee can be used to do this inline.
     // ...
-    var final = CalcFinal(partN);
-    Dbg.Regression.Add(final);
-    return final;
+    return CalcFinal(partN).Tee(Dbg.Regression.Add);
 }
 
 [Fact]

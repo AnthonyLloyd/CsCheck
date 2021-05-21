@@ -22,9 +22,10 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>2.2.4</Version>
+        <Version>2.3.0</Version>
         <PackageReleaseNotes>
-Added Dbg.Time.Line.
+Added null support in regression testing.
+Added Dbg.Tee to perform an action inline.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>9.0</LangVersion>

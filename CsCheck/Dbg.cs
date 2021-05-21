@@ -33,7 +33,7 @@ public static class Dbg
     static MapSlim<string, (long, int)> times = new();
 
     /// <summary>Debugger break.</summary>
-        public static void Break() => Debugger.Break();
+    public static void Break() => Debugger.Break();
 
     /// <summary>Output held debug info.</summary>
     public static void Output(Action<string> output)
@@ -81,7 +81,7 @@ public static class Dbg
         objects = new();
         functions = new();
         times = new();
-        if(regressionStream != null)
+        if (regressionStream != null)
         {
             regressionStream.Close();
             regressionStream = null;
@@ -236,6 +236,13 @@ public static class Dbg
 
     /// <summary>Call a stored debug call.</summary>
     public static void Call(string name) => functions[name]();
+
+    /// <summary>Perform an action inline and return the input.</summary>
+    public static T Tee<T>(this T t, Action<T> action)
+    {
+        action(t);
+        return t;
+    }
 
     static RegressionStream regressionStream;
     /// <summary>Saves a sequence of values on the first run and compares them on subsequent runs.</summary>
