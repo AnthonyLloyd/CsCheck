@@ -15,7 +15,6 @@
 using System;
 using System.IO;
 using System.Text;
-using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
@@ -24,7 +23,7 @@ using System.Runtime.InteropServices;
 
 namespace CsCheck
 {
-    public interface IAdd
+    public interface IRegression
     {
         void Add(bool val);
         void Add(byte val);
@@ -35,24 +34,6 @@ namespace CsCheck
         void Add(double val);
         void Add(float val);
         void Add(Guid val);
-        void Add(IEnumerable<bool> val);
-        void Add(IEnumerable<byte> val);
-        void Add(IEnumerable<char> val);
-        void Add(IEnumerable<DateTime> val);
-        void Add(IEnumerable<DateTimeOffset> val);
-        void Add(IEnumerable<decimal> val);
-        void Add(IEnumerable<double> val);
-        void Add(IEnumerable<float> val);
-        void Add(IEnumerable<Guid> val);
-        void Add(IEnumerable<int> val);
-        void Add(IEnumerable<long> val);
-        void Add(IEnumerable<sbyte> val);
-        void Add(IEnumerable<short> val);
-        void Add(IEnumerable<string> val);
-        void Add(IEnumerable<TimeSpan> val);
-        void Add(IEnumerable<uint> val);
-        void Add(IEnumerable<ulong> val);
-        void Add(IEnumerable<ushort> val);
         void Add(int val);
         void Add(long val);
         void Add(sbyte val);
@@ -65,7 +46,7 @@ namespace CsCheck
     }
 
     /// <summary>Functionality for hash testing data with detailed information of any changes.</summary>
-    public class Hash : IAdd
+    public class Hash : IRegression
     {
         static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new();
         internal static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
@@ -426,114 +407,6 @@ namespace CsCheck
             1e15M, 1e16M, 1e17M, 1e18M, 1e19M, 1e20M, 1e21M, 1e22M, 1e23M, 1e24M, 1e25M, 1e26M, 1e27M, 1e28M };
         static decimal Pow10Decimal(int i) => i >= 0 ? pow10Decimal[i] : 1.0M / pow10Decimal[-i];
 
-        public void Add(IEnumerable<bool> val)
-        {
-            var col = val as ICollection<bool> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<byte> val)
-        {
-            var col = val as ICollection<byte> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<sbyte> val)
-        {
-            var col = val as ICollection<sbyte> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<short> val)
-        {
-            var col = val as ICollection<short> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<ushort> val)
-        {
-            var col = val as ICollection<ushort> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<int> val)
-        {
-            var col = val as ICollection<int> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<uint> val)
-        {
-            var col = val as ICollection<uint> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<long> val)
-        {
-            var col = val as ICollection<long> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<ulong> val)
-        {
-            var col = val as ICollection<ulong> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<DateTime> val)
-        {
-            var col = val as ICollection<DateTime> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<DateTimeOffset> val)
-        {
-            var col = val as ICollection<DateTimeOffset> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<TimeSpan> val)
-        {
-            var col = val as ICollection<TimeSpan> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<Guid> val)
-        {
-            var col = val as ICollection<Guid> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<char> val)
-        {
-            var col = val as ICollection<char> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<string> val)
-        {
-            var col = val as ICollection<string> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<double> val)
-        {
-            var col = val as ICollection<double> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<float> val)
-        {
-            var col = val as ICollection<float> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<decimal> val)
-        {
-            var col = val as ICollection<decimal> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
         internal static class StreamSerializer
         {
             public static void WriteBool(Stream stream, bool val)

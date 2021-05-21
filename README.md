@@ -394,7 +394,7 @@ Standard Output Messages:
 
 ## Debug utilities
 
-The Dbg module is a set of utilities to collect, count and output debug info, classify generators, define and remotely call functions, and perform in code regression during testing.
+The Dbg module is a set of utilities to collect, count and output debug info, time, classify generators, define and remotely call functions, and perform in code regression during testing.
 CsCheck can temporarily be added as a reference to run in non test code.
 Note this module is only for temporary debug use and the API may change between minor versions.
 

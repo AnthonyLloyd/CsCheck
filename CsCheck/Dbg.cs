@@ -1,4 +1,18 @@
-﻿using System;
+﻿// Copyright 2021 Anthony Lloyd
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+using System;
 using System.IO;
 using System.Linq;
 using System.Collections;
@@ -7,7 +21,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using CsCheck;
 
-/// <summary>Debug utility functions to collect, count and output debug info, classify generators, define and remotely call functions, and perform in code regression testing.
+/// <summary>Debug utility functions to collect, count and output debug info, time, classify generators, define and remotely call functions, and perform in code regression testing.
 /// CsCheck can temporarily be added as a reference to run in non test code.
 /// Note this module is only for temporary debug use and the API may change between minor versions.</summary>
 public static class Dbg
@@ -227,7 +241,7 @@ public static class Dbg
     /// <summary>Saves a sequence of values on the first run and compares them on subsequent runs.</summary>
     public static RegressionStream Regression => regressionStream ??= new RegressionStream(Path.Combine(Hash.CacheDir, "Dbg.Regression.has"));
 
-    public class RegressionStream : IAdd
+    public class RegressionStream : IRegression
     {
         readonly string filename;
         readonly bool reading;
@@ -475,6 +489,7 @@ public static class Dbg
 
         public void Add(string val)
         {
+            if (val is null) val = "null";
             if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadString(stream);
@@ -532,115 +547,6 @@ public static class Dbg
                 using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteDecimal(stream, val);
             }
-        }
-
-        public void Add(IEnumerable<bool> val)
-        {
-            var col = val as ICollection<bool> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<byte> val)
-        {
-            var col = val as ICollection<byte> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<sbyte> val)
-        {
-            var col = val as ICollection<sbyte> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<short> val)
-        {
-            var col = val as ICollection<short> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<ushort> val)
-        {
-            var col = val as ICollection<ushort> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<int> val)
-        {
-            var col = val as ICollection<int> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<uint> val)
-        {
-            var col = val as ICollection<uint> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<long> val)
-        {
-            var col = val as ICollection<long> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<ulong> val)
-        {
-            var col = val as ICollection<ulong> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<DateTime> val)
-        {
-            var col = val as ICollection<DateTime> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<DateTimeOffset> val)
-        {
-            var col = val as ICollection<DateTimeOffset> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<TimeSpan> val)
-        {
-            var col = val as ICollection<TimeSpan> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<Guid> val)
-        {
-            var col = val as ICollection<Guid> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<char> val)
-        {
-            var col = val as ICollection<char> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<string> val)
-        {
-            var col = val as ICollection<string> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<double> val)
-        {
-            var col = val as ICollection<double> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<float> val)
-        {
-            var col = val as ICollection<float> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
-        }
-        public void Add(IEnumerable<decimal> val)
-        {
-            var col = val as ICollection<decimal> ?? val.ToArray();
-            Add((uint)col.Count);
-            foreach (var v in col) Add(v);
         }
     }
 
@@ -786,5 +692,154 @@ public static class Dbg
         }
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+}
+
+public static class RegressionExtensions
+{
+    const string NULL = "<null>";
+
+    public static void Add(this IRegression r, IEnumerable<bool> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<bool> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<byte> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<byte> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<char> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<char> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<DateTime> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<DateTime> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<DateTimeOffset> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<DateTimeOffset> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<decimal> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<decimal> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<double> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<double> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<float> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<float> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<Guid> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<Guid> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<int> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<int> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<long> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<long> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<sbyte> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<sbyte> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<short> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<short> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<string> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<string> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<TimeSpan> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<TimeSpan> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<uint> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<uint> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<ulong> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<ulong> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<ushort> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<ushort> ?? val.ToArray();
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
     }
 }
