@@ -41,7 +41,7 @@ namespace Tests
         public void ListSlim_Performance_Add()
         {
             Gen.Int.Array
-            .DebugClassify(a => a.Length switch
+            .DbgClassify(a => a.Length switch
             {
                 0 => "zero length",
                 1 => "single length",

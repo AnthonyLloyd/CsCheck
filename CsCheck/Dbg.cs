@@ -39,7 +39,7 @@ public static class Dbg
     public static void Output(Action<string> output)
     {
         foreach (var s in info)
-            output(string.Concat("Dbg: ", s));
+            output(string.Concat("[Dbg] ", s));
         int maxLength = 0, total = 0;
         foreach (var kv in counts)
         {
@@ -88,15 +88,15 @@ public static class Dbg
         }
     }
 
-    /// <summary>Add debug info.</summary>
-    public static void Info<T>(T t)
-    {
-        var s = Check.Print(t);
-        lock (info) info.Add(s);
-    }
+    /// <summary>Save object by name.</summary>
+    public static void Set(string name, object o) => objects[name] = o;
 
     /// <summary>Save object by name.</summary>
-    public static object Set(string name, object o) => objects[name] = o;
+    public static T DbgSet<T>(this T t, string name)
+    {
+        objects[name] = t;
+        return t;
+    }
 
     /// <summary>Get object by name.</summary>
     public static object Get(string name) => objects[name];
@@ -109,7 +109,7 @@ public static class Dbg
     }
 
     /// <summary>Increment debug info counter. Function name when parameter not set.</summary>
-    public static void Count([CallerMemberName] string name = "") => Count<string>(name);
+    public static void Count([CallerMemberName] string name = "", [CallerLineNumber] int line = 0) => Count(string.Concat(name, " ", line));
 
     public struct TimeRegion : IDisposable
     {
@@ -156,18 +156,16 @@ public static class Dbg
     /// <summary>Start a time measurement. Function name when parameter not set.</summary>
     public static TimeRegion Time([CallerMemberName] string name = "") => Time<string>(name);
 
-    /// <summary>Add IEnumerable item debug info.</summary>
-    public static IEnumerable<T> Debug<T>(this IEnumerable<T> source, string name)
-    {
-        foreach (var t in source)
-        {
-            Info(string.Concat(name, " : ", Check.Print(t)));
-            yield return t;
-        }
-    }
+    ///// <summary>Add IEnumerable item debug info.</summary>
+    //public static IEnumerable<T> DbgInfo<T>(this IEnumerable<T> source, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
+    //{
+    //    source = source.ToList();
+    //    Info(string.Concat(name, " ", line, " : ", Check.Print(source)));
+    //    return source;
+    //}
 
     /// <summary>Classify and count generated types debug info.</summary>
-    public static Gen<T> DebugClassify<T>(this Gen<T> gen, Func<T, string> name) =>
+    public static Gen<T> DbgClassify<T>(this Gen<T> gen, Func<T, string> name) =>
         Gen.Create((PCG pcg, Size min, out Size size) =>
     {
         var t = gen.Generate(pcg, min, out size);
@@ -175,57 +173,74 @@ public static class Dbg
         return t;
     });
 
-    /// <summary>Method debug info.</summary>
-    public static void Info<T>(string name, Action<T> f, T t)
+    /// <summary>Add debug info.</summary>
+    public static void Info<T>(T t, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
-        Info(string.Concat(name, " : ", Check.Print(t)));
+        var s = string.Concat(name, " ", line, ": ", Check.Print(t));
+        lock (info) info.Add(s);
+    }
+
+    /// <summary>Method debug info.</summary>
+    public static void Info<T>(Action<T> f, T t, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
+    {
+        var s = string.Concat(Check.Print(t), " -> ()");
+        Info(s, name, line);
         f(t);
     }
 
     /// <summary>Method debug info.</summary>
-    public static void Info<T1, T2>(string name, Action<T1, T2> f, T1 t1, T2 t2)
+    public static void Info<T1, T2>(Action<T1, T2> f, T1 t1, T2 t2, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
-        Info(string.Concat(name, " : ", Check.Print(t1), ", ", Check.Print(t2)));
+        var s = string.Concat(Check.Print(t1), " -> ", Check.Print(t2), " -> ()");
+        Info(s, name, line);
         f(t1, t2);
     }
 
     /// <summary>Method debug info.</summary>
-    public static void Info<T1, T2, T3>(string name, Action<T1, T2, T3> f, T1 t1, T2 t2, T3 t3)
+    public static void Info<T1, T2, T3>(Action<T1, T2, T3> f, T1 t1, T2 t2, T3 t3, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
-        Info(string.Concat(name, " : ", Check.Print(t1), ", ", Check.Print(t2), ", ", Check.Print(t3)));
+        var s = string.Concat(Check.Print(t1), " -> ", Check.Print(t2), " -> ", Check.Print(t3), " -> ()");
+        Info(s, name, line);
         f(t1, t2, t3);
     }
 
     /// <summary>Function debug info.</summary>
-    public static R Info<R>(string name, Func<R> f)
+    public static R Info<R>(Func<R> f, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
         var r = f();
-        Info(string.Concat(name, " : ", Check.Print(r)));
+        var s = string.Concat("() -> ", Check.Print(r));
+        Info(s, name, line);
         return r;
     }
 
     /// <summary>Function debug info.</summary>
-    public static R Info<T, R>(string name, Func<T, R> f, T t)
+    public static R Info<T, R>(Func<T, R> f, T t, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
         var r = f(t);
-        Info(string.Concat(name, " : ", Check.Print(t), " -> ", Check.Print(r)));
+        Info(string.Concat(Check.Print(t), " -> ", Check.Print(r)), name, line);
         return r;
     }
 
     /// <summary>Function debug info.</summary>
-    public static R Info<T1, T2, R>(string name, Func<T1, T2, R> f, T1 t1, T2 t2)
+    public static R Info<T1, T2, R>(Func<T1, T2, R> f, T1 t1, T2 t2, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
         var r = f(t1, t2);
-        Info(string.Concat(name, " : ", Check.Print(t1), " -> ", Check.Print(t2), " -> ", Check.Print(r)));
+        Info(string.Concat(Check.Print(t1), " -> ", Check.Print(t2), " -> ", Check.Print(r)), name, line);
         return r;
     }
 
     /// <summary>Function debug info.</summary>
-    public static R Info<T1, T2, T3, R>(string name, Func<T1, T2, T3, R> f, T1 t1, T2 t2, T3 t3)
+    public static R Info<T1, T2, T3, R>(Func<T1, T2, T3, R> f, T1 t1, T2 t2, T3 t3, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
         var r = f(t1, t2, t3);
-        Info(string.Concat(name, " : ", Check.Print(t1), " -> ", Check.Print(t2), " -> ", Check.Print(t3), " -> ", Check.Print(r)));
+        Info(string.Concat(Check.Print(t1), " -> ", Check.Print(t2), " -> ", Check.Print(t3), " -> ", Check.Print(r)), name, line);
         return r;
+    }
+
+    public static T DbgInfo<T>(this T t, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
+    {
+        Info(t, name, line);
+        return t;
     }
 
     /// <summary>Define and store debug call by name.</summary>
@@ -238,10 +253,62 @@ public static class Dbg
     public static void Call(string name) => functions[name]();
 
     /// <summary>Perform an action inline and return the input.</summary>
-    public static T Tee<T>(this T t, Action<T> action)
+    public static T DbgTee<T>(this T t, Action<T> action)
     {
         action(t);
         return t;
+    }
+
+    /// <summary>Perform an action inline and return the input.</summary>
+    public static R DbgTee<T, R>(this R r, Action<T, R> action, T t)
+    {
+        action(t, r);
+        return r;
+    }
+
+    /// <summary>Perform an action inline and return the input.</summary>
+    public static R DbgTee<T1, T2, R>(this R r, Action<T1, T2, R> action, T1 t1, T2 t2)
+    {
+        action(t1, t2, r);
+        return r;
+    }
+
+    public static IEnumerable<T> DbgCache<T>(this IEnumerable<T> e)
+    {
+        return new CachedEnumerable<T>(e);
+    }
+
+    class CachedEnumerable<T> : IEnumerable<T>, IDisposable
+    {
+        IEnumerator<T> _enumerator;
+        readonly List<T> _cache = new();
+        public CachedEnumerable(IEnumerable<T> enumerable) => _enumerator = enumerable.GetEnumerator();
+        public IEnumerator<T> GetEnumerator()
+        {
+            int index = 0;
+            for (; index < _cache.Count; index++) yield return _cache[index];
+            for (; _enumerator != null && _enumerator.MoveNext(); index++)
+            {
+                var current = _enumerator.Current;
+                _cache.Add(current);
+                yield return current;
+            }
+            if (_enumerator != null)
+            {
+                _enumerator.Dispose();
+                _enumerator = null;
+            }
+            for (; index < _cache.Count; index++) yield return _cache[index];
+        }
+        public void Dispose()
+        {
+            if (_enumerator != null)
+            {
+                _enumerator.Dispose();
+                _enumerator = null;
+            }
+        }
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
     static RegressionStream regressionStream;

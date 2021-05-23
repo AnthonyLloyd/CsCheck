@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Xunit;
 
 namespace Tests
@@ -8,6 +9,10 @@ namespace Tests
         readonly Action<string> writeLine;
         public DbgTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
 
+        static IEnumerable<char> Enumerable(string s) => s;
+        static int[] Calc1(double _) => new[] { 1, 2 };
+        static double Calc2(int[] _) => 1.2;
+
         [Fact]
         public void DbgWalkthrough()
         {
@@ -16,19 +21,14 @@ namespace Tests
             for (int i = 0; i < 2; i++)
             {
                 Dbg.Info("some info");
-                Dbg.Regression.Add("ONE");
-                var array = new []{ 1, 2 }.Tee(Dbg.Regression.Add);
-                Dbg.Set("d", array);
-                Dbg.CallAdd("cache", () =>
-                {
-                    Dbg.Regression.Add((int[])Dbg.Get("d"));
-                    Dbg.Regression.Add("TWO");
-                });
-                Dbg.Call("cache");
-                Dbg.Regression.Add(1.243M);
-                //Dbg.Output(s => Assert.Equal("Dbg: some info", s));
+                var array = Calc1(1.7).DbgTee(Dbg.Regression.Add);
+                var d = Calc2(array).DbgSet("d");
+                Dbg.CallAdd("cache", () => Dbg.Get("d").DbgInfo("hi"));
             }
 
+            Dbg.Call("cache");
+            var x = "hello";
+            var y = Dbg.Info(Enumerable, x).DbgCache().DbgInfo();
             Dbg.Regression.Delete();
             Dbg.Output(writeLine);
         }
