@@ -3,6 +3,7 @@ using System.Linq;
 using Xunit;
 using CsCheck;
 using System.Collections.Generic;
+using System.Reflection.Metadata.Ecma335;
 
 namespace Tests
 {
@@ -34,6 +35,14 @@ namespace Tests
             var x = a - 2.0 * fa / (w + r);
             if (a < x && x < b) return x;
             x = a - 2.0 * fa / (w - r);
+            if (a < x && x < b) return x;
+            return LinearRoot(a, fa, b, fb);
+        }
+
+        public static double InverseQuadraticRoot(double a, double fa, double b, double fb, double c, double fc)
+        {
+            if (fb == fc || fa == fc || c == double.PositiveInfinity) return LinearRoot(a, fa, b, fb);
+            var x = a * fb * fc / ((fa - fb) * (fa - fc)) + b * fa * fc / ((fb - fa) * (fb - fc)) + c * fa * fb / ((fc - fa) * (fc - fb));
             if (a < x && x < b) return x;
             return LinearRoot(a, fa, b, fb);
         }
@@ -84,36 +93,36 @@ namespace Tests
         [Fact]
         public void Root_TestProblems()
         {
-            Assert.Equal(2698, TestSolver(1e-7, Root));
+            Assert.Equal(2544, TestSolver(1e-7, Root));
         }
 
         public static double Root(double tol, Func<double, double> f, double a, double b)
         {
-            const double F = 0.47;
+            const double F = 0.4;
             var fa = f(a);
             if (fa == 0.0) return a;
             var fb = f(b);
             if (fb == 0.0) return b;
             if (!BoundsZero(fa, fb)) throw new Exception($"f(a)={fa} and f(b)={fb} do not bound zero");
-            double c = double.MaxValue, fc = double.MaxValue;
+            double c = double.PositiveInfinity, fc = 0;
             int shit = 1;
             while (b - a > tol * 2)
             {
                 double x = shit == 0 ? QuadraticRoot(a, fa, b, fb, c, fc)
-                         : shit == 1 ? LinearRoot(a, fa, b, fb)
+                         : shit == 1 ? InverseQuadraticRoot(a, fa, b, fb, c, fc)
                          : (a + b) * 0.5;
                 x = Math.Min(b - tol * 1.99999, Math.Max(a + tol * 1.99999, x));
                 var fx = f(x);
                 if (fx == 0.0) return x;
                 if (BoundsZero(fa, fx))
                 {
-                    if (b - x < F * (b - a)) shit++; else shit = 0;
+                    shit = b - x < F * (b - a) ? shit + 1 : 0;
                     if (c > b || b - x < a - c) { c = b; fc = fb; }
                     b = x; fb = fx;
                 }
                 else
                 {
-                    if (x - a < F * (b - a)) shit++; else shit = 0;
+                    shit = x - a < F * (b - a) ? shit + 1 : 0;
                     if (c < a || x - a < c - b) { c = a; fc = fa; }
                     a = x; fa = fx;
                 }
