@@ -138,6 +138,48 @@ namespace CsCheck
         public static Gen<R> Select<T, R>(this Gen<T> gen, Func<T, R> selector) =>
             Create((PCG pcg, Size min, out Size size) => selector(gen.Generate(pcg, min, out size)));
 
+        public static Gen<R> Select<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> selector) =>
+            Create((PCG pcg, Size min, out Size size) =>
+            {
+                var (t1, t2) = gen.Generate(pcg, min, out size);
+                return selector(t1, t2);
+            });
+
+        public static Gen<R> Select<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> selector) =>
+            Create((PCG pcg, Size min, out Size size) =>
+            {
+                var (t1, t2, t3) = gen.Generate(pcg, min, out size);
+                return selector(t1, t2, t3);
+            });
+
+        public static Gen<R> Select<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> selector) =>
+            Create((PCG pcg, Size min, out Size size) =>
+            {
+                var (t1, t2, t3, t4) = gen.Generate(pcg, min, out size);
+                return selector(t1, t2, t3, t4);
+            });
+
+        public static Gen<R> Select<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> selector) =>
+            Create((PCG pcg, Size min, out Size size) =>
+            {
+                var (t1, t2, t3, t4, t5) = gen.Generate(pcg, min, out size);
+                return selector(t1, t2, t3, t4, t5);
+            });
+
+        public static Gen<R> Select<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> selector) =>
+            Create((PCG pcg, Size min, out Size size) =>
+            {
+                var (t1, t2, t3, t4, t5, t6) = gen.Generate(pcg, min, out size);
+                return selector(t1, t2, t3, t4, t5, t6);
+            });
+
+        public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) =>
+            Create((PCG pcg, Size min, out Size size) =>
+            {
+                var (t1, t2, t3, t4, t5, t6, t7) = gen.Generate(pcg, min, out size);
+                return selector(t1, t2, t3, t4, t5, t6, t7);
+            });
+
         public static Gen<R> Select<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2,
             Func<T1, T2, R> selector) => Create((PCG pcg, Size min, out Size size) =>
         {
@@ -564,6 +606,60 @@ namespace CsCheck
             {
                 var t = gen.Generate(pcg, null, out size);
                 if (predicate(t)) return t;
+            }
+        });
+
+        public static Gen<(T1, T2)> Where<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+        {
+            while (true)
+            {
+                var (t1, t2) = gen.Generate(pcg, null, out size);
+                if (predicate(t1, t2)) return (t1, t2);
+            }
+        });
+
+        public static Gen<(T1, T2, T3)> Where<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+        {
+            while (true)
+            {
+                var (t1, t2, t3) = gen.Generate(pcg, null, out size);
+                if (predicate(t1, t2, t3)) return (t1, t2, t3);
+            }
+        });
+
+        public static Gen<(T1, T2, T3, T4)> Where<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+        {
+            while (true)
+            {
+                var (t1, t2, t3, t4) = gen.Generate(pcg, null, out size);
+                if (predicate(t1, t2, t3, t4)) return (t1, t2, t3, t4);
+            }
+        });
+
+        public static Gen<(T1, T2, T3, T4, T5)> Where<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+        {
+            while (true)
+            {
+                var (t1, t2, t3, t4, t5) = gen.Generate(pcg, null, out size);
+                if (predicate(t1, t2, t3, t4, t5)) return (t1, t2, t3, t4, t5);
+            }
+        });
+
+        public static Gen<(T1, T2, T3, T4, T5, T6)> Where<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+        {
+            while (true)
+            {
+                var (t1, t2, t3, t4, t5, t6) = gen.Generate(pcg, null, out size);
+                if (predicate(t1, t2, t3, t4, t5, t6)) return (t1, t2, t3, t4, t5, t6);
+            }
+        });
+
+        public static Gen<(T1, T2, T3, T4, T5, T6, T7)> Where<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+        {
+            while (true)
+            {
+                var (t1, t2, t3, t4, t5, t6, t7) = gen.Generate(pcg, null, out size);
+                if (predicate(t1, t2, t3, t4, t5, t6, t7)) return (t1, t2, t3, t4, t5, t6, t7);
             }
         });
 

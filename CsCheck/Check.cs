@@ -218,6 +218,18 @@ namespace CsCheck
             string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string> print = null)
             => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), seed, iter, time, threads, print);
 
+        /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> assert,
+            string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string> print = null)
+            => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), seed, iter, time, threads, print);
+
         /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
         /// <param name="gen">The sample input data generator.</param>
         /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
@@ -396,6 +408,18 @@ namespace CsCheck
         public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate,
             string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string> print = null)
             => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), seed, iter, time, threads, print);
+
+        /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
+        /// <param name="gen">The sample input data generator.</param>
+        /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+        /// <param name="time">The number of seconds to run the sample.</param>
+        /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+        /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+        public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate,
+            string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string> print = null)
+            => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), seed, iter, time, threads, print);
 
         /// <summary>Sample the gen once calling the assert.</summary>
         /// <param name="gen">The sample input data generator.</param>
@@ -1221,6 +1245,48 @@ namespace CsCheck
             double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), sigma, threads, repeat, timeout, seed, raiseexception);
 
+        /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
+        /// <param name="gen">The input data generator.</param>
+        /// <param name="faster">The presumed faster code to test.</param>
+        /// <param name="slower">The presumed slower code to test.</param>
+        /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+        /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
+        /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
+        /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
+        public static FasterResult Faster<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> faster, Action<T1, T2, T3, T4, T5> slower,
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), sigma, threads, repeat, timeout, seed, raiseexception);
+
+        /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
+        /// <param name="gen">The input data generator.</param>
+        /// <param name="faster">The presumed faster code to test.</param>
+        /// <param name="slower">The presumed slower code to test.</param>
+        /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+        /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
+        /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
+        /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
+        public static FasterResult Faster<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> faster, Action<T1, T2, T3, T4, T5, T6> slower,
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), sigma, threads, repeat, timeout, seed, raiseexception);
+
+        /// <summary>Assert the first Action is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
+        /// <param name="gen">The input data generator.</param>
+        /// <param name="faster">The presumed faster code to test.</param>
+        /// <param name="slower">The presumed slower code to test.</param>
+        /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+        /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
+        /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
+        /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
+        public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> faster, Action<T1, T2, T3, T4, T5, T6, T7> slower,
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), sigma, threads, repeat, timeout, seed, raiseexception);
+
         /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
         /// <param name="gen">The input data generator.</param>
         /// <param name="faster">The presumed faster code to test.</param>
@@ -1365,6 +1431,51 @@ namespace CsCheck
         public static FasterResult Faster<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> faster, Func<T1, T2, T3, T4, R> slower, Action<R, R> assertEqual = null,
             double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
+
+        /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
+        /// <param name="gen">The input data generator.</param>
+        /// <param name="faster">The presumed faster code to test.</param>
+        /// <param name="slower">The presumed slower code to test.</param>
+        /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
+        /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+        /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
+        /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
+        /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
+        public static FasterResult Faster<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> faster, Func<T1, T2, T3, T4, T5, R> slower, Action<R, R> assertEqual = null,
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
+
+        /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
+        /// <param name="gen">The input data generator.</param>
+        /// <param name="faster">The presumed faster code to test.</param>
+        /// <param name="slower">The presumed slower code to test.</param>
+        /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
+        /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+        /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
+        /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
+        /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
+        public static FasterResult Faster<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> faster, Func<T1, T2, T3, T4, T5, T6, R> slower, Action<R, R> assertEqual = null,
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
+
+        /// <summary>Assert the first Func gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
+        /// <param name="gen">The input data generator.</param>
+        /// <param name="faster">The presumed faster code to test.</param>
+        /// <param name="slower">The presumed slower code to test.</param>
+        /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
+        /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+        /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
+        /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
+        /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
+        /// <param name="seed">The initial seed to use for the first iteration.</param>
+        /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
+        public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, R> slower, Action<R, R> assertEqual = null,
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Generate an example that satisfies the predicate.</summary>
         /// <param name="gen">The data generator.</param>
