@@ -3,7 +3,6 @@ using System.Linq;
 using Xunit;
 using CsCheck;
 using System.Collections.Generic;
-using System.Reflection.Metadata.Ecma335;
 
 namespace Tests
 {
@@ -41,7 +40,6 @@ namespace Tests
 
         public static double InverseQuadraticRoot(double a, double fa, double b, double fb, double c, double fc)
         {
-            if (fb == fc || fa == fc || c == double.PositiveInfinity) return LinearRoot(a, fa, b, fb);
             var x = a * fb * fc / ((fa - fb) * (fa - fc)) + b * fa * fc / ((fb - fa) * (fb - fc)) + c * fa * fb / ((fc - fa) * (fc - fb));
             if (a < x && x < b) return x;
             return LinearRoot(a, fa, b, fb);
@@ -73,56 +71,124 @@ namespace Tests
             .Sample((a, fa, b, fb, c, fc, x) => a <= x && x <= b);
         }
 
-        static int TestSolver(double tol, Func<double, Func<double, double>, double, double, double> solver)
+        static (int,int[]) TestSolver(double tol, Func<double, Func<double, double>, double, double, double> solver)
         {
+            var problems = TestProblems().ToArray();
+            Assert.Equal(154, problems.Length);
+            var counts = new int[problems.Length];
             var count = 0;
-            foreach (var (F, Min, Max) in TestProblems().ToArray())
+            for (int i = 0; i < problems.Length; i++)
             {
+                var (F, Min, Max) = problems[i];
+                counts[i] = -count;
                 var x = solver(tol, x => { count++; return F(x); }, Min, Max);
+                counts[i] += count;
                 Assert.True(BoundsZero(F(x - tol), F(x + tol)) || F(x) == 0.0);
             }
-            return count;
+            return (count, counts);
         }
 
         [Fact]
-        public void Brent_TestProblems()
+        public void Brent_TestProblems_7()
         {
-            Assert.Equal(2816, TestSolver(1e-7, Brent));
+            Assert.Equal(2816, TestSolver(1e-7, Brent).Item1);
         }
 
         [Fact]
-        public void Root_TestProblems()
+        public void Root_TestProblems_7()
         {
-            Assert.Equal(2544, TestSolver(1e-7, Root));
+            Assert.Equal(2544, TestSolver(1e-7, Root).Item1);
+        }
+
+        [Fact]
+        public void Brent_TestProblems_9()
+        {
+            Assert.Equal(2889, TestSolver(1e-9, Brent).Item1);
+        }
+
+        [Fact]
+        public void Root_TestProblems_9()
+        {
+            Assert.Equal(2609, TestSolver(1e-9, Root).Item1);
+        }
+
+        [Fact]
+        public void Brent_TestProblems_11()
+        {
+            Assert.Equal(2935, TestSolver(1e-11, Brent).Item1);
+        }
+
+        [Fact]
+        public void Root_TestProblems_11()
+        {
+            Assert.Equal(2716, TestSolver(1e-11, Root).Item1);
+        }
+
+        [Fact]
+        public void Brent_TestProblems_13()
+        {
+            Assert.Equal(2964, TestSolver(1e-13, Brent).Item1);
+        }
+
+        [Fact]
+        public void Root_TestProblems_13()
+        {
+            Assert.Equal(2714, TestSolver(1e-13, Root).Item1);
+        }
+
+        [Fact]
+        public void Root_TestProblems_Compare()
+        {
+            var rootCounts = TestSolver(1e-13, Root).Item2;
+            var brentCounts = TestSolver(1e-13, Brent).Item2;
+            var check =
+                rootCounts.Zip(brentCounts)
+                .Select((t,i) => (t.First, t.Second, i))
+                .Where(t => t.First > t.Second)
+                .OrderBy(t => t.Second - t.First)
+                .ThenBy(t => ((double)(t.Second - t.First))/t.Second)
+                .Select(t => t.i + ": " + t.First + " - " + t.Second);
+            foreach (var s in check) writeLine(s);
+        }
+
+        [Fact]
+        public void Root_TestProblems_Check()
+        {
+            var (F, Min, Max) = TestProblems().ToArray()[12];
+            Root(1e-13, F, Min, Max);
+            Dbg.Output(writeLine);
         }
 
         public static double Root(double tol, Func<double, double> f, double a, double b)
         {
             const double F = 0.4;
-            var fa = f(a);
-            if (fa == 0.0) return a;
-            var fb = f(b);
-            if (fb == 0.0) return b;
+            var fa = f(a); if (fa == 0.0) return a;
+            var fb = f(b); if (fb == 0.0) return b;
             if (!BoundsZero(fa, fb)) throw new Exception($"f(a)={fa} and f(b)={fb} do not bound zero");
             double c = double.PositiveInfinity, fc = 0;
-            int shit = 1;
+            int defcon = 1;
             while (b - a > tol * 2)
             {
-                double x = shit == 0 ? QuadraticRoot(a, fa, b, fb, c, fc)
-                         : shit == 1 ? InverseQuadraticRoot(a, fa, b, fb, c, fc)
-                         : (a + b) * 0.5;
-                x = Math.Min(b - tol * 1.99999, Math.Max(a + tol * 1.99999, x));
-                var fx = f(x);
-                if (fx == 0.0) return x;
+                double x;
+                if (b - a < tol * 4 || defcon == 2) x = (a + b) * 0.5;
+                else
+                {
+                    x = defcon == 0 ? QuadraticRoot(a, fa, b, fb, c, fc) : InverseQuadraticRoot(a, fa, b, fb, c, fc);
+                    x = Math.Min(b - tol * 1.999999, Math.Max(a + tol * 1.999999, x));
+                }
+                var fx = f(x); if (fx == 0.0) return x;
+                Dbg.Info($"{a}\t{b}\t{c}\t{x}\t{defcon}\t{fa}\t{fb}\t{fc}\t{fx}");
                 if (BoundsZero(fa, fx))
                 {
-                    shit = b - x < F * (b - a) ? shit + 1 : 0;
+                    var slow = b - x < F * (b - a);
+                    defcon = slow ? defcon + 1 : 0;
                     if (c > b || b - x < a - c) { c = b; fc = fb; }
                     b = x; fb = fx;
                 }
                 else
                 {
-                    shit = x - a < F * (b - a) ? shit + 1 : 0;
+                    var slow = x - a < F * (b - a);
+                    defcon = slow ? defcon + 1 : 0;
                     if (c < a || x - a < c - b) { c = a; fc = fa; }
                     a = x; fa = fx;
                 }

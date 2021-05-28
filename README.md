@@ -401,12 +401,12 @@ Note this module is only for temporary debug use and the API may change between 
 
 ### Count, Info, Set, Get, CallAdd, Call
 ```csharp
-public void Normal_Code()
+public void Normal_Code(int z)
 {
     Dbg.Count();
-    Dbg.Set("d", 1.23);
+    var d = Calc1(z).DbgSet("d");
     Dbg.Call("helpful");
-    Dbg.Info("some info");
+    var c = Calc2(d).DbgInfo("c");
     Dbg.CallAdd("test cache", () =>
     {
         Dbg.Info(Dbg.Get("d"));
@@ -423,7 +423,7 @@ public void Test()
         // ...
         Dbg.Set("d", d);
     });
-    Normal_Code();
+    Normal_Code(z);
     Dbg.Call("test cache");
     Dbg.Output(writeLine);
 }
@@ -435,7 +435,7 @@ public void Test()
 public void Test()
 {
     Gen.Int.Array
-    .DebugClassify(a => a.Length switch
+    .DbgClassify(a => a.Length switch
     {
         0 => "zero length",
         1 => "single length",
@@ -459,9 +459,9 @@ public double[] Calculation(InputData input)
     var part1 = CalcPart1(input);
     // Add items to the regression on first pass, throw/break here if different on subsequent.
     Dbg.Regression.Add(part1);
-    var part2 = CalcPart2(part1).Tee(Dbg.Regression.Add); // Tee can be used to do this inline.
+    var part2 = CalcPart2(part1).DbgTee(Dbg.Regression.Add); // Tee can be used to do this inline.
     // ...
-    return CalcFinal(partN).Tee(Dbg.Regression.Add);
+    return CalcFinal(partN).DbgTee(Dbg.Regression.Add);
 }
 
 [Fact]
