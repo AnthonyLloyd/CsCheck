@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Linq;
+using System.Collections.Generic;
 using Xunit;
 using CsCheck;
-using System.Collections.Generic;
+using System.Xml;
+using Xunit.Sdk;
 
 namespace Tests
 {
@@ -40,25 +42,24 @@ namespace Tests
 
         public static double InverseQuadraticRoot(double a, double fa, double b, double fb, double c, double fc)
         {
+            if(fa == fc || fb == fc) return QuadraticRoot(a, fa, b, fb, c, fc);
             var x = a * fb * fc / ((fa - fb) * (fa - fc)) + b * fa * fc / ((fb - fa) * (fb - fc)) + c * fa * fb / ((fc - fa) * (fc - fb));
             if (a < x && x < b) return x;
-            return LinearRoot(a, fa, b, fb);
+            return QuadraticRoot(a, fa, b, fb, c, fc);
         }
 
         [Fact]
         public void QuadraticRoot_Increasing()
         {
             static double f(double x) => x * x - 100.0;
-            var x = QuadraticRoot(9.4, f(9.4), 11.7, f(11.7), 20.11, f(20.11));
-            Assert.Equal(10.0, x);
+            Assert.Equal(10.0, QuadraticRoot(9.4, f(9.4), 11.7, f(11.7), 20.11, f(20.11)));
         }
 
         [Fact]
         public void QuadraticRoot_Decreasing()
         {
             static double f(double x) => x * x - 100.0;
-            var x = QuadraticRoot(-11.0, f(-11.0), -8.7, f(-8.7), -20.0, f(-20.0));
-            Assert.Equal(-10.0, x);
+            Assert.Equal(-10.0, QuadraticRoot(-11.0, f(-11.0), -8.7, f(-8.7), -20.0, f(-20.0)));
         }
 
         [Fact]
@@ -89,52 +90,40 @@ namespace Tests
         }
 
         [Fact]
-        public void Brent_TestProblems_7()
-        {
-            Assert.Equal(2816, TestSolver(1e-7, Brent).Item1);
-        }
+        public void Root_TestProblems_4() => Assert.Equal(2233, TestSolver(1e-4, Root).Item1);
 
         [Fact]
-        public void Root_TestProblems_7()
-        {
-            Assert.Equal(2544, TestSolver(1e-7, Root).Item1);
-        }
+        public void Root_TestProblems_5() => Assert.Equal(2351, TestSolver(1e-5, Root).Item1);
 
         [Fact]
-        public void Brent_TestProblems_9()
-        {
-            Assert.Equal(2889, TestSolver(1e-9, Brent).Item1);
-        }
+        public void Brent_TestProblems_6() => Assert.Equal(2763, TestSolver(1e-6, Brent).Item1);
 
         [Fact]
-        public void Root_TestProblems_9()
-        {
-            Assert.Equal(2609, TestSolver(1e-9, Root).Item1);
-        }
+        public void Root_TestProblems_6() => Assert.Equal(2446, TestSolver(1e-6, Root).Item1);
 
         [Fact]
-        public void Brent_TestProblems_11()
-        {
-            Assert.Equal(2935, TestSolver(1e-11, Brent).Item1);
-        }
+        public void Brent_TestProblems_7() => Assert.Equal(2816, TestSolver(1e-7, Brent).Item1);
 
         [Fact]
-        public void Root_TestProblems_11()
-        {
-            Assert.Equal(2716, TestSolver(1e-11, Root).Item1);
-        }
+        public void Root_TestProblems_7() => Assert.Equal(2544, TestSolver(1e-7, Root).Item1);
 
         [Fact]
-        public void Brent_TestProblems_13()
-        {
-            Assert.Equal(2964, TestSolver(1e-13, Brent).Item1);
-        }
+        public void Brent_TestProblems_9() => Assert.Equal(2889, TestSolver(1e-9, Brent).Item1);
 
         [Fact]
-        public void Root_TestProblems_13()
-        {
-            Assert.Equal(2714, TestSolver(1e-13, Root).Item1);
-        }
+        public void Root_TestProblems_9() => Assert.Equal(2592, TestSolver(1e-9, Root).Item1);
+
+        [Fact]
+        public void Brent_TestProblems_11() => Assert.Equal(2935, TestSolver(1e-11, Brent).Item1);
+
+        [Fact]
+        public void Root_TestProblems_11() => Assert.Equal(2632, TestSolver(1e-11, Root).Item1);
+
+        [Fact]
+        public void Brent_TestProblems_13() => Assert.Equal(2964, TestSolver(1e-13, Brent).Item1);
+
+        [Fact]
+        public void Root_TestProblems_13() => Assert.Equal(2698, TestSolver(1e-13, Root).Item1);
 
         [Fact]
         public void Root_TestProblems_Compare()
@@ -161,33 +150,32 @@ namespace Tests
 
         public static double Root(double tol, Func<double, double> f, double a, double b)
         {
-            const double F = 0.4;
             var fa = f(a); if (fa == 0.0) return a;
             var fb = f(b); if (fb == 0.0) return b;
-            if (!BoundsZero(fa, fb)) throw new Exception($"f(a)={fa} and f(b)={fb} do not bound zero");
+            if (!BoundsZero(fa, fb)) throw new Exception($"f(a)=f({a})={fa} and f(b)=f({b})={fb} do not bound zero");
             double c = double.PositiveInfinity, fc = 0;
             int defcon = 1;
             while (b - a > tol * 2)
             {
                 double x;
-                if (b - a < tol * 4 || defcon == 2) x = (a + b) * 0.5;
+                if (b - a < tol * 4 || defcon >= 2) x = (a + b) * 0.5;
                 else
                 {
                     x = defcon == 0 ? QuadraticRoot(a, fa, b, fb, c, fc) : InverseQuadraticRoot(a, fa, b, fb, c, fc);
-                    x = Math.Min(b - tol * 1.999999, Math.Max(a + tol * 1.999999, x));
+                    x = Math.Min(b - tol * 1.99, Math.Max(a + tol * 1.99, x));
                 }
                 var fx = f(x); if (fx == 0.0) return x;
                 Dbg.Info($"{a}\t{b}\t{c}\t{x}\t{defcon}\t{fa}\t{fb}\t{fc}\t{fx}");
                 if (BoundsZero(fa, fx))
                 {
-                    var slow = b - x < F * (b - a);
+                    var slow = b - x < 0.4 * (b - a);
                     defcon = slow ? defcon + 1 : 0;
                     if (c > b || b - x < a - c) { c = b; fc = fb; }
                     b = x; fb = fx;
                 }
                 else
                 {
-                    var slow = x - a < F * (b - a);
+                    var slow = x - a < 0.4 * (b - a);
                     defcon = slow ? defcon + 1 : 0;
                     if (c < a || x - a < c - b) { c = a; fc = fa; }
                     a = x; fa = fx;
