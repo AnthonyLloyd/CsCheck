@@ -211,12 +211,6 @@ namespace Tests
         public void Root_TestProblems_11() => Assert.Equal(2350, TestSolver(1e-11, Root).Item1);
 
         [Fact]
-        public void Brent_TestProblems_13() => Assert.Equal(2964, TestSolver(1e-13, Brent).Item1);
-
-        [Fact]
-        public void Root_TestProblems_13() => Assert.Equal(2418, TestSolver(1e-13, Root).Item1);
-
-        [Fact]
         public void Root_TestProblems_Compare()
         {
             var rootCounts = TestSolver(1e-13, Root).Item2;
