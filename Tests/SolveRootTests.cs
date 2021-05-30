@@ -3,8 +3,6 @@ using System.Linq;
 using System.Collections.Generic;
 using Xunit;
 using CsCheck;
-using System.Xml;
-using Xunit.Sdk;
 
 namespace Tests
 {
@@ -16,16 +14,6 @@ namespace Tests
         public static bool BoundsZero(double a, double b) => (a < 0.0 && b > 0.0) || (b < 0.0 && a > 0.0);
 
         public static double LinearRoot(double a, double fa, double b, double fb) => (a * fb - b * fa) / (fb - fa);
-
-        [Fact]
-        public void LinearRoot_Bound()
-        {
-            var genD = Gen.Double[-10_000, 10_000];
-            Gen.Select(genD, genD, genD, genD)
-            .Where((a, fa, b, fb) => a < b && BoundsZero(fa, fb))
-            .Select((a, fa, b, fb) => (a, fa, b, fb, LinearRoot(a, fa, b, fb)))
-            .Sample((a, fa, b, fb, x) => a <= x && x <= b);
-        }
 
         public static double QuadraticRoot(double a, double fa, double b, double fb, double c, double fc)
         {
@@ -42,10 +30,113 @@ namespace Tests
 
         public static double InverseQuadraticRoot(double a, double fa, double b, double fb, double c, double fc)
         {
-            if(fa == fc || fb == fc) return QuadraticRoot(a, fa, b, fb, c, fc);
+            if (fa == fc || fb == fc || c == double.PositiveInfinity) return QuadraticRoot(a, fa, b, fb, c, fc);
             var x = a * fb * fc / ((fa - fb) * (fa - fc)) + b * fa * fc / ((fb - fa) * (fb - fc)) + c * fa * fb / ((fc - fa) * (fc - fb));
             if (a < x && x < b) return x;
             return QuadraticRoot(a, fa, b, fb, c, fc);
+        }
+
+        public static double Root2(double tol, Func<double, double> f, double a, double b)
+        {
+            var fa = f(a); if (fa == 0.0) return a;
+            var fb = f(b); if (fb == 0.0) return b;
+            if (!BoundsZero(fa, fb)) throw new Exception($"f(a)=f({a})={fa} and f(b)=f({b})={fb} do not bound zero");
+            double c = double.PositiveInfinity, fc = 0;
+            int defcon = 1;
+            while (b - a > tol * 2)
+            {
+                double x;
+                if (b - a < tol * 4 || defcon >= 2) x = (a + b) * 0.5;
+                else
+                {
+                    x = defcon == 0 ? QuadraticRoot(a, fa, b, fb, c, fc) : InverseQuadraticRoot(a, fa, b, fb, c, fc);
+                    x = Math.Min(b - tol * 1.99, Math.Max(a + tol * 1.99, x));
+                }
+                var fx = f(x); if (fx == 0.0) return x;
+                Dbg.Info($"{a}\t{b}\t{c}\t{x}\t{defcon}\t{fa}\t{fb}\t{fc}\t{fx}");
+                if (BoundsZero(fa, fx))
+                {
+                    defcon = b - x < 0.4 * (b - a) ? defcon + 1 : 0;
+                    if (c > b || b - x < a - c) { c = b; fc = fb; }
+                    b = x; fb = fx;
+                }
+                else
+                {
+                    defcon = x - a < 0.4 * (b - a) ? defcon + 1 : 0;
+                    if (c < a || x - a < c - b) { c = a; fc = fa; }
+                    a = x; fa = fx;
+                }
+            }
+            return (a + b) * 0.5;
+        }
+
+        public static double Root(double tol, Func<double, double> f, double a, double b)
+        {
+            const double inFactor = 0.20;
+            var ai = a + (b - a) * inFactor;
+            var bi = b - (b - a) * inFactor;
+            var fai = f(ai); if (fai == 0.0) return ai;
+            var fbi = f(bi); if (fbi == 0.0) return bi;
+            if (BoundsZero(fai, fbi)) return RootInner(tol, f, ai, fai, bi, fbi, double.PositiveInfinity, 0, 1);
+            //var lx = LinearRoot(ai, fai, bi, fbi);
+            if(Math.Abs(fai) < Math.Abs(fbi))
+            {
+                var fa = f(a); if (fa == 0.0) return a;
+                if (BoundsZero(fa, fai)) return RootInner(tol, f, a, fa, ai, fai, bi, fbi, 1);
+                var fb = f(b); if (fb == 0.0) return b;
+                if (!BoundsZero(fai, fb)) Dbg.Break();
+                return RootInner(tol, f, bi, fbi, b, fb, ai, fai, 1);
+            }
+            //if(lx >= b)
+            else
+            {
+                var fb = f(b); if (fb == 0.0) return b;
+                if (BoundsZero(fbi, fb)) return RootInner(tol, f, bi, fbi, b, fb, ai, fai, 1);
+                var fa = f(a); if (fa == 0.0) return a;
+                if (!BoundsZero(fa, fai)) Dbg.Break();
+                return RootInner(tol, f, a, fa, ai, fai, bi, fbi, 1);
+            }
+        }
+
+        public static double RootInner(double tol, Func<double, double> f, double a, double fa, double b, double fb, double c, double fc, int defcon)
+        {
+            while (b - a > tol * 2)
+            {
+                double x;
+                if (b - a < tol * 4 || defcon >= 2) x = (a + b) * 0.5;
+                else
+                {
+                    x = defcon == 0 ? QuadraticRoot(a, fa, b, fb, c, fc) : InverseQuadraticRoot(a, fa, b, fb, c, fc);
+                    x = Math.Min(b - tol * 1.99, Math.Max(a + tol * 1.99, x));
+                }
+                var fx = f(x); if (fx == 0.0) return x;
+                Dbg.Info($"{a}\t{b}\t{c}\t{x}\t{defcon}\t{fa}\t{fb}\t{fc}\t{fx}");
+                if (BoundsZero(fa, fx))
+                {
+                    defcon = b - x < 0.4 * (b - a) ? defcon + 1 : 0;
+                    if (c > b || b - x < a - c) { c = b; fc = fb; }
+                    b = x; fb = fx;
+                }
+                else
+                {
+                    defcon = x - a < 0.4 * (b - a) ? defcon + 1 : 0;
+                    if (c < a || x - a < c - b) { c = a; fc = fa; }
+                    a = x; fa = fx;
+                }
+            }
+            return (a + b) * 0.5;
+        }
+
+
+
+        [Fact]
+        public void LinearRoot_Bound()
+        {
+            var genD = Gen.Double[-10_000, 10_000];
+            Gen.Select(genD, genD, genD, genD)
+            .Where((a, fa, b, fb) => a < b && BoundsZero(fa, fb))
+            .Select((a, fa, b, fb) => (a, fa, b, fb, LinearRoot(a, fa, b, fb)))
+            .Sample((a, fa, b, fb, x) => a <= x && x <= b);
         }
 
         [Fact]
@@ -72,7 +163,7 @@ namespace Tests
             .Sample((a, fa, b, fb, c, fc, x) => a <= x && x <= b);
         }
 
-        static (int,int[]) TestSolver(double tol, Func<double, Func<double, double>, double, double, double> solver)
+        static (int, int[]) TestSolver(double tol, Func<double, Func<double, double>, double, double, double> solver)
         {
             var problems = TestProblems().ToArray();
             Assert.Equal(154, problems.Length);
@@ -90,40 +181,40 @@ namespace Tests
         }
 
         [Fact]
-        public void Root_TestProblems_4() => Assert.Equal(2233, TestSolver(1e-4, Root).Item1);
+        public void Root_TestProblems_4() => Assert.Equal(1958, TestSolver(1e-4, Root).Item1);
 
         [Fact]
-        public void Root_TestProblems_5() => Assert.Equal(2351, TestSolver(1e-5, Root).Item1);
+        public void Root_TestProblems_5() => Assert.Equal(2084, TestSolver(1e-5, Root).Item1);
 
         [Fact]
         public void Brent_TestProblems_6() => Assert.Equal(2763, TestSolver(1e-6, Brent).Item1);
 
         [Fact]
-        public void Root_TestProblems_6() => Assert.Equal(2446, TestSolver(1e-6, Root).Item1);
+        public void Root_TestProblems_6() => Assert.Equal(2164, TestSolver(1e-6, Root).Item1);
 
         [Fact]
         public void Brent_TestProblems_7() => Assert.Equal(2816, TestSolver(1e-7, Brent).Item1);
 
         [Fact]
-        public void Root_TestProblems_7() => Assert.Equal(2544, TestSolver(1e-7, Root).Item1);
+        public void Root_TestProblems_7() => Assert.Equal(2257, TestSolver(1e-7, Root).Item1);
 
         [Fact]
         public void Brent_TestProblems_9() => Assert.Equal(2889, TestSolver(1e-9, Brent).Item1);
 
         [Fact]
-        public void Root_TestProblems_9() => Assert.Equal(2592, TestSolver(1e-9, Root).Item1);
+        public void Root_TestProblems_9() => Assert.Equal(2312, TestSolver(1e-9, Root).Item1);
 
         [Fact]
         public void Brent_TestProblems_11() => Assert.Equal(2935, TestSolver(1e-11, Brent).Item1);
 
         [Fact]
-        public void Root_TestProblems_11() => Assert.Equal(2632, TestSolver(1e-11, Root).Item1);
+        public void Root_TestProblems_11() => Assert.Equal(2350, TestSolver(1e-11, Root).Item1);
 
         [Fact]
         public void Brent_TestProblems_13() => Assert.Equal(2964, TestSolver(1e-13, Brent).Item1);
 
         [Fact]
-        public void Root_TestProblems_13() => Assert.Equal(2698, TestSolver(1e-13, Root).Item1);
+        public void Root_TestProblems_13() => Assert.Equal(2418, TestSolver(1e-13, Root).Item1);
 
         [Fact]
         public void Root_TestProblems_Compare()
@@ -132,10 +223,10 @@ namespace Tests
             var brentCounts = TestSolver(1e-13, Brent).Item2;
             var check =
                 rootCounts.Zip(brentCounts)
-                .Select((t,i) => (t.First, t.Second, i))
+                .Select((t, i) => (t.First, t.Second, i))
                 .Where(t => t.First > t.Second)
                 .OrderBy(t => t.Second - t.First)
-                .ThenBy(t => ((double)(t.Second - t.First))/t.Second)
+                .ThenBy(t => ((double)(t.Second - t.First)) / t.Second)
                 .Select(t => t.i + ": " + t.First + " - " + t.Second);
             foreach (var s in check) writeLine(s);
         }
@@ -147,43 +238,6 @@ namespace Tests
             Root(1e-13, F, Min, Max);
             Dbg.Output(writeLine);
         }
-
-        public static double Root(double tol, Func<double, double> f, double a, double b)
-        {
-            var fa = f(a); if (fa == 0.0) return a;
-            var fb = f(b); if (fb == 0.0) return b;
-            if (!BoundsZero(fa, fb)) throw new Exception($"f(a)=f({a})={fa} and f(b)=f({b})={fb} do not bound zero");
-            double c = double.PositiveInfinity, fc = 0;
-            int defcon = 1;
-            while (b - a > tol * 2)
-            {
-                double x;
-                if (b - a < tol * 4 || defcon >= 2) x = (a + b) * 0.5;
-                else
-                {
-                    x = defcon == 0 ? QuadraticRoot(a, fa, b, fb, c, fc) : InverseQuadraticRoot(a, fa, b, fb, c, fc);
-                    x = Math.Min(b - tol * 1.99, Math.Max(a + tol * 1.99, x));
-                }
-                var fx = f(x); if (fx == 0.0) return x;
-                Dbg.Info($"{a}\t{b}\t{c}\t{x}\t{defcon}\t{fa}\t{fb}\t{fc}\t{fx}");
-                if (BoundsZero(fa, fx))
-                {
-                    var slow = b - x < 0.4 * (b - a);
-                    defcon = slow ? defcon + 1 : 0;
-                    if (c > b || b - x < a - c) { c = b; fc = fb; }
-                    b = x; fb = fx;
-                }
-                else
-                {
-                    var slow = x - a < 0.4 * (b - a);
-                    defcon = slow ? defcon + 1 : 0;
-                    if (c < a || x - a < c - b) { c = a; fc = fa; }
-                    a = x; fa = fx;
-                }
-            }
-            return (a + b) * 0.5;
-        }
-
 
         public static double Brent(double tol, Func<double, double> f, double a, double b)
         {
@@ -260,6 +314,57 @@ namespace Tests
             }
             else
                 return b;
+        }
+
+        [Fact]
+        public void BondPriceProblem()
+        {
+            const double tol = 1e-6, coupon = 0.075, interestRate = 0.035;
+            const int years = 20;
+            static double BondPrice(double spread)
+            {
+                double pv = 0.0;
+                for (int t = 1; t < years * 2; t++)
+                    pv += coupon * 0.5 * Math.Pow(1 + interestRate + spread, -0.5 * t);
+                pv += (1 + coupon * 0.5) * Math.Pow(1 + interestRate + spread, -years);
+                return pv;
+            }
+            var countRoot = 0;
+            var spreadRoot = Root(tol, x => { countRoot++; return 0.9 - BondPrice(x); }, -0.1, 1);
+            var countBrent = 0;
+            var spreadBrent = Brent(tol, x => { countBrent++; return 0.9 - BondPrice(x); }, -0.1, 1);
+            Assert.True(Math.Abs(spreadRoot - spreadBrent) < tol * 2);
+            Assert.Equal(10, countRoot);
+            Assert.Equal(12, countBrent);
+        }
+
+        [Fact]
+        public void OptionPriceProblem()
+        {
+            const double tol = 1e-6;
+            static double CND(double x)
+            {
+                var l = Math.Abs(x);
+                var k = 1.0 / (1.0 + 0.2316419 * l);
+                var cnd = 1.0 - 1.0 / Math.Sqrt(2 * Convert.ToDouble(Math.PI.ToString())) * Math.Exp(-l * l / 2.0) *
+                    (0.31938153 * k + -0.356563782 * k * k + 1.781477937 * Math.Pow(k, 3.0) + -1.821255978 * Math.Pow(k, 4.0)
+                    + 1.330274429 * Math.Pow(k, 5.0));
+                return x < 0 ? 1.0 - cnd : cnd;
+            }
+            static double BlackScholes(bool call, double s, double x, double t, double r, double v)
+            {
+                var d1 = (Math.Log(s / x) + (r + v * v / 2.0) * t) / (v * Math.Sqrt(t));
+                var d2 = d1 - v * Math.Sqrt(t);
+                return call ? s * CND(d1) - x * Math.Exp(-r * t) * CND(d2) : x * Math.Exp(-r * t) * CND(-d2) - s * CND(-d1);
+            }
+            var countRoot = 0;
+            var volatilityRoot = Root(tol, x => { countRoot++; return BlackScholes(true, 9, 10, 2, 0.02, x) - 1; }, 0, 1);
+            var countBrent = 0;
+            var volatilityBrent = Brent(tol, x => { countBrent++; return BlackScholes(true, 9, 10, 2, 0.02, x) - 1; }, 0, 1);
+            Assert.True(Math.Abs(volatilityRoot - volatilityBrent) < tol * 2);
+            Dbg.Output(writeLine);
+            Assert.Equal(6, countRoot);
+            Assert.Equal(7, countBrent);
         }
 
         static IEnumerable<(Func<double, double> F, double Min, double Max)> TestProblems()
