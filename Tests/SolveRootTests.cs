@@ -187,13 +187,13 @@ namespace Tests
         public void Brent_TestProblems_9() => Assert.Equal(2889, TestSolver(1e-9, Brent).Item1);
 
         [Fact]
-        public void Root_TestProblems_9() => Assert.Equal(2292, TestSolver(1e-9, Root).Item1);
+        public void Root_TestProblems_9() => Assert.InRange(TestSolver(1e-9, Root).Item1, 2292, 2293);
 
         [Fact]
         public void Brent_TestProblems_11() => Assert.Equal(2935, TestSolver(1e-11, Brent).Item1);
 
         [Fact]
-        public void Root_TestProblems_11() => Assert.Equal(2329, TestSolver(1e-11, Root).Item1);
+        public void Root_TestProblems_11() => Assert.InRange(TestSolver(1e-11, Root).Item1, 2329, 2330);
 
         [Fact]
         public void Root_TestProblems_Compare()
