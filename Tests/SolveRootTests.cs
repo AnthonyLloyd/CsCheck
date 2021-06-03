@@ -35,9 +35,27 @@ namespace Tests
             return QuadraticRoot(a, fa, b, fb, c, fc);
         }
 
+        /// <summary>
+        /// Finds x the root f(x) = 0 accurate to tol where a and b (a<b) bound a root i.e. f(a)f(b) < 0.
+        /// </summary>
+        /// <param name="tol">The tolerance of the root required.</param>
+        /// <param name="f">The function to find the root of.</param>
+        /// <param name="a">The lower boundary.</param>
+        /// <param name="b">The upper boundary.</param>
+        /// <returns>The root x accurate to tol.</returns>
         public static double Root(double tol, Func<double, double> f, double a, double b)
             => Root(tol, f, a, b, a + (b - a) * 0.2, b - (b - a) * 0.2);
 
+        /// <summary>
+        /// Finds x the root f(x) = 0 accurate to tol where a and b (a<ai<bi<b) bound a root i.e. f(a)f(b) < 0.
+        /// </summary>
+        /// <param name="tol">The tolerance of the root required.</param>
+        /// <param name="f">The function to find the root of.</param>
+        /// <param name="a">The lower boundary.</param>
+        /// <param name="b">The upper boundary.</param>
+        /// <param name="ai">The lower inner region.</param>
+        /// <param name="bi">The upper inner region.</param>
+        /// <returns>The root x accurate to tol.</returns>
         public static double Root(double tol, Func<double, double> f, double a, double b, double ai, double bi)
         {
             static double RootInner(double tol, Func<double, double> f, double a, double fa, double b, double fb, double c, double fc)
