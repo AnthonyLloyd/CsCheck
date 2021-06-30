@@ -1196,6 +1196,20 @@ namespace CsCheck
             size = new Size(i + 1UL);
             return new FloatConverter { I = i | 0x3F800000 }.F;
         });
+        /// <summary>In the range 0.0 &lt; x &lt;= inf without nan.</summary>
+        public Gen<float> Positive = Gen.Create((PCG pcg, Size min, out Size size) =>
+        {
+            uint i = pcg.Next() >> 1;
+            size = new Size(i + 1UL);
+            return (i & 0x7F800000U) == 0x7F800000U ? (i & 0xFU) + 1U : new FloatConverter { I = i + 1U }.F;
+        });
+        /// <summary>In the range -inf &lt;= x &lt; 0.0 without nan.</summary>
+        public Gen<float> Negative = Gen.Create((PCG pcg, Size min, out Size size) =>
+        {
+            uint i = pcg.Next() >> 1;
+            size = new Size(i + 1UL);
+            return (i & 0x7F800000U) == 0x7F800000U ? -((i & 0xFU) + 1U) : new FloatConverter { I = (i + 1U) | 0x80000000U }.F;
+        });
         /// <summary>Without special values nan and inf.</summary>
         public Gen<float> Normal = Gen.Create((PCG pcg, Size min, out Size size) =>
         {
@@ -1203,12 +1217,33 @@ namespace CsCheck
             size = new Size(i + 1UL);
             return (i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU)) : new FloatConverter { I = i }.F;
         });
-        /// <summary>In the range 0.0 &lt;= x &lt;= max without special values.</summary>
+        /// <summary>In the range 0.0 &lt; x &lt;= max without special values nan and inf.</summary>
+        public Gen<float> NormalPositive = Gen.Create((PCG pcg, Size min, out Size size) =>
+        {
+            uint i = pcg.Next() >> 1;
+            size = new Size(i + 1UL);
+            return (i & 0x7F800000U) == 0x7F800000U || i == 0U ? (i & 0xFU) + 1U : new FloatConverter { I = i }.F;
+        });
+        /// <summary>In the range min &lt;= x &lt; 0.0 without special values nan and inf.</summary>
+        public Gen<float> NormalNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
+        {
+            uint i = pcg.Next() >> 1;
+            size = new Size(i + 1UL);
+            return (i & 0x7F800000U) == 0x7F800000U || i == 0U ? -((i & 0xFU) + 1U) : new FloatConverter { I = i | 0x80000000U }.F;
+        });
+        /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
         public Gen<float> NormalNonNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            uint i = pcg.Next();
+            uint i = pcg.Next() >> 1;
             size = new Size(i + 1UL);
-            return Math.Abs((i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU)) : new FloatConverter { I = i }.F);
+            return (i & 0x7F800000U) == 0x7F800000U ? i & 0xFU : new FloatConverter { I = i }.F;
+        });
+        /// <summary>In the range min &lt;= x &lt;= 0.0 without special values nan and inf.</summary>
+        public Gen<float> NormalNonPositive = Gen.Create((PCG pcg, Size min, out Size size) =>
+        {
+            uint i = pcg.Next() >> 1;
+            size = new Size(i + 1UL);
+            return (i & 0x7F800000U) == 0x7F800000U ? -(i & 0xFU) : new FloatConverter { I = i | 0x80000000U }.F;
         });
         static float MakeSpecial(uint i) => (i & 0xFU) switch
         {
@@ -1261,11 +1296,11 @@ namespace CsCheck
                 });
             }
         }
-        /// <summary>In the range 0.0 &lt;= x &lt;= max.</summary>
+        /// <summary>In the range 0.0 &lt;= x &lt;= inf, can be nan.</summary>
         public Gen<double> NonNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
         {
             ulong i = pcg.Next64();
-            size = new Size(i + 1UL);
+            size = new Size((i >> 12) + 1UL);
             return Math.Abs(BitConverter.Int64BitsToDouble((long)i));
         });
         /// <summary>In the range 0.0 &lt;= x &lt; 1.0.</summary>
@@ -1282,19 +1317,54 @@ namespace CsCheck
             size = new Size(i + 1UL);
             return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000);
         });
+        /// <summary>In the range 0.0 &lt; x &lt;= inf without nan.</summary>
+        public Gen<double> Positive = Gen.Create((PCG pcg, Size min, out Size size) =>
+        {
+            ulong i = pcg.Next64() >> 1;
+            size = new Size((i >> 11) + 1UL);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? ((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)(i + 1UL));
+        });
+        /// <summary>In the range -inf &lt;= x &lt; 0.0 without nan.</summary>
+        public Gen<double> Negative = Gen.Create((PCG pcg, Size min, out Size size) =>
+        {
+            ulong i = pcg.Next64() >> 1;
+            size = new Size((i >> 11) + 1UL);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? -(double)((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)((i + 1UL) | 0x8000000000000000U));
+        });
         /// <summary>Without special values nan and inf.</summary>
         public Gen<double> Normal = Gen.Create((PCG pcg, Size min, out Size size) =>
         {
             ulong i = pcg.Next64();
-            size = new Size(i + 1UL);
+            size = new Size((i >> 12) + 1UL);
             return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL)) : BitConverter.Int64BitsToDouble((long)i);
+        });
+        /// <summary>In the range 0.0 &lt; x &lt;= max without special values nan and inf.</summary>
+        public Gen<double> NormalPositive = Gen.Create((PCG pcg, Size min, out Size size) =>
+        {
+            ulong i = pcg.Next64() >> 1;
+            size = new Size((i >> 11) + 1UL);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U || i == 0L ? ((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)i);
+        });
+        /// <summary>In the range min &lt;= x &lt; 0.0 without special values nan and inf.</summary>
+        public Gen<double> NormalNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
+        {
+            ulong i = pcg.Next64() >> 1;
+            size = new Size((i >> 11) + 1UL);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U || i == 0L ? -(double)((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)(i | 0x8000000000000000U));
         });
         /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
         public Gen<double> NormalNonNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
         {
-            ulong i = pcg.Next64();
-            size = new Size(i + 1UL);
-            return Math.Abs((i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL)) : BitConverter.Int64BitsToDouble((long)i));
+            ulong i = pcg.Next64() >> 1;
+            size = new Size((i >> 11) + 1UL);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? i & 0xFUL : BitConverter.Int64BitsToDouble((long)i);
+        });
+        /// <summary>In the range min &lt;= x &lt;= 0.0 without special values nan and inf.</summary>
+        public Gen<double> NormalNonPositive = Gen.Create((PCG pcg, Size min, out Size size) =>
+        {
+            ulong i = pcg.Next64() >> 1;
+            size = new Size((i >> 11) + 1UL);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? -(double)(i & 0xFUL) : BitConverter.Int64BitsToDouble((long)(i | 0x8000000000000000U));
         });
         static double MakeSpecial(ulong i) => (i & 0xFUL) switch
         {
@@ -1319,7 +1389,7 @@ namespace CsCheck
         public Gen<double> Special = Gen.Create((PCG pcg, Size min, out Size size) =>
         {
             ulong i = pcg.Next64();
-            size = new Size(i + 1UL);
+            size = new Size((i >> 12) + 1UL);
             return (i & 0xF0UL) == 0xD0UL ? MakeSpecial(i) : BitConverter.Int64BitsToDouble((long)i);
         });
         public class DoubleSkew

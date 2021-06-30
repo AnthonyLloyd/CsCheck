@@ -375,6 +375,20 @@ namespace Tests
         }
 
         [Fact]
+        public void Single_Negative()
+        {
+            Gen.Single.Negative
+            .Sample(d => !float.IsNaN(d) && d < 0.0f);
+        }
+
+        [Fact]
+        public void Single_Positive()
+        {
+            Gen.Single.Positive
+            .Sample(d => !float.IsNaN(d) && d > 0.0f);
+        }
+
+        [Fact]
         public void Single_Normal()
         {
             Gen.Single.Normal
@@ -382,10 +396,31 @@ namespace Tests
         }
 
         [Fact]
+        public void Single_NormalNegative()
+        {
+            Gen.Single.NormalNegative
+            .Sample(d => !float.IsNaN(d) && !float.IsInfinity(d) && d < 0.0f);
+        }
+
+        [Fact]
+        public void Single_NormalPositive()
+        {
+            Gen.Single.NormalPositive
+            .Sample(d => !float.IsNaN(d) && !float.IsInfinity(d) && d > 0.0f);
+        }
+
+        [Fact]
         public void Single_NormalNonNegative()
         {
             Gen.Single.NormalNonNegative
             .Sample(f => !float.IsNaN(f) && !float.IsInfinity(f) && f >= 0.0f);
+        }
+
+        [Fact]
+        public void Single_NormalNonPositive()
+        {
+            Gen.Single.NormalNonPositive
+            .Sample(f => !float.IsNaN(f) && !float.IsInfinity(f) && f <= 0.0f);
         }
 
         [Fact]
@@ -430,6 +465,20 @@ namespace Tests
         }
 
         [Fact]
+        public void Double_Negative()
+        {
+            Gen.Double.Negative
+            .Sample(d => !double.IsNaN(d) && d < 0.0);
+        }
+
+        [Fact]
+        public void Double_Positive()
+        {
+            Gen.Double.Positive
+            .Sample(d => !double.IsNaN(d) && d > 0.0);
+        }
+
+        [Fact]
         public void Double_Normal()
         {
             Gen.Double.Normal
@@ -437,10 +486,31 @@ namespace Tests
         }
 
         [Fact]
+        public void Double_NormalNegative()
+        {
+            Gen.Double.NormalNegative
+            .Sample(d => !double.IsNaN(d) && !double.IsInfinity(d) && d < 0.0);
+        }
+
+        [Fact]
+        public void Double_NormalPositive()
+        {
+            Gen.Double.NormalPositive
+            .Sample(d => !double.IsNaN(d) && !double.IsInfinity(d) && d > 0.0);
+        }
+
+        [Fact]
         public void Double_NormalNonNegative()
         {
             Gen.Double.NormalNonNegative
             .Sample(d => !double.IsNaN(d) && !double.IsInfinity(d) && d >= 0.0);
+        }
+
+        [Fact]
+        public void Double_NormalNonPositive()
+        {
+            Gen.Double.NormalNonPositive
+            .Sample(d => !double.IsNaN(d) && !double.IsInfinity(d) && d <= 0.0);
         }
 
         [Fact]
