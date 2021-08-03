@@ -175,7 +175,7 @@ public void MapSlim_Metamorphic()
 
 CsCheck has support for concurrency testing with full shrinking capability.
 A concurrent sequence of operations are run on an initial state and the result is compared to all the possible linearized versions.
-At least ones of these must be equal to the concurrent version.
+At least one of these must be equal to the concurrent version.
 
 Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603).
 

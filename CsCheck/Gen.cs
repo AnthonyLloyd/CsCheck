@@ -1011,6 +1011,12 @@ namespace CsCheck
             size = new Size((s << 27 | i & 0x7FFFFFFUL) + 1UL);
             return -Unzigzag(i);
         }
+        public Gen<int> Uniform = Gen.Create((PCG pcg, Size min, out Size size) =>
+        {
+            int i = (int)pcg.Next();
+            size = new Size(Zigzag(i) + 1UL);
+            return i;
+        });
         public Gen<int> Positive = Gen.Create((PCG pcg, Size min, out Size size) =>
         {
             uint s = pcg.Next(31);
