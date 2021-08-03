@@ -25,12 +25,12 @@ namespace Tests
         [Fact]
         public void Induction_Random()
         {
-            Gen.Int.Sample(i => FizzBuzz(i) switch
+            Gen.Int.Uniform.Sample(i => FizzBuzz(i) switch
             {
-                "FizzBuzz" => "FizzBuzz".Equals(FizzBuzz(i + 15)),
-                "Fizz" => FizzBuzz(i + 3).Contains("Fizz"),
-                "Buzz" => FizzBuzz(i + 5).Contains("Buzz"),
-                var fb => i == int.Parse(fb) && !FizzBuzz(i + 3).Contains("Fizz") && !FizzBuzz(i + 5).Contains("Buzz")
+                "FizzBuzz" => FizzBuzz(i + 15).Equals("FizzBuzz"),
+                "Fizz" => FizzBuzz(i + 3).StartsWith("Fizz"),
+                "Buzz" => FizzBuzz(i + 5).EndsWith("Buzz"),
+                var fb => int.Parse(fb) == i && !FizzBuzz(i + 3).StartsWith("Fizz") && !FizzBuzz(i + 5).EndsWith("Buzz")
             });
         }
     }
