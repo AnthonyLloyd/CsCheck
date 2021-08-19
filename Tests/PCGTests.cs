@@ -1,4 +1,5 @@
 ﻿using CsCheck;
+using System;
 using Xunit;
 
 namespace Tests
@@ -191,6 +192,18 @@ namespace Tests
                 return expected.Stream == actual.Stream
                     && expected.State == actual.State;
             });
+        }
+
+        [Fact]
+        public void PCG_Fast()
+        {
+            var pcg = new PCG(1);
+            var rnd = new Random();
+            Check.Faster(
+                () => pcg.Next(),
+                () => rnd.Next(),
+                repeat: 100, threads: 1
+            );
         }
     }
 }
