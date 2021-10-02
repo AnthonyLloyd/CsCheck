@@ -27,7 +27,7 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
 Added Positive, Negative, NormalPositive, NormalNegative to Gen.Double and Gen.Single.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <LangVersion>9.0</LangVersion>
+        <LangVersion>10.0</LangVersion>
         <WarningLevel>5</WarningLevel>
         <Features>strict</Features>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

@@ -28,7 +28,7 @@ namespace Tests
 
             Dbg.Call("cache");
             var x = "hello";
-            var y = Dbg.Info(Enumerable, x).DbgCache().DbgInfo();
+            var y = Dbg.Info(s => Enumerable(s), x).DbgCache().DbgInfo();
             Dbg.Regression.Delete();
             Dbg.Output(writeLine);
         }

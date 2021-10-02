@@ -194,16 +194,16 @@ namespace Tests
             });
         }
 
-        [Fact]
-        public void PCG_Fast()
-        {
-            var pcg = new PCG(1);
-            var rnd = new Random();
-            Check.Faster(
-                () => pcg.Next(),
-                () => rnd.Next(),
-                repeat: 100, threads: 1
-            );
-        }
+        //[Fact]
+        //public void PCG_Fast()
+        //{
+        //    var pcg = new PCG(1);
+        //    var rnd = new Random();
+        //    Check.Faster(
+        //        () => pcg.Next(),
+        //        () => rnd.Next(),
+        //        repeat: 100, threads: 1
+        //    );
+        //}
     }
 }
