@@ -6,6 +6,9 @@ namespace Tests
 {
     public class PCGTests
     {
+        readonly Action<string> writeLine;
+        public PCGTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
+
         [Fact] // from the github https://github.com/imneme/pcg-c-basic minimal c implementation http://www.pcg-random.org/download.html#minimal-c-implementation
         public void PCG_Demo_1()
         {
@@ -194,16 +197,17 @@ namespace Tests
             });
         }
 
-        //[Fact]
-        //public void PCG_Fast()
-        //{
-        //    var pcg = new PCG(1);
-        //    var rnd = new Random();
-        //    Check.Faster(
-        //        () => pcg.Next(),
-        //        () => rnd.Next(),
-        //        repeat: 100, threads: 1
-        //    );
-        //}
+        [Fact]
+        public void PCG_Fast()
+        {
+            var pcg = new PCG(1);
+            var rnd = new Random();
+            Check.Faster(
+                () => pcg.Next(),
+                () => rnd.Next(),
+                repeat: 100, threads: 1
+            )
+            .Output(writeLine);
+        }
     }
 }

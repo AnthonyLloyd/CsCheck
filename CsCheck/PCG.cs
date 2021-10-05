@@ -42,9 +42,10 @@ namespace CsCheck
         public PCG(uint stream) : this(stream, (ulong)Stopwatch.GetTimestamp()) { }
         public uint Next()
         {
-            State = State * 6364136223846793005UL + Inc;
-            uint xorshifted = (uint)((State ^ (State >> 18)) >> 27);
-            int rot = (int)(State >> 59);
+            ulong state = State * 6364136223846793005UL + Inc;
+            State = state;
+            int rot = (int)(state >> 59);
+            uint xorshifted = (uint)((state ^ (state >> 18)) >> 27);
             return (xorshifted >> rot) | (xorshifted << (32 - rot));
         }
         public ulong Next64() => ((ulong)Next() << 32) + Next();
