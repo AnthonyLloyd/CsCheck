@@ -1626,18 +1626,17 @@ namespace CsCheck
             return vs;
         }
         public override T[] Generate(PCG pcg, Size min, out Size size)
-        {
-            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-        }
+            => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         public Gen<T[]> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length.Generate(pcg, null, out Size sl), out size);
-        });
+            Generate(pcg, min, length.Generate(pcg, null, out Size sl), out size)
+        );
         public Gen<T[]> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length, out size);
-        });
+            Generate(pcg, min, length, out size)
+        );
         public Gen<T[]> this[int start, int finish] => this[Gen.Int[start, finish]];
+        public Gen<T[]> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+            Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
+        );
     }
 
     public class GenArrayUnique<T> : Gen<T[]>
@@ -1669,18 +1668,17 @@ namespace CsCheck
             return vs;
         }
         public override T[] Generate(PCG pcg, Size min, out Size size)
-        {
-            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-        }
+            => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         public Gen<T[]> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length.Generate(pcg, min, out size), out size);
-        });
+            Generate(pcg, min, length.Generate(pcg, min, out size), out size)
+        );
         public Gen<T[]> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length, out size);
-        });
+            Generate(pcg, min, length, out size)
+        );
         public Gen<T[]> this[int start, int finish] => this[Gen.Int[start, finish]];
+        public Gen<T[]> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+            Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
+        );
     }
 
     public class GenEnumerable<T> : Gen<IEnumerable<T>>
@@ -1707,18 +1705,17 @@ namespace CsCheck
             return vs;
         }
         public override IEnumerable<T> Generate(PCG pcg, Size min, out Size size)
-        {
-            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-        }
+            => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         public Gen<IEnumerable<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length.Generate(pcg, null, out _), out size);
-        });
+            Generate(pcg, min, length.Generate(pcg, null, out _), out size)
+        );
         public Gen<IEnumerable<T>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length, out size);
-        });
+            Generate(pcg, min, length, out size)
+        );
         public Gen<IEnumerable<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
+        public Gen<IEnumerable<T>> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+            Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
+        );
     }
 
     public class GenArray2D<T> : Gen<T[,]>
@@ -1737,17 +1734,16 @@ namespace CsCheck
             return vs;
         }
         public override T[,] Generate(PCG pcg, Size min, out Size size)
-        {
-            return Generate(pcg, min, (int)(pcg.Next() & 127U), (int)(pcg.Next() & 127U), out size);
-        }
+            => Generate(pcg, min, (int)(pcg.Next() & 127U), (int)(pcg.Next() & 127U), out size);
         public Gen<T[,]> this[int length0, int length1] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length0, length1, out size);
-        });
+            Generate(pcg, min, length0, length1, out size)
+        );
         public Gen<T[,]> this[Gen<int> length0, Gen<int> length1] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length0.Generate(pcg, null, out _), length1.Generate(pcg, null, out _), out size);
-        });
+            Generate(pcg, min, length0.Generate(pcg, null, out _), length1.Generate(pcg, null, out _), out size)
+        );
+        public Gen<T[,]> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+            Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, (int)(pcg.Next() & 127U) + 1, out size)
+        );
     }
 
     public class GenList<T> : Gen<List<T>>
@@ -1774,18 +1770,17 @@ namespace CsCheck
             return vs;
         }
         public override List<T> Generate(PCG pcg, Size min, out Size size)
-        {
-            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-        }
+            => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         public Gen<List<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length.Generate(pcg, null, out _), out size);
-        });
+            Generate(pcg, min, length.Generate(pcg, null, out _), out size)
+        );
         public Gen<List<T>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length, out size);
-        });
+            Generate(pcg, min, length, out size)
+        );
         public Gen<List<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
+        public Gen<List<T>> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+            Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
+        );
     }
 
     public class GenHashSet<T> : Gen<HashSet<T>>
@@ -1814,18 +1809,17 @@ namespace CsCheck
             return vs;
         }
         public override HashSet<T> Generate(PCG pcg, Size min, out Size size)
-        {
-            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-        }
+            => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         public Gen<HashSet<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length.Generate(pcg, null, out _), out size);
-        });
+            Generate(pcg, min, length.Generate(pcg, null, out _), out size)
+        );
         public Gen<HashSet<T>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length, out size);
-        });
+            Generate(pcg, min, length, out size)
+        );
         public Gen<HashSet<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
+        public Gen<HashSet<T>> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+            Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
+        );
     }
 
     public class GenDictionary<K, V> : Gen<Dictionary<K, V>>
@@ -1863,18 +1857,17 @@ namespace CsCheck
             return vs;
         }
         public override Dictionary<K, V> Generate(PCG pcg, Size min, out Size size)
-        {
-            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-        }
+            => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         public Gen<Dictionary<K, V>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length.Generate(pcg, null, out _), out size);
-        });
+            Generate(pcg, min, length.Generate(pcg, null, out _), out size)
+        );
         public Gen<Dictionary<K, V>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length, out size);
-        });
+            Generate(pcg, min, length, out size)
+        );
         public Gen<Dictionary<K, V>> this[int start, int finish] => this[Gen.Int[start, finish]];
+        public Gen<Dictionary<K, V>> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+            Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
+        );
     }
 
     public class GenSortedDictionary<K, V> : Gen<SortedDictionary<K, V>>
@@ -1912,18 +1905,17 @@ namespace CsCheck
             return vs;
         }
         public override SortedDictionary<K, V> Generate(PCG pcg, Size min, out Size size)
-        {
-            return Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-        }
+            => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
         public Gen<SortedDictionary<K, V>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length.Generate(pcg, null, out _), out size);
-        });
+            Generate(pcg, min, length.Generate(pcg, null, out _), out size)
+        );
         public Gen<SortedDictionary<K, V>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
-        {
-            return Generate(pcg, min, length, out size);
-        });
+            Generate(pcg, min, length, out size)
+        );
         public Gen<SortedDictionary<K, V>> this[int start, int finish] => this[Gen.Int[start, finish]];
+        public Gen<SortedDictionary<K, V>> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+            Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
+        );
     }
 
     public class GenOperation<T> : Gen<(string, Action<T>)>
