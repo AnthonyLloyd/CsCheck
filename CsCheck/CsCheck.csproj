@@ -22,9 +22,11 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>2.3.2</Version>
+        <Version>2.4.0</Version>
         <PackageReleaseNotes>
-Added Positive, Negative, NormalPositive, NormalNegative to Gen.Double and Gen.Single.
+Added Nonempty for collections.
+Added PCG performance improvements.
+Added MedianEstimator performance improvements.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>10.0</LangVersion>
@@ -36,8 +38,10 @@ Added Positive, Negative, NormalPositive, NormalNegative to Gen.Double and Gen.S
         <AssemblyOriginatorKeyFile>../SigningKey.snk</AssemblyOriginatorKeyFile>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>CS1591</NoWarn>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
     <ItemGroup>
-        <None Include="..\CsCheck.png" Pack="true" PackagePath="" Visible="False" />
+        <None Include="../CsCheck.png" Pack="true" PackagePath="" Visible="False" />
+        <None Include="../README.md" Pack="true" PackagePath="" Visible="False" />
     </ItemGroup>
 </Project>

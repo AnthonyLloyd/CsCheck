@@ -314,64 +314,143 @@ namespace CsCheck
     /// <summary>A median and quartile estimator.</summary>
     public class MedianEstimator
     {
-        int N, n2 = 2, n3 = 3, n4 = 4;
-        double q1, q2, q3, q4, q5;
-        public double Minimum => q1;
-        public double LowerQuartile => q2;
-        public double Median => q3;
-        public double UpperQuartile => q4;
-        public double Maximum => q5;
+        public int N, N1 = 2, N2 = 3, N3 = 4;
+        public double Q0, Q1, Q2, Q3, Q4;
+        public double Minimum => Q0;
+        public double LowerQuartile => Q1;
+        public double Median => Q2;
+        public double UpperQuartile => Q3;
+        public double Maximum => Q4;
         public void Add(double s)
         {
-            switch (++N)
+            if (++N > 5)
             {
-                case 1:
-                    q1 = s;
-                    return;
-                case 2:
-                    q2 = s;
-                    return;
-                case 3:
-                    q3 = s;
-                    return;
-                case 4:
-                    q4 = s;
-                    return;
-                case 5:
-                    var a = new[] { q1, q2, q3, q4, s };
-                    Array.Sort(a);
-                    q1 = a[0];
-                    q2 = a[1];
-                    q3 = a[2];
-                    q4 = a[3];
-                    q5 = a[4];
-                    return;
-                default:
-                    if (s < q1) q1 = s;
-                    if (s < q2) n2++;
-                    if (s < q3) n3++;
-                    if (s < q4) n4++;
-                    if (s > q5) q5 = s;
-                    Adjust(0.25, 1, ref n2, n3, q1, ref q2, q3);
-                    Adjust(0.50, n2, ref n3, n4, q2, ref q3, q4);
-                    Adjust(0.75, n3, ref n4, N, q3, ref q4, q5);
-                    return;
+                if (s < Q3)
+                {
+                    N3++;
+                    if (s < Q2)
+                    {
+                        N2++;
+                        if (s < Q1)
+                        {
+                            N1++;
+                            if (s < Q0) Q0 = s;
+                        }
+                    }
+                }
+                else if (s > Q4) Q4 = s;
+
+                s = 1 - N1 + (N - 1) * 0.25;
+                if ((s >= 1.0 && N2 - N1 > 1) || (s <= -1.0 && 1 - N1 < -1))
+                {
+                    int ds = Math.Sign(s);
+                    double q = Q1 + (double)ds / (N2 - 1) * ((N1 - 1 + ds) * (Q2 - Q1) / (N2 - N1) + (N2 - N1 - ds) * (Q1 - Q0) / (N1 - 1));
+                    q = Q0 < q && q < Q2 ? q
+                      : ds == 1 ? Q1 + (Q2 - Q1) / (N2 - N1)
+                      : Q1 - (Q0 - Q1) / (1 - N1);
+                    N1 += ds;
+                    Q1 = q;
+                }
+                s = 1 - N2 + (N - 1) * 0.50;
+                if ((s >= 1.0 && N3 - N2 > 1) || (s <= -1.0 && N1 - N2 < -1))
+                {
+                    int ds = Math.Sign(s);
+                    double q = Q2 + (double)ds / (N3 - N1) * ((N2 - N1 + ds) * (Q3 - Q2) / (N3 - N2) + (N3 - N2 - ds) * (Q2 - Q1) / (N2 - N1));
+                    q = Q1 < q && q < Q3 ? q
+                      : ds == 1 ? Q2 + (Q3 - Q2) / (N3 - N2)
+                      : Q2 - (Q1 - Q2) / (N1 - N2);
+                    N2 += ds;
+                    Q2 = q;
+                }
+                s = 1 - N3 + (N - 1) * 0.75;
+                if ((s >= 1.0 && N - N3 > 1) || (s <= -1.0 && N2 - N3 < -1))
+                {
+                    int ds = Math.Sign(s);
+                    double q = Q3 + (double)ds / (N - N2) * ((N3 - N2 + ds) * (Q4 - Q3) / (N - N3) + (N - N3 - ds) * (Q3 - Q2) / (N3 - N2));
+                    q = Q2 < q && q < Q4 ? q
+                      : ds == 1 ? Q3 + (Q4 - Q3) / (N - N3)
+                      : Q3 - (Q2 - Q3) / (N2 - N3);
+                    N3 += ds;
+                    Q3 = q;
+                }
             }
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Adjust(double p, int n1, ref int n2, int n3, double q1, ref double q2, double q3)
-        {
-            double d = 1 - n2 + (N - 1) * p;
-            if ((d >= 1.0 && n3 - n2 > 1) || (d <= -1.0 && n1 - n2 < -1))
+            else if (N == 5)
             {
-                int ds = Math.Sign(d);
-                double q = q2 + (double)ds / (n3 - n1) * ((n2 - n1 + ds) * (q3 - q2) / (n3 - n2) + (n3 - n2 - ds) * (q2 - q1) / (n2 - n1));
-                q = q1 < q && q < q3 ? q :
-                    ds == 1 ? q2 + (q3 - q2) / (n3 - n2) :
-                    q2 - (q1 - q2) / (n1 - n2);
-                n2 += ds;
-                q2 = q;
+                if (s > Q4)
+                {
+                    Q0 = Q1;
+                    Q1 = Q2;
+                    Q2 = Q3;
+                    Q3 = Q4;
+                    Q4 = s;
+                }
+                else if (s > Q3)
+                {
+                    Q0 = Q1;
+                    Q1 = Q2;
+                    Q2 = Q3;
+                    Q3 = s;
+                }
+                else if (s > Q2)
+                {
+                    Q0 = Q1;
+                    Q1 = Q2;
+                    Q2 = s;
+                }
+                else if (s > Q1)
+                {
+                    Q0 = Q1;
+                    Q1 = s;
+                }
+                else Q0 = s;
             }
+            else if (N == 4)
+            {
+                if (s < Q1)
+                {
+                    Q4 = Q3;
+                    Q3 = Q2;
+                    Q2 = Q1;
+                    Q1 = s;
+                }
+                else if (s < Q2)
+                {
+                    Q4 = Q3;
+                    Q3 = Q2;
+                    Q2 = s;
+                }
+                else if (s < Q3)
+                {
+                    Q4 = Q3;
+                    Q3 = s;
+                }
+                else Q4 = s;
+            }
+            else if (N == 3)
+            {
+                if (s < Q1)
+                {
+                    Q3 = Q2;
+                    Q2 = Q1;
+                    Q1 = s;
+                }
+                else if (s < Q2)
+                {
+                    Q3 = Q2;
+                    Q2 = s;
+                }
+                else Q3 = s;
+            }
+            else if (N == 2)
+            {
+                if (s > Q2)
+                {
+                    Q1 = Q2;
+                    Q2 = s;
+                }
+                else Q1 = s;
+            }
+            else Q2 = s;
         }
     }
 
