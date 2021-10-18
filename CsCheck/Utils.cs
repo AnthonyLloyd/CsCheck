@@ -314,7 +314,7 @@ namespace CsCheck
     /// <summary>A median and quartile estimator.</summary>
     public class MedianEstimator
     {
-        public int N, N1 = 2, N2 = 3, N3 = 4;
+        public int N, N1 = 1, N2 = 2, N3 = 3;
         public double Q0, Q1, Q2, Q3, Q4;
         public double Minimum => Q0;
         public double LowerQuartile => Q1;
@@ -340,38 +340,44 @@ namespace CsCheck
                 }
                 else if (s > Q4) Q4 = s;
 
-                s = 1 - N1 + (N - 1) * 0.25;
-                if ((s >= 1.0 && N2 - N1 > 1) || (s <= -1.0 && 1 - N1 < -1))
+                s = (N - 1) * 0.25 - N1;
+                if (s >= 1.0 && N2 - N1 > 1)
                 {
-                    int ds = Math.Sign(s);
-                    double q = Q1 + (double)ds / (N2 - 1) * ((N1 - 1 + ds) * (Q2 - Q1) / (N2 - N1) + (N2 - N1 - ds) * (Q1 - Q0) / (N1 - 1));
-                    q = Q0 < q && q < Q2 ? q
-                      : ds == 1 ? Q1 + (Q2 - Q1) / (N2 - N1)
-                      : Q1 - (Q0 - Q1) / (1 - N1);
-                    N1 += ds;
-                    Q1 = q;
+                    double q = Q1 + ((N1 + 1) * (Q2 - Q1) / (N2 - N1) + (N2 - N1 - 1) * (Q1 - Q0) / N1) / N2;
+                    Q1 = Q0 < q && q < Q2 ? q : Q1 + (Q2 - Q1) / (N2 - N1);
+                    N1++;
                 }
-                s = 1 - N2 + (N - 1) * 0.50;
-                if ((s >= 1.0 && N3 - N2 > 1) || (s <= -1.0 && N1 - N2 < -1))
+                else if (s <= -1.0 && N1 > 1)
                 {
-                    int ds = Math.Sign(s);
-                    double q = Q2 + (double)ds / (N3 - N1) * ((N2 - N1 + ds) * (Q3 - Q2) / (N3 - N2) + (N3 - N2 - ds) * (Q2 - Q1) / (N2 - N1));
-                    q = Q1 < q && q < Q3 ? q
-                      : ds == 1 ? Q2 + (Q3 - Q2) / (N3 - N2)
-                      : Q2 - (Q1 - Q2) / (N1 - N2);
-                    N2 += ds;
-                    Q2 = q;
+                    double q = Q1 - ((N1 - 1) * (Q2 - Q1) / (N2 - N1) + (N2 - N1 + 1) * (Q1 - Q0) / N1) / N2;
+                    Q1 = Q0 < q && q < Q2 ? q : Q1 + (Q0 - Q1) / N1;
+                    N1--;
                 }
-                s = 1 - N3 + (N - 1) * 0.75;
-                if ((s >= 1.0 && N - N3 > 1) || (s <= -1.0 && N2 - N3 < -1))
+                s = (N - 1) * 0.50 - N2;
+                if (s >= 1.0 && N3 - N2 > 1)
                 {
-                    int ds = Math.Sign(s);
-                    double q = Q3 + (double)ds / (N - N2) * ((N3 - N2 + ds) * (Q4 - Q3) / (N - N3) + (N - N3 - ds) * (Q3 - Q2) / (N3 - N2));
-                    q = Q2 < q && q < Q4 ? q
-                      : ds == 1 ? Q3 + (Q4 - Q3) / (N - N3)
-                      : Q3 - (Q2 - Q3) / (N2 - N3);
-                    N3 += ds;
-                    Q3 = q;
+                    double q = Q2 + ((N2 - N1 + 1) * (Q3 - Q2) / (N3 - N2) + (N3 - N2 - 1) * (Q2 - Q1) / (N2 - N1)) / (N3 - N1);
+                    Q2 = Q1 < q && q < Q3 ? q : Q2 + (Q3 - Q2) / (N3 - N2);
+                    N2++;
+                }
+                else if (s <= -1.0 && N2 - N1 > 1)
+                {
+                    double q = Q2 - ((N2 - N1 - 1) * (Q3 - Q2) / (N3 - N2) + (N3 - N2 + 1) * (Q2 - Q1) / (N2 - N1)) / (N3 - N1);
+                    Q2 = Q1 < q && q < Q3 ? q : Q2 + (Q1 - Q2) / (N2 - N1);
+                    N2--;
+                }
+                s = (N - 1) * 0.75 - N3;
+                if (s >= 1.0 && N - N3 > 2)
+                {
+                    double q = Q3 + ((N3 - N2 + 1) * (Q4 - Q3) / (N - N3 - 1) + (N - N3 - 2) * (Q3 - Q2) / (N3 - N2)) / (N - N2 - 1);
+                    Q3 = Q2 < q && q < Q4 ? q : Q3 + (Q4 - Q3) / (N - N3 - 1);
+                    N3++;
+                }
+                else if (s <= -1.0 && N3 - N2 > 1)
+                {
+                    double q = Q3 - ((N3 - N2 - 1) * (Q4 - Q3) / (N - N3 - 1) + (N - N3) * (Q3 - Q2) / (N3 - N2)) / (N - N2 - 1);
+                    Q3 = Q2 < q && q < Q4 ? q : Q3 + (Q2 - Q3) / (N3 - N2);
+                    N3--;
                 }
             }
             else if (N == 5)

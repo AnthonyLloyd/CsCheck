@@ -202,7 +202,7 @@ namespace Tests
                 foreach (var v in values) expected.AddValue(v);
                 var actual = new MedianEstimator();
                 foreach (var v in values) actual.Add(v);
-                Assert.Equal(expected.GetQuantile(), actual.Median);
+                Assert.Equal(expected.GetQuantile(), actual.Median, 11);
             });
         }
     }
@@ -221,6 +221,8 @@ namespace Tests
         {
             p = probability;
         }
+
+
 
         public void AddValue(double x)
         {
