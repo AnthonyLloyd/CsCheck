@@ -1649,7 +1649,7 @@ namespace CsCheck
         }
         public override string ToString()
         {
-            var result = $"{Median.Median * 100.0:#0.0}%[{Median.LowerQuartile * 100.0:#0.0}%..{Median.UpperQuartile * 100.0:#0.0}%] ";
+            var result = $"{Median.Median * 100.0:#0.0}%[{Median.Q1 * 100.0:#0.0}%..{Median.Q3 * 100.0:#0.0}%] ";
             result += Median.Median >= 0.0 ? "faster" : "slower";
             if (double.IsNaN(Median.Median)) result = "Time resolution too small try using repeat.\n" + result;
             else if ((Median.Median >= 0.0) != (Faster > Slower)) result = "Inconsistent result try using repeat or increasing sigma.\n" + result;

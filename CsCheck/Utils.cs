@@ -314,69 +314,118 @@ namespace CsCheck
     /// <summary>A median and quartile estimator.</summary>
     public class MedianEstimator
     {
-        public int N, N1 = 1, N2 = 2, N3 = 3;
-        public double Q0, Q1, Q2, Q3, Q4;
+        /// <summary>The number of sample observations.</summary>
+        public int N;
+        /// <summary>The number of observations less than or equal to the quantile.</summary>
+        public int N0 = 1, N1 = 2, N2 = 3, N3 = 4;
+        /// <summary>The minimum or 0th percentile value.</summary>
+        public double Q0;
+        /// <summary>The first, lower quartile, or 25th percentile value.</summary>
+        public double Q1;
+        /// <summary>The second quartile, median, or 50th percentile value.</summary>
+        public double Q2;
+        /// <summary>The third, upper quartile, or 75th percentile value.</summary>
+        public double Q3;
+        /// <summary>The maximum or 100th percentile value.</summary>
+        public double Q4;
+        /// <summary>The minimum or 0th percentile value.</summary>
         public double Minimum => Q0;
+        /// <summary>The first, lower quartile, or 25th percentile value.</summary>
         public double LowerQuartile => Q1;
+        /// <summary>The second quartile, median, or 50th percentile value.</summary>
         public double Median => Q2;
+        /// <summary>The third, upper quartile, or 75th percentile value.</summary>
         public double UpperQuartile => Q3;
+        /// <summary>The maximum or 100th percentile value.</summary>
         public double Maximum => Q4;
+
+        /// <summary>Add a sample observation.</summary>
+        /// <param name="s">Sample observation value.</param>
         public void Add(double s)
         {
             if (++N > 5)
             {
-                if (s < Q3)
+                if (s <= Q3)
                 {
                     N3++;
-                    if (s < Q2)
+                    if (s <= Q2)
                     {
                         N2++;
-                        if (s < Q1)
+                        if (s <= Q1)
                         {
                             N1++;
-                            if (s < Q0) Q0 = s;
+                            if (s <= Q0)
+                            {
+                                if (s == Q0)
+                                {
+                                    N0++;
+                                }
+                                else
+                                {
+                                    Q0 = s;
+                                    N0 = 1;
+                                }
+                            }
                         }
                     }
                 }
                 else if (s > Q4) Q4 = s;
 
-                s = (N - 1) * 0.25 - N1;
+                s = (N - 1) * 0.25 + 1 - N1;
                 if (s >= 1.0 && N2 - N1 > 1)
                 {
-                    double q = Q1 + ((N1 + 1) * (Q2 - Q1) / (N2 - N1) + (N2 - N1 - 1) * (Q1 - Q0) / N1) / N2;
-                    Q1 = Q0 < q && q < Q2 ? q : Q1 + (Q2 - Q1) / (N2 - N1);
+                    var h1 = N2 - N1;
+                    var delta1 = (Q2 - Q1) / h1;
+                    var d1 = PchipDerivative(N1 - N0, (Q1 - Q0) / (N1 - N0), h1, delta1);
+                    var d2 = PchipDerivative(h1, delta1, N3 - N2, (Q3 - Q2) / (N3 - N2));
+                    Q1 = HermiteInterpolationOne(h1, Q1, delta1, d1, d2);
                     N1++;
                 }
-                else if (s <= -1.0 && N1 > 1)
+                else if (s <= -1.0 && N1 - N0 > 1)
                 {
-                    double q = Q1 - ((N1 - 1) * (Q2 - Q1) / (N2 - N1) + (N2 - N1 + 1) * (Q1 - Q0) / N1) / N2;
-                    Q1 = Q0 < q && q < Q2 ? q : Q1 + (Q0 - Q1) / N1;
+                    var h0 = N1 - N0;
+                    var delta0 = (Q1 - Q0) / h0;
+                    var d0 = PchipDerivativeEnd(h0, delta0, N2 - N1, (Q2 - Q1) / (N2 - N1));
+                    var d1 = PchipDerivative(h0, delta0, N2 - N1, (Q2 - Q1) / (N2 - N1));
+                    Q1 = HermiteInterpolationOne(h0, Q1, -delta0, -d1, -d0);
                     N1--;
                 }
-                s = (N - 1) * 0.50 - N2;
+                s = (N - 1) * 0.50 + 1 - N2;
                 if (s >= 1.0 && N3 - N2 > 1)
                 {
-                    double q = Q2 + ((N2 - N1 + 1) * (Q3 - Q2) / (N3 - N2) + (N3 - N2 - 1) * (Q2 - Q1) / (N2 - N1)) / (N3 - N1);
-                    Q2 = Q1 < q && q < Q3 ? q : Q2 + (Q3 - Q2) / (N3 - N2);
+                    var h2 = N3 - N2;
+                    var delta2 = (Q3 - Q2) / h2;
+                    var d2 = PchipDerivative(N2 - N1, (Q2 - Q1) / (N2 - N1), h2, delta2);
+                    var d3 = PchipDerivative(h2, delta2, N - N3, (Q4 - Q3) / (N - N3));
+                    Q2 = HermiteInterpolationOne(h2, Q2, delta2, d2, d3);
                     N2++;
                 }
                 else if (s <= -1.0 && N2 - N1 > 1)
                 {
-                    double q = Q2 - ((N2 - N1 - 1) * (Q3 - Q2) / (N3 - N2) + (N3 - N2 + 1) * (Q2 - Q1) / (N2 - N1)) / (N3 - N1);
-                    Q2 = Q1 < q && q < Q3 ? q : Q2 + (Q1 - Q2) / (N2 - N1);
+                    var h1 = N2 - N1;
+                    var delta1 = (Q2 - Q1) / h1;
+                    var d1 = PchipDerivative(N1 - N0, (Q1 - Q0) / (N1 - N0), h1, delta1);
+                    var d2 = PchipDerivative(h1, delta1, N3 - N2, (Q3 - Q2) / (N3 - N2));
+                    Q2 = HermiteInterpolationOne(h1, Q2, -delta1, -d2, -d1);
                     N2--;
                 }
-                s = (N - 1) * 0.75 - N3;
-                if (s >= 1.0 && N - N3 > 2)
+                s = (N - 1) * 0.75 + 1 - N3;
+                if (s >= 1.0 && N - N3 > 1)
                 {
-                    double q = Q3 + ((N3 - N2 + 1) * (Q4 - Q3) / (N - N3 - 1) + (N - N3 - 2) * (Q3 - Q2) / (N3 - N2)) / (N - N2 - 1);
-                    Q3 = Q2 < q && q < Q4 ? q : Q3 + (Q4 - Q3) / (N - N3 - 1);
+                    var h3 = N - N3;
+                    var delta3 = (Q4 - Q3) / h3;
+                    var d3 = PchipDerivative(N3 - N2, (Q3 - Q2) / (N3 - N2), h3, delta3);
+                    var d4 = PchipDerivativeEnd(h3, delta3, N3 - N2, (Q3 - Q2) / (N3 - N2));
+                    Q3 = HermiteInterpolationOne(h3, Q3, delta3, d3, d4);
                     N3++;
                 }
                 else if (s <= -1.0 && N3 - N2 > 1)
                 {
-                    double q = Q3 - ((N3 - N2 - 1) * (Q4 - Q3) / (N - N3 - 1) + (N - N3) * (Q3 - Q2) / (N3 - N2)) / (N - N2 - 1);
-                    Q3 = Q2 < q && q < Q4 ? q : Q3 + (Q2 - Q3) / (N3 - N2);
+                    var h2 = N3 - N2;
+                    var delta2 = (Q3 - Q2) / h2;
+                    var d2 = PchipDerivative(N2 - N1, (Q2 - Q1) / (N2 - N1), h2, delta2);
+                    var d3 = PchipDerivative(h2, delta2, N - N3, (Q4 - Q3) / (N - N3));
+                    Q3 = HermiteInterpolationOne(h2, Q3, -delta2, -d3, -d2);
                     N3--;
                 }
             }
@@ -458,6 +507,27 @@ namespace CsCheck
             }
             else Q2 = s;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static double PchipDerivative(int h1, double delta1, int h2, double delta2)
+        {
+            return (h1 + h2) * 3 * delta1 * delta2 / ((h1 * 2 + h2) * delta1 + (h2 * 2 + h1) * delta2);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static double PchipDerivativeEnd(int h1, double delta1, int h2, double delta2)
+        {
+            double d = (delta1 - delta2) * h1 / (h1 + h2) + delta1;
+            return d < 0.0 ? 0.0
+                 : d > 3 * delta1 ? 3 * delta1
+                 : d;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static double HermiteInterpolationOne(int h1, double y1, double delta1, double d1, double d2)
+        {
+            return ((d1 + d2 - delta1 * 2) / h1 + delta1 * 3 - d1 * 2 - d2) / h1 + y1 + d1;
+        }
     }
 
     /// <summary>Median estimate with error. Supports mathematical operators.</summary>
@@ -467,7 +537,7 @@ namespace CsCheck
         public MedianEstimate(MedianEstimator e)
         {
             Median = e.Median;
-            Error = (e.UpperQuartile - e.LowerQuartile) * 0.5;
+            Error = (e.Q3 - e.Q1) * 0.5;
         }
         static double Sqr(double x) => x * x;
         public static MedianEstimate operator -(double a, MedianEstimate e) => new() { Median = a - e.Median, Error = e.Error };
