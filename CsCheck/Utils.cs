@@ -343,7 +343,8 @@ namespace CsCheck
         /// <param name="s">Sample observation value.</param>
         public void Add(double s)
         {
-            if (++N > 5)
+            N++;
+            if (N > 5)
             {
                 if (s <= Q3)
                 {
@@ -370,62 +371,63 @@ namespace CsCheck
                     }
                 }
                 else if (s > Q4) Q4 = s;
-
+                int h;
+                double delta, d1, d2;
                 s = (N - 1) * 0.25 + 1 - N1;
                 if (s >= 1.0 && N2 - N1 > 1)
                 {
-                    var h1 = N2 - N1;
-                    var delta1 = (Q2 - Q1) / h1;
-                    var d1 = PchipDerivative(N1 - N0, (Q1 - Q0) / (N1 - N0), h1, delta1);
-                    var d2 = PchipDerivative(h1, delta1, N3 - N2, (Q3 - Q2) / (N3 - N2));
-                    Q1 += HermiteInterpolationOne(h1, delta1, d1, d2);
+                    h = N2 - N1;
+                    delta = (Q2 - Q1) / h;
+                    d1 = PchipDerivative(N1 - N0, (Q1 - Q0) / (N1 - N0), h, delta);
+                    d2 = PchipDerivative(h, delta, N3 - N2, (Q3 - Q2) / (N3 - N2));
+                    Q1 += HermiteInterpolationOne(h, delta, d1, d2);
                     N1++;
                 }
                 else if (s <= -1.0 && N1 - N0 > 1)
                 {
-                    var h0 = N1 - N0;
-                    var delta0 = (Q1 - Q0) / h0;
-                    var d0 = PchipDerivativeEnd(h0, delta0, N2 - N1, (Q2 - Q1) / (N2 - N1));
-                    var d1 = PchipDerivative(h0, delta0, N2 - N1, (Q2 - Q1) / (N2 - N1));
-                    Q1 += HermiteInterpolationOne(h0, -delta0, -d1, -d0);
+                    h = N1 - N0;
+                    delta = (Q1 - Q0) / h;
+                    d1 = PchipDerivativeEnd(h, delta, N2 - N1, (Q2 - Q1) / (N2 - N1));
+                    d2 = PchipDerivative(h, delta, N2 - N1, (Q2 - Q1) / (N2 - N1));
+                    Q1 += HermiteInterpolationOne(h, -delta, -d2, -d1);
                     N1--;
                 }
                 s = (N - 1) * 0.50 + 1 - N2;
                 if (s >= 1.0 && N3 - N2 > 1)
                 {
-                    var h2 = N3 - N2;
-                    var delta2 = (Q3 - Q2) / h2;
-                    var d2 = PchipDerivative(N2 - N1, (Q2 - Q1) / (N2 - N1), h2, delta2);
-                    var d3 = PchipDerivative(h2, delta2, N - N3, (Q4 - Q3) / (N - N3));
-                    Q2 += HermiteInterpolationOne(h2, delta2, d2, d3);
+                    h = N3 - N2;
+                    delta = (Q3 - Q2) / h;
+                    d1 = PchipDerivative(N2 - N1, (Q2 - Q1) / (N2 - N1), h, delta);
+                    d2 = PchipDerivative(h, delta, N - N3, (Q4 - Q3) / (N - N3));
+                    Q2 += HermiteInterpolationOne(h, delta, d1, d2);
                     N2++;
                 }
                 else if (s <= -1.0 && N2 - N1 > 1)
                 {
-                    var h1 = N2 - N1;
-                    var delta1 = (Q2 - Q1) / h1;
-                    var d1 = PchipDerivative(N1 - N0, (Q1 - Q0) / (N1 - N0), h1, delta1);
-                    var d2 = PchipDerivative(h1, delta1, N3 - N2, (Q3 - Q2) / (N3 - N2));
-                    Q2 += HermiteInterpolationOne(h1, -delta1, -d2, -d1);
+                    h = N2 - N1;
+                    delta = (Q2 - Q1) / h;
+                    d1 = PchipDerivative(N1 - N0, (Q1 - Q0) / (N1 - N0), h, delta);
+                    d2 = PchipDerivative(h, delta, N3 - N2, (Q3 - Q2) / (N3 - N2));
+                    Q2 += HermiteInterpolationOne(h, -delta, -d2, -d1);
                     N2--;
                 }
                 s = (N - 1) * 0.75 + 1 - N3;
                 if (s >= 1.0 && N - N3 > 1)
                 {
-                    var h3 = N - N3;
-                    var delta3 = (Q4 - Q3) / h3;
-                    var d3 = PchipDerivative(N3 - N2, (Q3 - Q2) / (N3 - N2), h3, delta3);
-                    var d4 = PchipDerivativeEnd(h3, delta3, N3 - N2, (Q3 - Q2) / (N3 - N2));
-                    Q3 += HermiteInterpolationOne(h3, delta3, d3, d4);
+                    h = N - N3;
+                    delta = (Q4 - Q3) / h;
+                    d1 = PchipDerivative(N3 - N2, (Q3 - Q2) / (N3 - N2), h, delta);
+                    d2 = PchipDerivativeEnd(h, delta, N3 - N2, (Q3 - Q2) / (N3 - N2));
+                    Q3 += HermiteInterpolationOne(h, delta, d1, d2);
                     N3++;
                 }
                 else if (s <= -1.0 && N3 - N2 > 1)
                 {
-                    var h2 = N3 - N2;
-                    var delta2 = (Q3 - Q2) / h2;
-                    var d2 = PchipDerivative(N2 - N1, (Q2 - Q1) / (N2 - N1), h2, delta2);
-                    var d3 = PchipDerivative(h2, delta2, N - N3, (Q4 - Q3) / (N - N3));
-                    Q3 += HermiteInterpolationOne(h2, -delta2, -d3, -d2);
+                    h = N3 - N2;
+                    delta = (Q3 - Q2) / h;
+                    d1 = PchipDerivative(N2 - N1, (Q2 - Q1) / (N2 - N1), h, delta);
+                    d2 = PchipDerivative(h, delta, N - N3, (Q4 - Q3) / (N - N3));
+                    Q3 += HermiteInterpolationOne(h, -delta, -d2, -d1);
                     N3--;
                 }
             }
