@@ -11,7 +11,7 @@ This gives the following advantages:
 - Random testing and shrinking are parallelized. This and PCG make it very fast.
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be continued later to give simpler cases for high dimensional problems.
-- Concurrency testing and random shrinking work well together.
+- Concurrency testing and random shrinking work well together. Repeat is not needed.
 
 See the [comparison](Comparison.md) with other random testing libraries, or how CsCheck does in the [shrinking challenge](https://github.com/jlink/shrinking-challenge).
 In one [shrinking challenge test](https://github.com/jlink/shrinking-challenge/blob/main/challenges/binheap.md) CsCheck managed to shrink to a new smaller example than was thought possible and is not reached by any other testing library.
@@ -173,7 +173,7 @@ CsCheck has support for concurrency testing with full shrinking capability.
 A concurrent sequence of operations are run on an initial state and the result is compared to all the possible linearized versions.
 At least one of these must be equal to the concurrent version.
 
-Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603).
+Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603) and [paper](https://github.com/AnthonyLloyd/AnthonyLloyd.github.io/raw/master/public/cscheck/finding-race-conditions.pdf). This is actually easier to implement with CsCheck than QuickCheck because the random shrinking does not need to repeat each step (10 times by default) like QuickCheck does to make shrinking deterministic.
 
 ### SetSlim
 ```csharp
