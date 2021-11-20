@@ -173,7 +173,7 @@ CsCheck has support for concurrency testing with full shrinking capability.
 A concurrent sequence of operations are run on an initial state and the result is compared to all the possible linearized versions.
 At least one of these must be equal to the concurrent version.
 
-Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603) and [paper](https://github.com/AnthonyLloyd/AnthonyLloyd.github.io/raw/master/public/cscheck/finding-race-conditions.pdf). This is actually easier to implement with CsCheck than QuickCheck because the random shrinking does not need to repeat each step (10 times by default) like QuickCheck does to make shrinking deterministic.
+Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603) and [paper](https://github.com/AnthonyLloyd/AnthonyLloyd.github.io/raw/master/public/cscheck/finding-race-conditions.pdf). This is actually easier to implement with CsCheck than QuickCheck because the random shrinking does not need to repeat each step as QuickCheck does (10 times by default) to make shrinking deterministic.
 
 ### SetSlim
 ```csharp
