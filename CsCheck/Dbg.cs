@@ -1,4 +1,4 @@
-﻿// Copyright 2021 Anthony Lloyd
+﻿// Copyright 2022 Anthony Lloyd
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,9 +31,22 @@ public static class Dbg
     static MapSlim<string, object> objects = new();
     static MapSlim<string, Action> functions = new();
     static MapSlim<string, (long, int)> times = new();
+    static Action<string> autoOutput;
+    static bool autoEveryInfo;
 
     /// <summary>Debugger break.</summary>
     public static void Break() => Debugger.Break();
+
+    public static void AutoOutput(Action<string> output, bool everyInfo = true)
+    {
+        autoOutput = output;
+        autoEveryInfo = everyInfo;
+    }
+
+    public static void Flush()
+    {
+        if (autoOutput is not null) Output(autoOutput);
+    }
 
     /// <summary>Output held debug info.</summary>
     public static void Output(Action<string> output)
@@ -121,6 +134,7 @@ public static class Dbg
         {
             var timestamp = Stopwatch.GetTimestamp();
             lock (times) times.GetValueOrNullRef(Name).Item1 += timestamp - Start;
+            if (autoOutput is not null) Output(autoOutput);
         }
 
         /// <summary>Record time to this line.</summary>
@@ -177,7 +191,11 @@ public static class Dbg
     public static void Info<T>(T t, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
         var s = string.Concat(name, " ", line, ": ", Check.Print(t));
-        lock (info) info.Add(s);
+        lock (info)
+        {
+            info.Add(s);
+        }
+        if (autoEveryInfo && autoOutput is not null) Output(autoOutput);
     }
 
     /// <summary>Method debug info.</summary>
