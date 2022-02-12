@@ -33,6 +33,8 @@ The following tests are in xUnit but could equally be used in any testing framew
 
 More to see in the [Tests](Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
 
+No Reflection was used in the making of this product.
+
 ## Random testing
 
 ### Unit Single
