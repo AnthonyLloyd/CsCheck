@@ -49,10 +49,10 @@ public static class Dbg
     }
 
     /// <summary>Output held debug info.</summary>
-    public static void Output(Action<string> output)
+    public static IEnumerable<string> Output()
     {
         foreach (var s in info)
-            output(string.Concat("[Dbg] ", s));
+            yield return string.Concat("[Dbg] ", s);
         int maxLength = 0, total = 0;
         foreach (var kv in counts)
         {
@@ -62,7 +62,7 @@ public static class Dbg
         foreach (var kc in counts.OrderByDescending(i => i.Value))
         {
             var percent = ((float)kc.Value / total).ToString("0.0%").PadLeft(7);
-            output(string.Concat("Count: ", kc.Key.PadRight(maxLength), percent, " ", kc.Value));
+            yield return string.Concat("Count: ", kc.Key.PadRight(maxLength), percent, " ", kc.Value);
         }
         maxLength = 0;
         int maxPercent = 0, maxTime = 0, maxCount = 0;
@@ -81,9 +81,16 @@ public static class Dbg
             var time = (kc.Value.Item1 * 1000L / Stopwatch.Frequency).ToString("#,0").PadLeft(maxTime + 1);
             var percent = ((float)kc.Value.Item1 / times.Value(0).Item1).ToString("0.0%").PadLeft(maxPercent + 1);
             var count = kc.Value.Item2.ToString().PadLeft(maxCount + 1);
-            output(string.Concat("Time: ", kc.Key.PadRight(maxLength), time, "ms", percent, count));
+            yield return string.Concat("Time: ", kc.Key.PadRight(maxLength), time, "ms", percent, count);
         }
         Clear();
+    }
+
+    /// <summary>Output held debug info.</summary>
+    public static void Output(Action<string> output)
+    {
+        foreach (var s in Output())
+            output(s);
     }
 
     /// <summary>Clear debug info.</summary>
