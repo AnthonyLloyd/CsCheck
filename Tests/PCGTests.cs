@@ -205,8 +205,8 @@ namespace Tests
             Check.Faster(
                 () => pcg.Next(),
                 () => rnd.Next(),
-                repeat: 500, threads: 1
-            )
+                repeat: 1000, threads: 1
+            , sigma: 10)
             .Output(writeLine);
         }
     }
