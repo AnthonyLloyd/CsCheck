@@ -45,6 +45,8 @@ namespace CsCheck
         public static string Seed;
         /// <summary>The sigma to use for Faster (default 6).</summary>
         public static double Sigma = 6.0;
+        /// <summary>The timeout in seconds to use for Faster (default 60 seconds).</summary>
+        public static int Timeout = 60;
 
         static Check()
         {
@@ -60,6 +62,8 @@ namespace CsCheck
             if (!string.IsNullOrWhiteSpace(seed)) Seed = PCG.Parse(seed).ToString();
             var sigma = Environment.GetEnvironmentVariable("CsCheck_Sigma");
             if (!string.IsNullOrWhiteSpace(sigma)) Sigma = double.Parse(sigma);
+            var timeout = Environment.GetEnvironmentVariable("CsCheck_Timeout");
+            if (!string.IsNullOrWhiteSpace(timeout)) Timeout = int.Parse(timeout);
         }
 
         /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1364,12 +1368,13 @@ namespace CsCheck
         /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster(Action faster, Action slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
         {
             if (sigma == -1.0) sigma = Sigma;
             sigma *= sigma;
             if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
+            if (timeout == -1) timeout = Timeout;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
             Exception exception = null;
@@ -1423,12 +1428,13 @@ namespace CsCheck
         /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Action<T, T> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
         {
             if (sigma == -1.0) sigma = Sigma;
             sigma *= sigma;
             if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
+            if (timeout == -1) timeout = Timeout;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
             Exception exception = null;
@@ -1515,13 +1521,14 @@ namespace CsCheck
         /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync(Func<Task> faster, Func<Task> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
         {
             var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout);
             if (sigma == -1.0) sigma = Sigma;
             sigma *= sigma;
             if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
+            if (timeout == -1) timeout = Timeout;
             var r = new FasterResult { Median = new MedianEstimator() };
             var tcs = new TaskCompletionSource<FasterResult>();
             var isSet = false;
@@ -1598,13 +1605,14 @@ namespace CsCheck
         /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T>(Func<Task<T>> faster, Func<Task<T>> slower, Action<T, T> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
         {
             var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout);
             if (sigma == -1.0) sigma = Sigma;
             sigma *= sigma;
             if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
+            if (timeout == -1) timeout = Timeout;
             var r = new FasterResult { Median = new MedianEstimator() };
             var tcs = new TaskCompletionSource<FasterResult>();
             var isSet = false;
@@ -1724,13 +1732,14 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
         {
             if (sigma == -1.0) sigma = Sigma;
             sigma *= sigma; // using sigma as sigma squared now
             if (seed is null) seed = Seed;
             if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
+            if (timeout == -1) timeout = Timeout;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
             Exception exception = null;
@@ -1793,7 +1802,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> faster, Action<T1, T2> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1807,7 +1816,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> faster, Action<T1, T2, T3> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1821,7 +1830,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> faster, Action<T1, T2, T3, T4> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1835,7 +1844,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> faster, Action<T1, T2, T3, T4, T5> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1849,7 +1858,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> faster, Action<T1, T2, T3, T4, T5, T6> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1863,7 +1872,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> faster, Action<T1, T2, T3, T4, T5, T6, T7> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1877,7 +1886,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T>(this Gen<T> gen, Func<T, Task> faster, Func<T, Task> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
         {
             var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout);
             if (sigma == -1.0) sigma = Sigma;
@@ -1885,6 +1894,7 @@ namespace CsCheck
             if (seed is null) seed = Seed;
             if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
+            if (timeout == -1) timeout = Timeout;
             var r = new FasterResult { Median = new MedianEstimator() };
             var tcs = new TaskCompletionSource<FasterResult>();
             var isSet = false;
@@ -1970,7 +1980,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> faster, Func<T1, T2, Task> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1984,7 +1994,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> faster, Func<T1, T2, T3, Task> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1998,7 +2008,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> faster, Func<T1, T2, T3, T4, Task> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2012,7 +2022,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> faster, Func<T1, T2, T3, T4, T5, Task> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2026,7 +2036,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> faster, Func<T1, T2, T3, T4, T5, T6, Task> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2040,7 +2050,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task> slower,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2055,13 +2065,14 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T, R>(this Gen<T> gen, Func<T, R> faster, Func<T, R> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
         {
             if (sigma == -1.0) sigma = Sigma;
             sigma *= sigma; // using sigma as sigma squared now
             if (seed is null) seed = Seed;
             if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
+            if (timeout == -1) timeout = Timeout;
             var r = new FasterResult { Median = new MedianEstimator() };
             var mre = new ManualResetEventSlim();
             Exception exception = null;
@@ -2160,7 +2171,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> faster, Func<T1, T2, R> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2175,7 +2186,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> faster, Func<T1, T2, T3, R> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2190,7 +2201,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> faster, Func<T1, T2, T3, T4, R> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2205,7 +2216,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> faster, Func<T1, T2, T3, T4, T5, R> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2220,7 +2231,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> faster, Func<T1, T2, T3, T4, T5, T6, R> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2235,7 +2246,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, R> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2250,7 +2261,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T, R>(this Gen<T> gen, Func<T, Task<R>> faster, Func<T, Task<R>> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
         {
             var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout);
             if (sigma == -1.0) sigma = Sigma;
@@ -2258,6 +2269,7 @@ namespace CsCheck
             if (seed is null) seed = Seed;
             if (threads == -1) threads = Threads;
             if (threads == -1) threads = Environment.ProcessorCount;
+            if (timeout == -1) timeout = Timeout;
             var r = new FasterResult { Median = new MedianEstimator() };
             var tcs = new TaskCompletionSource<FasterResult>();
             var isSet = false;
@@ -2387,7 +2399,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<R>> faster, Func<T1, T2, Task<R>> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2402,7 +2414,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<R>> faster, Func<T1, T2, T3, Task<R>> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2417,7 +2429,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<R>> faster, Func<T1, T2, T3, T4, Task<R>> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2432,7 +2444,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<R>> faster, Func<T1, T2, T3, T4, T5, Task<R>> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2447,7 +2459,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, Task<R>> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2462,7 +2474,7 @@ namespace CsCheck
         /// <param name="seed">The initial seed to use for the first iteration.</param>
         /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
         public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> slower, Action<R, R> assertEqual = null,
-            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = 60, string seed = null, bool raiseexception = true)
+            double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
             => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
         /// <summary>Generate an example that satisfies the predicate.</summary>

@@ -525,6 +525,7 @@ iter - The number of iterations to run in the sample (default 100).
 time - The number of seconds to run the sample.  
 seed - The seed to use for the first iteration.  
 threads - The number of threads to run the sample on (default number logical CPUs).  
+timeout - The timeout in seconds to use for Faster (default 60 seconds).  
 print - A function to convert the state to a string for error reporting (default Check.Print).  
 equal - A function to check if the two states are the same (default Check.Equal).  
 sigma - For Faster sigma is the number of standard deviations from the null hypothosis (default 6).  
@@ -535,7 +536,9 @@ Global defaults can also be set via environment variables:
 ```powershell
 $env:CsCheck_Iter = 10000; dotnet test -c Release --filter Multithreading; rm env:CsCheck*
 
-$env:CsCheck_Time = 60; dotnet test -c Release --filter Multithreading; rm env:CsCheck*
+$env:CsCheck_Time 
+
+; dotnet test -c Release --filter Multithreading; rm env:CsCheck*
 
 $env:CsCheck_Seed = '0N0XIzNsQ0O2'; dotnet test -c Release --filter List; rm env:CsCheck*
 
