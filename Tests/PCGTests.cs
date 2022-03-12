@@ -196,18 +196,5 @@ namespace Tests
                     && expected.State == actual.State;
             });
         }
-
-        [Fact]
-        public void PCG_Fast()
-        {
-            var pcg = new PCG(1);
-            var rnd = new Random();
-            Check.Faster(
-                () => pcg.Next(),
-                () => rnd.Next(),
-                repeat: 1000, threads: 1
-            , sigma: 10)
-            .Output(writeLine);
-        }
     }
 }
