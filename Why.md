@@ -18,7 +18,7 @@ Random tests are able to make a stronger claim than a test with a few examples.
 In fact a test that generates any example and runs for a long time is close to being a proof.
 A 'long time' could be 60 seconds in CsCheck since examples are run in parallel by default and often millions can be run in this time.
 
-When a random test finds a bug it will shrink it down to the smallest possible example so you can more easily repeat and diagnose the problem.
+When a random test finds a bug it will shrink it down to the smallest possible example so you can more easily reproduce and diagnose the problem.
 CsCheck is particularly good at this.
 
 ## Gen It
@@ -30,7 +30,7 @@ The generators created for domain types can be composed and reused across a numb
 We start with a highly defaulted generator `Gen.Double.Array.List` say but may want to be more specific `Gen.Double[0.0, 100.0].Array[5].List[1, 10]` about the range of values. 
 
 Some testing libraries can create the generator for you automatically using reflection but this can lead to a number of bugs for the library author and a lack of control and insight for the library user.
-Fluent style composition similar to LINQ is a much more robust and extendable option.
+Fluent style composition similar to LINQ is a much more robust and extensible option.
 
 ## Some No Brainers
 
