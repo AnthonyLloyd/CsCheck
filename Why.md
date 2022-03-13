@@ -15,7 +15,7 @@ Random testing will come up with quirky examples e.g. empty sets, or things that
 Also large examples tend to be more [efficient](https://youtu.be/1LNEWF8s1hI?t=2055) at catching bugs. 
 
 Random tests are able to make a stronger claim than a test with a few examples.
-In fact a test that generates any example and run for a long time is close to being a proof.
+In fact a test that generates any example and runs for a long time is close to being a proof.
 A 'long time' could be 60 seconds since the examples are run in parallel by default and often millions can be run in this time.
 
 When a random test finds a bug it will shrink it down to the smallest possible example so you can more easily repeat and diagnose the problem.
@@ -23,11 +23,14 @@ CsCheck is particularly good at this.
 
 ## Gen
 
-Instead of coming up with examples we need to create a generator `Gen<T>` for the examples.
-This may sound like a pain but is actually really simple with the composable fluent 'Gen' classes.
+Instead of coming up with examples we need to create a generator `Gen<T>` for them.
+This may sound like a pain but actually it is really simple with the composable fluent `Gen` classes in CsCheck and can be done in one or two lines of code.
+The generators created for a domain can also be composed and reused across a number of tests e.g. serialization and domain logic.
 
-Gen.Double.Array.List  
-Gen.Double[0, 100].Array[1, 30].List  
+We start with a highly defaulted version `Gen.Double.Array.List` but may want to be more specific `Gen.Double[0.0, 100.0].Array[5].List[1, 10]` about the range of values. 
+
+Some testing libraries can create the generator for you using reflection but this often leads to a number of bugs for the library author and a lack of control for the library user.
+Fluent style composition similar to Linq is a much more extendable and robust option.
 
 ## No Brainers
 
