@@ -11,7 +11,7 @@ When coming up with a small number of simple examples consider if the test could
 
 The advantage is the test will be run for 100 or more examples with varying size.
 The developer isn't directly coming up with the examples so they are more of an independent test.
-Random testing will come up with quirky examples e.g. empty sets, or things that sum to zero.
+Random testing will come up with quirky examples e.g. empty collections, or things that sum to zero.
 Also large examples tend to be more [efficient at catching bugs](https://youtu.be/1LNEWF8s1hI?t=2055). 
 
 Random tests are able to make a stronger claim than a test with a few examples.
