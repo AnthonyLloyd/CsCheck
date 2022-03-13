@@ -36,7 +36,7 @@ Fluent style composition similar to LINQ is a much more robust and extendable op
 
 - Serialization - the number of bugs seen in serialization code (looking at you json) is almost criminal given how easy it is to roundtrip test serialization using random testing.
 - Caches and collections - often a key part of server and client side code these can be tested against a suitable simple test model.
-- Calculations and algorithms - often possible to generalize examples in calculations and algorithms and check the result given the input. 
+- Calculations and algorithms - often possible to generalize examples for calculations and algorithms and check the result given the input. 
 - Code refactoring - keep a copy of the original code with the test, refactor for simplicity and performance, safe in the knowledge it still produces the same results. Pair with a `Faster` test to monitor the relative performance over a range of inputs.
 - Multithreading and concurrency - test on the same object instance across multiple threads and examples. Shrink even works for concurrency testing.
 
