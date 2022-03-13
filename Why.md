@@ -24,7 +24,7 @@ CsCheck is particularly good at this.
 ## Gen It
 
 Instead of coming up with examples we need to create a generator `Gen<T>` for them.
-This may sound like a pain, but actually is really simple with the composable fluent `Gen` classes in CsCheck, and can be done in one or two lines of code.
+This may sound like a pain, but actually it's really simple with the composable fluent `Gen` classes in CsCheck, and can be done in one or two lines of code.
 The generators created for domain types can be composed and reused across a number of tests e.g. serialization and domain logic.
 
 We start with a highly defaulted generator `Gen.Double.Array.List` say but may want to be more specific `Gen.Double[0.0, 100.0].Array[5].List[1, 10]` about the range of values. 
