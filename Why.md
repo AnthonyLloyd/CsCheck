@@ -12,7 +12,7 @@ When coming up with a small number of simple examples consider if the test could
 The advantage is the test will be run for 100 or more examples with varying size.
 The developer isn't directly coming up with the examples so they are a bit more of an independent test.
 Random testing will come up with quirky examples e.g. empty sets, or things that sum to zero.
-Also large examples tend to be more [efficient](https://youtu.be/1LNEWF8s1hI?t=2055) at catching bugs. 
+Also large examples tend to be more [efficient at catching bugs](https://youtu.be/1LNEWF8s1hI?t=2055). 
 
 Random tests are able to make a stronger claim than a test with a few examples.
 In fact a test that generates any example and runs for a long time is close to being a proof.
@@ -24,18 +24,18 @@ CsCheck is particularly good at this.
 ## Gen
 
 Instead of coming up with examples we need to create a generator `Gen<T>` for them.
-This may sound like a pain but actually it is really simple with the composable fluent `Gen` classes in CsCheck and can be done in one or two lines of code.
+This may sound like a pain but actually is really simple with the composable fluent `Gen` classes in CsCheck and can be done in one or two lines of code.
 The generators created for a domain can also be composed and reused across a number of tests e.g. serialization and domain logic.
 
-We start with a highly defaulted version `Gen.Double.Array.List` but may want to be more specific `Gen.Double[0.0, 100.0].Array[5].List[1, 10]` about the range of values. 
+We start with a highly defaulted generator `Gen.Double.Array.List` but may want to be more specific `Gen.Double[0.0, 100.0].Array[5].List[1, 10]` about the range of values. 
 
-Some testing libraries can create the generator for you using reflection but this often leads to a number of bugs for the library author and a lack of control for the library user.
-Fluent style composition similar to Linq is a much more extendable and robust option.
+Some testing libraries can create the generator for you using reflection but this often leads to a number of bugs for the library author and a lack of control and insight for the library user.
+Fluent style composition similar to Linq is a much more robust and extendable option.
 
-## No Brainers
+## Some No Brainers
 
-Serialization  
-Caches and collections  
-Calculations and algorithms  
-Code refactoring  
-Multithreading and concurrency  
+- Serialization  
+- Caches and collections  
+- Calculations and algorithms  
+- Code refactoring  
+- Multithreading and concurrency  
