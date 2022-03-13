@@ -44,5 +44,5 @@ Fluent style composition similar to LINQ is a much more robust and extendable op
 
 CsCheck has been used to help test serialization in Microsoft Orleans and Hagar, and high performance immutable collections in ImTools.
 
-It has given me the ability to write safe native code and interop, high performance collections, faster and simpler servers and much more.
+It has given me the ability to write safe native code and interop, high performance collections, faster and simpler servers code and much more.
 It basically raised the game in terms of the quality of solutions I can attempt.
