@@ -19,7 +19,7 @@ In fact a test that generates any example and runs for a long time is close to b
 A 'long time' could be 60 seconds in CsCheck since examples are run in parallel by default and often millions can be run in this time.
 
 When a random test finds a bug it will shrink it down to the smallest possible example so you can more easily reproduce and diagnose the problem.
-CsCheck is particularly good at this.
+CsCheck is particularly good at this as it's the only library that can always skrink to the simplest example and reproduce it directly.
 
 ## Gen It
 
