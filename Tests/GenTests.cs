@@ -347,7 +347,7 @@ namespace Tests
         [Fact]
         public void Single_Unit_Range()
         {
-            Gen.Single.Unit.Sample(f => f >= 0f && f <= 0.9999999f);
+            Gen.Single.Unit.Sample(f => f is >= 0f and <= 0.9999999f);
         }
 
         [Fact]
@@ -426,7 +426,7 @@ namespace Tests
         [Fact]
         public void Double_Unit_Range()
         {
-            Gen.Double.Unit.Sample(f => f >= 0.0 && f <= 0.99999999999999978);
+            Gen.Double.Unit.Sample(f => f is >= 0.0 and <= 0.99999999999999978);
         }
 
         [Fact]
@@ -525,7 +525,7 @@ namespace Tests
         [Fact]
         public void Decimal_Unit_Range()
         {
-            Gen.Decimal.Unit.Sample(i => i >= 0.0M && i <= 0.99999999999999978M);
+            Gen.Decimal.Unit.Sample(i => i is >= 0.0M and <= 0.99999999999999978M);
         }
 
         [Fact]
@@ -633,7 +633,7 @@ namespace Tests
             Gen.UShort[1, 1000]
             .List[10, 100]
             .Sample(l => l.Count >= 10 && l.Count <= 100
-                      && l.All(i => i >= 1 && i <= 1000));
+                      && l.All(i => i is >= 1 and <= 1000));
         }
 
         [Fact]
@@ -642,7 +642,7 @@ namespace Tests
             Gen.UShort[1, 1000]
             .Enumerable[10, 100]
             .Sample(l => l.Count() >= 10 && l.Count() <= 100
-                      && l.All(i => i >= 1 && i <= 1000));
+                      && l.All(i => i is >= 1 and <= 1000));
         }
 
         [Fact]
@@ -651,7 +651,7 @@ namespace Tests
             Gen.ULong[1, 1000]
             .HashSet[10, 100]
             .Sample(i => i.Count >= 10 && i.Count <= 100
-                      && i.All(j => j >= 1 && j <= 1000));
+                      && i.All(j => j is >= 1 and <= 1000));
         }
 
         [Fact]
@@ -659,7 +659,7 @@ namespace Tests
         {
             Gen.Dictionary(Gen.UInt[1, 1000], Gen.Bool)[10, 100]
             .Sample(i => i.Count >= 10 && i.Count <= 100
-                      && i.All(j => j.Key >= 1 && j.Key <= 1000));
+                      && i.All(j => j.Key is >= 1 and <= 1000));
         }
 
         [Fact]
@@ -667,19 +667,19 @@ namespace Tests
         {
             Gen.SortedDictionary(Gen.UInt[1, 1000], Gen.Bool)[10, 100]
             .Sample(i => i.Count >= 10 && i.Count <= 100
-                      && i.All(j => j.Key >= 1 && j.Key <= 1000));
+                      && i.All(j => j.Key is >= 1 and <= 1000));
         }
 
         [Fact]
         public void OneOfConst()
         {
-            Gen.OneOfConst(0, 1, 2).Sample(i => i >= 0 && i <= 2);
+            Gen.OneOfConst(0, 1, 2).Sample(i => i is >= 0 and <= 2);
         }
 
         [Fact]
         public void OneOf()
         {
-            Gen.OneOf(Gen.Const(0), Gen.Const(1), Gen.Const(2)).Sample(i => i >= 0 && i <= 2);
+            Gen.OneOf(Gen.Const(0), Gen.Const(1), Gen.Const(2)).Sample(i => i is >= 0 and <= 2);
         }
 
         [Fact]

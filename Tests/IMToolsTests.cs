@@ -14,7 +14,7 @@ using CsCheck;
 using System.Linq;
 using ImTools;
 
-
+#pragma warning disable
 
 namespace Tests
 {
@@ -342,7 +342,7 @@ namespace ImTools
 
         /// <inheritdoc />
         public bool Equals(Box<TBox, T> other) =>
-            other != null && EqualityComparer<T>.Default.Equals(Value, other.Value);
+            other is not null && EqualityComparer<T>.Default.Equals(Value, other.Value);
 
         /// <inheritdoc />
         public override bool Equals(object obj) => obj is Box<TBox, T> c && Equals(c);
@@ -919,6 +919,7 @@ namespace ImTools
             public override int GetHashCode() => EqualityComparer<T2>.Default.GetHashCode(Case);
             public override string ToString() => UnionTools.ToString<TUnion, T2>(Case);
         }
+
 
         public struct case3 : union, IEquatable<case3>, I<T3>
         {
@@ -1692,7 +1693,7 @@ namespace ImTools
         /// <returns>Index of item for which predicate returns true, or -1 otherwise.</returns>
         public static int IndexOf<T>(this T[] source, Func<T, bool> predicate)
         {
-            if (source != null && source.Length != 0)
+            if (source is not null && source.Length != 0)
                 for (var i = 0; i < source.Length; ++i)
                     if (predicate(source[i]))
                         return i;
@@ -1702,7 +1703,7 @@ namespace ImTools
         /// Minimizes the allocations for closure in predicate lambda with the provided <paramref name="state"/>
         public static int IndexOf<T, S>(this T[] source, S state, Func<S, T, bool> predicate)
         {
-            if (source != null && source.Length != 0)
+            if (source is not null && source.Length != 0)
                 for (var i = 0; i < source.Length; ++i)
                     if (predicate(state, source[i]))
                         return i;
@@ -1716,7 +1717,7 @@ namespace ImTools
         /// <returns>Index of item equal to value, or -1 item is not found.</returns>
         public static int IndexOf<T>(this T[] source, T value)
         {
-            if (source != null && source.Length != 0)
+            if (source is not null && source.Length != 0)
                 for (var i = 0; i < source.Length; ++i)
                 {
                     var item = source[i];
@@ -1760,7 +1761,7 @@ namespace ImTools
         /// <returns>First item matching condition or default value.</returns>
         public static T FindFirst<T>(this T[] source, Func<T, bool> predicate)
         {
-            if (source != null && source.Length != 0)
+            if (source is not null && source.Length != 0)
                 for (var i = 0; i < source.Length; ++i)
                 {
                     var item = source[i];
@@ -1774,7 +1775,7 @@ namespace ImTools
         /// Version of FindFirst with the fixed state used by predicate to prevent allocations by predicate lambda closure
         public static T FindFirst<T, S>(this T[] source, S state, Func<S, T, bool> predicate)
         {
-            if (source != null && source.Length != 0)
+            if (source is not null && source.Length != 0)
                 for (var i = 0; i < source.Length; ++i)
                 {
                     var item = source[i];
@@ -2451,7 +2452,7 @@ namespace ImTools
         public override bool Equals(object obj)
         {
             var other = obj as KV<K, V>;
-            return other != null
+            return other is not null
                    && (ReferenceEquals(other.Key, Key) || Equals(other.Key, Key))
                    && (ReferenceEquals(other.Value, Value) || Equals(other.Value, Value));
         }
@@ -2617,7 +2618,7 @@ namespace ImTools
         public static ImList<T> List<T>(params T[] items)
         {
             var l = ImList<T>.Empty;
-            if (items != null)
+            if (items is not null)
                 for (var i = items.Length - 1; i >= 0; --i)
                     l = l.Push(items[i]);
             return l;
@@ -2629,7 +2630,7 @@ namespace ImTools
         public static ImList<T> ToImList<T>(this IList<T> source)
         {
             var l = ImList<T>.Empty;
-            if (source != null)
+            if (source is not null)
                 for (var i = source.Count - 1; i >= 0; --i)
                     l = l.Push(source[i]);
             return l;
@@ -2644,7 +2645,7 @@ namespace ImTools
                 return list.ToImList();
             var l = ImList<T>.Empty;
 
-            if (source != null)
+            if (source is not null)
                 foreach (var item in source)
                     l = l.Push(item);
             return l.Reverse();
@@ -2856,7 +2857,7 @@ namespace ImTools
             if (z.IsEmpty)
                 return z;
             var result = update(z.Focus);
-            if (ReferenceEquals(z.Focus, result) || result != null && result.Equals(z.Focus))
+            if (ReferenceEquals(z.Focus, result) || result is not null && result.Equals(z.Focus))
                 return z;
             return z.WithFocus(result);
         }
@@ -4702,7 +4703,7 @@ namespace ImTools
         /// <summary> Searches for the key in the conflicts and returns true if found </summary>
         public bool ContainsConflictedData(K key)
         {
-            if (Conflicts != null)
+            if (Conflicts is not null)
             {
                 var conflicts = Conflicts;
                 for (var i = 0; i < conflicts.Length; ++i)
@@ -4715,7 +4716,7 @@ namespace ImTools
         /// <summary> Searches for the key in the node conflicts </summary>
         public ImHashMapEntry<K, V> GetConflictedEntryOrDefault(K key)
         {
-            if (Conflicts != null)
+            if (Conflicts is not null)
             {
                 var conflicts = Conflicts;
                 for (var i = 0; i < conflicts.Length; ++i)
@@ -4728,7 +4729,7 @@ namespace ImTools
         /// Searches for the key in the node conflicts
         public V GetConflictedValueOrDefault(K key, V defaultValue)
         {
-            if (Conflicts != null)
+            if (Conflicts is not null)
             {
                 var conflicts = Conflicts;
                 for (var i = 0; i < conflicts.Length; ++i)
@@ -4741,7 +4742,7 @@ namespace ImTools
         /// Searches for the key in the node conflicts
         public bool TryFindConflictedValue(K key, out V value)
         {
-            if (Conflicts != null)
+            if (Conflicts is not null)
             {
                 var conflicts = Conflicts;
                 for (var i = 0; i < conflicts.Length; ++i)
@@ -5699,19 +5700,19 @@ namespace ImTools.Experimental
 
                 if (hash == e0.Hash)
                     return (e0 = e0.TryRemove(key)) == l.Entry0 ? this :
-                        e0 != null ? (ImHashMap234<K, V>)new Leaf3Plus1(p, new Leaf3(e0, e1, e2)) :
+                        e0 is not null ? (ImHashMap234<K, V>)new Leaf3Plus1(p, new Leaf3(e0, e1, e2)) :
                         ph < e1.Hash ? new Leaf3(p, e1, e2) :
                         ph < e2.Hash ? new Leaf3(e1, p, e2) :
                                        new Leaf3(e1, e2, p);
                 if (hash == e1.Hash)
                     return (e1 = e1.TryRemove(key)) == l.Entry1 ? this :
-                        e1 != null ? (ImHashMap234<K, V>)new Leaf3Plus1(p, new Leaf3(e0, e1, e2)) :
+                        e1 is not null ? (ImHashMap234<K, V>)new Leaf3Plus1(p, new Leaf3(e0, e1, e2)) :
                         ph < e0.Hash ? new Leaf3(p, e0, e2) :
                         ph < e2.Hash ? new Leaf3(e0, p, e2) :
                                        new Leaf3(e0, e2, p);
                 if (hash == e2.Hash)
                     return (e2 = e2.TryRemove(key)) == l.Entry1 ? this :
-                        e2 != null ? (ImHashMap234<K, V>)new Leaf3Plus1(p, new Leaf3(e0, e1, e2)) :
+                        e2 is not null ? (ImHashMap234<K, V>)new Leaf3Plus1(p, new Leaf3(e0, e1, e2)) :
                         ph < e0.Hash ? new Leaf3(p, e0, e1) :
                         ph < e1.Hash ? new Leaf3(e0, p, e1) :
                                        new Leaf3(e0, e1, p);
@@ -6461,7 +6462,7 @@ namespace ImTools.Experimental
                 var e4 = l.Entry4;
 
                 if (hash == e0.Hash)
-                    return (e0 = e0.TryRemove(key)) == l.Entry0 ? this : e0 != null ? (ImHashMap234<K, V>)new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4)) :
+                    return (e0 = e0.TryRemove(key)) == l.Entry0 ? this : e0 is not null ? (ImHashMap234<K, V>)new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4)) :
                     ph < e1.Hash ? new Leaf5(p, e1, e2, e3, e4) :
                     ph < e2.Hash ? new Leaf5(e1, p, e2, e3, e4) :
                     ph < e3.Hash ? new Leaf5(e1, e2, p, e3, e4) :
@@ -6469,7 +6470,7 @@ namespace ImTools.Experimental
                                    new Leaf5(e1, e2, e3, e4, p);
 
                 if (hash == e1.Hash)
-                    return (e1 = e1.TryRemove(key)) == l.Entry0 ? this : e1 != null ? (ImHashMap234<K, V>)new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4)) :
+                    return (e1 = e1.TryRemove(key)) == l.Entry0 ? this : e1 is not null ? (ImHashMap234<K, V>)new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4)) :
                     ph < e0.Hash ? new Leaf5(p, e0, e2, e3, e4) :
                     ph < e2.Hash ? new Leaf5(e0, p, e2, e3, e4) :
                     ph < e3.Hash ? new Leaf5(e0, e2, p, e3, e4) :
@@ -6477,7 +6478,7 @@ namespace ImTools.Experimental
                                    new Leaf5(e0, e2, e3, e4, p);
 
                 if (hash == e2.Hash)
-                    return (e2 = e2.TryRemove(key)) == l.Entry0 ? this : e2 != null ? (ImHashMap234<K, V>)new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4)) :
+                    return (e2 = e2.TryRemove(key)) == l.Entry0 ? this : e2 is not null ? (ImHashMap234<K, V>)new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4)) :
                     ph < e0.Hash ? new Leaf5(p, e0, e1, e3, e4) :
                     ph < e1.Hash ? new Leaf5(e0, p, e1, e3, e4) :
                     ph < e3.Hash ? new Leaf5(e0, e1, p, e3, e4) :
@@ -6485,7 +6486,7 @@ namespace ImTools.Experimental
                                    new Leaf5(e0, e1, e3, e4, p);
 
                 if (hash == e3.Hash)
-                    return (e3 = e3.TryRemove(key)) == l.Entry0 ? this : e3 != null ? (ImHashMap234<K, V>)new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4)) :
+                    return (e3 = e3.TryRemove(key)) == l.Entry0 ? this : e3 is not null ? (ImHashMap234<K, V>)new Leaf5Plus1(p, new Leaf5(e0, e1, e2, e3, e4)) :
                     ph < e0.Hash ? new Leaf5(p, e0, e1, e2, e4) :
                     ph < e1.Hash ? new Leaf5(e0, p, e1, e2, e4) :
                     ph < e2.Hash ? new Leaf5(e0, e1, p, e2, e4) :
@@ -6535,7 +6536,7 @@ namespace ImTools.Experimental
                     if (Right is Leaf5Plus1OrBranch3 x)
                     {
                         var newBranch = x.AddOrUpdateOrSplitEntry(hash, entry, out var popEntry, out var popRight);
-                        if (popRight != null)
+                        if (popRight is not null)
                             return new Branch3(Left, e0, newBranch, popEntry, popRight);
                         return new Branch2(Left, e0, newBranch);
                     }
@@ -6548,7 +6549,7 @@ namespace ImTools.Experimental
                     if (Left is Leaf5Plus1OrBranch3 x)
                     {
                         var newBranch = x.AddOrUpdateOrSplitEntry(hash, entry, out var popEntry, out var popRight);
-                        if (popRight != null)
+                        if (popRight is not null)
                             return new Branch3(newBranch, popEntry, popRight, e0, Right);
                         return new Branch2(newBranch, e0, Right);
                     }
@@ -6571,7 +6572,7 @@ namespace ImTools.Experimental
                         newBranch = x.AddOrKeepOrSplitEntry(hash, entry, out var popEntry, out var popRight);
                         if (newBranch == x)
                             return this;
-                        if (popRight != null)
+                        if (popRight is not null)
                             return new Branch3(Left, e0, newBranch, popEntry, popRight);
                         return new Branch2(Left, e0, newBranch);
                     }
@@ -6588,7 +6589,7 @@ namespace ImTools.Experimental
                         newBranch = x.AddOrKeepOrSplitEntry(hash, entry, out var popEntry, out var popRight);
                         if (newBranch == x)
                             return this;
-                        if (popRight != null)
+                        if (popRight is not null)
                             return new Branch3(newBranch, popEntry, popRight, e0, Right);
                         return new Branch2(newBranch, e0, Right);
                     }
@@ -6811,7 +6812,7 @@ namespace ImTools.Experimental
                     if (Middle is Leaf5Plus1OrBranch3 x)
                     {
                         var newMiddle = x.AddOrUpdateOrSplitEntry(hash, entry, out var popEntry, out var popRight);
-                        if (popRight != null)
+                        if (popRight is not null)
                             return new Branch2(new Branch2(Left, Entry0, newMiddle), popEntry, new Branch2(popRight, Entry1, Right));
                         return new Branch3(Left, Entry0, newMiddle, Entry1, Right);
                     }
@@ -6865,7 +6866,7 @@ namespace ImTools.Experimental
                     if (Middle is Leaf5Plus1OrBranch3 x)
                     {
                         var newMiddle = x.AddOrUpdateOrSplitEntry(hash, entry, out popEntry, out var popRightBelow);
-                        if (popRightBelow != null)
+                        if (popRightBelow is not null)
                         {
                             //                              [4]
                             //       [2, 7]            [2]         [7]
@@ -6926,7 +6927,7 @@ namespace ImTools.Experimental
                         newMiddle = x.AddOrKeepOrSplitEntry(hash, entry, out var popEntry, out var popRight);
                         if (newMiddle == x)
                             return this;
-                        if (popRight != null)
+                        if (popRight is not null)
                             return new Branch2(new Branch2(Left, e0, newMiddle), popEntry, new Branch2(popRight, e1, Right));
                         return new Branch3(Left, e0, newMiddle, e1, Right);
                     }
@@ -6985,7 +6986,7 @@ namespace ImTools.Experimental
                         newMiddle = x.AddOrKeepOrSplitEntry(hash, entry, out popEntry, out var popRightBelow);
                         if (newMiddle == x)
                             return this;
-                        if (popRightBelow != null)
+                        if (popRightBelow is not null)
                         {
                             //                              [4]
                             //       [2, 7]            [2]         [7]
@@ -7605,3 +7606,5 @@ namespace ImTools.Experimental
             Ref.Swap(ref part, hash, key, value, (x, h, k, v) => x.AddOrUpdate(h, k, v));
     }
 }
+
+#pragma warning restore

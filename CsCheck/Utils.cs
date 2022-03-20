@@ -144,7 +144,7 @@ namespace CsCheck
                         return false;
                 return true;
             }
-            else if (a.GetType().GetInterface(typeof(IReadOnlyList<>).Name) != null)
+            else if (a.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null)
             {
                 var e1 = ((IEnumerable)a).GetEnumerator();
                 var e2 = ((IEnumerable)b).GetEnumerator();
@@ -180,8 +180,8 @@ namespace CsCheck
                         return false;
                 return true;
             }
-            else if (actual.GetType().GetInterface(typeof(IReadOnlyList<>).Name) != null
-                  && model.GetType().GetInterface(typeof(IReadOnlyList<>).Name) != null)
+            else if (actual.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null
+                  && model.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null)
             {
                 var e1 = ((IEnumerable)actual).GetEnumerator();
                 var e2 = ((IEnumerable)model).GetEnumerator();
@@ -304,9 +304,7 @@ namespace CsCheck
             var copy = new T[array.Length];
             for (int j = 0; j < array.Length; j++)
                 copy[j] = array[j];
-            var s = copy[i];
-            copy[i] = copy[i + 1];
-            copy[i + 1] = s;
+            (copy[i + 1], copy[i]) = (copy[i], copy[i + 1]);
             return copy;
         }
     }

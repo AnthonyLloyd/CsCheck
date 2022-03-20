@@ -231,7 +231,7 @@ namespace ReverseComplementOld
         {
             t = null;
             while (!q.IsCompleted && !q.TryTake(out t)) Thread.SpinWait(0);
-            return t != null;
+            return t is not null;
         }
 
         static void Grouper()

@@ -63,7 +63,7 @@ namespace CsCheck
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void Stream<T>(Action<Stream, T> serialize, Func<Stream, T> deserialize, T val)
         {
-            if (stream != null)
+            if (stream is not null)
             {
                 if (writing) serialize(stream, val);
                 else
@@ -149,7 +149,7 @@ namespace CsCheck
         public void Close()
         {
             var actualHash = GetHashCode();
-            if (stream != null)
+            if (stream is not null)
             {
                 stream.Dispose();
 

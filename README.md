@@ -248,7 +248,7 @@ public void Portfolio_Small_Mixed_Example()
     , "0N0XIzNsQ0O2");
     var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
     var fxRates = ModelGen.Price.Array[currencies.Length].Example(a =>
-        a.All(p => p > 0.75 && p < 1.5)
+        a.All(p => pp is > 0.75 and < 1.5)
     , "ftXKwKhS6ec4");
     double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
     Check.Hash(h =>

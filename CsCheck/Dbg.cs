@@ -101,7 +101,7 @@ public static class Dbg
         objects = new();
         functions = new();
         times = new();
-        if (regressionStream != null)
+        if (regressionStream is not null)
         {
             regressionStream.Close();
             regressionStream = null;
@@ -312,13 +312,13 @@ public static class Dbg
         {
             int index = 0;
             for (; index < _cache.Count; index++) yield return _cache[index];
-            for (; _enumerator != null && _enumerator.MoveNext(); index++)
+            for (; _enumerator is not null && _enumerator.MoveNext(); index++)
             {
                 var current = _enumerator.Current;
                 _cache.Add(current);
                 yield return current;
             }
-            if (_enumerator != null)
+            if (_enumerator is not null)
             {
                 _enumerator.Dispose();
                 _enumerator = null;
@@ -327,7 +327,7 @@ public static class Dbg
         }
         public void Dispose()
         {
-            if (_enumerator != null)
+            if (_enumerator is not null)
             {
                 _enumerator.Dispose();
                 _enumerator = null;
