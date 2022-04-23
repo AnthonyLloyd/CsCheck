@@ -350,7 +350,7 @@ public static class Gen
         size.Add(s);
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
-        var v4 = gen4.Gengenerate(pcg, min, out s);
+        var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);

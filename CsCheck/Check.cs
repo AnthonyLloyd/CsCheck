@@ -510,6 +510,7 @@ public static partial class Check
                                         minState = state;
                                         minSize = s;
                                         minT = t;
+                                        minException = null;
                                     }
                                 }
                             }
@@ -713,6 +714,7 @@ public static partial class Check
                                         minState = state;
                                         minSize = s;
                                         minT = t;
+                                        minException = null;
                                     }
                                 }
                             }
