@@ -24,8 +24,7 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
         <Version>2.8.0</Version>
         <PackageReleaseNotes>
-Added up to 16 Gen.Select Gen parameters.
-Added up to 8 Sample and Faster tuple type parameters.
+Below minimum size null collection bug fix.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>10.0</LangVersion>
