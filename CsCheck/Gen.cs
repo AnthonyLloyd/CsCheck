@@ -994,6 +994,10 @@ public static class Gen
         });
     }
 
+    /// <summary>
+    /// Recursively generate a type.
+    /// </summary>
+    /// <param name="f">The function to create the generator give an instance of the generator.</param>
     public static Gen<T> Recursive<T>(Func<Gen<T>, Gen<T>> f)
     {
         Gen<T> gen = null;
@@ -1001,11 +1005,37 @@ public static class Gen
         return gen;
     }
 
+    /// <summary>
+    /// Recursively generate a type with the depth of generation.
+    /// </summary>
+    /// <param name="f">The function to create the generator give the depth and an instance of the generator.</param>
+    public static Gen<T> Recursive<T>(Func<int, Gen<T>, Gen<T>> f)
+    {
+        Gen<T> gen(int i) => f(i, Create((PCG pcg, Size min, out Size size) => gen(i + 1).Generate(pcg, null, out size)));
+        return gen(0);
+    }
+
+    /// <summary>
+    /// Recursively generate a type with a map of type and size.
+    /// </summary>
+    /// <param name="f">The function to create the generator give an instance of the generator.</param>
+    /// <param name="map">The type and size map function.</param>
     public static Gen<T> Recursive<T>(Func<Gen<T>, Gen<T>> f, GenMap<T> map)
     {
         Gen<T> gen = null;
         gen = f(Create((PCG pcg, Size min, out Size size) => map(gen.Generate(pcg, null, out size), ref size)));
         return gen;
+    }
+
+    /// <summary>
+    /// Recursively generate a type with the depth of generation and a map of type and size.
+    /// </summary>
+    /// <param name="f">The function to create the generator give the depth and an instance of the generator.</param>
+    /// <param name="map">The type and size map function.</param>
+    public static Gen<T> Recursive<T>(Func<int, Gen<T>, Gen<T>> f, GenMap<T> map)
+    {
+        Gen<T> gen(int i) => f(i, Create((PCG pcg, Size min, out Size size) => map(gen(i + 1).Generate(pcg, null, out size), ref size)));
+        return gen(0);
     }
 
     /// <summary>Create a second exact clone by running the generator again with the same seed.</summary>

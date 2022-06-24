@@ -22,15 +22,13 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>2.8.1</Version>
+        <Version>2.9.0</Version>
         <PackageReleaseNotes>
-Below minimum size null collection fix.
-Sample reset exception on shrink fix.
+Added Gen.Recursive with depth parameter overload.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>10.0</LangVersion>
-        <WarningLevel>5</WarningLevel>
-        <Features>strict</Features>
+        <WarningLevel>999</WarningLevel>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <SignAssembly>true</SignAssembly>
         <DelaySign>false</DelaySign>

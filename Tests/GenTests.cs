@@ -706,6 +706,22 @@ public class GenTests
             Assert.Equal(a1, a2);
         });
     }
+
+    record MyObj(int Id, MyObj[] Children);
+
+    [Fact]
+    public void RecursiveDepth()
+    {
+        int maxDepth = 4;
+        Gen.Recursive<MyObj>((i, my) =>
+            Gen.Select(Gen.Int, my.Array[0, i < maxDepth ? 6 : 0], (i, a) => new MyObj(i, a))
+        )
+        .Sample(i =>
+        {
+            static int Depth(MyObj o) => o.Children.Length == 0 ? 0 : 1 + o.Children.Max(Depth);
+            return Depth(i) <= maxDepth;
+        });
+    }
 }
 
 [StructLayout(LayoutKind.Explicit)]
