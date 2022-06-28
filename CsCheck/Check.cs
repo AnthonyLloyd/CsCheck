@@ -1573,12 +1573,11 @@ public static partial class Check
     public static Task<FasterResult> FasterAsync(Func<Task> faster, Func<Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
     {
-        var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout);
         if (sigma == -1.0) sigma = Sigma;
         sigma *= sigma;
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
+        var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout == -1 ? Timeout : timeout);
         var r = new FasterResult { Median = new MedianEstimator() };
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
@@ -1657,12 +1656,11 @@ public static partial class Check
     public static Task<FasterResult> FasterAsync<T>(Func<Task<T>> faster, Func<Task<T>> slower, Action<T, T> assertEqual = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
     {
-        var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout);
         if (sigma == -1.0) sigma = Sigma;
         sigma *= sigma;
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
+        var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout == -1 ? Timeout : timeout);
         var r = new FasterResult { Median = new MedianEstimator() };
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
@@ -1952,13 +1950,12 @@ public static partial class Check
     public static Task<FasterResult> FasterAsync<T>(this Gen<T> gen, Func<T, Task> faster, Func<T, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
     {
-        var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout);
         if (sigma == -1.0) sigma = Sigma;
         sigma *= sigma; // using sigma as sigma squared now
         if (seed is null) seed = Seed;
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
+        var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout == -1 ? Timeout : timeout);
         var r = new FasterResult { Median = new MedianEstimator() };
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
@@ -2356,13 +2353,12 @@ public static partial class Check
     public static Task<FasterResult> FasterAsync<T, R>(this Gen<T> gen, Func<T, Task<R>> faster, Func<T, Task<R>> slower, Action<R, R> assertEqual = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
     {
-        var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout);
         if (sigma == -1.0) sigma = Sigma;
         sigma *= sigma; // using sigma as sigma squared now
         if (seed is null) seed = Seed;
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
+        var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout == -1 ? Timeout : timeout);
         var r = new FasterResult { Median = new MedianEstimator() };
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
