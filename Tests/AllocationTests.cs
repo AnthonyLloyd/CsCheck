@@ -5,6 +5,8 @@ using CsCheck;
 using System;
 using System.Collections.Generic;
 
+#nullable enable
+
 public class AllocationTests
 {
     public static long[] Allocate(long total, double[] weights)
@@ -15,8 +17,45 @@ public class AllocationTests
             results[i] = (long)Math.Round(total * weights[i] / sumWeights);
         var residual = total - Sum(results);
         if (residual > results.Length || residual < -results.Length)
-            throw new Exception($"Numeric overflow, total={total}, sum weights={sumWeights}");
+            throw new Exception($"Numeric overflow, total={total}, sum weights={sumWeights}, residual={residual}");
         var increment = Math.Sign(residual);
+        while (residual != 0)
+        {
+            var minAbsError = double.MaxValue;
+            var minRelError = double.MaxValue;
+            var maxWeightDir = double.MinValue;
+            var minErrorIndex = 0;
+            for (int i = 0; i < weights.Length; i++)
+            {
+                var required = total * weights[i];
+                var actual = results[i] * sumWeights;
+                var absErrorIncrease = Math.Abs(actual + increment * sumWeights - required) - Math.Abs(actual - required);
+                var relErrorIncrease = absErrorIncrease / Math.Abs(required);
+                var weightDir = increment * Math.Sign(total) * Math.Sign(sumWeights) * weights[i];
+                if (absErrorIncrease < minAbsError
+                    || (absErrorIncrease == minAbsError && (relErrorIncrease < minRelError || (relErrorIncrease == minRelError  && weightDir > maxWeightDir))))
+                {
+                    minAbsError = absErrorIncrease;
+                    minRelError = relErrorIncrease;
+                    maxWeightDir = weightDir;
+                    minErrorIndex = i;
+                }
+            }
+            results[minErrorIndex] += increment;
+            residual -= increment;
+        }
+        return results;
+    }
+
+    public static long[] AllocateFloor(long total, double[] weights)
+    { // Floor can't be made to work as it doesn't do NegativeExample properly
+        var sumWeights = Sum(weights);
+        var results = new long[weights.Length];
+        for (int i = 0; i < weights.Length; i++)
+            results[i] = (long)Math.Floor(total * weights[i] / sumWeights);
+        var residual = total - Sum(results);
+        if (residual > results.Length || residual < 0)
+            throw new Exception($"Numeric overflow, total={total}, sum weights={sumWeights}");
         while (residual != 0)
         {
             var minAbsError = double.MaxValue;
@@ -26,7 +65,7 @@ public class AllocationTests
             {
                 var required = total * weights[i];
                 var actual = results[i] * sumWeights;
-                var absErrorIncrease = Math.Abs(actual + increment * sumWeights - required) - Math.Abs(actual - required);
+                var absErrorIncrease = Math.Abs(actual + sumWeights - required) - Math.Abs(actual - required);
                 var relErrorIncrease = absErrorIncrease / Math.Abs(required);
                 if (absErrorIncrease < minAbsError || (absErrorIncrease == minAbsError && relErrorIncrease < minRelError))
                 {
@@ -35,8 +74,70 @@ public class AllocationTests
                     minErrorIndex = i;
                 }
             }
-            results[minErrorIndex] += increment;
-            residual -= increment;
+            results[minErrorIndex]++;
+            residual--;
+        }
+        return results;
+    }
+
+    public static long[][] Allocate(long[] totals, double[] weights)
+    {
+        var results = new long[totals.Length][];
+        var sumTotals = Sum(totals);
+        var residualWeights = Allocate(sumTotals, weights);
+        // Set weights to the allocated values
+        weights = new double[weights.Length];
+        for (int i = 0; i < weights.Length; i++)
+            weights[i] = residualWeights[i];
+        var sumWeights = sumTotals;
+        var residualTotals = new long[totals.Length];
+        for (int t = 0; t < totals.Length; t++)
+        {
+            var total = totals[t];
+            var residualT = total;
+            var resultsT = new long[weights.Length];
+            results[t] = resultsT;
+            for (int w = 0; w < weights.Length; w++)
+            {
+                var allocj = (long)Math.Floor(total * weights[w] / sumWeights);
+                resultsT[w] = allocj;
+                residualT -= allocj;
+                residualWeights[w] -= allocj;
+            }
+            residualTotals[t] = residualT;
+        }
+        while (true)
+        {
+            var maxError = double.MinValue;
+            var maxErrorRel = double.MinValue;
+            var maxErrorT = -1;
+            var maxErrorW = -1;
+            for (int t = 0; t < totals.Length; t++)
+            {
+                if (residualTotals[t] == 0) continue;
+                var resultsT = results[t];
+                var total = totals[t];
+                for (int w = 0; w < weights.Length; w++)
+                {
+                    if (residualWeights[w] != 0)
+                    {
+                        var required = total * weights[w];
+                        var error = required - resultsT[w] * sumWeights;
+                        var errorRel = error / required;
+                        if (error > maxError || (error == maxError && errorRel > maxErrorRel))
+                        {
+                            maxError = error;
+                            maxErrorRel = errorRel;
+                            maxErrorT = t;
+                            maxErrorW = w;
+                        }
+                    }
+                }
+            }
+            if (maxErrorT < 0) break;
+            results[maxErrorT][maxErrorW]++;
+            residualTotals[maxErrorT]--;
+            residualWeights[maxErrorW]--;
         }
         return results;
     }
@@ -119,10 +220,9 @@ public class AllocationTests
     [Fact]
     public void NegativeExample()
     {
-        var actual = Allocate(42, new[] { 1.5, 1.0, 39.5, -1.0, 1.0 });
-        Assert.Equal(new long[] { 1, 1, 40, -1, 1 }, actual);
-        actual = Allocate(-42, new[] { 1.5, 1.0, 39.5, -1.0, 1.0 });
-        Assert.Equal(new long[] { -1, -1, -40, 1, -1 }, actual);
+        var positive = Allocate(42, new[] { 1.5, 1.0, 39.5, -1.0, 1.0 });
+        var negative = Allocate(-42, new[] { 1.5, 1.0, 39.5, -1.0, 1.0 });
+        Assert.Equal(positive, Array.ConvertAll(negative, i => -i));
     }
 
     [Fact]
@@ -131,11 +231,16 @@ public class AllocationTests
         Assert.Throws<Exception>(() => Allocate(42, new[] { 1.0, -2.0, 1.0, 1e-30 }));
     }
 
-    readonly Gen<(int Total, double[] Weights)> genAllocateExample =
-        Gen.Select(Gen.Int[-100, 100], Gen.Double[-100.0, 100.0].Array[1, 30]);
+    readonly static Gen<double> genDouble =
+        Gen.Select(Gen.Int[-100, 100], Gen.Int[-100, 100], Gen.Int[1, 100])
+        .Select((a, b, c) => a + (double)b / c);
+
+    readonly static Gen<(int Total, double[] Weights)> genAllocateExample =
+        Gen.Select(Gen.Int[-100, 100], genDouble.Array[1, 30])
+        .Where((_, weights) => Math.Abs(Sum(weights)) > 1e-9);
 
     [Fact]
-    public void AllocationsTotalCorrectly()
+    public void AllocateTotalsCorrectly()
     {
         genAllocateExample.Sample((total, weights) =>
         {
@@ -145,12 +250,42 @@ public class AllocationTests
     }
 
     [Fact]
-    public void NegativeTotalGivesOppositeOfPositiveTotal()
+    public void AllocateGivesOppositeForNegativeTotal()
     {
         genAllocateExample.Sample((total, weights) =>
         {
             var allocationsPositive = Allocate(total, weights);
             var allocationsNegative = Allocate(-total, weights);
+            for (int i = 0; i < allocationsPositive.Length; i++)
+                if (allocationsPositive[i] != -allocationsNegative[i])
+                    return false;
+            return true;
+        });
+    }
+
+    [Fact]
+    public void AllocateGivesSameForNegativeWeight()
+    {
+        genAllocateExample.Sample((total, weights) =>
+        {
+            var allocationsPositive = Allocate(total, weights);
+            var negativeWeights = Array.ConvertAll(weights, i => -i);
+            var allocationsNegative = Allocate(total, negativeWeights);
+            for (int i = 0; i < allocationsPositive.Length; i++)
+                if (allocationsPositive[i] != allocationsNegative[i])
+                    return false;
+            return true;
+        });
+    }
+
+    [Fact]
+    public void AllocateGivesOppositeForNegativeBoth()
+    {
+        genAllocateExample.Sample((total, weights) =>
+        {
+            var allocationsPositive = Allocate(total, weights);
+            var negativeWeights = Array.ConvertAll(weights, i => -i);
+            var allocationsNegative = Allocate(-total, negativeWeights);
             for (int i = 0; i < allocationsPositive.Length; i++)
                 if (allocationsPositive[i] != -allocationsNegative[i])
                     return false;
@@ -191,7 +326,7 @@ public class AllocationTests
         {
             double error = 0;
             for (int i = 0; i < allocations.Length; i++)
-                error += Math.Abs(allocations[i] - total * weights[i] / sumWeights);
+                error += Math.Abs(allocations[i] * sumWeights - total * weights[i]);
             return error;
         }
         static Gen<(int, int)[]> GenChanges(int i)
@@ -214,7 +349,14 @@ public class AllocationTests
                 allocations[j]++;
             }
             var errorAfter = Error(allocations, total, weights, sumWeights);
-            return errorAfter >= errorBefore;
+            return errorAfter >= errorBefore || AreClose(errorAfter, errorBefore);
         });
+    }
+
+    static bool AreClose(double a, double b)
+    {
+        static double AreCloseLhs(double a, double b) => Math.Abs(a - b);
+        static double AreCloseRhs(double a, double b) => 1e-12 + 1e-9 * Math.Max(Math.Abs(a), Math.Abs(b));
+        return AreCloseLhs(a, b) <= AreCloseRhs(a, b);
     }
 }
