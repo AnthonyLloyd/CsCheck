@@ -110,7 +110,7 @@ public static partial class Check
                 minException = e;
             }
         }
-        int skipped = 0;
+        long skipped = 0;
         bool isIter = time < 0;
         long target = isIter ? seed is null ? iter : iter - 1
                     : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
@@ -291,7 +291,7 @@ public static partial class Check
                 minException = e;
             }
         }
-        int skipped = 0;
+        long skipped = 0;
         bool isIter = time < 0;
         long target = isIter ? seed is null ? iter : iter - 1
                     : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
@@ -479,7 +479,7 @@ public static partial class Check
                 minException = e;
             }
         }
-        int skipped = 0;
+        long skipped = 0;
         bool isIter = time < 0;
         long target = isIter ? seed is null ? iter : iter - 1
                     : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
@@ -683,7 +683,7 @@ public static partial class Check
                 minException = e;
             }
         }
-        int skipped = 0;
+        long skipped = 0;
         bool isIter = time < 0;
         long target = isIter ? seed is null ? iter : iter - 1
                     : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
