@@ -47,9 +47,9 @@ public class AllocationTests
 
     static double AbsoluteErrorChange(double weight, long n, double sumWeights, long total, int increment)
     {
-        var change = sumWeights / (increment * total * 2);
+        var change = sumWeights / (increment * total);
         var weightn = sumWeights * n / total;
-        return change > 0.0 ? Math.Min(weightn - weight, 0) + change : Math.Min(weight - weightn, 0) - change;
+        return Math.Abs(weightn - weight + change) - Math.Abs(weightn - weight);
     }
 
     public static long[] AllocateFloor(long total, double[] weights)
