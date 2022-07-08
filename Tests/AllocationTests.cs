@@ -16,40 +16,45 @@ public class AllocationTests
         for (int i = 0; i < weights.Length; i++)
             results[i] = (long)Math.Round(total * weights[i] / sumWeights);
         var residual = total - Sum(results);
-        if (residual > results.Length || residual < -results.Length)
+        if (residual >= results.Length || residual <= -results.Length)
             throw new Exception($"Numeric overflow, total={total}, sum weights={sumWeights}, residual={residual}");
         var increment = Math.Sign(residual);
         while (residual != 0)
         {
-            var minAbsError = double.MaxValue;
-            var minRelError = double.MaxValue;
-            var maxWeightDir = double.MinValue;
-            var minErrorIndex = 0;
+            var minAbs = double.MaxValue;
+            var minRel = double.MaxValue;
+            var minWei = double.MaxValue;
+            var minIndex = 0;
             for (int i = 0; i < weights.Length; i++)
             {
-                var required = total * weights[i];
-                var actual = results[i] * sumWeights;
-                var absErrorIncrease = Math.Abs(actual + increment * sumWeights - required) - Math.Abs(actual - required);
-                var relErrorIncrease = absErrorIncrease / Math.Abs(required);
-                var weightDir = increment * Math.Sign(total) * Math.Sign(sumWeights) * weights[i];
-                if (absErrorIncrease < minAbsError
-                    || (absErrorIncrease == minAbsError && (relErrorIncrease < minRelError || (relErrorIncrease == minRelError  && weightDir > maxWeightDir))))
+                var weight = weights[i];
+                var abs = AbsoluteErrorChange(weight, results[i], sumWeights, total, increment);
+                var rel = abs / Math.Abs(weight);
+                var wei = sumWeights > 0.0 ? -weight : weight;
+                if (abs < minAbs || (abs == minAbs && (rel < minRel || (rel == minRel && wei < minWei))))
                 {
-                    minAbsError = absErrorIncrease;
-                    minRelError = relErrorIncrease;
-                    maxWeightDir = weightDir;
-                    minErrorIndex = i;
+                    minAbs = abs;
+                    minRel = rel;
+                    minWei = wei;
+                    minIndex = i;
                 }
             }
-            results[minErrorIndex] += increment;
+            results[minIndex] += increment;
             residual -= increment;
         }
         return results;
     }
 
+    static double AbsoluteErrorChange(double weight, long n, double sumWeights, long total, int increment)
+    {
+        var change = sumWeights / (increment * total * 2);
+        var weightn = sumWeights * n / total;
+        return change > 0.0 ? Math.Min(weightn - weight, 0) + change : Math.Min(weight - weightn, 0) - change;
+    }
+
     public static long[] AllocateFloor(long total, double[] weights)
     { // Floor can't be made to work as it doesn't do NegativeExample properly
-        var sumWeights = Sum(weights);
+        var sumWeights = Sum(weights);  
         var results = new long[weights.Length];
         for (int i = 0; i < weights.Length; i++)
             results[i] = (long)Math.Floor(total * weights[i] / sumWeights);
@@ -234,6 +239,9 @@ public class AllocationTests
     readonly static Gen<double> genDouble =
         Gen.Select(Gen.Int[-100, 100], Gen.Int[-100, 100], Gen.Int[1, 100])
         .Select((a, b, c) => a + (double)b / c);
+
+    readonly static Gen<double> genDouble2 =
+        Gen.Double[-100, 100];
 
     readonly static Gen<(int Total, double[] Weights)> genAllocateExample =
         Gen.Select(Gen.Int[-100, 100], genDouble.Array[1, 30])
