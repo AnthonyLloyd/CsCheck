@@ -340,7 +340,7 @@ public static class Dbg
     /// <summary>Saves a sequence of values on the first run and compares them on subsequent runs.</summary>
     public static RegressionStream Regression => regressionStream ??= new RegressionStream(Path.Combine(Hash.CacheDir, "Dbg.Regression.has"));
 
-    public class RegressionStream : IRegression
+    public sealed class RegressionStream : IRegression
     {
         readonly string filename;
         readonly bool reading;
@@ -649,7 +649,7 @@ public static class Dbg
         }
     }
 
-    class ListSlim<T> : IReadOnlyList<T>
+    sealed class ListSlim<T> : IReadOnlyList<T>
     {
         static class Holder { internal static T[] Initial = Array.Empty<T>(); }
         T[] entries;
@@ -702,7 +702,7 @@ public static class Dbg
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    class MapSlim<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
+    sealed class MapSlim<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
     {
         struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
         static class Holder { internal static Entry[] Initial = new Entry[1]; }

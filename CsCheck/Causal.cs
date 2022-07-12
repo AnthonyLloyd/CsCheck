@@ -185,7 +185,7 @@ public static class Causal
         return Profile(() => action(gen.Generate(pcg, null, out _)), iter, time);
     }
 
-    public class Result
+    public sealed class Result
     {
         public class Row { public string Region; public int Count; public double Time; public MedianEstimate P10, P5, N5, N10, N15, N20; }
         public Row[] Rows;

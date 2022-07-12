@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
 /// <summary>Size representation of Gen generated data.</summary>
-public class Size
+public sealed class Size
 {
     public ulong I;
     public Size Next;
@@ -845,6 +845,42 @@ public static class Gen
         return resultSelector(v1, v2);
     });
 
+    public static Gen<R> SelectMany<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
+    {
+        var (v1, v2) = gen.Generate(pcg, min, out size);
+        if (min is not null && min.I < size.I) return default;
+        var vR = selector(v1, v2).Generate(pcg, null, out var sR);
+        size.Append(sR);
+        return vR;
+    });
+
+    public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
+    {
+        var (v1, v2, v3) = gen.Generate(pcg, min, out size);
+        if (min is not null && min.I < size.I) return default;
+        var vR = selector(v1, v2, v3).Generate(pcg, null, out var sR);
+        size.Append(sR);
+        return vR;
+    });
+
+    public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
+    {
+        var (v1, v2, v3, v4) = gen.Generate(pcg, min, out size);
+        if (min is not null && min.I < size.I) return default;
+        var vR = selector(v1, v2, v3, v4).Generate(pcg, null, out var sR);
+        size.Append(sR);
+        return vR;
+    });
+
+    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
+    {
+        var (v1, v2, v3, v4, v5) = gen.Generate(pcg, min, out size);
+        if (min is not null && min.I < size.I) return default;
+        var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, null, out var sR);
+        size.Append(sR);
+        return vR;
+    });
+
     public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
     {
         while (true)
@@ -1168,7 +1204,7 @@ public static class Gen
     public static readonly GenString String = new();
 }
 
-public class GenBool : Gen<bool>
+public sealed class GenBool : Gen<bool>
 {
     public override bool Generate(PCG pcg, Size min, out Size size)
     {
@@ -1178,7 +1214,7 @@ public class GenBool : Gen<bool>
     }
 }
 
-public class GenSByte : Gen<sbyte>
+public sealed class GenSByte : Gen<sbyte>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static ulong Zigzag(sbyte i) => (ulong)((i << 1) ^ (i >> 7));
@@ -1203,7 +1239,7 @@ public class GenSByte : Gen<sbyte>
     }
 }
 
-public class GenByte : Gen<byte>
+public sealed class GenByte : Gen<byte>
 {
     public override byte Generate(PCG pcg, Size min, out Size size)
     {
@@ -1227,7 +1263,7 @@ public class GenByte : Gen<byte>
     }
 }
 
-public class GenShort : Gen<short>
+public sealed class GenShort : Gen<short>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort Zigzag(short i) => (ushort)(i << 1 ^ i >> 31);
@@ -1256,7 +1292,7 @@ public class GenShort : Gen<short>
     }
 }
 
-public class GenUShort : Gen<ushort>
+public sealed class GenUShort : Gen<ushort>
 {
     public override ushort Generate(PCG pcg, Size min, out Size size)
     {
@@ -1279,7 +1315,7 @@ public class GenUShort : Gen<ushort>
     }
 }
 
-public class GenInt : Gen<int>
+public sealed class GenInt : Gen<int>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint Zigzag(int i) => (uint)(i << 1 ^ i >> 31);
@@ -1340,7 +1376,7 @@ public class GenInt : Gen<int>
     public IntSkew Skew = new();
 }
 
-public class GenUInt : Gen<uint>
+public sealed class GenUInt : Gen<uint>
 {
     public override uint Generate(PCG pcg, Size min, out Size size)
     {
@@ -1380,7 +1416,7 @@ public class GenUInt : Gen<uint>
     public UIntSkew Skew = new();
 }
 
-public class GenLong : Gen<long>
+public sealed class GenLong : Gen<long>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong Zigzag(long i) => (ulong)(i << 1 ^ i >> 63);
@@ -1410,7 +1446,7 @@ public class GenLong : Gen<long>
     }
 }
 
-public class GenULong : Gen<ulong>
+public sealed class GenULong : Gen<ulong>
 {
     public override ulong Generate(PCG pcg, Size min, out Size size)
     {
@@ -1435,7 +1471,7 @@ public class GenULong : Gen<ulong>
     }
 }
 
-public class GenFloat : Gen<float>
+public sealed class GenFloat : Gen<float>
 {
     [StructLayout(LayoutKind.Explicit)]
     struct FloatConverter
@@ -1562,7 +1598,7 @@ public class GenFloat : Gen<float>
     });
 }
 
-public class GenDouble : Gen<double>
+public sealed class GenDouble : Gen<double>
 {
     public override double Generate(PCG pcg, Size min, out Size size)
     {
@@ -1692,7 +1728,7 @@ public class GenDouble : Gen<double>
     public DoubleSkew Skew = new();
 }
 
-public class GenDecimal : Gen<decimal>
+public sealed class GenDecimal : Gen<decimal>
 {
     public override decimal Generate(PCG pcg, Size min, out Size size)
     {
@@ -1730,7 +1766,7 @@ public class GenDecimal : Gen<decimal>
     });
 }
 
-public class GenDateTime : Gen<DateTime>
+public sealed class GenDateTime : Gen<DateTime>
 {
     const ulong max = 3155378975999999999UL; //(ulong)DateTime.MaxValue.Ticks;
     public override DateTime Generate(PCG pcg, Size min, out Size size)
@@ -1754,7 +1790,7 @@ public class GenDateTime : Gen<DateTime>
     }
 }
 
-public class GenDate : Gen<DateTime>
+public sealed class GenDate : Gen<DateTime>
 {
     const uint max = 3652058U; //(uint)(DateTime.MaxValue.Ticks / TimeSpan.TicksPerDay);
     public override DateTime Generate(PCG pcg, Size min, out Size size)
@@ -1779,7 +1815,7 @@ public class GenDate : Gen<DateTime>
     }
 }
 
-public class GenTimeSpan : Gen<TimeSpan>
+public sealed class GenTimeSpan : Gen<TimeSpan>
 {
     public override TimeSpan Generate(PCG pcg, Size min, out Size size)
     {
@@ -1802,7 +1838,7 @@ public class GenTimeSpan : Gen<TimeSpan>
     }
 }
 
-public class GenDateTimeOffset : Gen<DateTimeOffset>
+public sealed class GenDateTimeOffset : Gen<DateTimeOffset>
 {
     readonly Gen<DateTime> genDateTime = Gen.DateTime[new DateTime(1800, 1, 1), new DateTime(2200, 1, 1)];
     readonly Gen<int> genOffset = Gen.Int[-14 * 60, 14 * 60];
@@ -1815,7 +1851,7 @@ public class GenDateTimeOffset : Gen<DateTimeOffset>
     }
 }
 
-public class GenGuid : Gen<Guid>
+public sealed class GenGuid : Gen<Guid>
 {
     [StructLayout(LayoutKind.Explicit)]
     struct GuidConverter
@@ -1834,7 +1870,7 @@ public class GenGuid : Gen<Guid>
     }
 }
 
-public class GenChar : Gen<char>
+public sealed class GenChar : Gen<char>
 {
     public override char Generate(PCG pcg, Size min, out Size size)
     {
@@ -1870,7 +1906,7 @@ public class GenChar : Gen<char>
     }
 }
 
-public class GenString : Gen<string>
+public sealed class GenString : Gen<string>
 {
     static readonly Gen<string> d = Gen.Char.Array.Select(i => new string(i));
     public override string Generate(PCG pcg, Size min, out Size size) => d.Generate(pcg, min, out size);
@@ -1884,7 +1920,7 @@ public class GenString : Gen<string>
         Gen.Char[chars].Array.Select(i => new string(i));
 }
 
-public class GenArray<T> : Gen<T[]>
+public sealed class GenArray<T> : Gen<T[]>
 {
     readonly Gen<T> gen;
     public GenArray(Gen<T> gen) => this.gen = gen;
@@ -1921,7 +1957,7 @@ public class GenArray<T> : Gen<T[]>
     );
 }
 
-public class GenArrayUnique<T> : Gen<T[]>
+public sealed class GenArrayUnique<T> : Gen<T[]>
 {
     readonly Gen<T> gen;
     public GenArrayUnique(Gen<T> gen) => this.gen = gen;
@@ -1963,7 +1999,7 @@ public class GenArrayUnique<T> : Gen<T[]>
     );
 }
 
-public class GenEnumerable<T> : Gen<IEnumerable<T>>
+public sealed class GenEnumerable<T> : Gen<IEnumerable<T>>
 {
     readonly Gen<T> gen;
     public GenEnumerable(Gen<T> gen) => this.gen = gen;
@@ -2000,7 +2036,7 @@ public class GenEnumerable<T> : Gen<IEnumerable<T>>
     );
 }
 
-public class GenArray2D<T> : Gen<T[,]>
+public sealed class GenArray2D<T> : Gen<T[,]>
 {
     readonly Gen<T> gen;
     public GenArray2D(Gen<T> gen) => this.gen = gen;
@@ -2028,7 +2064,7 @@ public class GenArray2D<T> : Gen<T[,]>
     );
 }
 
-public class GenList<T> : Gen<List<T>>
+public sealed class GenList<T> : Gen<List<T>>
 {
     readonly Gen<T> gen;
     public GenList(Gen<T> gen) => this.gen = gen;
@@ -2065,7 +2101,7 @@ public class GenList<T> : Gen<List<T>>
     );
 }
 
-public class GenHashSet<T> : Gen<HashSet<T>>
+public sealed class GenHashSet<T> : Gen<HashSet<T>>
 {
     readonly Gen<T> gen;
     public GenHashSet(Gen<T> gen) => this.gen = gen;
@@ -2104,7 +2140,7 @@ public class GenHashSet<T> : Gen<HashSet<T>>
     );
 }
 
-public class GenDictionary<K, V> : Gen<Dictionary<K, V>>
+public sealed class GenDictionary<K, V> : Gen<Dictionary<K, V>>
 {
     readonly Gen<K> genK;
     readonly Gen<V> genV;
@@ -2152,7 +2188,7 @@ public class GenDictionary<K, V> : Gen<Dictionary<K, V>>
     );
 }
 
-public class GenSortedDictionary<K, V> : Gen<SortedDictionary<K, V>>
+public sealed class GenSortedDictionary<K, V> : Gen<SortedDictionary<K, V>>
 {
     readonly Gen<K> genK;
     readonly Gen<V> genV;
@@ -2200,7 +2236,7 @@ public class GenSortedDictionary<K, V> : Gen<SortedDictionary<K, V>>
     );
 }
 
-public class GenOperation<T> : Gen<(string, Action<T>)>
+public sealed class GenOperation<T> : Gen<(string, Action<T>)>
 {
     public bool AddOpNumber;
     readonly GenDelegate<(string, Action<T>)> generate;
@@ -2213,7 +2249,7 @@ public class GenOperation<T> : Gen<(string, Action<T>)>
     public override (string, Action<T>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
 }
 
-public class GenOperation<T1, T2> : Gen<(string, Action<T1, T2>)>
+public sealed class GenOperation<T1, T2> : Gen<(string, Action<T1, T2>)>
 {
     public bool AddOpNumber;
     readonly GenDelegate<(string, Action<T1, T2>)> generate;
@@ -2226,7 +2262,7 @@ public class GenOperation<T1, T2> : Gen<(string, Action<T1, T2>)>
     public override (string, Action<T1, T2>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
 }
 
-public class GenMetamorphic<T> : Gen<(string, Action<T>, Action<T>)>
+public sealed class GenMetamorphic<T> : Gen<(string, Action<T>, Action<T>)>
 {
     readonly GenDelegate<(string, Action<T>, Action<T>)> generate;
     internal GenMetamorphic(GenDelegate<(string, Action<T>, Action<T>)> generate) => this.generate = generate;

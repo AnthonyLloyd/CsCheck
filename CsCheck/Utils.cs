@@ -23,7 +23,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
-public partial class Check
+public static partial class Check
 {
     static string PrintArray2D(Array a)
     {
@@ -307,10 +307,25 @@ public partial class Check
         (copy[i + 1], copy[i]) = (copy[i], copy[i + 1]);
         return copy;
     }
+
+    /// <summary>
+    /// Check if two doubles are within the given absolute and relative tolerance.
+    /// </summary>
+    /// <param name="atol">The absolute tolerance.</param>
+    /// <param name="rtol">The releative tolerance.</param>
+    /// <param name="a">The first double.</param>
+    /// <param name="b">The second double.</param>
+    /// <returns>True if the values satisfy |a-b| &#8804; atol + rtol max(|a|,|b|).</returns>
+    public static bool AreClose(double atol, double rtol, double a, double b)
+    {
+        var areCloseLhs = Math.Abs(a - b);
+        var areCloseRhs = atol + rtol * Math.Max(Math.Abs(a), Math.Abs(b));
+        return areCloseLhs <= areCloseRhs;
+    }
 }
 
 /// <summary>A median and quartile estimator.</summary>
-public class MedianEstimator
+public sealed class MedianEstimator
 {
     /// <summary>The number of sample observations.</summary>
     public int N;

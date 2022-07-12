@@ -23,7 +23,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-public class CsCheckException : Exception
+public sealed class CsCheckException : Exception
 {
     public CsCheckException(string message) : base(message) { }
     public CsCheckException(string message, Exception exception) : base(message, exception) { }
@@ -2715,7 +2715,7 @@ public static partial class Check
     }
 }
 
-public class FasterResult
+public sealed class FasterResult
 {
     public int Faster, Slower;
     public MedianEstimator Median;

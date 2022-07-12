@@ -19,7 +19,7 @@ using System.Threading;
 using System.Diagnostics;
 
 /// <summary><see href="https://www.pcg-random.org/">PCG</see> is a family of simple fast space-efficient statistically good algorithms for random number generation.</summary>
-public class PCG
+public sealed class PCG
 {
     static int threadCount;
     [ThreadStatic]

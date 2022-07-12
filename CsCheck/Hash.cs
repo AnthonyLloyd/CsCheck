@@ -46,7 +46,7 @@ public interface IRegression
 }
 
 /// <summary>Functionality for hash testing data with detailed information of any changes.</summary>
-public class Hash : IRegression
+public sealed class Hash : IRegression
 {
     static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new();
     internal static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
@@ -776,7 +776,7 @@ public class Hash : IRegression
 }
 
 /// <summary>A stream for hash testing.</summary>
-public class HashStream : Stream
+public sealed class HashStream : Stream
 {
     public override bool CanRead => true;
     public override bool CanSeek => true;
