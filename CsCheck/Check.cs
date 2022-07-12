@@ -866,7 +866,7 @@ public static partial class Check
     public static Task SampleOneAsync<T>(this Gen<T> gen, Func<T, Task<bool>> predicate, string seed = null, Func<T, string> print = null)
         => SampleAsync(gen, predicate, seed, 1, -2, 1, print);
 
-    class ModelBasedData<Actual, Model>
+    sealed class ModelBasedData<Actual, Model>
     {
         public Actual ActualState; public Model ModelState; public uint Stream; public ulong Seed;
         public (string, Action<Actual, Model>)[] Operations; public Exception Exception;
@@ -1073,7 +1073,7 @@ public static partial class Check
         => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
             equal, seed, iter, time, threads, printActual, printModel);
 
-    class MetamorphicData<T> { public T State1; public T State2; public uint Stream; public ulong Seed; public Exception Exception; }
+    sealed class MetamorphicData<T> { public T State1; public T State2; public uint Stream; public ulong Seed; public Exception Exception; }
 
     /// <summary>Sample metamorphic (two path) operations on a random initial state checking that both paths are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1139,7 +1139,7 @@ public static partial class Check
         });
     }
 
-    class ConcurrentData<T>
+    sealed class ConcurrentData<T>
     {
         public T State; public uint Stream; public ulong Seed; public (string, Action<T>)[] Operations;
         public int Threads; public int[] ThreadIds; public Exception Exception;

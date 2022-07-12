@@ -303,7 +303,7 @@ public static class Dbg
         return new CachedEnumerable<T>(e);
     }
 
-    class CachedEnumerable<T> : IEnumerable<T>, IDisposable
+    sealed class CachedEnumerable<T> : IEnumerable<T>, IDisposable
     {
         IEnumerator<T> _enumerator;
         readonly List<T> _cache = new();

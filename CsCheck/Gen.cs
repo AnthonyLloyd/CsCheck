@@ -119,7 +119,7 @@ public delegate T GenMap<T>(T pcg, ref Size size);
 /// <summary>Provides a set of static methods for composing generators.</summary>
 public static class Gen
 {
-    class GenCreate<T> : Gen<T>
+    sealed class GenCreate<T> : Gen<T>
     {
         readonly GenDelegate<T> generate;
         internal GenCreate(GenDelegate<T> generate) => this.generate = generate;
@@ -1364,7 +1364,7 @@ public sealed class GenInt : Gen<int>
             });
         }
     }
-    public class IntSkew
+    public sealed class IntSkew
     {
         public Gen<int> this[int start, int finish, double a] =>
             a >= 0.0 ? Gen.Double.Unit.Select(u => start + (int)(Math.Pow(u, a + 1.0) * (1.0 + finish - start)))
@@ -1399,7 +1399,7 @@ public sealed class GenUInt : Gen<uint>
             });
         }
     }
-    public class UIntSkew
+    public sealed class UIntSkew
     {
         public Gen<uint> this[double a] => Gen.Double.Unit.Select(u =>
         {
@@ -1620,6 +1620,18 @@ public sealed class GenDouble : Gen<double>
             });
         }
     }
+
+    /// <summary>A rational double num/den between start and finish where den is between 1 and denominator.</summary>
+    /// <param name="start">The lowest value.</param>
+    /// <param name="finish">The hghest value.</param>
+    /// <param name="denominator">The maximum values of the fraction denominator.</param>
+    public Gen<double> this[int start, int finish, int denominator]
+        => Gen.Int[1, denominator]
+            .SelectMany(den =>
+                Gen.Int[start * den, finish * den]
+                .Select(num => ((double)num) / den)
+            );
+
     /// <summary>In the range 0.0 &lt;= x &lt;= inf, can be nan.</summary>
     public Gen<double> NonNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
     {
@@ -1716,7 +1728,7 @@ public sealed class GenDouble : Gen<double>
         size = new Size((i >> 12) + 1UL);
         return (i & 0xF0UL) == 0xD0UL ? MakeSpecial(i) : BitConverter.Int64BitsToDouble((long)i);
     });
-    public class DoubleSkew
+    public sealed class DoubleSkew
     {
         public Gen<double> this[double start, double finish, double a] =>
             a >= 0.0 ? Gen.Double.Unit.Select(u => start + Math.Pow(u, a + 1.0) * (finish - start))
