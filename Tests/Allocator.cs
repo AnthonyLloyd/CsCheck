@@ -4,7 +4,7 @@ using System;
 
 #nullable enable
 
-public static class ErrorMinimisingAllocator
+public static class Allocator
 {
     static double Sum(double[] array)
     {
@@ -29,7 +29,7 @@ public static class ErrorMinimisingAllocator
         return Math.Abs(weightn - weight + change) - Math.Abs(weightn - weight);
     }
 
-    public static long[] Allocate(long total, double[] weights)
+    public static long[] ErrorMinimising(long total, double[] weights)
     {
         var sumWeights = Sum(weights);
         var results = new long[weights.Length];
@@ -63,6 +63,53 @@ public static class ErrorMinimisingAllocator
             residual -= increment;
         }
         return results;
+    }
+
+    public static long[] BalinskiYoung(long total, double[] weights)
+    {
+        var sumWeights = Sum(weights);
+        var results = new long[weights.Length];
+        long h = 0;
+        while (h++ != total)
+        {
+            var max = double.MinValue;
+            var wei = double.MinValue;
+            var index = -1;
+            for (int i = 0; i < weights.Length; i++)
+            {
+                var r = results[i];
+                var w = weights[i];
+                if (r < w * h / sumWeights)
+                {
+                    var v = w / (1 + r);
+                    if (v > max || (v == max && w > wei))
+                    {
+                        max = v;
+                        wei = w;
+                        index = i;
+                    }
+                }
+            }
+            results[index]++;
+        }
+        return results;
+    }
+
+    /// <summary>
+    /// Allocate the next total given the total of previous allocations.
+    /// </summary>
+    /// <param name="total">The next total to allocate.</param>
+    /// <param name="weights">The weights to allocate to.</param>
+    /// <param name="previous">The total of all the previous allocations.</param>
+    /// <returns>The allocation of total.</returns>
+    public static long[] Allocate(long total, double[] weights, long[] previous)
+    {
+        for (int i = 0; i < previous.Length; i++)
+            total += previous[i];
+        var result = ErrorMinimising(total, weights);
+        for (int i = 0; i < previous.Length; i++)
+            result[i] -= previous[i];
+        return result;
     }
 
     public static long[] AllocateFloor(long total, double[] weights)
@@ -102,12 +149,13 @@ public static class ErrorMinimisingAllocator
     {
         var results = new long[totals.Length][];
         var sumTotals = Sum(totals);
-        var residualWeights = Allocate(sumTotals, weights);
-        // Reset the weights to the allocated values
-        weights = new double[weights.Length];
-        for (int i = 0; i < weights.Length; i++)
-            weights[i] = residualWeights[i];
-        var sumWeights = sumTotals;
+        var sumWeights = Sum(weights);
+        var residualWeights = ErrorMinimising(sumTotals, weights);
+        //// Reset the weights to the allocated values
+        //weights = new double[weights.Length];
+        //for (int i = 0; i < weights.Length; i++)
+        //    weights[i] = residualWeights[i];
+        //var sumWeights = sumTotals;
         var residualTotals = new long[totals.Length];
         for (int t = 0; t < totals.Length; t++)
         {
@@ -138,28 +186,43 @@ public static class ErrorMinimisingAllocator
                 var total = totals[t];
                 for (int w = 0; w < weights.Length; w++)
                 {
-                    if (residualWeights[w] != 0)
+                    if (residualWeights[w] == 0) continue;
+                    var weight = weights[w];
+                    var abs = AbsoluteErrorChange2(weight, resultsT[w], sumWeights, total);
+                    var rel = abs / Math.Abs(weight);
+                    var wei = sumWeights > 0.0 ? -weight : weight;
+                    if (abs < minAbs || (abs == minAbs && (rel < minRel || (rel == minRel && wei < minWei))))
                     {
-                        var weight = weights[w];
-                        var abs = AbsoluteErrorChange(weight, resultsT[w], sumWeights, total, 1);
-                        var rel = abs / Math.Abs(weight);
-                        var wei = sumWeights > 0.0 ? -weight : weight;
-                        if (abs < minAbs || (abs == minAbs && (rel < minRel || (rel == minRel && wei < minWei))))
-                        {
-                            minAbs = abs;
-                            minRel = rel;
-                            minWei = wei;
-                            minIndexT = t;
-                            minIndexW = w;
-                        }
+                        minAbs = abs;
+                        minRel = rel;
+                        minWei = wei;
+                        minIndexT = t;
+                        minIndexW = w;
                     }
                 }
             }
-            if (minIndexT < 0) break;
+            if (minIndexT == -1) break;
             results[minIndexT][minIndexW]++;
             residualTotals[minIndexT]--;
             residualWeights[minIndexW]--;
         }
         return results;
     }
+
+    static double AbsoluteErrorChange2(double weight, long n, double sumWeights, long total)
+    {
+        var ndouble = total * weight;
+        return Math.Abs((n + 1) * sumWeights - ndouble) - Math.Abs(n * sumWeights - ndouble);
+    }
 }
+
+// https://qa.wujigu.com/qa/?qa=898054/c%23-proportionately-distribute-prorate-a-value-across-a-set-of-values
+// https://stackoverflow.com/questions/62914824/c-sharp-split-integer-in-parts-given-part-weights-algorithm
+// https://stackoverflow.com/questions/1925691/proportionately-distribute-prorate-a-value-across-a-set-of-values
+// https://stackoverflow.com/questions/1925691/proportionately-distribute-prorate-a-value-across-a-set-of-values/1925719#1925719
+// https://stackoverflow.com/questions/9088403/distributing-integers-using-weights-how-to-calculate
+// https://stackoverflow.com/questions/792460/how-to-round-floats-to-integers-while-preserving-their-sum
+// https://stackoverflow.com/questions/8685308/allocate-items-according-to-an-approximate-ratio-in-python
+// https://en.wikipedia.org/wiki/Largest_remainder_method
+// https://rangevoting.org/Apportion.html
+// https://en.wikipedia.org/wiki/Apportionment_paradox
