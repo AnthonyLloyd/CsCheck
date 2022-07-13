@@ -126,8 +126,10 @@ public static class Gen
         public override T Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
     }
 
+    /// <summary>Create a generator from a function.</summary>
     public static Gen<T> Create<T>(GenDelegate<T> gen) => new GenCreate<T>(gen);
 
+    /// <summary>Create a generator from a function.</summary>
     public static Gen<T> Create<T>(Func<PCG, (T, Size)> gen) => new GenCreate<T>((PCG pcg, Size min, out Size size) =>
       {
           T t;
@@ -135,9 +137,17 @@ public static class Gen
           return t;
       });
 
+    /// <summary>Create a constant generator.</summary>
+    public static Gen<T> Const<T>(T value) => Create((PCG pcg, Size min, out Size size) => { size = new Size(0L); return value; });
+
+    /// <summary>Create a constant generator.</summary>
+    public static Gen<T> Const<T>(Func<T> value) => Create((PCG pcg, Size min, out Size size) => { size = new Size(0L); return value(); });
+
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T, R>(this Gen<T> gen, Func<T, R> selector) =>
         Create((PCG pcg, Size min, out Size size) => selector(gen.Generate(pcg, min, out size)));
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> selector) =>
         Create((PCG pcg, Size min, out Size size) =>
         {
@@ -145,6 +155,7 @@ public static class Gen
             return selector(t1, t2);
         });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> selector) =>
         Create((PCG pcg, Size min, out Size size) =>
         {
@@ -152,6 +163,7 @@ public static class Gen
             return selector(t1, t2, t3);
         });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> selector) =>
         Create((PCG pcg, Size min, out Size size) =>
         {
@@ -159,6 +171,7 @@ public static class Gen
             return selector(t1, t2, t3, t4);
         });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> selector) =>
         Create((PCG pcg, Size min, out Size size) =>
         {
@@ -166,6 +179,7 @@ public static class Gen
             return selector(t1, t2, t3, t4, t5);
         });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> selector) =>
         Create((PCG pcg, Size min, out Size size) =>
         {
@@ -173,6 +187,7 @@ public static class Gen
             return selector(t1, t2, t3, t4, t5, t6);
         });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) =>
         Create((PCG pcg, Size min, out Size size) =>
         {
@@ -180,6 +195,7 @@ public static class Gen
             return selector(t1, t2, t3, t4, t5, t6, t7);
         });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector) =>
         Create((PCG pcg, Size min, out Size size) =>
         {
@@ -187,6 +203,7 @@ public static class Gen
             return selector(t1, t2, t3, t4, t5, t6, t7, t8);
         });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2,
         Func<T1, T2, R> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -202,6 +219,7 @@ public static class Gen
         return selector(v1, v2);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
         Func<T1, T2, T3, R> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -219,6 +237,7 @@ public static class Gen
         return selector(v1, v2, v3);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Func<T1, T2, T3, T4, R> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -238,6 +257,7 @@ public static class Gen
         return selector(v1, v2, v3, v4);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Func<T1, T2, T3, T4, T5, R> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -259,6 +279,7 @@ public static class Gen
         return selector(v1, v2, v3, v4, v5);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, R> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -282,6 +303,7 @@ public static class Gen
         return selector(v1, v2, v3, v4, v5, v6);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) =>
         Create((PCG pcg, Size min, out Size size) =>
@@ -308,6 +330,7 @@ public static class Gen
         return selector(v1, v2, v3, v4, v5, v6, v7);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector)
         => Create((PCG pcg, Size min, out Size size) =>
@@ -336,6 +359,7 @@ public static class Gen
         return selector(v1, v2, v3, v4, v5, v6, v7, v8);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9,
         Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> selector) => Create((PCG pcg, Size min, out Size size) =>
@@ -366,6 +390,7 @@ public static class Gen
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
         Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
     Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> selector) => Create((PCG pcg, Size min, out Size size) =>
@@ -398,6 +423,7 @@ public static class Gen
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
         Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11,
     Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R> selector) => Create((PCG pcg, Size min, out Size size) =>
@@ -432,6 +458,7 @@ public static class Gen
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
         Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12,
     Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R> selector) => Create((PCG pcg, Size min, out Size size) =>
@@ -468,6 +495,7 @@ public static class Gen
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R>(this Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
         Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13,
@@ -507,6 +535,7 @@ public static class Gen
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R>(this Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
         Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14,
@@ -548,6 +577,7 @@ public static class Gen
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R>(this Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
         Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14, Gen<T15> gen15,
@@ -591,6 +621,7 @@ public static class Gen
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15);
     });
 
+    /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R>(this Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
         Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14, Gen<T15> gen15, Gen<T16> gen16,
@@ -636,6 +667,7 @@ public static class Gen
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16);
     });
 
+    /// <summary>Projects each element of a generator into a tuple.</summary>
     public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen0, Gen<T1> gen1) => Create((PCG pcg, Size min, out Size size) =>
     {
         if (min is not null)
@@ -650,6 +682,7 @@ public static class Gen
         return (v0, v1);
     });
 
+    /// <summary>Projects each element of a generator into a tuple.</summary>
     public static Gen<(T0 V0, T1 V1, T2 V2)> Select<T0, T1, T2>(this Gen<T0> gen0, Gen<T1> gen1, Gen<T2> gen2)
         => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -667,6 +700,7 @@ public static class Gen
         return (v0, v1, v2);
     });
 
+    /// <summary>Projects each element of a generator into a tuple.</summary>
     public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> Select<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3) => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -686,6 +720,7 @@ public static class Gen
         return (v0, v1, v2, v3);
     });
 
+    /// <summary>Projects each element of a generator into a tuple.</summary>
     public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3, T4 V4)> Select<T0, T1, T2, T3, T4>(this Gen<T0> gen0, Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4) => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -707,6 +742,7 @@ public static class Gen
         return (v0, v1, v2, v3, v4);
     });
 
+    /// <summary>Projects each element of a generator into a tuple.</summary>
     public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3, T4 V4, T5 V5)> Select<T0, T1, T2, T3, T4, T5>(this Gen<T0> gen0, Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5) => Create((PCG pcg, Size min, out Size size) =>
         {
@@ -766,6 +802,7 @@ public static class Gen
         return (v0, v1, v2, v3);
     });
 
+    /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
         var v1 = gen.Generate(pcg, min, out size);
@@ -775,6 +812,7 @@ public static class Gen
         return vR;
     });
 
+    /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, Gen<R>> selector)
         => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -787,6 +825,7 @@ public static class Gen
         return vR;
     });
 
+    /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
         Func<T1, T2, T3, Gen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -801,6 +840,7 @@ public static class Gen
         return vR;
     });
 
+    /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Func<T1, T2, T3, T4, Gen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -817,6 +857,7 @@ public static class Gen
         return vR;
     });
 
+    /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -835,6 +876,7 @@ public static class Gen
         return vR;
     });
 
+    /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Func<T1, Gen<T2>> genSelector, Func<T1, T2, R> resultSelector)
         => Create((PCG pcg, Size min, out Size size) =>
     {
@@ -845,6 +887,7 @@ public static class Gen
         return resultSelector(v1, v2);
     });
 
+    /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
         var (v1, v2) = gen.Generate(pcg, min, out size);
@@ -854,6 +897,7 @@ public static class Gen
         return vR;
     });
 
+    /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
         var (v1, v2, v3) = gen.Generate(pcg, min, out size);
@@ -863,6 +907,7 @@ public static class Gen
         return vR;
     });
 
+    /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
         var (v1, v2, v3, v4) = gen.Generate(pcg, min, out size);
@@ -872,6 +917,7 @@ public static class Gen
         return vR;
     });
 
+    /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
     {
         var (v1, v2, v3, v4, v5) = gen.Generate(pcg, min, out size);
@@ -881,6 +927,7 @@ public static class Gen
         return vR;
     });
 
+    /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
     {
         while (true)
@@ -890,6 +937,7 @@ public static class Gen
         }
     });
 
+    /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2)> Where<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
     {
         while (true)
@@ -899,6 +947,7 @@ public static class Gen
         }
     });
 
+    /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2, T3)> Where<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
     {
         while (true)
@@ -908,6 +957,7 @@ public static class Gen
         }
     });
 
+    /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2, T3, T4)> Where<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
     {
         while (true)
@@ -917,6 +967,7 @@ public static class Gen
         }
     });
 
+    /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2, T3, T4, T5)> Where<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
     {
         while (true)
@@ -926,6 +977,7 @@ public static class Gen
         }
     });
 
+    /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2, T3, T4, T5, T6)> Where<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
     {
         while (true)
@@ -935,6 +987,7 @@ public static class Gen
         }
     });
 
+    /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2, T3, T4, T5, T6, T7)> Where<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
     {
         while (true)
@@ -944,6 +997,7 @@ public static class Gen
         }
     });
 
+    /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> Where<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
     {
         while (true)
@@ -953,17 +1007,15 @@ public static class Gen
         }
     });
 
-    public static Gen<T> Const<T>(T value) => Create((PCG pcg, Size min, out Size size) => { size = new Size(0L); return value; });
-
-    public static Gen<T> Const<T>(Func<T> value) => Create((PCG pcg, Size min, out Size size) => { size = new Size(0L); return value(); });
-
-    public static Gen<T> OneOfConst<T>(params T[] ts) => Create((PCG pcg, Size min, out Size size) =>
+    /// <summary>Create a generator where the element is one of the constants.</summary>
+    public static Gen<T> OneOfConst<T>(params T[] constants) => Create((PCG pcg, Size min, out Size size) =>
     {
         size = new Size(0x1_0000_0000UL);
         if (min is not null && min.I < size.I) return default;
-        return ts[pcg.Next((uint)ts.Length)];
+        return constants[pcg.Next((uint)constants.Length)];
     });
 
+    /// <summary>Create a generator where the element is generated from one of the generators.</summary>
     public static Gen<T> OneOf<T>(params IGen<T>[] gens) => Create((PCG pcg, Size min, out Size size) =>
     {
         if (min is not null)
@@ -976,6 +1028,7 @@ public static class Gen
         return r;
     });
 
+    /// <summary>Create a generator for an enum.</summary>
     public static Gen<T> Enum<T>() where T : Enum
     {
         var a = System.Enum.GetValues(typeof(T));
@@ -985,16 +1038,17 @@ public static class Gen
         return OneOfConst(ts);
     }
 
-    public static Gen<T> FrequencyConst<T>(params (int, T)[] ts)
+    /// <summary>Create a generator where the element is one of the constants weighted by the frequency.</summary>
+    public static Gen<T> FrequencyConst<T>(params (int Frequency, T Constant)[] constants)
     {
         int total = 0;
-        foreach (var (i, _) in ts) total += i;
+        foreach (var (i, _) in constants) total += i;
         return Create((PCG pcg, Size min, out Size size) =>
         {
             size = new Size(0x1_0000_0000UL);
             if (min is not null && min.I < size.I) return default;
             var v = (int)pcg.Next((uint)total);
-            foreach (var i in ts)
+            foreach (var i in constants)
             {
                 v -= i.Item1;
                 if (v < 0) return i.Item2;
@@ -1003,7 +1057,8 @@ public static class Gen
         });
     }
 
-    public static Gen<T> Frequency<T>(params (int, IGen<T>)[] gens)
+    /// <summary>Create a generator where the element is generated by one of the generators weighted by the frequency.</summary>
+    public static Gen<T> Frequency<T>(params (int Frequency, IGen<T> Generator)[] gens)
     {
         int total = 0;
         foreach (var (i, _) in gens) total += i;
@@ -1100,13 +1155,15 @@ public static class Gen
         }
     }
 
-    public static Gen<T[]> Shuffle<T>(T[] a) => Create((PCG pcg, Size min, out Size size) =>
+    /// <summary>Create a generator by shuffling the elements.</summary>
+    public static Gen<T[]> Shuffle<T>(T[] constants) => Create((PCG pcg, Size min, out Size size) =>
     {
-        Shuffle(a, pcg, 0);
+        Shuffle(constants, pcg, 0);
         size = new Size(0L);
-        return a;
+        return constants;
     });
 
+    /// <summary>Shuffle the generated elements.</summary>
     public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen) => Create((PCG pcg, Size min, out Size size) =>
     {
         var a = gen.Generate(pcg, null, out size);
@@ -1114,6 +1171,7 @@ public static class Gen
         return a;
     });
 
+    /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<T[]> Shuffle<T>(T[] a, int length) => Create((PCG pcg, Size min, out Size size) =>
     {
         size = new Size(0L);
@@ -1126,15 +1184,19 @@ public static class Gen
         return r;
     });
 
+    /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<T[]> Shuffle<T>(T[] a, int start, int finish) =>
         Int[start, finish].SelectMany(i => Shuffle(a, i));
 
+    /// <summary>Shuffle the generated elements.</summary>
     public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen, int length) =>
         SelectMany(gen, a => Shuffle(a, length));
 
+    /// <summary>Shuffle the generated elements.</summary>
     public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen, int start, int finish) =>
         SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
 
+    /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<List<T>> Shuffle<T>(List<T> a) => Create((PCG pcg, Size min, out Size size) =>
     {
         Shuffle(a, pcg, 0);
@@ -1142,6 +1204,7 @@ public static class Gen
         return a;
     });
 
+    /// <summary>Create a generator by shuffling the generated elements.</summary>
     public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => Create((PCG pcg, Size min, out Size size) =>
     {
         var a = gen.Generate(pcg, null, out size);
@@ -1149,6 +1212,7 @@ public static class Gen
         return a;
     });
 
+    /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => Create((PCG pcg, Size min, out Size size) =>
     {
         size = new Size(0L);
@@ -1161,12 +1225,15 @@ public static class Gen
         return r;
     });
 
+    /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<List<T>> Shuffle<T>(List<T> a, int start, int finish) =>
         SelectMany(Int[start, finish], l => Shuffle(a, l));
 
+    /// <summary>Create a generator by shuffling the generated elements.</summary>
     public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int length) =>
         SelectMany(gen, a => Shuffle(a, length));
 
+    /// <summary>Create a generator by shuffling the generated elements.</summary>
     public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int start, int finish) =>
         SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
 
