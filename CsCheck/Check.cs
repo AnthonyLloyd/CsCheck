@@ -26,7 +26,7 @@ using System.Threading.Tasks;
 public sealed class CsCheckException : Exception
 {
     public CsCheckException(string message) : base(message) { }
-    public CsCheckException(string message, Exception exception) : base(message, exception) { }
+    public CsCheckException(string message, Exception? exception) : base(message, exception) { }
 }
 
 /// <summary>Main random testing Check functions.</summary>
@@ -42,7 +42,7 @@ public static partial class Check
     /// <summary>The number of threads to run the sample on (default number logical CPUs).</summary>
     public static int Threads = Environment.ProcessorCount;
     /// <summary>The initial seed to use for the first iteration.</summary>
-    public static string Seed;
+    public static string? Seed;
     /// <summary>The sigma to use for Faster (default 6).</summary>
     public static double Sigma = 6.0;
     /// <summary>The timeout in seconds to use for Faster (default 60 seconds).</summary>
@@ -75,27 +75,27 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T>(this Gen<T> gen, Action<T> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
     {
-        if (seed is null) seed = Seed;
+        seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
-        if (print is null) print = Print;
+        print ??= Print;
 
-        PCG minPCG = null;
+        PCG? minPCG = null;
         ulong minState = 0UL;
-        Size minSize = null;
-        T minT = default;
-        Exception minException = null;
+        Size? minSize = null;
+        T? minT = default;
+        Exception? minException = null;
 
         int shrinks = -1;
         if (seed is not null)
         {
             var pcg = PCG.Parse(seed);
             ulong state = pcg.State;
-            Size s = null;
-            T t = default;
+            Size? s = null;
+            T? t = default;
             try
             {
                 assert(t = gen.Generate(pcg, null, out s));
@@ -120,8 +120,8 @@ public static partial class Check
             ThreadPool.UnsafeQueueUserWorkItem(_ =>
             {
                 var pcg = PCG.ThreadPCG;
-                Size s = null;
-                T t = default;
+                Size? s = null;
+                T? t = default;
                 while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
                 {
                     ulong state = pcg.State;
@@ -156,7 +156,7 @@ public static partial class Check
         if (minPCG is not null)
         {
             var seedString = minPCG.ToString(minState);
-            var tString = print(minT);
+            var tString = print(minT!);
             if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
             var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
             throw new CsCheckException(summary + tString, minException);
@@ -172,7 +172,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -184,7 +184,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -196,7 +196,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -208,7 +208,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -220,7 +220,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -232,7 +232,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -244,7 +244,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -256,27 +256,27 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
     {
-        if (seed is null) seed = Seed;
+        seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
-        if (print is null) print = Print;
+        print ??= Print;
 
-        PCG minPCG = null;
+        PCG? minPCG = null;
         ulong minState = 0UL;
-        Size minSize = null;
-        T minT = default;
-        Exception minException = null;
+        Size? minSize = null;
+        T? minT = default;
+        Exception? minException = null;
 
         int shrinks = -1;
         if (seed is not null)
         {
             var pcg = PCG.Parse(seed);
             ulong state = pcg.State;
-            Size s = null;
-            T t = default;
+            Size? s = null;
+            T? t = default;
             try
             {
                 await assert(t = gen.Generate(pcg, null, out s));
@@ -301,8 +301,8 @@ public static partial class Check
             tasks[threads] = Task.Run(async () =>
             {
                 var pcg = PCG.ThreadPCG;
-                Size s = null;
-                T t = default;
+                Size? s = null;
+                T? t = default;
                 while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
                 {
                     ulong state = pcg.State;
@@ -336,7 +336,7 @@ public static partial class Check
         if (minPCG is not null)
         {
             var seedString = minPCG.ToString(minState);
-            var tString = print(minT);
+            var tString = print(minT!);
             if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
             var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
             throw new CsCheckException(summary + tString, minException);
@@ -352,7 +352,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -364,7 +364,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -376,7 +376,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -388,7 +388,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -400,7 +400,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -412,7 +412,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -424,7 +424,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> assert,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -436,27 +436,27 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
     {
-        if (seed is null) seed = Seed;
+        seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
-        if (print is null) print = Print;
+        print ??= Print;
 
-        PCG minPCG = null;
+        PCG? minPCG = null;
         ulong minState = 0UL;
-        Size minSize = null;
-        T minT = default;
-        Exception minException = null;
+        Size? minSize = null;
+        T? minT = default;
+        Exception? minException = null;
 
         int shrinks = -1;
         if (seed is not null)
         {
             var pcg = PCG.Parse(seed);
             ulong state = pcg.State;
-            Size s = null;
-            T t = default;
+            Size? s = null;
+            T? t = default;
             try
             {
                 t = gen.Generate(pcg, null, out s);
@@ -489,8 +489,8 @@ public static partial class Check
             ThreadPool.UnsafeQueueUserWorkItem(_ =>
             {
                 var pcg = PCG.ThreadPCG;
-                Size s = null;
-                T t = default;
+                Size? s = null;
+                T? t = default;
                 while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
                 {
                     ulong state = pcg.State;
@@ -540,7 +540,7 @@ public static partial class Check
         if (minPCG is not null)
         {
             var seedString = minPCG.ToString(minState);
-            var tString = print(minT);
+            var tString = print(minT!);
             if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
             var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
             throw new CsCheckException(summary + tString, minException);
@@ -556,7 +556,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -568,7 +568,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -580,7 +580,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -592,7 +592,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -604,7 +604,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -616,7 +616,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -628,7 +628,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -640,27 +640,27 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task<bool>> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
     {
-        if (seed is null) seed = Seed;
+        seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
-        if (print is null) print = Print;
+        print ??= Print;
 
-        PCG minPCG = null;
+        PCG? minPCG = null;
         ulong minState = 0UL;
-        Size minSize = null;
-        T minT = default;
-        Exception minException = null;
+        Size? minSize = null;
+        T? minT = default;
+        Exception? minException = null;
 
         int shrinks = -1;
         if (seed is not null)
         {
             var pcg = PCG.Parse(seed);
             ulong state = pcg.State;
-            Size s = null;
-            T t = default;
+            Size? s = null;
+            T? t = default;
             try
             {
                 t = gen.Generate(pcg, null, out s);
@@ -693,8 +693,8 @@ public static partial class Check
             tasks[threads] = Task.Run(async () =>
             {
                 var pcg = PCG.ThreadPCG;
-                Size s = null;
-                T t = default;
+                Size? s = null;
+                T? t = default;
                 while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
                 {
                     ulong state = pcg.State;
@@ -743,7 +743,7 @@ public static partial class Check
         if (minPCG is not null)
         {
             var seedString = minPCG.ToString(minState);
-            var tString = print(minT);
+            var tString = print(minT!);
             if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
             var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
             throw new CsCheckException(summary + tString, minException);
@@ -759,7 +759,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<bool>> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -771,7 +771,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<bool>> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -783,7 +783,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<bool>> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -795,7 +795,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<bool>> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -807,7 +807,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<bool>> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -819,7 +819,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<bool>> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -831,7 +831,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<bool>> predicate,
-        string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string> print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), seed, iter, time, threads, print);
 
     /// <summary>Sample the gen once calling the assert.</summary>
@@ -839,7 +839,7 @@ public static partial class Check
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void SampleOne<T>(this Gen<T> gen, Action<T> assert, string seed = null, Func<T, string> print = null)
+    public static void SampleOne<T>(this Gen<T> gen, Action<T> assert, string? seed = null, Func<T, string>? print = null)
         => Sample(gen, assert, seed, 1, -2, 1, print);
 
     /// <summary>Sample the gen once calling the assert.</summary>
@@ -847,7 +847,7 @@ public static partial class Check
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Task SampleOneAsync<T>(this Gen<T> gen, Func<T, Task> assert, string seed = null, Func<T, string> print = null)
+    public static Task SampleOneAsync<T>(this Gen<T> gen, Func<T, Task> assert, string? seed = null, Func<T, string>? print = null)
         => SampleAsync(gen, assert, seed, 1, -2, 1, print);
 
     /// <summary>Sample the gen once calling the predicate.</summary>
@@ -855,7 +855,7 @@ public static partial class Check
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null, Func<T, string> print = null)
+    public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string? seed = null, Func<T, string>? print = null)
         => Sample(gen, predicate, seed, 1, -2, 1, print);
 
     /// <summary>Sample the gen once calling the predicate.</summary>
@@ -863,13 +863,16 @@ public static partial class Check
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Task SampleOneAsync<T>(this Gen<T> gen, Func<T, Task<bool>> predicate, string seed = null, Func<T, string> print = null)
+    public static Task SampleOneAsync<T>(this Gen<T> gen, Func<T, Task<bool>> predicate, string? seed = null, Func<T, string>? print = null)
         => SampleAsync(gen, predicate, seed, 1, -2, 1, print);
 
     sealed class ModelBasedData<Actual, Model>
     {
-        public Actual ActualState; public Model ModelState; public uint Stream; public ulong Seed;
-        public (string, Action<Actual, Model>)[] Operations; public Exception Exception;
+        public ModelBasedData(Actual actualState, Model modelState, uint stream, ulong seed, (string, Action<Actual, Model>)[] operations)
+        {
+            ActualState = actualState; ModelState = modelState; Stream = stream; Seed = seed; Operations = operations;
+        }
+        public Actual ActualState; public Model ModelState; public uint Stream; public ulong Seed; public (string, Action<Actual, Model>)[] Operations; public Exception? Exception;
     }
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
@@ -884,16 +887,16 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model>[] operations,
-        Func<Actual, Model, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
     {
-        if (equal is null) equal = ModelEqual;
-        if (seed is null) seed = Seed;
+        equal ??= ModelEqual;
+        seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
-        if (printActual is null) printActual = Print;
-        if (printModel is null) printModel = Print;
+        printActual ??= Print;
+        printModel ??= Print;
 
         var opNameActions = new Gen<(string, Action<Actual, Model>)>[operations.Length];
         for (int i = 0; i < operations.Length; i++)
@@ -903,21 +906,13 @@ public static partial class Check
             opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2)) : op;
         }
 
-        Gen.Create((PCG pcg, Size min, out Size size) =>
+        Gen.Create((PCG pcg, Size? min, out Size size) =>
         {
             var stream = pcg.Stream;
             var seed = pcg.Seed;
             return (initial.Generate(pcg, null, out size), stream, seed);
         })
-        .Select(Gen.OneOf(opNameActions).Array, (a, b) =>
-             new ModelBasedData<Actual, Model>
-             {
-                 ActualState = a.Item1.Item1,
-                 ModelState = a.Item1.Item2,
-                 Stream = a.stream,
-                 Seed = a.seed,
-                 Operations = b
-             })
+        .Select(Gen.OneOf(opNameActions).Array, (a, b) => new ModelBasedData<Actual, Model>(a.Item1.Item1, a.Item1.Item2, a.stream, a.seed, b))
         .Sample(d =>
         {
             try
@@ -965,8 +960,8 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation,
-        Func<Actual, Model, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
         => SampleModelBased(initial, new[] { operation }, equal, seed, iter, time, threads, printActual, printModel);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
@@ -983,8 +978,8 @@ public static partial class Check
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2,
-        Func<Actual, Model, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
         => SampleModelBased(initial, new[] { operation1, operation2 }, equal, seed, iter, time, threads, printActual, printModel);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
@@ -1002,8 +997,8 @@ public static partial class Check
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3,
-        Func<Actual, Model, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
         => SampleModelBased(initial, new[] { operation1, operation2, operation3 }, equal, seed, iter, time, threads, printActual, printModel);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
@@ -1022,8 +1017,8 @@ public static partial class Check
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
-        Func<Actual, Model, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
         => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, iter, time, threads, printActual, printModel);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
@@ -1044,8 +1039,8 @@ public static partial class Check
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         GenOperation<Actual, Model> operation5,
-        Func<Actual, Model, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
         => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5 },
             equal, seed, iter, time, threads, printActual, printModel);
 
@@ -1068,12 +1063,19 @@ public static partial class Check
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         GenOperation<Actual, Model> operation5, GenOperation<Actual, Model> operation6,
-        Func<Actual, Model, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string> printActual = null, Func<Model, string> printModel = null)
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
         => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
             equal, seed, iter, time, threads, printActual, printModel);
 
-    sealed class MetamorphicData<T> { public T State1; public T State2; public uint Stream; public ulong Seed; public Exception Exception; }
+    sealed class MetamorphicData<T> {
+        public MetamorphicData(T state1, T state2, uint stream, ulong seed)
+        {
+            State1 = state1; State2 = state2; Stream = stream; Seed = seed;
+        }
+        public T State1; public T State2; public uint Stream; public ulong Seed; public Exception? Exception;
+
+    }
 
     /// <summary>Sample metamorphic (two path) operations on a random initial state checking that both paths are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1086,23 +1088,23 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     public static void SampleMetamorphic<T>(this Gen<T> initial, GenMetamorphic<T> operations,
-        Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<T, string> print = null)
+        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<T, string>? print = null)
     {
-        if (equal is null) equal = ModelEqual;
-        if (seed is null) seed = Seed;
+        equal ??= ModelEqual;
+        seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
-        if (print is null) print = Print;
+        print ??= Print;
 
-        Gen.Create((PCG pcg, Size min, out Size size) =>
+        Gen.Create((PCG pcg, Size? min, out Size size) =>
         {
             var stream = pcg.Stream;
             var seed = pcg.Seed;
             var i1 = initial.Generate(pcg, null, out size);
             var i2 = initial.Generate(new PCG(stream, seed), null, out size);
-            return new MetamorphicData<T> { State1 = i1, State2 = i2, Stream = stream, Seed = seed };
+            return new MetamorphicData<T>(i1, i2, stream, seed);
         })
         .Select(operations)
         .Sample(d =>
@@ -1141,8 +1143,11 @@ public static partial class Check
 
     sealed class ConcurrentData<T>
     {
-        public T State; public uint Stream; public ulong Seed; public (string, Action<T>)[] Operations;
-        public int Threads; public int[] ThreadIds; public Exception Exception;
+        public ConcurrentData(T state, uint stream, ulong seed, (string, Action<T>)[] operations, int threads)
+        {
+            State = state; Stream = stream; Seed = seed; Operations = operations; Threads = threads;
+        }
+        public T State; public uint Stream; public ulong Seed; public (string, Action<T>)[] Operations; public int Threads; public int[]? ThreadIds; public Exception? Exception;
     }
 
     internal const int MAX_CONCURRENT_OPERATIONS = 10;
@@ -1161,16 +1166,16 @@ public static partial class Check
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T>[] operations,
-        Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
+        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
     {
-        if (equal is null) equal = Equal;
-        if (seed is null) seed = Seed;
+        equal ??= Equal;
+        seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
-        if (print is null) print = Print;
+        print ??= Print;
         if (replay == -1) replay = Replay;
-        int[] replayThreads = null;
+        int[]? replayThreads = null;
         if (seed is not null && seed.Contains("["))
         {
             int i = seed.IndexOf('[');
@@ -1189,14 +1194,14 @@ public static partial class Check
 
         bool firstIteration = true;
 
-        Gen.Create((PCG pcg, Size min, out Size size) =>
+        Gen.Create((PCG pcg, Size? min, out Size size) =>
         {
             var stream = pcg.Stream;
             var seed = pcg.Seed;
             return (initial.Generate(pcg, null, out size), stream, seed);
         })
         .Select(Gen.OneOf(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS].SelectTuple(ops => Gen.Int[1, Math.Min(threads, ops.Length)]), (a, b) =>
-            new ConcurrentData<T> { State = a.Item1, Stream = a.stream, Seed = a.seed, Operations = b.V0, Threads = b.V1 }
+            new ConcurrentData<T>(a.Item1, a.stream, a.seed, b.V0, b.V1)
         )
         .Sample(cd =>
         {
@@ -1215,7 +1220,7 @@ public static partial class Check
                     cd.Exception = e;
                     break;
                 }
-                System.Threading.Tasks.Parallel.ForEach(Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
+                Parallel.ForEach(Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
                 {
                     var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed), null, out _);
                     try
@@ -1242,7 +1247,7 @@ public static partial class Check
             sb.Append("\nInitial state: ").Append(print(initial.Generate(new PCG(p.Stream, p.Seed), null, out _)));
             sb.Append("\n  Final state: ").Append(p.Exception is not null ? p.Exception.ToString() : print(p.State));
             bool first = true;
-            foreach (var sequence in Permutations(p.ThreadIds, p.Operations))
+            foreach (var sequence in Permutations(p.ThreadIds!, p.Operations))
             {
                 var linearState = initial.Generate(new PCG(p.Stream, p.Seed), null, out _);
                 string result;
@@ -1279,7 +1284,7 @@ public static partial class Check
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation,
-        Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
+        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
         => SampleConcurrent(initial, new[] { operation }, equal, seed, iter, time, threads, print, replay);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
@@ -1297,7 +1302,7 @@ public static partial class Check
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
-        Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
+        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
         => SampleConcurrent(initial, new[] { operation1, operation2 }, equal, seed, iter, time, threads, print, replay);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
@@ -1317,7 +1322,7 @@ public static partial class Check
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
         GenOperation<T> operation3,
-        Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
+        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
         => SampleConcurrent(initial, new[] { operation1, operation2, operation3 }, equal, seed, iter, time, threads, print, replay);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
@@ -1338,7 +1343,7 @@ public static partial class Check
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
         GenOperation<T> operation3, GenOperation<T> operation4,
-        Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
+        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
         => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, iter, time, threads, print, replay);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
@@ -1360,7 +1365,7 @@ public static partial class Check
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
         GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5,
-        Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
+        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
         => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5 },
             equal, seed, iter, time, threads, print, replay);
 
@@ -1384,7 +1389,7 @@ public static partial class Check
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
         GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5, GenOperation<T> operation6,
-        Func<T, T, bool> equal = null, string seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string> print = null, int replay = -1)
+        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
         => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
             equal, seed, iter, time, threads, print, replay);
 
@@ -1425,9 +1430,9 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
         if (timeout == -1) timeout = Timeout;
-        var r = new FasterResult { Median = new MedianEstimator() };
+        var r = new FasterResult();
         var mre = new ManualResetEventSlim();
-        Exception exception = null;
+        Exception? exception = null;
         while (threads-- > 0)
             ThreadPool.UnsafeQueueUserWorkItem(_ =>
             {
@@ -1477,7 +1482,7 @@ public static partial class Check
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Action<T, T> assertEqual = null,
+    public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Action<T, T>? assertEqual = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
     {
         if (sigma == -1.0) sigma = Sigma;
@@ -1485,9 +1490,9 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
         if (timeout == -1) timeout = Timeout;
-        var r = new FasterResult { Median = new MedianEstimator() };
+        var r = new FasterResult();
         var mre = new ManualResetEventSlim();
-        Exception exception = null;
+        Exception? exception = null;
         while (threads-- > 0)
             ThreadPool.UnsafeQueueUserWorkItem(_ =>
             {
@@ -1578,7 +1583,7 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
         var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout == -1 ? Timeout : timeout);
-        var r = new FasterResult { Median = new MedianEstimator() };
+        var r = new FasterResult();
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
         while (threads-- > 0)
@@ -1653,7 +1658,7 @@ public static partial class Check
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T>(Func<Task<T>> faster, Func<Task<T>> slower, Action<T, T> assertEqual = null,
+    public static Task<FasterResult> FasterAsync<T>(Func<Task<T>> faster, Func<Task<T>> slower, Action<T, T>? assertEqual = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
     {
         if (sigma == -1.0) sigma = Sigma;
@@ -1661,7 +1666,7 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
         var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout == -1 ? Timeout : timeout);
-        var r = new FasterResult { Median = new MedianEstimator() };
+        var r = new FasterResult();
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
         while (threads-- > 0)
@@ -1780,23 +1785,23 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static FasterResult Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
     {
         if (sigma == -1.0) sigma = Sigma;
         sigma *= sigma; // using sigma as sigma squared now
-        if (seed is null) seed = Seed;
+        seed ??= Seed;
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
         if (timeout == -1) timeout = Timeout;
-        var r = new FasterResult { Median = new MedianEstimator() };
+        var r = new FasterResult();
         var mre = new ManualResetEventSlim();
-        Exception exception = null;
+        Exception? exception = null;
         while (threads-- > 0)
             ThreadPool.UnsafeQueueUserWorkItem(__ =>
             {
                 var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
                 ulong state = 0;
-                T t = default;
+                T? t = default;
                 try
                 {
                     while (true)
@@ -1850,7 +1855,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static FasterResult Faster<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> faster, Action<T1, T2> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1864,7 +1869,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static FasterResult Faster<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> faster, Action<T1, T2, T3> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1878,7 +1883,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static FasterResult Faster<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> faster, Action<T1, T2, T3, T4> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1892,7 +1897,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static FasterResult Faster<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> faster, Action<T1, T2, T3, T4, T5> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1906,7 +1911,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static FasterResult Faster<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> faster, Action<T1, T2, T3, T4, T5, T6> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1920,7 +1925,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> faster, Action<T1, T2, T3, T4, T5, T6, T7> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1934,7 +1939,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> faster, Action<T1, T2, T3, T4, T5, T6, T7, T8> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -1948,15 +1953,15 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static Task<FasterResult> FasterAsync<T>(this Gen<T> gen, Func<T, Task> faster, Func<T, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
     {
         if (sigma == -1.0) sigma = Sigma;
         sigma *= sigma; // using sigma as sigma squared now
-        if (seed is null) seed = Seed;
+        seed ??= Seed;
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
         var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout == -1 ? Timeout : timeout);
-        var r = new FasterResult { Median = new MedianEstimator() };
+        var r = new FasterResult();
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
         while (threads-- > 0)
@@ -1964,7 +1969,7 @@ public static partial class Check
             {
                 var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
                 ulong state = 0;
-                T t = default;
+                T? t = default;
                 try
                 {
                     while (true)
@@ -2041,7 +2046,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static Task<FasterResult> FasterAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> faster, Func<T1, T2, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2055,7 +2060,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static Task<FasterResult> FasterAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> faster, Func<T1, T2, T3, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2069,7 +2074,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static Task<FasterResult> FasterAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> faster, Func<T1, T2, T3, T4, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2083,7 +2088,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> faster, Func<T1, T2, T3, T4, T5, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2097,7 +2102,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> faster, Func<T1, T2, T3, T4, T5, T6, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2111,7 +2116,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2125,7 +2130,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2139,24 +2144,24 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T, R>(this Gen<T> gen, Func<T, R> faster, Func<T, R> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static FasterResult Faster<T, R>(this Gen<T> gen, Func<T, R> faster, Func<T, R> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
     {
         if (sigma == -1.0) sigma = Sigma;
         sigma *= sigma; // using sigma as sigma squared now
-        if (seed is null) seed = Seed;
+        seed ??= Seed;
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
         if (timeout == -1) timeout = Timeout;
-        var r = new FasterResult { Median = new MedianEstimator() };
+        var r = new FasterResult();
         var mre = new ManualResetEventSlim();
-        Exception exception = null;
+        Exception? exception = null;
         while (threads-- > 0)
             ThreadPool.UnsafeQueueUserWorkItem(__ =>
             {
                 var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
                 ulong state = 0;
-                T t = default;
+                T? t = default;
                 try
                 {
 
@@ -2245,8 +2250,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> faster, Func<T1, T2, R> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static FasterResult Faster<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> faster, Func<T1, T2, R> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2260,8 +2265,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> faster, Func<T1, T2, T3, R> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static FasterResult Faster<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> faster, Func<T1, T2, T3, R> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2275,8 +2280,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> faster, Func<T1, T2, T3, T4, R> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static FasterResult Faster<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> faster, Func<T1, T2, T3, T4, R> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2290,8 +2295,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> faster, Func<T1, T2, T3, T4, T5, R> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static FasterResult Faster<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> faster, Func<T1, T2, T3, T4, T5, R> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2305,8 +2310,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> faster, Func<T1, T2, T3, T4, T5, T6, R> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static FasterResult Faster<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> faster, Func<T1, T2, T3, T4, T5, T6, R> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2320,8 +2325,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, R> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, R> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2335,8 +2340,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2350,16 +2355,16 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T, R>(this Gen<T> gen, Func<T, Task<R>> faster, Func<T, Task<R>> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static Task<FasterResult> FasterAsync<T, R>(this Gen<T> gen, Func<T, Task<R>> faster, Func<T, Task<R>> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
     {
         if (sigma == -1.0) sigma = Sigma;
         sigma *= sigma; // using sigma as sigma squared now
-        if (seed is null) seed = Seed;
+        seed ??= Seed;
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
         var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout == -1 ? Timeout : timeout);
-        var r = new FasterResult { Median = new MedianEstimator() };
+        var r = new FasterResult();
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
         while (threads-- > 0)
@@ -2367,7 +2372,7 @@ public static partial class Check
             {
                 var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
                 ulong state = 0;
-                T t = default;
+                T? t = default;
                 try
                 {
 
@@ -2487,8 +2492,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<R>> faster, Func<T1, T2, Task<R>> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static Task<FasterResult> FasterAsync<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<R>> faster, Func<T1, T2, Task<R>> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2502,8 +2507,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<R>> faster, Func<T1, T2, T3, Task<R>> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static Task<FasterResult> FasterAsync<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<R>> faster, Func<T1, T2, T3, Task<R>> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2517,8 +2522,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<R>> faster, Func<T1, T2, T3, T4, Task<R>> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<R>> faster, Func<T1, T2, T3, T4, Task<R>> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2532,8 +2537,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<R>> faster, Func<T1, T2, T3, T4, T5, Task<R>> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<R>> faster, Func<T1, T2, T3, T4, T5, Task<R>> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2547,8 +2552,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, Task<R>> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, Task<R>> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2562,8 +2567,8 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2577,21 +2582,21 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> slower, Action<R, R> assertEqual = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string seed = null, bool raiseexception = true)
+    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> slower, Action<R, R>? assertEqual = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
     /// <summary>Generate an example that satisfies the predicate.</summary>
     /// <param name="gen">The data generator.</param>
     /// <param name="predicate">The predicate the data has to satisfy.</param>
     /// <param name="seed">The initial seed to use to pin the example once found.</param>
-    public static T Example<T>(this Gen<T> gen, Func<T, bool> predicate, string seed = null)
+    public static T Example<T>(this Gen<T> gen, Func<T, bool> predicate, string? seed = null)
     {
         if (seed is null)
         {
             var mre = new ManualResetEventSlim();
-            T ret = default;
-            string message = null;
+            T? ret = default;
+            string? message = null;
             var threads = Environment.ProcessorCount;
             while (threads-- > 0)
                 ThreadPool.UnsafeQueueUserWorkItem(__ =>
@@ -2618,7 +2623,7 @@ public static partial class Check
                     }
                 }, null);
             mre.Wait();
-            throw new CsCheckException(message);
+            throw new CsCheckException(message!);
         }
         else
         {
@@ -2636,7 +2641,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Equality<T>(this Gen<T> gen, string seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T, T), string> print = null)
+    public static void Equality<T>(this Gen<T> gen, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T, T), string>? print = null)
     {
         if (iter == -1) iter = Iter;
         if (iter > 1) iter /= 2;
@@ -2644,18 +2649,18 @@ public static partial class Check
         if (time > 1) time /= 2;
 
         gen.Clone().Sample((t1, t2) =>
-            t1.Equals(t2) && t2.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()
+            t1!.Equals(t2) && t2!.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()
             && (t1 is not IEquatable<T> e || (e.Equals(t2) && ((IEquatable<T>)t2).Equals(t1)))
         , seed, iter, time, threads, print);
 
         gen.Select(gen).Sample((t1, t2) =>
         {
-            bool equal = t1.Equals(t2);
+            bool equal = t1!.Equals(t2);
             return
-            (!equal && !t2.Equals(t1) && !Equals(t1, t2)
+            (!equal && !t2!.Equals(t1) && !Equals(t1, t2)
              && (t1 is not IEquatable<T> e2 || (!e2.Equals(t2) && !((IEquatable<T>)t2).Equals(t1))))
             ||
-            (equal && t2.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()
+            (equal && t2!.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()
              && (t1 is not IEquatable<T> e || (e.Equals(t2) && ((IEquatable<T>)t2).Equals(t1))));
         }, seed, iter, time, threads, print);
     }
@@ -2718,7 +2723,7 @@ public static partial class Check
 public sealed class FasterResult
 {
     public int Faster, Slower;
-    public MedianEstimator Median;
+    public MedianEstimator Median = new();
     public float SigmaSquared
     {
         // Binomial distribution: Mean = n p, Variance = n p q

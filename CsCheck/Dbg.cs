@@ -28,10 +28,10 @@ public static class Dbg
 {
     static ListSlim<string> info = new();
     static MapSlim<string, int> counts = new();
-    static MapSlim<string, object> objects = new();
+    static MapSlim<string, object?> objects = new();
     static MapSlim<string, Action> functions = new();
     static MapSlim<string, (long, int)> times = new();
-    static Action<string> autoOutput;
+    static Action<string>? autoOutput;
     static bool autoEveryInfo;
 
     /// <summary>Debugger break.</summary>
@@ -119,7 +119,7 @@ public static class Dbg
     }
 
     /// <summary>Get object by name.</summary>
-    public static object Get(string name) => objects[name];
+    public static object? Get(string name) => objects[name];
 
     /// <summary>Increment debug info counter. Function name when parameter not set.</summary>
     public static void Count<T>(T t)
@@ -187,7 +187,7 @@ public static class Dbg
 
     /// <summary>Classify and count generated types debug info.</summary>
     public static Gen<T> DbgClassify<T>(this Gen<T> gen, Func<T, string> name) =>
-        Gen.Create((PCG pcg, Size min, out Size size) =>
+        Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         var t = gen.Generate(pcg, min, out size);
         Count(name(t));
@@ -305,7 +305,7 @@ public static class Dbg
 
     sealed class CachedEnumerable<T> : IEnumerable<T>, IDisposable
     {
-        IEnumerator<T> _enumerator;
+        IEnumerator<T>? _enumerator;
         readonly List<T> _cache = new();
         public CachedEnumerable(IEnumerable<T> enumerable) => _enumerator = enumerable.GetEnumerator();
         public IEnumerator<T> GetEnumerator()
@@ -336,22 +336,20 @@ public static class Dbg
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    static RegressionStream regressionStream;
+    static RegressionStream? regressionStream;
     /// <summary>Saves a sequence of values on the first run and compares them on subsequent runs.</summary>
     public static RegressionStream Regression => regressionStream ??= new RegressionStream(Path.Combine(Hash.CacheDir, "Dbg.Regression.has"));
 
     public sealed class RegressionStream : IRegression
     {
         readonly string filename;
-        readonly bool reading;
-        readonly FileStream stream;
+        readonly FileStream? stream; // If not null then reading
         string lastString = "null";
         double absolute = 1e-12, relative = 1e-9;
         public RegressionStream(string filename)
         {
             this.filename = filename;
-            reading = File.Exists(filename);
-            if (reading) stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if(File.Exists(filename)) stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
             else Directory.CreateDirectory(Path.GetDirectoryName(filename));
         }
 
@@ -364,7 +362,7 @@ public static class Dbg
 
         public void Close()
         {
-            if (reading && stream.Length != stream.Position)
+            if (stream is not null && stream.Length != stream.Position)
                 throw new CsCheckException($"file (length {stream.Length}) contains more data than read (length {stream.Position})");
             regressionStream = null;
             stream?.Dispose();
@@ -378,7 +376,7 @@ public static class Dbg
 
         public void Add(bool val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadBool(stream);
                 if (val != val2)
@@ -393,7 +391,7 @@ public static class Dbg
 
         public void Add(sbyte val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadSByte(stream);
                 if (val != val2)
@@ -408,7 +406,7 @@ public static class Dbg
 
         public void Add(byte val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadByte(stream);
                 if (val != val2)
@@ -423,7 +421,7 @@ public static class Dbg
 
         public void Add(short val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadShort(stream);
                 if (val != val2)
@@ -438,7 +436,7 @@ public static class Dbg
 
         public void Add(ushort val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadUShort(stream);
                 if (val != val2)
@@ -453,7 +451,7 @@ public static class Dbg
 
         public void Add(int val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadInt(stream);
                 if (val != val2)
@@ -468,7 +466,7 @@ public static class Dbg
 
         public void Add(uint val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadUInt(stream);
                 if (val != val2)
@@ -483,7 +481,7 @@ public static class Dbg
 
         public void Add(long val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadLong(stream);
                 if (val != val2)
@@ -498,7 +496,7 @@ public static class Dbg
 
         public void Add(ulong val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadULong(stream);
                 if (val != val2)
@@ -513,7 +511,7 @@ public static class Dbg
 
         public void Add(DateTime val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadDateTime(stream);
                 if (val != val2)
@@ -528,7 +526,7 @@ public static class Dbg
 
         public void Add(TimeSpan val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadTimeSpan(stream);
                 if (val != val2)
@@ -543,7 +541,7 @@ public static class Dbg
 
         public void Add(DateTimeOffset val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadDateTimeOffset(stream);
                 if (val != val2)
@@ -558,7 +556,7 @@ public static class Dbg
 
         public void Add(Guid val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadGuid(stream);
                 if (val != val2)
@@ -573,7 +571,7 @@ public static class Dbg
 
         public void Add(char val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadChar(stream);
                 if (val != val2)
@@ -588,8 +586,8 @@ public static class Dbg
 
         public void Add(string val)
         {
-            if (val is null) val = "null";
-            if (reading)
+            val ??= "null";
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadString(stream);
                 if (val != val2)
@@ -605,7 +603,7 @@ public static class Dbg
 
         public void Add(double val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadDouble(stream);
                 if (Math.Abs(val - val2) > absolute + relative * (Math.Abs(val) + Math.Abs(val2)))
@@ -620,7 +618,7 @@ public static class Dbg
 
         public void Add(float val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadFloat(stream);
                 if (Math.Abs(val - val2) > absolute + relative * (Math.Abs(val) + Math.Abs(val2)))
@@ -635,7 +633,7 @@ public static class Dbg
 
         public void Add(decimal val)
         {
-            if (reading)
+            if (stream is not null)
             {
                 var val2 = Hash.StreamSerializer.ReadDecimal(stream);
                 if ((double)Math.Abs(val - val2) > absolute + relative * (double)(Math.Abs(val) + Math.Abs(val2)))
@@ -776,7 +774,7 @@ public static class Dbg
                 var bucketIndex = hashCode & (ent.Length - 1);
                 ent[i].Next = ent[bucketIndex].Bucket - 1;
                 ent[i].Key = key;
-                ent[i].Value = default;
+                ent[i].Value = default!;
                 ent[bucketIndex].Bucket = ++count;
                 return ref ent[i].Value;
             }

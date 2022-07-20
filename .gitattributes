@@ -1,6 +1,6 @@
 # These files are text and should be normalized (convert crlf to lf)
 *.config text eol=lf crlf=input
-*.cs text eol=lf crlf=input
+*.cs text eol=lf crlf=input diff=csharp
 *.fs text eol=lf crlf=input
 *.md text eol=lf crlf=input
 *.yml text eol=lf crlf=input

@@ -54,14 +54,15 @@ public sealed class Hash : IRegression
     readonly int Offset;
     readonly int? DecimalPlaces, SignificantFigures;
     readonly int ExpectedHash;
-    readonly Stream stream;
-    readonly string filename;
-    readonly string threadId;
+    readonly Stream? stream;
+    readonly string? filename;
+    readonly string? threadId;
     readonly bool writing;
-    readonly List<int> roundingFractions;
+    readonly List<int>? roundingFractions;
     string lastString = "null";
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    void Stream<T>(Action<Stream, T> serialize, Func<Stream, T> deserialize, T val)
+    void Stream<T>(Action<Stream, T> serialize, Func<Stream, T> deserialize, T val) where T : notnull
     {
         if (stream is not null)
         {
@@ -75,8 +76,7 @@ public sealed class Hash : IRegression
         }
     }
 
-    public Hash(int? expectedHash, int? offset = null, int? decimalPlaces = null, int? significantFigures = null
-        , string memberName = "", string filePath = "")
+    public Hash(int? expectedHash, int? offset = null, int? decimalPlaces = null, int? significantFigures = null, string memberName = "", string filePath = "")
     {
         Offset = offset ?? 0;
         DecimalPlaces = decimalPlaces;
@@ -129,7 +129,7 @@ public sealed class Hash : IRegression
 
     public int? BestOffset()
     {
-        if (roundingFractions.Count == 0) return null;
+        if (roundingFractions is null || roundingFractions.Count == 0) return null;
         roundingFractions.Sort();
         var maxDiff = OFFSET_SIZE - roundingFractions[roundingFractions.Count - 1] + roundingFractions[0];
         var maxMid = roundingFractions[roundingFractions.Count - 1] + maxDiff / 2;
@@ -162,9 +162,9 @@ public sealed class Hash : IRegression
                 }
                 else
                     File.Delete(filename + threadId);
-                replaceLock[filename].ExitWriteLock();
+                replaceLock[filename!].ExitWriteLock();
             }
-            replaceLock[filename].ExitUpgradeableReadLock();
+            replaceLock[filename!].ExitUpgradeableReadLock();
         }
     }
 
@@ -269,15 +269,15 @@ public sealed class Hash : IRegression
             if (DecimalPlaces.HasValue)
             {
                 val *= Pow10Double(DecimalPlaces.Value);
-                roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                roundingFractions!.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
             }
             else if (SignificantFigures.HasValue)
             {
-                if (val == 0.0) roundingFractions.Add(0);
+                if (val == 0.0) roundingFractions!.Add(0);
                 else
                 {
                     val *= Pow10Double(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
-                    roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                    roundingFractions!.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
                 }
             }
         }
@@ -314,15 +314,15 @@ public sealed class Hash : IRegression
             if (DecimalPlaces.HasValue)
             {
                 val *= Pow10Float(DecimalPlaces.Value);
-                roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                roundingFractions!.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
             }
             else if (SignificantFigures.HasValue)
             {
-                if (val == 0.0f) roundingFractions.Add(0);
+                if (val == 0.0f) roundingFractions!.Add(0);
                 else
                 {
                     val *= Pow10Float(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
-                    roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                    roundingFractions!.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
                 }
             }
         }
@@ -361,15 +361,15 @@ public sealed class Hash : IRegression
             if (DecimalPlaces.HasValue)
             {
                 val *= Pow10Decimal(DecimalPlaces.Value);
-                roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                roundingFractions!.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
             }
             else if (SignificantFigures.HasValue)
             {
-                if (val == 0.0M) roundingFractions.Add(0);
+                if (val == 0.0M) roundingFractions!.Add(0);
                 else
                 {
                     val *= Pow10Decimal(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10((double)Math.Abs(val))));
-                    roundingFractions.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
+                    roundingFractions!.Add((int)((val - Math.Floor(val)) * OFFSET_SIZE));
                 }
             }
         }

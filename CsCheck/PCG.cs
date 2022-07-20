@@ -23,7 +23,7 @@ public sealed class PCG
 {
     static int threadCount;
     [ThreadStatic]
-    static PCG threadPCG;
+    static PCG? threadPCG;
     public static PCG ThreadPCG => threadPCG ??= new PCG((uint)Interlocked.Increment(ref threadCount));
     readonly ulong Inc;
     public ulong State;

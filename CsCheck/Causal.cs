@@ -28,7 +28,7 @@ public static class Causal
     enum RunType { Nothing, CollectTimes, Delay }
     static RunType runType;
     static SpinLock spinLock = new(false);
-    static string delayName;
+    static string? delayName;
     static int delayTime, delayCount;
     static long onSince, totalDelay;
     static readonly List<(string, long)> times = new();
@@ -104,7 +104,7 @@ public static class Causal
     {
         if (iter == -1) iter = Check.Iter;
         if (time == -1) time = Check.Time;
-        int Run(RunType run, string name, int time)
+        int Run(RunType run, string? name, int time)
         {
             runType = run;
             delayName = name;
@@ -117,7 +117,7 @@ public static class Causal
             return (int)(Stopwatch.GetTimestamp() - start - totalDelay);
         }
         Run(RunType.CollectTimes, null, 0);
-        var summary = times.Select(i => i.Item1).Distinct().Select(i => new Result.Row { Region = i }).ToArray();
+        var summary = times.Select(i => i.Item1).Distinct().Select(i => new Result.Row(i)).ToArray();
         times.Clear();
         for (int j = 0; j < SUMMARY_STAT_COUNT; j++)
         {
@@ -131,7 +131,7 @@ public static class Causal
                     }
             times.Clear();
         }
-        var delays = new (string, int, MedianEstimator)[1 + 6 * summary.Length];
+        var delays = new (string?, int, MedianEstimator)[1 + 6 * summary.Length];
         delays[0] = (null, 0, new());
         int i = 1;
         foreach (var row in summary)
@@ -171,7 +171,7 @@ public static class Causal
             row.N15 = 100.0 - Estimate(1 + i + summary.Length * 4) / totalPct;
             row.N20 = 100.0 - Estimate(1 + i + summary.Length * 5) / totalPct;
         }
-        return new Result { Rows = summary };
+        return new Result(summary);
     }
 
     /// <summary>Run causal profiling on a the code in action using gen input data for a number of iterations or time.</summary>
@@ -187,7 +187,11 @@ public static class Causal
 
     public sealed class Result
     {
-        public class Row { public string Region; public int Count; public double Time; public MedianEstimate P10, P5, N5, N10, N15, N20; }
+        public Result(Row[] rows) => Rows = rows;
+        public class Row {
+            public Row(string region) => Region = region;
+            public string Region; public int Count; public double Time; public MedianEstimate P10, P5, N5, N10, N15, N20;
+        }
         public Row[] Rows;
         public override string ToString()
         {

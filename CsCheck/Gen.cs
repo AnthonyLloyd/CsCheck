@@ -23,7 +23,7 @@ using System.Runtime.CompilerServices;
 public sealed class Size
 {
     public ulong I;
-    public Size Next;
+    public Size? Next;
 
     public Size(ulong i) => I = i;
 
@@ -49,57 +49,57 @@ public sealed class Size
         final.Next = s;
     }
 
-    public static bool IsLessThan(Size s1, Size s2) => s1 is not null && (s2 is null || s1.I < s2.I || (s1.I == s2.I && IsLessThan(s1.Next, s2.Next)));
+    public static bool IsLessThan(Size? s1, Size? s2) => s1 is not null && (s2 is null || s1.I < s2.I || (s1.I == s2.I && IsLessThan(s1.Next, s2.Next)));
 }
 
 public interface IGen<out T>
 {
-    T Generate(PCG pcg, Size min, out Size size);
+    T Generate(PCG pcg, Size? min, out Size size);
 }
 
 /// <summary>Data and Size generator from a PCG random number generator.</summary>
 public abstract class Gen<T> : IGen<T>
 {
-    public abstract T Generate(PCG pcg, Size min, out Size size);
-    public Gen<R> Cast<R>() => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public abstract T Generate(PCG pcg, Size? min, out Size size);
+    public Gen<R> Cast<R>() => Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         var o = Generate(pcg, min, out size);
         return o is R t ? t : (R)Convert.ChangeType(o, typeof(R));
     });
 
-    public GenOperation<S> Operation<S>(Func<T, string> name, Action<S, T> action) => new((PCG pcg, Size min, out Size size) =>
+    public GenOperation<S> Operation<S>(Func<T, string> name, Action<S, T> action) => new((PCG pcg, Size? min, out Size size) =>
     {
         var t = Generate(pcg, min, out size);
         return (name(t), m => action(m, t));
     });
 
-    public GenOperation<S> Operation<S>(Action<S, T> action) => new((PCG pcg, Size min, out Size size) =>
+    public GenOperation<S> Operation<S>(Action<S, T> action) => new((PCG pcg, Size? min, out Size size) =>
     {
         var t = Generate(pcg, min, out size);
         return (" " + Check.Print(t), m => action(m, t));
     }, true);
 
     public GenOperation<Actual, Model> Operation<Actual, Model>(Func<T, string> name, Action<Actual, Model, T> action)
-        => new((PCG pcg, Size min, out Size size) =>
+        => new((PCG pcg, Size? min, out Size size) =>
     {
         var t = Generate(pcg, min, out size);
         return (name(t), (a, m) => action(a, m, t));
     });
 
     public GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, Model, T> action)
-        => new((PCG pcg, Size min, out Size size) =>
+        => new((PCG pcg, Size? min, out Size size) =>
     {
         var t = Generate(pcg, min, out size);
         return (" " + Check.Print(t), (a, m) => action(a, m, t));
     }, true);
 
-    public GenMetamorphic<S> Metamorphic<S>(Func<T, string> name, Action<S, T> action1, Action<S, T> action2) => new((PCG pcg, Size min, out Size size) =>
+    public GenMetamorphic<S> Metamorphic<S>(Func<T, string> name, Action<S, T> action1, Action<S, T> action2) => new((PCG pcg, Size? min, out Size size) =>
     {
         var t = Generate(pcg, min, out size);
         return (name(t), m => action1(m, t), m => action2(m, t));
     });
 
-    public GenMetamorphic<S> Metamorphic<S>(Action<S, T> action1, Action<S, T> action2) => new((PCG pcg, Size min, out Size size) =>
+    public GenMetamorphic<S> Metamorphic<S>(Action<S, T> action1, Action<S, T> action2) => new((PCG pcg, Size? min, out Size size) =>
     {
         var t = Generate(pcg, min, out size);
         return (Check.Print(t), m => action1(m, t), m => action2(m, t));
@@ -113,7 +113,7 @@ public abstract class Gen<T> : IGen<T>
     public GenArrayUnique<T> ArrayUnique => new(this);
 }
 
-public delegate T GenDelegate<out T>(PCG pcg, Size min, out Size size);
+public delegate T GenDelegate<out T>(PCG pcg, Size? min, out Size size);
 public delegate T GenMap<T>(T pcg, ref Size size);
 
 /// <summary>Provides a set of static methods for composing generators.</summary>
@@ -123,14 +123,14 @@ public static class Gen
     {
         readonly GenDelegate<T> generate;
         internal GenCreate(GenDelegate<T> generate) => this.generate = generate;
-        public override T Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
+        public override T Generate(PCG pcg, Size? min, out Size size) => generate(pcg, min, out size);
     }
 
     /// <summary>Create a generator from a function.</summary>
     public static Gen<T> Create<T>(GenDelegate<T> gen) => new GenCreate<T>(gen);
 
     /// <summary>Create a generator from a function.</summary>
-    public static Gen<T> Create<T>(Func<PCG, (T, Size)> gen) => new GenCreate<T>((PCG pcg, Size min, out Size size) =>
+    public static Gen<T> Create<T>(Func<PCG, (T, Size)> gen) => new GenCreate<T>((PCG pcg, Size? min, out Size size) =>
       {
           T t;
           (t, size) = gen(pcg);
@@ -138,18 +138,18 @@ public static class Gen
       });
 
     /// <summary>Create a constant generator.</summary>
-    public static Gen<T> Const<T>(T value) => Create((PCG pcg, Size min, out Size size) => { size = new Size(0L); return value; });
+    public static Gen<T> Const<T>(T value) => Create((PCG pcg, Size? min, out Size size) => { size = new Size(0L); return value; });
 
     /// <summary>Create a constant generator.</summary>
-    public static Gen<T> Const<T>(Func<T> value) => Create((PCG pcg, Size min, out Size size) => { size = new Size(0L); return value(); });
+    public static Gen<T> Const<T>(Func<T> value) => Create((PCG pcg, Size? min, out Size size) => { size = new Size(0L); return value(); });
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T, R>(this Gen<T> gen, Func<T, R> selector) =>
-        Create((PCG pcg, Size min, out Size size) => selector(gen.Generate(pcg, min, out size)));
+        Create((PCG pcg, Size? min, out Size size) => selector(gen.Generate(pcg, min, out size)));
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> selector) =>
-        Create((PCG pcg, Size min, out Size size) =>
+        Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2) = gen.Generate(pcg, min, out size);
             return selector(t1, t2);
@@ -157,7 +157,7 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> selector) =>
-        Create((PCG pcg, Size min, out Size size) =>
+        Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2, t3) = gen.Generate(pcg, min, out size);
             return selector(t1, t2, t3);
@@ -165,7 +165,7 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> selector) =>
-        Create((PCG pcg, Size min, out Size size) =>
+        Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2, t3, t4) = gen.Generate(pcg, min, out size);
             return selector(t1, t2, t3, t4);
@@ -173,7 +173,7 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> selector) =>
-        Create((PCG pcg, Size min, out Size size) =>
+        Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2, t3, t4, t5) = gen.Generate(pcg, min, out size);
             return selector(t1, t2, t3, t4, t5);
@@ -181,7 +181,7 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> selector) =>
-        Create((PCG pcg, Size min, out Size size) =>
+        Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2, t3, t4, t5, t6) = gen.Generate(pcg, min, out size);
             return selector(t1, t2, t3, t4, t5, t6);
@@ -189,7 +189,7 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) =>
-        Create((PCG pcg, Size min, out Size size) =>
+        Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2, t3, t4, t5, t6, t7) = gen.Generate(pcg, min, out size);
             return selector(t1, t2, t3, t4, t5, t6, t7);
@@ -197,7 +197,7 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector) =>
-        Create((PCG pcg, Size min, out Size size) =>
+        Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2, t3, t4, t5, t6, t7, t8) = gen.Generate(pcg, min, out size);
             return selector(t1, t2, t3, t4, t5, t6, t7, t8);
@@ -205,11 +205,11 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2,
-        Func<T1, T2, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+        Func<T1, T2, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0x2_0000_0000UL) { size = new Size(0x2_0000_0000UL); return default; }
+            if (min.I < 0x2_0000_0000UL) { size = new Size(0x2_0000_0000UL); return default!; }
             min = min.I == 0x2_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -221,11 +221,11 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
-        Func<T1, T2, T3, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+        Func<T1, T2, T3, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0x3_0000_0000UL) { size = new Size(0x3_0000_0000UL); return default; }
+            if (min.I < 0x3_0000_0000UL) { size = new Size(0x3_0000_0000UL); return default!; }
             min = min.I == 0x3_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -239,11 +239,11 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
-        Func<T1, T2, T3, T4, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+        Func<T1, T2, T3, T4, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0x4_0000_0000UL) { size = new Size(0x4_0000_0000UL); return default; }
+            if (min.I < 0x4_0000_0000UL) { size = new Size(0x4_0000_0000UL); return default!; }
             min = min.I == 0x4_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -259,11 +259,11 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
-        Gen<T5> gen5, Func<T1, T2, T3, T4, T5, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+        Gen<T5> gen5, Func<T1, T2, T3, T4, T5, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0x5_0000_0000UL) { size = new Size(0x5_0000_0000UL); return default; }
+            if (min.I < 0x5_0000_0000UL) { size = new Size(0x5_0000_0000UL); return default!; }
             min = min.I == 0x5_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -281,11 +281,11 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
-        Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+        Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0x6_0000_0000UL) { size = new Size(0x6_0000_0000UL); return default; }
+            if (min.I < 0x6_0000_0000UL) { size = new Size(0x6_0000_0000UL); return default!; }
             min = min.I == 0x6_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -306,11 +306,11 @@ public static class Gen
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) =>
-        Create((PCG pcg, Size min, out Size size) =>
+        Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0x7_0000_0000UL) { size = new Size(0x7_0000_0000UL); return default; }
+            if (min.I < 0x7_0000_0000UL) { size = new Size(0x7_0000_0000UL); return default!; }
             min = min.I == 0x7_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -333,11 +333,11 @@ public static class Gen
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector)
-        => Create((PCG pcg, Size min, out Size size) =>
+        => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0x8_0000_0000UL) { size = new Size(0x8_0000_0000UL); return default; }
+            if (min.I < 0x8_0000_0000UL) { size = new Size(0x8_0000_0000UL); return default!; }
             min = min.I == 0x8_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -362,11 +362,11 @@ public static class Gen
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9,
-        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0x9_0000_0000UL) { size = new Size(0x9_0000_0000UL); return default; }
+            if (min.I < 0x9_0000_0000UL) { size = new Size(0x9_0000_0000UL); return default!; }
             min = min.I == 0x9_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -393,11 +393,11 @@ public static class Gen
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
         Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
-    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0xA_0000_0000UL) { size = new Size(0xA_0000_0000UL); return default; }
+            if (min.I < 0xA_0000_0000UL) { size = new Size(0xA_0000_0000UL); return default!; }
             min = min.I == 0xA_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -426,11 +426,11 @@ public static class Gen
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
         Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11,
-    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0xB_0000_0000UL) { size = new Size(0xB_0000_0000UL); return default; }
+            if (min.I < 0xB_0000_0000UL) { size = new Size(0xB_0000_0000UL); return default!; }
             min = min.I == 0xB_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -461,11 +461,11 @@ public static class Gen
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
         Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12,
-    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0xC_0000_0000UL) { size = new Size(0xC_0000_0000UL); return default; }
+            if (min.I < 0xC_0000_0000UL) { size = new Size(0xC_0000_0000UL); return default!; }
             min = min.I == 0xC_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -499,11 +499,11 @@ public static class Gen
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R>(this Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
         Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13,
-    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0xD_0000_0000UL) { size = new Size(0xD_0000_0000UL); return default; }
+            if (min.I < 0xD_0000_0000UL) { size = new Size(0xD_0000_0000UL); return default!; }
             min = min.I == 0xD_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -539,11 +539,11 @@ public static class Gen
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R>(this Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
         Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14,
-    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0xE_0000_0000UL) { size = new Size(0xE_0000_0000UL); return default; }
+            if (min.I < 0xE_0000_0000UL) { size = new Size(0xE_0000_0000UL); return default!; }
             min = min.I == 0xE_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -581,11 +581,11 @@ public static class Gen
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R>(this Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
         Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14, Gen<T15> gen15,
-    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0xF_0000_0000UL) { size = new Size(0xF_0000_0000UL); return default; }
+            if (min.I < 0xF_0000_0000UL) { size = new Size(0xF_0000_0000UL); return default!; }
             min = min.I == 0xF_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -625,11 +625,11 @@ public static class Gen
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R>(this Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
         Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14, Gen<T15> gen15, Gen<T16> gen16,
-    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R> selector) => Create((PCG pcg, Size min, out Size size) =>
+    Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0x10_0000_0000UL) { size = new Size(0x10_0000_0000UL); return default; }
+            if (min.I < 0x10_0000_0000UL) { size = new Size(0x10_0000_0000UL); return default!; }
             min = min.I == 0x10_0000_0000UL ? min.Next : null;
         }
         var v1 = gen1.Generate(pcg, min, out size);
@@ -668,7 +668,7 @@ public static class Gen
     });
 
     /// <summary>Projects each element of a generator into a tuple.</summary>
-    public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen0, Gen<T1> gen1) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen0, Gen<T1> gen1) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
@@ -684,7 +684,7 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a tuple.</summary>
     public static Gen<(T0 V0, T1 V1, T2 V2)> Select<T0, T1, T2>(this Gen<T0> gen0, Gen<T1> gen1, Gen<T2> gen2)
-        => Create((PCG pcg, Size min, out Size size) =>
+        => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
@@ -702,7 +702,7 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a tuple.</summary>
     public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> Select<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1,
-        Gen<T2> gen2, Gen<T3> gen3) => Create((PCG pcg, Size min, out Size size) =>
+        Gen<T2> gen2, Gen<T3> gen3) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
@@ -722,7 +722,7 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a tuple.</summary>
     public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3, T4 V4)> Select<T0, T1, T2, T3, T4>(this Gen<T0> gen0, Gen<T1> gen1,
-        Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4) => Create((PCG pcg, Size min, out Size size) =>
+        Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
@@ -744,7 +744,7 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a tuple.</summary>
     public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3, T4 V4, T5 V5)> Select<T0, T1, T2, T3, T4, T5>(this Gen<T0> gen0, Gen<T1> gen1,
-        Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5) => Create((PCG pcg, Size min, out Size size) =>
+        Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5) => Create((PCG pcg, Size? min, out Size size) =>
         {
             if (min is not null)
             {
@@ -767,7 +767,7 @@ public static class Gen
         });
 
     public static Gen<(T0 V0, T1 V1)> SelectTuple<T0, T1>(this Gen<T0> gen, Func<T0, Gen<T1>> selector)
-        => Create((PCG pcg, Size min, out Size size) =>
+        => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen.Generate(pcg, min, out size);
         if (min is not null && min.I < size.I) return default;
@@ -777,7 +777,7 @@ public static class Gen
     });
 
     public static Gen<(T0 V0, T1 V1, T2 V2)> SelectTuple<T0, T1, T2>(this Gen<T0> gen0, Gen<T1> gen1,
-        Func<T0, T1, Gen<T2>> selector) => Create((PCG pcg, Size min, out Size size) =>
+        Func<T0, T1, Gen<T2>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v0 = gen0.Generate(pcg, min, out size);
         var v1 = gen1.Generate(pcg, min, out var s);
@@ -789,7 +789,7 @@ public static class Gen
     });
 
     public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> SelectTuple<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1, Gen<T2> gen2,
-        Func<T0, T1, T2, Gen<T3>> selector) => Create((PCG pcg, Size min, out Size size) =>
+        Func<T0, T1, T2, Gen<T3>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v0 = gen0.Generate(pcg, min, out size);
         var v1 = gen1.Generate(pcg, min, out var s);
@@ -803,10 +803,10 @@ public static class Gen
     });
 
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, IGen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen.Generate(pcg, min, out size);
-        if (min is not null && min.I < size.I) return default;
+        if (min is not null && min.I < size.I) return default!;
         var vR = selector(v1).Generate(pcg, null, out var sR);
         size.Append(sR);
         return vR;
@@ -814,12 +814,12 @@ public static class Gen
 
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, Gen<R>> selector)
-        => Create((PCG pcg, Size min, out Size size) =>
+        => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen1.Generate(pcg, min, out size);
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
-        if (min is not null && min.I < size.I) return default;
+        if (min is not null && min.I < size.I) return default!;
         var vR = selector(v1, v2).Generate(pcg, null, out s);
         size.Append(s);
         return vR;
@@ -827,14 +827,14 @@ public static class Gen
 
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
-        Func<T1, T2, T3, Gen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
+        Func<T1, T2, T3, Gen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen1.Generate(pcg, min, out size);
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
-        if (min is not null && min.I < size.I) return default;
+        if (min is not null && min.I < size.I) return default!;
         var vR = selector(v1, v2, v3).Generate(pcg, null, out s);
         size.Append(s);
         return vR;
@@ -842,7 +842,7 @@ public static class Gen
 
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
-        Func<T1, T2, T3, T4, Gen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
+        Func<T1, T2, T3, T4, Gen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen1.Generate(pcg, null, out size);
         var v2 = gen2.Generate(pcg, null, out var s);
@@ -851,7 +851,7 @@ public static class Gen
         size.Add(s);
         var v4 = gen4.Generate(pcg, null, out s);
         size.Add(s);
-        if (min is not null && min.I < size.I) return default;
+        if (min is not null && min.I < size.I) return default!;
         var vR = selector(v1, v2, v3, v4).Generate(pcg, null, out s);
         size.Append(s);
         return vR;
@@ -859,7 +859,7 @@ public static class Gen
 
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
-        Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
+        Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen1.Generate(pcg, null, out size);
         var v2 = gen2.Generate(pcg, null, out var s);
@@ -870,7 +870,7 @@ public static class Gen
         size.Add(s);
         var v5 = gen5.Generate(pcg, null, out s);
         size.Add(s);
-        if (min is not null && min.I < size.I) return default;
+        if (min is not null && min.I < size.I) return default!;
         var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, null, out s);
         size.Append(s);
         return vR;
@@ -878,57 +878,57 @@ public static class Gen
 
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Func<T1, Gen<T2>> genSelector, Func<T1, T2, R> resultSelector)
-        => Create((PCG pcg, Size min, out Size size) =>
+        => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen1.Generate(pcg, null, out size);
-        if (min is not null && min.I < size.I) return default;
+        if (min is not null && min.I < size.I) return default!;
         var v2 = genSelector(v1).Generate(pcg, null, out var s);
         size.Append(s);
         return resultSelector(v1, v2);
     });
 
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<R> SelectMany<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, IGen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var (v1, v2) = gen.Generate(pcg, min, out size);
-        if (min is not null && min.I < size.I) return default;
+        if (min is not null && min.I < size.I) return default!;
         var vR = selector(v1, v2).Generate(pcg, null, out var sR);
         size.Append(sR);
         return vR;
     });
 
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, IGen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var (v1, v2, v3) = gen.Generate(pcg, min, out size);
-        if (min is not null && min.I < size.I) return default;
+        if (min is not null && min.I < size.I) return default!;
         var vR = selector(v1, v2, v3).Generate(pcg, null, out var sR);
         size.Append(sR);
         return vR;
     });
 
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, IGen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var (v1, v2, v3, v4) = gen.Generate(pcg, min, out size);
-        if (min is not null && min.I < size.I) return default;
+        if (min is not null && min.I < size.I) return default!;
         var vR = selector(v1, v2, v3, v4).Generate(pcg, null, out var sR);
         size.Append(sR);
         return vR;
     });
 
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, IGen<R>> selector) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, IGen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var (v1, v2, v3, v4, v5) = gen.Generate(pcg, min, out size);
-        if (min is not null && min.I < size.I) return default;
+        if (min is not null && min.I < size.I) return default!;
         var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, null, out var sR);
         size.Append(sR);
         return vR;
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         while (true)
         {
@@ -938,7 +938,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2)> Where<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<(T1, T2)> Where<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         while (true)
         {
@@ -948,7 +948,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3)> Where<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<(T1, T2, T3)> Where<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         while (true)
         {
@@ -958,7 +958,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4)> Where<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<(T1, T2, T3, T4)> Where<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         while (true)
         {
@@ -968,7 +968,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4, T5)> Where<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<(T1, T2, T3, T4, T5)> Where<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         while (true)
         {
@@ -978,7 +978,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4, T5, T6)> Where<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<(T1, T2, T3, T4, T5, T6)> Where<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         while (true)
         {
@@ -988,7 +988,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4, T5, T6, T7)> Where<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<(T1, T2, T3, T4, T5, T6, T7)> Where<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         while (true)
         {
@@ -998,7 +998,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> Where<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> Where<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         while (true)
         {
@@ -1008,19 +1008,19 @@ public static class Gen
     });
 
     /// <summary>Create a generator where the element is one of the constants.</summary>
-    public static Gen<T> OneOfConst<T>(params T[] constants) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<T> OneOfConst<T>(params T[] constants) => Create((PCG pcg, Size? min, out Size size) =>
     {
         size = new Size(0x1_0000_0000UL);
-        if (min is not null && min.I < size.I) return default;
+        if (min is not null && min.I < size.I) return default!;
         return constants[pcg.Next((uint)constants.Length)];
     });
 
     /// <summary>Create a generator where the element is generated from one of the generators.</summary>
-    public static Gen<T> OneOf<T>(params IGen<T>[] gens) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<T> OneOf<T>(params IGen<T>[] gens) => Create((PCG pcg, Size? min, out Size size) =>
     {
         if (min is not null)
         {
-            if (min.I < 0x1_0000_0000UL) { size = new Size(0x1_0000_0000UL); return default; }
+            if (min.I < 0x1_0000_0000UL) { size = new Size(0x1_0000_0000UL); return default!; }
             min = min.I == 0x1_0000_0000UL ? min.Next : null;
         }
         var r = gens[pcg.Next((uint)gens.Length)].Generate(pcg, min, out size);
@@ -1043,17 +1043,17 @@ public static class Gen
     {
         int total = 0;
         foreach (var (i, _) in constants) total += i;
-        return Create((PCG pcg, Size min, out Size size) =>
+        return Create((PCG pcg, Size? min, out Size size) =>
         {
             size = new Size(0x1_0000_0000UL);
-            if (min is not null && min.I < size.I) return default;
+            if (min is not null && min.I < size.I) return default!;
             var v = (int)pcg.Next((uint)total);
             foreach (var i in constants)
             {
-                v -= i.Item1;
-                if (v < 0) return i.Item2;
+                v -= i.Frequency;
+                if (v < 0) return i.Constant;
             }
-            return default;
+            return default!;
         });
     }
 
@@ -1062,26 +1062,26 @@ public static class Gen
     {
         int total = 0;
         foreach (var (i, _) in gens) total += i;
-        return Create((PCG pcg, Size min, out Size size) =>
+        return Create((PCG pcg, Size? min, out Size size) =>
         {
             if (min is not null)
             {
-                if (min.I < 0x1_0000_0000UL) { size = new Size(0x1_0000_0000UL); return default; }
+                if (min.I < 0x1_0000_0000UL) { size = new Size(0x1_0000_0000UL); return default!; }
                 min = min.I == 0x1_0000_0000UL ? min.Next : null;
             }
             var v = (int)pcg.Next((uint)total);
             foreach (var i in gens)
             {
-                v -= i.Item1;
+                v -= i.Frequency;
                 if (v < 0)
                 {
-                    var r = i.Item2.Generate(pcg, min, out size);
+                    var r = i.Generator.Generate(pcg, min, out size);
                     size = new Size(0x1_0000_0000UL, size);
                     return r;
                 }
             }
             size = new Size(0L);
-            return default;
+            return default!;
         });
     }
 
@@ -1091,9 +1091,9 @@ public static class Gen
     /// <param name="f">The function to create the generator give an instance of the generator.</param>
     public static Gen<T> Recursive<T>(Func<Gen<T>, Gen<T>> f)
     {
-        Gen<T> gen = null;
-        gen = f(Create((PCG pcg, Size min, out Size size) => gen.Generate(pcg, null, out size)));
-        return gen;
+        Gen<T>? gen = null;
+        gen = f(Create((PCG pcg, Size? min, out Size size) => gen!.Generate(pcg, null, out size)));
+        return gen!;
     }
 
     /// <summary>
@@ -1102,7 +1102,7 @@ public static class Gen
     /// <param name="f">The function to create the generator give the depth and an instance of the generator.</param>
     public static Gen<T> Recursive<T>(Func<int, Gen<T>, Gen<T>> f)
     {
-        Gen<T> gen(int i) => f(i, Create((PCG pcg, Size min, out Size size) => gen(i + 1).Generate(pcg, null, out size)));
+        Gen<T> gen(int i) => f(i, Create((PCG pcg, Size? min, out Size size) => gen(i + 1).Generate(pcg, null, out size)));
         return gen(0);
     }
 
@@ -1113,8 +1113,8 @@ public static class Gen
     /// <param name="map">The type and size map function.</param>
     public static Gen<T> Recursive<T>(Func<Gen<T>, Gen<T>> f, GenMap<T> map)
     {
-        Gen<T> gen = null;
-        gen = f(Create((PCG pcg, Size min, out Size size) => map(gen.Generate(pcg, null, out size), ref size)));
+        Gen<T>? gen = null;
+        gen = f(Create((PCG pcg, Size? min, out Size size) => map(gen!.Generate(pcg, null, out size), ref size)));
         return gen;
     }
 
@@ -1125,12 +1125,12 @@ public static class Gen
     /// <param name="map">The type and size map function.</param>
     public static Gen<T> Recursive<T>(Func<int, Gen<T>, Gen<T>> f, GenMap<T> map)
     {
-        Gen<T> gen(int i) => f(i, Create((PCG pcg, Size min, out Size size) => map(gen(i + 1).Generate(pcg, null, out size), ref size)));
+        Gen<T> gen(int i) => f(i, Create((PCG pcg, Size? min, out Size size) => map(gen(i + 1).Generate(pcg, null, out size), ref size)));
         return gen(0);
     }
 
     /// <summary>Create a second exact clone by running the generator again with the same seed.</summary>
-    public static Gen<(T V0, T V1)> Clone<T>(this Gen<T> gen) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<(T V0, T V1)> Clone<T>(this Gen<T> gen) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var seed = pcg.Seed;
         var stream = pcg.Stream;
@@ -1156,7 +1156,7 @@ public static class Gen
     }
 
     /// <summary>Create a generator by shuffling the elements.</summary>
-    public static Gen<T[]> Shuffle<T>(T[] constants) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<T[]> Shuffle<T>(T[] constants) => Create((PCG pcg, Size? min, out Size size) =>
     {
         Shuffle(constants, pcg, 0);
         size = new Size(0L);
@@ -1164,7 +1164,7 @@ public static class Gen
     });
 
     /// <summary>Shuffle the generated elements.</summary>
-    public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var a = gen.Generate(pcg, null, out size);
         Shuffle(a, pcg, 0);
@@ -1172,7 +1172,7 @@ public static class Gen
     });
 
     /// <summary>Create a generator by shuffling the elements.</summary>
-    public static Gen<T[]> Shuffle<T>(T[] a, int length) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<T[]> Shuffle<T>(T[] a, int length) => Create((PCG pcg, Size? min, out Size size) =>
     {
         size = new Size(0L);
         int lower = Math.Max(a.Length - length, 0);
@@ -1197,7 +1197,7 @@ public static class Gen
         SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
 
     /// <summary>Create a generator by shuffling the elements.</summary>
-    public static Gen<List<T>> Shuffle<T>(List<T> a) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<List<T>> Shuffle<T>(List<T> a) => Create((PCG pcg, Size? min, out Size size) =>
     {
         Shuffle(a, pcg, 0);
         size = new Size(0L);
@@ -1205,7 +1205,7 @@ public static class Gen
     });
 
     /// <summary>Create a generator by shuffling the generated elements.</summary>
-    public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var a = gen.Generate(pcg, null, out size);
         Shuffle(a, pcg, 0);
@@ -1213,7 +1213,7 @@ public static class Gen
     });
 
     /// <summary>Create a generator by shuffling the elements.</summary>
-    public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => Create((PCG pcg, Size min, out Size size) =>
+    public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => Create((PCG pcg, Size? min, out Size size) =>
     {
         size = new Size(0L);
         int lower = Math.Max(a.Count - length, 0);
@@ -1238,16 +1238,16 @@ public static class Gen
         SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
 
     public static GenOperation<T> Operation<T>(string name, Action<T> action)
-        => new((PCG pcg, Size min, out Size size) => { size = new Size(0L); return (name, action); });
+        => new((PCG pcg, Size? min, out Size size) => { size = new Size(0L); return (name, action); });
 
     public static GenOperation<T> Operation<T>(Action<T> action)
-        => new((PCG pcg, Size min, out Size size) => { size = new Size(0L); return ("", action); }, true);
+        => new((PCG pcg, Size? min, out Size size) => { size = new Size(0L); return ("", action); }, true);
 
     public static GenOperation<Actual, Model> Operation<Actual, Model>(string name, Action<Actual, Model> action)
-        => new((PCG pcg, Size min, out Size size) => { size = new Size(0L); return (name, action); });
+        => new((PCG pcg, Size? min, out Size size) => { size = new Size(0L); return (name, action); });
 
     public static GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, Model> action)
-        => new((PCG pcg, Size min, out Size size) => { size = new Size(0L); return ("", action); }, true);
+        => new((PCG pcg, Size? min, out Size size) => { size = new Size(0L); return ("", action); }, true);
 
     public static readonly GenBool Bool = new();
     public static readonly GenSByte SByte = new();
@@ -1273,7 +1273,7 @@ public static class Gen
 
 public sealed class GenBool : Gen<bool>
 {
-    public override bool Generate(PCG pcg, Size min, out Size size)
+    public override bool Generate(PCG pcg, Size? min, out Size size)
     {
         uint i = pcg.Next();
         size = new Size(i + 1UL);
@@ -1285,7 +1285,7 @@ public sealed class GenSByte : Gen<sbyte>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static ulong Zigzag(sbyte i) => (ulong)((i << 1) ^ (i >> 7));
-    public override sbyte Generate(PCG pcg, Size min, out Size size)
+    public override sbyte Generate(PCG pcg, Size? min, out Size size)
     {
         sbyte i = (sbyte)(pcg.Next() & 255u);
         size = new Size(Zigzag(i) + 1UL);
@@ -1296,7 +1296,7 @@ public sealed class GenSByte : Gen<sbyte>
         get
         {
             uint l = (uint)(finish - start) + 1u;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 sbyte i = (sbyte)(start + pcg.Next(l));
                 size = new Size(Zigzag(i) + 1UL);
@@ -1308,7 +1308,7 @@ public sealed class GenSByte : Gen<sbyte>
 
 public sealed class GenByte : Gen<byte>
 {
-    public override byte Generate(PCG pcg, Size min, out Size size)
+    public override byte Generate(PCG pcg, Size? min, out Size size)
     {
         byte i = (byte)(pcg.Next() & 255u);
         size = new Size(i + 1UL);
@@ -1320,7 +1320,7 @@ public sealed class GenByte : Gen<byte>
         {
             uint s = start;
             uint l = finish - s + 1u;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 byte i = (byte)(s + pcg.Next(l));
                 size = new Size(i + 1UL);
@@ -1336,7 +1336,7 @@ public sealed class GenShort : Gen<short>
     public static ushort Zigzag(short i) => (ushort)(i << 1 ^ i >> 31);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static short Unzigzag(ushort i) => (short)((i >> 1) ^ -(int)(i & 1U));
-    public override short Generate(PCG pcg, Size min, out Size size)
+    public override short Generate(PCG pcg, Size? min, out Size size)
     {
         uint s = pcg.Next() & 15U;
         ushort i = (ushort)(1U << (int)s);
@@ -1349,7 +1349,7 @@ public sealed class GenShort : Gen<short>
         get
         {
             uint l = (uint)(finish - start) + 1u;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 short i = (short)(start + pcg.Next(l));
                 size = new Size(Zigzag(i) + 1UL);
@@ -1361,7 +1361,7 @@ public sealed class GenShort : Gen<short>
 
 public sealed class GenUShort : Gen<ushort>
 {
-    public override ushort Generate(PCG pcg, Size min, out Size size)
+    public override ushort Generate(PCG pcg, Size? min, out Size size)
     {
         ushort i = (ushort)(pcg.Next() & 65535u);
         size = new Size(i + 1UL);
@@ -1372,7 +1372,7 @@ public sealed class GenUShort : Gen<ushort>
         get
         {
             uint l = (uint)(finish - start) + 1u;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 ushort i = (ushort)(start + pcg.Next(l));
                 size = new Size(i + 1UL);
@@ -1388,7 +1388,7 @@ public sealed class GenInt : Gen<int>
     public static uint Zigzag(int i) => (uint)(i << 1 ^ i >> 31);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int Unzigzag(uint i) => (int)(i >> 1) ^ -(int)(i & 1U);
-    public override int Generate(PCG pcg, Size min, out Size size)
+    public override int Generate(PCG pcg, Size? min, out Size size)
     {
         uint s = pcg.Next() & 31U;
         uint i = 1U << (int)s;
@@ -1396,13 +1396,13 @@ public sealed class GenInt : Gen<int>
         size = new Size((s << 27 | i & 0x7FFFFFFUL) + 1UL);
         return -Unzigzag(i);
     }
-    public Gen<int> Uniform = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<int> Uniform = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         int i = (int)pcg.Next();
         size = new Size(Zigzag(i) + 1UL);
         return i;
     });
-    public Gen<int> Positive = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<int> Positive = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint s = pcg.Next(31);
         int i = 1 << (int)s;
@@ -1410,7 +1410,7 @@ public sealed class GenInt : Gen<int>
         size = new Size((s << 27 | (ulong)i & 0x7FFFFFFUL) + 1UL);
         return i;
     });
-    public Gen<int> NonNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<int> NonNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint s = pcg.Next(31);
         int i = 1 << (int)s;
@@ -1423,7 +1423,7 @@ public sealed class GenInt : Gen<int>
         get
         {
             uint l = (uint)(finish - start) + 1u;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 int i = (int)(start + pcg.Next(l));
                 size = new Size(Zigzag(i) + 1UL);
@@ -1445,7 +1445,7 @@ public sealed class GenInt : Gen<int>
 
 public sealed class GenUInt : Gen<uint>
 {
-    public override uint Generate(PCG pcg, Size min, out Size size)
+    public override uint Generate(PCG pcg, Size? min, out Size size)
     {
         uint s = pcg.Next() & 31U;
         uint i = 1U << (int)s;
@@ -1458,7 +1458,7 @@ public sealed class GenUInt : Gen<uint>
         get
         {
             uint l = finish - start + 1u;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 uint i = start + pcg.Next(l);
                 size = new Size(i + 1UL);
@@ -1489,7 +1489,7 @@ public sealed class GenLong : Gen<long>
     public static ulong Zigzag(long i) => (ulong)(i << 1 ^ i >> 63);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static long Unzigzag(ulong i) => (long)(i >> 1) ^ -(long)(i & 1UL);
-    public override long Generate(PCG pcg, Size min, out Size size)
+    public override long Generate(PCG pcg, Size? min, out Size size)
     {
         uint s = pcg.Next() & 63U;
         ulong i = 1UL << (int)s;
@@ -1503,7 +1503,7 @@ public sealed class GenLong : Gen<long>
         {
 
             ulong l = (ulong)(finish - start) + 1ul;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 long i = start + (long)pcg.Next64(l);
                 size = new Size(Zigzag(i) + 1UL);
@@ -1515,7 +1515,7 @@ public sealed class GenLong : Gen<long>
 
 public sealed class GenULong : Gen<ulong>
 {
-    public override ulong Generate(PCG pcg, Size min, out Size size)
+    public override ulong Generate(PCG pcg, Size? min, out Size size)
     {
         uint s = pcg.Next() & 63U;
         ulong i = 1UL << (int)s;
@@ -1528,7 +1528,7 @@ public sealed class GenULong : Gen<ulong>
         get
         {
             ulong l = finish - start + 1ul;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 ulong i = start + pcg.Next64(l);
                 size = new Size(i + 1UL);
@@ -1546,7 +1546,7 @@ public sealed class GenFloat : Gen<float>
         [FieldOffset(0)] public uint I;
         [FieldOffset(0)] public float F;
     }
-    public override float Generate(PCG pcg, Size min, out Size size)
+    public override float Generate(PCG pcg, Size? min, out Size size)
     {
         uint i = pcg.Next();
         size = new Size(i + 1UL);
@@ -1558,7 +1558,7 @@ public sealed class GenFloat : Gen<float>
         {
             finish -= start;
             start -= finish;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 uint i = pcg.Next() >> 9;
                 size = new Size(i + 1UL);
@@ -1567,70 +1567,70 @@ public sealed class GenFloat : Gen<float>
         }
     }
     /// <summary>In the range 0.0 &lt;= x &lt;= max including special values.</summary>
-    public Gen<float> NonNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<float> NonNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint i = pcg.Next();
         size = new Size(i + 1UL);
         return Math.Abs(new FloatConverter { I = i }.F);
     });
     /// <summary>In the range 0.0f &lt;= x &lt; 1.0f.</summary>
-    public Gen<float> Unit = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<float> Unit = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint i = pcg.Next() >> 9;
         size = new Size(i + 1UL);
         return new FloatConverter { I = i | 0x3F800000 }.F - 1f;
     });
     /// <summary>In the range 1.0f &lt;= x &lt; 2.0f.</summary>
-    public Gen<float> OneTwo = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<float> OneTwo = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint i = pcg.Next() >> 9;
         size = new Size(i + 1UL);
         return new FloatConverter { I = i | 0x3F800000 }.F;
     });
     /// <summary>In the range 0.0 &lt; x &lt;= inf without nan.</summary>
-    public Gen<float> Positive = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<float> Positive = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint i = pcg.Next() >> 1;
         size = new Size(i + 1UL);
         return (i & 0x7F800000U) == 0x7F800000U ? (i & 0xFU) + 1U : new FloatConverter { I = i + 1U }.F;
     });
     /// <summary>In the range -inf &lt;= x &lt; 0.0 without nan.</summary>
-    public Gen<float> Negative = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<float> Negative = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint i = pcg.Next() >> 1;
         size = new Size(i + 1UL);
         return (i & 0x7F800000U) == 0x7F800000U ? -((i & 0xFU) + 1U) : new FloatConverter { I = (i + 1U) | 0x80000000U }.F;
     });
     /// <summary>Without special values nan and inf.</summary>
-    public Gen<float> Normal = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<float> Normal = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint i = pcg.Next();
         size = new Size(i + 1UL);
         return (i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU)) : new FloatConverter { I = i }.F;
     });
     /// <summary>In the range 0.0 &lt; x &lt;= max without special values nan and inf.</summary>
-    public Gen<float> NormalPositive = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<float> NormalPositive = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint i = pcg.Next() >> 1;
         size = new Size(i + 1UL);
         return (i & 0x7F800000U) == 0x7F800000U || i == 0U ? (i & 0xFU) + 1U : new FloatConverter { I = i }.F;
     });
     /// <summary>In the range min &lt;= x &lt; 0.0 without special values nan and inf.</summary>
-    public Gen<float> NormalNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<float> NormalNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint i = pcg.Next() >> 1;
         size = new Size(i + 1UL);
         return (i & 0x7F800000U) == 0x7F800000U || i == 0U ? -((i & 0xFU) + 1U) : new FloatConverter { I = i | 0x80000000U }.F;
     });
     /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
-    public Gen<float> NormalNonNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<float> NormalNonNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint i = pcg.Next() >> 1;
         size = new Size(i + 1UL);
         return (i & 0x7F800000U) == 0x7F800000U ? i & 0xFU : new FloatConverter { I = i }.F;
     });
     /// <summary>In the range min &lt;= x &lt;= 0.0 without special values nan and inf.</summary>
-    public Gen<float> NormalNonPositive = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<float> NormalNonPositive = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint i = pcg.Next() >> 1;
         size = new Size(i + 1UL);
@@ -1657,7 +1657,7 @@ public sealed class GenFloat : Gen<float>
     };
 
     /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
-    public Gen<float> Special = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<float> Special = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         uint i = pcg.Next();
         size = new Size(i + 1UL);
@@ -1667,7 +1667,7 @@ public sealed class GenFloat : Gen<float>
 
 public sealed class GenDouble : Gen<double>
 {
-    public override double Generate(PCG pcg, Size min, out Size size)
+    public override double Generate(PCG pcg, Size? min, out Size size)
     {
         ulong i = pcg.Next64();
         size = new Size((i >> 12) + 1UL);
@@ -1679,7 +1679,7 @@ public sealed class GenDouble : Gen<double>
         {
             finish -= start;
             start -= finish;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 ulong i = pcg.Next64() >> 12;
                 size = new Size(i + 1UL);
@@ -1700,70 +1700,70 @@ public sealed class GenDouble : Gen<double>
             );
 
     /// <summary>In the range 0.0 &lt;= x &lt;= inf, can be nan.</summary>
-    public Gen<double> NonNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<double> NonNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         ulong i = pcg.Next64();
         size = new Size((i >> 12) + 1UL);
         return Math.Abs(BitConverter.Int64BitsToDouble((long)i));
     });
     /// <summary>In the range 0.0 &lt;= x &lt; 1.0.</summary>
-    public Gen<double> Unit = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<double> Unit = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         ulong i = pcg.Next64() >> 12;
         size = new Size(i + 1UL);
         return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1.0;
     });
     /// <summary>In the range 1.0 &lt;= x &lt; 2.0.</summary>
-    public Gen<double> OneTwo = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<double> OneTwo = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         ulong i = pcg.Next64() >> 12;
         size = new Size(i + 1UL);
         return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000);
     });
     /// <summary>In the range 0.0 &lt; x &lt;= inf without nan.</summary>
-    public Gen<double> Positive = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<double> Positive = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         ulong i = pcg.Next64() >> 1;
         size = new Size((i >> 11) + 1UL);
         return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? ((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)(i + 1UL));
     });
     /// <summary>In the range -inf &lt;= x &lt; 0.0 without nan.</summary>
-    public Gen<double> Negative = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<double> Negative = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         ulong i = pcg.Next64() >> 1;
         size = new Size((i >> 11) + 1UL);
         return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? -(double)((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)((i + 1UL) | 0x8000000000000000U));
     });
     /// <summary>Without special values nan and inf.</summary>
-    public Gen<double> Normal = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<double> Normal = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         ulong i = pcg.Next64();
         size = new Size((i >> 12) + 1UL);
         return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL)) : BitConverter.Int64BitsToDouble((long)i);
     });
     /// <summary>In the range 0.0 &lt; x &lt;= max without special values nan and inf.</summary>
-    public Gen<double> NormalPositive = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<double> NormalPositive = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         ulong i = pcg.Next64() >> 1;
         size = new Size((i >> 11) + 1UL);
         return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U || i == 0L ? ((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)i);
     });
     /// <summary>In the range min &lt;= x &lt; 0.0 without special values nan and inf.</summary>
-    public Gen<double> NormalNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<double> NormalNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         ulong i = pcg.Next64() >> 1;
         size = new Size((i >> 11) + 1UL);
         return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U || i == 0L ? -(double)((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)(i | 0x8000000000000000U));
     });
     /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
-    public Gen<double> NormalNonNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<double> NormalNonNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         ulong i = pcg.Next64() >> 1;
         size = new Size((i >> 11) + 1UL);
         return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? i & 0xFUL : BitConverter.Int64BitsToDouble((long)i);
     });
     /// <summary>In the range min &lt;= x &lt;= 0.0 without special values nan and inf.</summary>
-    public Gen<double> NormalNonPositive = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<double> NormalNonPositive = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         ulong i = pcg.Next64() >> 1;
         size = new Size((i >> 11) + 1UL);
@@ -1789,7 +1789,7 @@ public sealed class GenDouble : Gen<double>
         _ => 0.0,
     };
     /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
-    public Gen<double> Special = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<double> Special = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         ulong i = pcg.Next64();
         size = new Size((i >> 12) + 1UL);
@@ -1809,7 +1809,7 @@ public sealed class GenDouble : Gen<double>
 
 public sealed class GenDecimal : Gen<decimal>
 {
-    public override decimal Generate(PCG pcg, Size min, out Size size)
+    public override decimal Generate(PCG pcg, Size? min, out Size size)
     {
         var scaleAndSign = (int)pcg.Next(58);
         var hi = pcg.Next();
@@ -1822,7 +1822,7 @@ public sealed class GenDecimal : Gen<decimal>
         {
             finish -= start;
             start -= finish;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 var i = pcg.Next64() >> 12;
                 size = new Size(i + 1UL);
@@ -1830,14 +1830,14 @@ public sealed class GenDecimal : Gen<decimal>
             });
         }
     }
-    public Gen<decimal> NonNegative = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<decimal> NonNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         var scale = (byte)pcg.Next(29);
         var hi = (int)pcg.Next();
         size = new Size((ulong)scale << 32 + hi);
         return new decimal((int)pcg.Next(), (int)pcg.Next(), hi, false, scale);
     });
-    public Gen<decimal> Unit = Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<decimal> Unit = Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         ulong i = pcg.Next64() >> 12;
         size = new Size(i + 1UL);
@@ -1848,7 +1848,7 @@ public sealed class GenDecimal : Gen<decimal>
 public sealed class GenDateTime : Gen<DateTime>
 {
     const ulong max = 3155378975999999999UL; //(ulong)DateTime.MaxValue.Ticks;
-    public override DateTime Generate(PCG pcg, Size min, out Size size)
+    public override DateTime Generate(PCG pcg, Size? min, out Size size)
     {
         ulong i = pcg.Next64(max);
         size = new Size((i >> 10) + 1UL);
@@ -1859,7 +1859,7 @@ public sealed class GenDateTime : Gen<DateTime>
         get
         {
             ulong l = (ulong)(finish.Ticks - start.Ticks) + 1ul;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 ulong i = (ulong)start.Ticks + pcg.Next64(l);
                 size = new Size(i + 1UL);
@@ -1872,7 +1872,7 @@ public sealed class GenDateTime : Gen<DateTime>
 public sealed class GenDate : Gen<DateTime>
 {
     const uint max = 3652058U; //(uint)(DateTime.MaxValue.Ticks / TimeSpan.TicksPerDay);
-    public override DateTime Generate(PCG pcg, Size min, out Size size)
+    public override DateTime Generate(PCG pcg, Size? min, out Size size)
     {
         uint i = pcg.Next(max);
         size = new Size(i + 1UL);
@@ -1884,7 +1884,7 @@ public sealed class GenDate : Gen<DateTime>
         {
             uint s = (uint)(start.Ticks / TimeSpan.TicksPerDay);
             uint l = (uint)((finish.Ticks - start.Ticks) / TimeSpan.TicksPerDay) + 1u;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 uint i = s + pcg.Next(l);
                 size = new Size(i + 1UL);
@@ -1896,7 +1896,7 @@ public sealed class GenDate : Gen<DateTime>
 
 public sealed class GenTimeSpan : Gen<TimeSpan>
 {
-    public override TimeSpan Generate(PCG pcg, Size min, out Size size)
+    public override TimeSpan Generate(PCG pcg, Size? min, out Size size)
     {
         ulong i = pcg.Next64();
         size = new Size((i >> 12) + 1UL);
@@ -1907,7 +1907,7 @@ public sealed class GenTimeSpan : Gen<TimeSpan>
         get
         {
             ulong l = (ulong)(finish.Ticks - start.Ticks) + 1ul;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 ulong i = (ulong)start.Ticks + pcg.Next64(l);
                 size = new Size(i + 1UL);
@@ -1921,7 +1921,7 @@ public sealed class GenDateTimeOffset : Gen<DateTimeOffset>
 {
     readonly Gen<DateTime> genDateTime = Gen.DateTime[new DateTime(1800, 1, 1), new DateTime(2200, 1, 1)];
     readonly Gen<int> genOffset = Gen.Int[-14 * 60, 14 * 60];
-    public override DateTimeOffset Generate(PCG pcg, Size min, out Size size)
+    public override DateTimeOffset Generate(PCG pcg, Size? min, out Size size)
     {
         var os = genOffset.Generate(pcg, null, out Size s1);
         var dt = genDateTime.Generate(pcg, null, out Size s2);
@@ -1941,7 +1941,7 @@ public sealed class GenGuid : Gen<Guid>
         [FieldOffset(8)] public uint I2;
         [FieldOffset(12)] public uint I3;
     }
-    public override Guid Generate(PCG pcg, Size min, out Size size)
+    public override Guid Generate(PCG pcg, Size? min, out Size size)
     {
         var c = new GuidConverter { I0 = pcg.Next(), I1 = pcg.Next(), I2 = pcg.Next(), I3 = pcg.Next() };
         size = new Size(c.I0 + c.I1 + c.I2 + c.I3 + 1UL);
@@ -1951,7 +1951,7 @@ public sealed class GenGuid : Gen<Guid>
 
 public sealed class GenChar : Gen<char>
 {
-    public override char Generate(PCG pcg, Size min, out Size size)
+    public override char Generate(PCG pcg, Size? min, out Size size)
     {
         var i = pcg.Next() & 127u;
         size = new Size(i + 1UL);
@@ -1963,7 +1963,7 @@ public sealed class GenChar : Gen<char>
         {
             uint s = start;
             uint l = finish + 1u - s;
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 var i = pcg.Next(l);
                 size = new Size(i + 1UL);
@@ -1975,7 +1975,7 @@ public sealed class GenChar : Gen<char>
     {
         get
         {
-            return Gen.Create((PCG pcg, Size min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? min, out Size size) =>
             {
                 var i = pcg.Next((uint)chars.Length);
                 size = new Size(i + 1UL);
@@ -1988,7 +1988,7 @@ public sealed class GenChar : Gen<char>
 public sealed class GenString : Gen<string>
 {
     static readonly Gen<string> d = Gen.Char.Array.Select(i => new string(i));
-    public override string Generate(PCG pcg, Size min, out Size size) => d.Generate(pcg, min, out size);
+    public override string Generate(PCG pcg, Size? min, out Size size) => d.Generate(pcg, min, out size);
     public Gen<string> this[int start, int finish] =>
         Gen.Char.Array[start, finish].Select(i => new string(i));
     public Gen<string> this[Gen<char> gen, int start, int finish] =>
@@ -2004,7 +2004,7 @@ public sealed class GenArray<T> : Gen<T[]>
     readonly Gen<T> gen;
     public GenArray(Gen<T> gen) => this.gen = gen;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    T[] Generate(PCG pcg, Size min, int length, out Size size)
+    T[] Generate(PCG pcg, Size? min, int length, out Size size)
     {
         var sizeI = ((ulong)length << 32) + 1UL;
         var vs = new T[length];
@@ -2022,16 +2022,16 @@ public sealed class GenArray<T> : Gen<T[]>
         size = new Size(sizeI, total);
         return vs;
     }
-    public override T[] Generate(PCG pcg, Size min, out Size size)
+    public override T[] Generate(PCG pcg, Size? min, out Size size)
         => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<T[]> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<T[]> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length.Generate(pcg, null, out Size sl), out size)
     );
-    public Gen<T[]> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<T[]> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length, out size)
     );
     public Gen<T[]> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<T[]> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<T[]> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
     );
 }
@@ -2041,7 +2041,7 @@ public sealed class GenArrayUnique<T> : Gen<T[]>
     readonly Gen<T> gen;
     public GenArrayUnique(Gen<T> gen) => this.gen = gen;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    T[] Generate(PCG pcg, Size min, int length, out Size size)
+    T[] Generate(PCG pcg, Size? min, int length, out Size size)
     {
         var sizeI = ((ulong)length << 32) + 1UL;
         var vs = new T[length];
@@ -2064,16 +2064,16 @@ public sealed class GenArrayUnique<T> : Gen<T[]>
         size = new Size(sizeI, size);
         return vs;
     }
-    public override T[] Generate(PCG pcg, Size min, out Size size)
+    public override T[] Generate(PCG pcg, Size? min, out Size size)
         => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<T[]> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<T[]> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length.Generate(pcg, min, out size), out size)
     );
-    public Gen<T[]> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<T[]> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length, out size)
     );
     public Gen<T[]> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<T[]> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<T[]> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
     );
 }
@@ -2083,7 +2083,7 @@ public sealed class GenEnumerable<T> : Gen<IEnumerable<T>>
     readonly Gen<T> gen;
     public GenEnumerable(Gen<T> gen) => this.gen = gen;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    IEnumerable<T> Generate(PCG pcg, Size min, int length, out Size size)
+    IEnumerable<T> Generate(PCG pcg, Size? min, int length, out Size size)
     {
         var sizeI = ((ulong)length << 32) + 1UL;
         var vs = new T[length];
@@ -2101,16 +2101,16 @@ public sealed class GenEnumerable<T> : Gen<IEnumerable<T>>
         size = new Size(sizeI, size);
         return vs;
     }
-    public override IEnumerable<T> Generate(PCG pcg, Size min, out Size size)
+    public override IEnumerable<T> Generate(PCG pcg, Size? min, out Size size)
         => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<IEnumerable<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<IEnumerable<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length.Generate(pcg, null, out _), out size)
     );
-    public Gen<IEnumerable<T>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<IEnumerable<T>> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length, out size)
     );
     public Gen<IEnumerable<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<IEnumerable<T>> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<IEnumerable<T>> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
     );
 }
@@ -2120,7 +2120,7 @@ public sealed class GenArray2D<T> : Gen<T[,]>
     readonly Gen<T> gen;
     public GenArray2D(Gen<T> gen) => this.gen = gen;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    T[,] Generate(PCG pcg, Size min, int length0, int length1, out Size size)
+    T[,] Generate(PCG pcg, Size? min, int length0, int length1, out Size size)
     {
         size = new Size((((ulong)(length0 * length1)) << 32) + 1UL);
         var vs = new T[length0, length1];
@@ -2130,15 +2130,15 @@ public sealed class GenArray2D<T> : Gen<T[,]>
                 vs[i, j] = gen.Generate(pcg, null, out _);
         return vs;
     }
-    public override T[,] Generate(PCG pcg, Size min, out Size size)
+    public override T[,] Generate(PCG pcg, Size? min, out Size size)
         => Generate(pcg, min, (int)(pcg.Next() & 127U), (int)(pcg.Next() & 127U), out size);
-    public Gen<T[,]> this[int length0, int length1] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<T[,]> this[int length0, int length1] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length0, length1, out size)
     );
-    public Gen<T[,]> this[Gen<int> length0, Gen<int> length1] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<T[,]> this[Gen<int> length0, Gen<int> length1] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length0.Generate(pcg, null, out _), length1.Generate(pcg, null, out _), out size)
     );
-    public Gen<T[,]> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<T[,]> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, (int)(pcg.Next() & 127U) + 1, out size)
     );
 }
@@ -2148,7 +2148,7 @@ public sealed class GenList<T> : Gen<List<T>>
     readonly Gen<T> gen;
     public GenList(Gen<T> gen) => this.gen = gen;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    List<T> Generate(PCG pcg, Size min, int length, out Size size)
+    List<T> Generate(PCG pcg, Size? min, int length, out Size size)
     {
         var sizeI = ((ulong)length << 32) + 1UL;
         var vs = new List<T>(length);
@@ -2166,16 +2166,16 @@ public sealed class GenList<T> : Gen<List<T>>
         size = new Size(sizeI, size);
         return vs;
     }
-    public override List<T> Generate(PCG pcg, Size min, out Size size)
+    public override List<T> Generate(PCG pcg, Size? min, out Size size)
         => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<List<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<List<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length.Generate(pcg, null, out _), out size)
     );
-    public Gen<List<T>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<List<T>> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length, out size)
     );
     public Gen<List<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<List<T>> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<List<T>> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
     );
 }
@@ -2185,7 +2185,7 @@ public sealed class GenHashSet<T> : Gen<HashSet<T>>
     readonly Gen<T> gen;
     public GenHashSet(Gen<T> gen) => this.gen = gen;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    HashSet<T> Generate(PCG pcg, Size min, int length, out Size size)
+    HashSet<T> Generate(PCG pcg, Size? min, int length, out Size size)
     {
         var sizeI = ((ulong)length << 32) + 1UL;
         var vs = new HashSet<T>();
@@ -2205,16 +2205,16 @@ public sealed class GenHashSet<T> : Gen<HashSet<T>>
         size = new Size(sizeI, size);
         return vs;
     }
-    public override HashSet<T> Generate(PCG pcg, Size min, out Size size)
+    public override HashSet<T> Generate(PCG pcg, Size? min, out Size size)
         => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<HashSet<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<HashSet<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length.Generate(pcg, null, out _), out size)
     );
-    public Gen<HashSet<T>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<HashSet<T>> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length, out size)
     );
     public Gen<HashSet<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<HashSet<T>> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<HashSet<T>> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
     );
 }
@@ -2229,7 +2229,7 @@ public sealed class GenDictionary<K, V> : Gen<Dictionary<K, V>>
         this.genV = genV;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    Dictionary<K, V> Generate(PCG pcg, Size min, int length, out Size size)
+    Dictionary<K, V> Generate(PCG pcg, Size? min, int length, out Size size)
     {
         var sizeI = ((ulong)length << 32) + 1UL;
         var vs = new Dictionary<K, V>(length);
@@ -2253,16 +2253,16 @@ public sealed class GenDictionary<K, V> : Gen<Dictionary<K, V>>
         size = new Size(sizeI, size);
         return vs;
     }
-    public override Dictionary<K, V> Generate(PCG pcg, Size min, out Size size)
+    public override Dictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
         => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<Dictionary<K, V>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<Dictionary<K, V>> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length.Generate(pcg, null, out _), out size)
     );
-    public Gen<Dictionary<K, V>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<Dictionary<K, V>> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length, out size)
     );
     public Gen<Dictionary<K, V>> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<Dictionary<K, V>> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<Dictionary<K, V>> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
     );
 }
@@ -2277,7 +2277,7 @@ public sealed class GenSortedDictionary<K, V> : Gen<SortedDictionary<K, V>>
         this.genV = genV;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    SortedDictionary<K, V> Generate(PCG pcg, Size min, int length, out Size size)
+    SortedDictionary<K, V> Generate(PCG pcg, Size? min, int length, out Size size)
     {
         var sizeI = ((ulong)length << 32) + 1UL;
         var vs = new SortedDictionary<K, V>();
@@ -2301,16 +2301,16 @@ public sealed class GenSortedDictionary<K, V> : Gen<SortedDictionary<K, V>>
         size = new Size(sizeI, size);
         return vs;
     }
-    public override SortedDictionary<K, V> Generate(PCG pcg, Size min, out Size size)
+    public override SortedDictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
         => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<SortedDictionary<K, V>> this[Gen<int> length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<SortedDictionary<K, V>> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length.Generate(pcg, null, out _), out size)
     );
-    public Gen<SortedDictionary<K, V>> this[int length] => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<SortedDictionary<K, V>> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, length, out size)
     );
     public Gen<SortedDictionary<K, V>> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<SortedDictionary<K, V>> Nonempty => Gen.Create((PCG pcg, Size min, out Size size) =>
+    public Gen<SortedDictionary<K, V>> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
         Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
     );
 }
@@ -2325,7 +2325,7 @@ public sealed class GenOperation<T> : Gen<(string, Action<T>)>
         this.generate = generate;
         AddOpNumber = addOpNumber;
     }
-    public override (string, Action<T>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
+    public override (string, Action<T>) Generate(PCG pcg, Size? min, out Size size) => generate(pcg, min, out size);
 }
 
 public sealed class GenOperation<T1, T2> : Gen<(string, Action<T1, T2>)>
@@ -2338,7 +2338,7 @@ public sealed class GenOperation<T1, T2> : Gen<(string, Action<T1, T2>)>
         this.generate = generate;
         AddOpNumber = addOpNumber;
     }
-    public override (string, Action<T1, T2>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
+    public override (string, Action<T1, T2>) Generate(PCG pcg, Size? min, out Size size) => generate(pcg, min, out size);
 }
 
 public sealed class GenMetamorphic<T> : Gen<(string, Action<T>, Action<T>)>
@@ -2346,5 +2346,5 @@ public sealed class GenMetamorphic<T> : Gen<(string, Action<T>, Action<T>)>
     readonly GenDelegate<(string, Action<T>, Action<T>)> generate;
     internal GenMetamorphic(GenDelegate<(string, Action<T>, Action<T>)> generate) => this.generate = generate;
 
-    public override (string, Action<T>, Action<T>) Generate(PCG pcg, Size min, out Size size) => generate(pcg, min, out size);
+    public override (string, Action<T>, Action<T>) Generate(PCG pcg, Size? min, out Size size) => generate(pcg, min, out size);
 }

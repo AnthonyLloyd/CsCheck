@@ -125,7 +125,9 @@ public static partial class Check
     /// <summary>Default equal implementation. Handles most collections ordered for IList like or unordered for ICollection based.</summary>
     public static bool Equal<T>(T a, T b)
     {
-        if (a is IEquatable<T> aieq) return aieq.Equals(b);
+        if (a is null && b is null) return true;
+        else if (a is null || b is null) return false;
+        else if (a is IEquatable<T> aieq) return aieq.Equals(b);
         else if (a is Array aa2 && b is Array ba2 && aa2.Rank == 2)
         {
             int I = aa2.GetLength(0), J = aa2.GetLength(1);
@@ -172,6 +174,8 @@ public static partial class Check
     /// <summary>Default model equal implementation. Handles most collections ordered when actual is IList like or unordered when actual is ICollection based.</summary>
     public static bool ModelEqual<T, M>(T actual, M model)
     {
+        if (actual is null && model is null) return true;
+        else if(actual is null || model is null) return false;
         if (actual is IList ail && model is IList bil)
         {
             if (ail.Count != bil.Count) return false;
@@ -207,10 +211,10 @@ public static partial class Check
     }
 
     static readonly int[] DummyArray = new int[MAX_CONCURRENT_OPERATIONS];
-    internal static void Run<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[] threadIds = null)
+    internal static void Run<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[]? threadIds = null)
     {
-        if (threadIds is null) threadIds = DummyArray;
-        Exception exception = null;
+        threadIds ??= DummyArray;
+        Exception? exception = null;
         var opId = -1;
         var runners = new Thread[threads];
         while (--threads >= 0)
@@ -240,7 +244,7 @@ public static partial class Check
 
     internal static void RunReplay<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[] threadIds)
     {
-        Exception exception = null;
+        Exception? exception = null;
         var runners = new Thread[threads];
         while (--threads >= 0)
         {
