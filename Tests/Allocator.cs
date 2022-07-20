@@ -65,97 +65,12 @@ public static class Allocator
         return results;
     }
 
-    public static long[] BalinskiYoung(long total, double[] weights)
-    {
-        var sumWeights = Sum(weights);
-        var results = new long[weights.Length];
-        long h = 0;
-        while (h++ != total)
-        {
-            var max = double.MinValue;
-            var wei = double.MinValue;
-            var index = -1;
-            for (int i = 0; i < weights.Length; i++)
-            {
-                var r = results[i];
-                var w = weights[i];
-                if (r < w * h / sumWeights)
-                {
-                    var v = w / (1 + r);
-                    if (v > max || (v == max && w > wei))
-                    {
-                        max = v;
-                        wei = w;
-                        index = i;
-                    }
-                }
-            }
-            results[index]++;
-        }
-        return results;
-    }
-
-    /// <summary>
-    /// Allocate the next total given the total of previous allocations.
-    /// </summary>
-    /// <param name="total">The next total to allocate.</param>
-    /// <param name="weights">The weights to allocate to.</param>
-    /// <param name="previous">The total of all the previous allocations.</param>
-    /// <returns>The allocation of total.</returns>
-    public static long[] Allocate(long total, double[] weights, long[] previous)
-    {
-        for (int i = 0; i < previous.Length; i++)
-            total += previous[i];
-        var result = ErrorMinimising(total, weights);
-        for (int i = 0; i < previous.Length; i++)
-            result[i] -= previous[i];
-        return result;
-    }
-
-    public static long[] AllocateFloor(long total, double[] weights)
-    { // Floor can't be made to work as it doesn't do NegativeExample properly
-        var sumWeights = Sum(weights);
-        var results = new long[weights.Length];
-        for (int i = 0; i < weights.Length; i++)
-            results[i] = (long)Math.Floor(total * weights[i] / sumWeights);
-        var residual = total - Sum(results);
-        if (residual > results.Length || residual < 0)
-            throw new Exception($"Numeric overflow, total={total}, sum weights={sumWeights}");
-        while (residual != 0)
-        {
-            var minAbsError = double.MaxValue;
-            var minRelError = double.MaxValue;
-            var minErrorIndex = 0;
-            for (int i = 0; i < weights.Length; i++)
-            {
-                var required = total * weights[i];
-                var actual = results[i] * sumWeights;
-                var absErrorIncrease = Math.Abs(actual + sumWeights - required) - Math.Abs(actual - required);
-                var relErrorIncrease = absErrorIncrease / Math.Abs(required);
-                if (absErrorIncrease < minAbsError || (absErrorIncrease == minAbsError && relErrorIncrease < minRelError))
-                {
-                    minAbsError = absErrorIncrease;
-                    minRelError = relErrorIncrease;
-                    minErrorIndex = i;
-                }
-            }
-            results[minErrorIndex]++;
-            residual--;
-        }
-        return results;
-    }
-
     public static long[][] Allocate(long[] totals, double[] weights)
     {
         var results = new long[totals.Length][];
         var sumTotals = Sum(totals);
         var sumWeights = Sum(weights);
         var residualWeights = ErrorMinimising(sumTotals, weights);
-        //// Reset the weights to the allocated values
-        //weights = new double[weights.Length];
-        //for (int i = 0; i < weights.Length; i++)
-        //    weights[i] = residualWeights[i];
-        //var sumWeights = sumTotals;
         var residualTotals = new long[totals.Length];
         for (int t = 0; t < totals.Length; t++)
         {
@@ -187,8 +102,10 @@ public static class Allocator
                 for (int w = 0; w < weights.Length; w++)
                 {
                     if (residualWeights[w] == 0) continue;
+                    var result = resultsT[w];
+                    if ((long)Math.Ceiling(total * weights[w] / sumWeights) == result) continue;
                     var weight = weights[w];
-                    var abs = AbsoluteErrorChange2(weight, resultsT[w], sumWeights, total);
+                    var abs = AbsoluteErrorChange(weight, resultsT[w], sumWeights, total, 1);
                     var rel = abs / Math.Abs(weight);
                     var wei = sumWeights > 0.0 ? -weight : weight;
                     if (abs < minAbs || (abs == minAbs && (rel < minRel || (rel == minRel && wei < minWei))))
@@ -209,10 +126,131 @@ public static class Allocator
         return results;
     }
 
-    static double AbsoluteErrorChange2(double weight, long n, double sumWeights, long total)
+    public static long[] BalinskiYoung(long total, double[] weights)
     {
-        var ndouble = total * weight;
-        return Math.Abs((n + 1) * sumWeights - ndouble) - Math.Abs(n * sumWeights - ndouble);
+        var sumWeights = Sum(weights);
+        var results = new long[weights.Length];
+        long h = 0;
+        while (h++ != total)
+        {
+            var max = double.MinValue;
+            var wei = double.MinValue;
+            var index = -1;
+            for (int i = 0; i < weights.Length; i++)
+            {
+                var r = results[i];
+                var w = weights[i];
+                if (r < w * h / sumWeights)
+                {
+                    var v = w / (1 + r);
+                    if (v > max || (v == max && w > wei))
+                    {
+                        max = v;
+                        wei = w;
+                        index = i;
+                    }
+                }
+            }
+            results[index]++;
+        }
+        return results;
+    }
+
+    public static long[][] BalinskiYoung(long total, double[][] weights)
+    {
+        var sumWeights = 0.0;
+        for (int i = 0; i < weights.Length; i++)
+            sumWeights += Sum(weights[i]);
+        var results = new long[weights.Length][];
+        for (int i = 0; i < weights.Length; i++)
+            results[i] = new long[weights[i].Length];
+        long h = 0;
+        while (h++ != total)
+        {
+            var max = double.MinValue;
+            var wei = double.MinValue;
+            var indexI = -1;
+            var indexJ = -1;
+            for (int i = 0; i < weights.Length; i++)
+            {
+                var resultsI = results[i];
+                var weightsI = weights[i];
+                for (int j = 0; j < weightsI.Length; j++)
+                {
+                    var r = resultsI[j];
+                    var w = weightsI[j];
+                    if (r < w * h / sumWeights)
+                    {
+                        var v = w / (1 + r);
+                        if (v > max || (v == max && w > wei))
+                        {
+                            max = v;
+                            wei = w;
+                            indexI = i;
+                            indexJ = j;
+                        }
+                    }
+                }
+            }
+            results[indexI][indexJ]++;
+        }
+        return results;
+    }
+
+    public static long[][] BalinskiYoung(long[] totals, double[] weights)
+    {
+        var results = new long[totals.Length][];
+        var sumWeights = Sum(weights);
+        var cumulativeTotal = new long[weights.Length];
+        var h = 0L;
+        var total = 0L;
+        var t = 0;
+        while (true)
+        {
+            total += totals[t];
+            while (h != total)
+            {
+                h++;
+                var max = double.MinValue;
+                var wei = double.MinValue;
+                var index = -1;
+                for (int i = 0; i < weights.Length; i++)
+                {
+                    var r = cumulativeTotal[i];
+                    var w = weights[i];
+                    if (r < w * h / sumWeights)
+                    {
+                        var v = w / (1 + r);
+                        if (v > max || (v == max && w > wei))
+                        {
+                            max = v;
+                            wei = w;
+                            index = i;
+                        }
+                    }
+                }
+                cumulativeTotal[index]++;
+            }
+            if (t < totals.Length - 1)
+            {
+                results[t++] = (long[])cumulativeTotal.Clone();
+            }
+            else
+            {
+                results[t] = cumulativeTotal;
+                break;
+            }
+        }
+        t = results.Length - 1;
+        var next = results[t];
+        for(; t > 0 ; t--)
+        {
+            var resultsT1 = results[t - 1];
+            for (int i = 0; i < next.Length; i++)
+                next[i] -= resultsT1[i];
+            next = resultsT1;
+        }
+        return results;
     }
 }
 

@@ -20,7 +20,7 @@ internal static class AllocatorCheck
                 if (allocs.Sum() != total)
                     return false;
             return true;
-        });
+        }, seed: "bxR2SBs8lofc");
     }
 
     public static void GivesOppositeForNegativeTotal(Gen<(long Total, double[] Weights)> gen, Func<long, double[], long[]> allocate)
@@ -192,5 +192,27 @@ internal static class AllocatorCheck
             }
             return true;
         });
+    }
+
+    public static void BetweenFloorAndCeiling(Gen<(long[] Totals, double[] Weights)> gen, Func<long[], double[], long[][]> allocate)
+    {
+        gen.Where((totals, weights) => totals.All(t => t >= 0) && weights.All(w => w >= 0))
+        .Sample((totals, weights) =>
+        {
+            var sumWeights = weights.Sum();
+            var allocations = allocate(totals, weights);
+            for (int i = 0; i < allocations.Length; i++)
+            {
+                var total = totals[i];
+                var allocationsI = allocations[i];
+                for (int j = 0; j < weights.Length; j++)
+                {
+                    var doubleAllocation = total * weights[j] / sumWeights;
+                    if (allocationsI[j] < Math.Floor(doubleAllocation) || allocationsI[j] > Math.Ceiling(doubleAllocation))
+                        return false;
+                }
+            }
+            return true;
+        }, seed: "8-J0IDdNLP_5");
     }
 }
