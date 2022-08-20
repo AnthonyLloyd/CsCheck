@@ -15,28 +15,28 @@ public class AllocatorTests
 
     [Fact]
     public void ErrorMinimising_TotalsCorrectly()
-        => AllocatorCheck.TotalsCorrectly(genAllocateAllSigns, Allocator.ErrorMinimising);
+        => AllocatorCheck.TotalsCorrectly(genAllocateAllSigns, Allocator.Allocate);
     [Fact]
     public void ErrorMinimising_BetweenFloorAndCeiling()
-        => AllocatorCheck.BetweenFloorAndCeiling(genAllocateAllSigns, Allocator.ErrorMinimising);
+        => AllocatorCheck.BetweenFloorAndCeiling(genAllocateAllSigns, Allocator.Allocate);
     [Fact]
     public void ErrorMinimising_SmallerWeightsDontGetLargerAllocation()
-        => AllocatorCheck.SmallerWeightsDontGetLargerAllocation(genAllocateAllSigns, Allocator.ErrorMinimising);
+        => AllocatorCheck.SmallerWeightsDontGetLargerAllocation(genAllocateAllSigns, Allocator.Allocate);
     [Fact]
     public void ErrorMinimising_GivesOppositeForNegativeTotal()
-        => AllocatorCheck.GivesOppositeForNegativeTotal(genAllocateAllSigns, Allocator.ErrorMinimising);
+        => AllocatorCheck.GivesOppositeForNegativeTotal(genAllocateAllSigns, Allocator.Allocate);
     [Fact]
     public void ErrorMinimising_GivesSameForNegativeWeights()
-        => AllocatorCheck.GivesSameForNegativeWeights(genAllocateAllSigns, Allocator.ErrorMinimising);
+        => AllocatorCheck.GivesSameForNegativeWeights(genAllocateAllSigns, Allocator.Allocate);
     [Fact]
     public void ErrorMinimising_GivesOppositeForNegativeBoth()
-        => AllocatorCheck.GivesOppositeForNegativeBoth(genAllocateAllSigns, Allocator.ErrorMinimising);
+        => AllocatorCheck.GivesOppositeForNegativeBoth(genAllocateAllSigns, Allocator.Allocate);
     [Fact]
     public void ErrorMinimising_HasSmallestError()
-        => AllocatorCheck.HasSmallestError(genAllocateAllSigns, Allocator.ErrorMinimising);
+        => AllocatorCheck.HasSmallestError(genAllocateAllSigns, Allocator.Allocate);
     [Fact(Skip ="ErrorMinimising doesn't solve the Alabama Paradox.")]
     public void ErrorMinimising_NoAlabamaParadox()
-        => AllocatorCheck.NoAlabamaParadox(genAllocateAllSigns, Allocator.ErrorMinimising);
+        => AllocatorCheck.NoAlabamaParadox(genAllocateAllSigns, Allocator.Allocate);
 
     readonly static Gen<(long Total, double[] Weights)> genAllocatePositive =
         Gen.Select(Gen.Long[0, 100], Gen.Double[0, 100, 100].Array[1, 30])
@@ -59,18 +59,18 @@ public class AllocatorTests
         => AllocatorCheck.HasSmallestError(genAllocatePositive, Allocator.BalinskiYoung);
 
     readonly static Gen<(long[] Totals, double[] Weights)> genAllocateMany =
-        Gen.Select(Gen.Long[1, 100].Array[1, 50], Gen.Double[0, 100, 100].Array[1, 30])
+        Gen.Select(Gen.Long[1, 100].Array[1, 5], Gen.Double[0, 100, 100].Array[1, 5])
         .Where((_, weights) => Math.Abs(weights.Sum()) > 1e-9);
 
-    [Fact(Skip = "Not working mate.")]
+    [Fact(Skip = "Current algo gets itself stuck where it can't make the needed change to due to being already rounded in the direction.")]
     public void Many_TotalsCorrectly()
-        => AllocatorCheck.TotalsCorrectly(genAllocateMany, Allocator.Allocate);
+        => AllocatorCheck.TotalsCorrectly(genAllocateMany, (totals, weights)  => Allocator.Allocate(totals, weights));
     [Fact]
     public void Many_BetweenFloorAndCeiling()
         => AllocatorCheck.BetweenFloorAndCeiling(genAllocateMany, Allocator.Allocate);
-    [Fact(Skip = "Many doesn't always have the smallest error.")]
+    [Fact(Skip = "Current algo doesn't always have the smallest error.")]
     public void Many_HasSmallestError()
-        => AllocatorCheck.HasSmallestError(genAllocateMany, Allocator.Allocate);
+        => AllocatorCheck.HasSmallestError(genAllocateMany, (totals, weights) => Allocator.Allocate(totals, weights));
 
     [Fact]
     public void ManyBalinskiYoung_TotalsCorrectly()
@@ -85,49 +85,49 @@ public class AllocatorTests
     [Fact]
     public void ErrorMinimising_Twitter()
     {
-        var actual = Allocator.ErrorMinimising(100, new[] { 406.0, 348.0, 246.0, 0.0 });
+        var actual = Allocator.Allocate(100, new[] { 406.0, 348.0, 246.0, 0.0 });
         Assert.Equal(new long[] { 40, 35, 25, 0 }, actual);
     }
     [Fact]
     public void ErrorMinimising_TwitterZero()
     {
-        var actual = Allocator.ErrorMinimising(0, new[] { 406.0, 348.0, 246.0, 0.0 });
+        var actual = Allocator.Allocate(0, new[] { 406.0, 348.0, 246.0, 0.0 });
         Assert.Equal(new long[] { 0, 0, 0, 0 }, actual);
     }
     [Fact]
     public void ErrorMinimising_TwitterTotalNegative()
     {
-        var actual = Allocator.ErrorMinimising(-100, new[] { 406.0, 348.0, 246.0, 0.0 });
+        var actual = Allocator.Allocate(-100, new[] { 406.0, 348.0, 246.0, 0.0 });
         Assert.Equal(new long[] { -40, -35, -25, -0 }, actual);
     }
     [Fact]
     public void ErrorMinimising_TwitterWeightsNegative()
     {
-        var actual = Allocator.ErrorMinimising(100, new[] { -406.0, -348.0, -246.0, -0.0 });
+        var actual = Allocator.Allocate(100, new[] { -406.0, -348.0, -246.0, -0.0 });
         Assert.Equal(new long[] { 40, 35, 25, 0 }, actual);
     }
     [Fact]
     public void ErrorMinimising_TwitterBothNegative()
     {
-        var actual = Allocator.ErrorMinimising(-100, new[] { -406.0, -348.0, -246.0, -0.0 });
+        var actual = Allocator.Allocate(-100, new[] { -406.0, -348.0, -246.0, -0.0 });
         Assert.Equal(new long[] { -40, -35, -25, -0 }, actual);
     }
     [Fact]
     public void ErrorMinimising_TwitterTricky()
     {
-        var actual = Allocator.ErrorMinimising(100, new[] { 404.0, 397.0, 57.0, 57.0, 57.0, 28.0 });
+        var actual = Allocator.Allocate(100, new[] { 404.0, 397.0, 57.0, 57.0, 57.0, 28.0 });
         Assert.Equal(new long[] { 40, 39, 6, 6, 6, 3 }, actual);
     }
     [Fact]
     public void ErrorMinimising_NegativeExample()
     {
-        var positive = Allocator.ErrorMinimising(42, new[] { 1.5, 1.0, 39.5, -1.0, 1.0 });
-        var negative = Allocator.ErrorMinimising(-42, new[] { 1.5, 1.0, 39.5, -1.0, 1.0 });
+        var positive = Allocator.Allocate(42, new[] { 1.5, 1.0, 39.5, -1.0, 1.0 });
+        var negative = Allocator.Allocate(-42, new[] { 1.5, 1.0, 39.5, -1.0, 1.0 });
         Assert.Equal(positive, Array.ConvertAll(negative, i => -i));
     }
     [Fact]
     public void ErrorMinimising_SmallTotalWeight()
     {
-        Assert.Throws<Exception>(() => Allocator.ErrorMinimising(42, new[] { 1.0, -2.0, 1.0, 1e-30 }));
+        Assert.Throws<Exception>(() => Allocator.Allocate(42, new[] { 1.0, -2.0, 1.0, 1e-30 }));
     }
 }

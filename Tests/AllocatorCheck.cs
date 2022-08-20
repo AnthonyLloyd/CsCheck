@@ -20,7 +20,7 @@ internal static class AllocatorCheck
                 if (allocs.Sum() != total)
                     return false;
             return true;
-        }, seed: "bxR2SBs8lofc");
+        }, seed: "6REN2tjDc581");
     }
 
     public static void GivesOppositeForNegativeTotal(Gen<(long Total, double[] Weights)> gen, Func<long, double[], long[]> allocate)
@@ -160,7 +160,7 @@ internal static class AllocatorCheck
             }
             var errorAfter = Error(allocations, totals, weights, sumWeights);
             return errorAfter >= errorBefore || Check.AreClose(1e-12, 1e-9, errorAfter, errorBefore);
-        });
+        }, iter: 5, threads: 1);
     }
 
     public static void NoAlabamaParadox(Gen<(long Total, double[] Weights)> gen, Func<long, double[], long[]> allocate)
@@ -213,6 +213,6 @@ internal static class AllocatorCheck
                 }
             }
             return true;
-        }, seed: "8-J0IDdNLP_5");
+        });
     }
 }

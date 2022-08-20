@@ -18,6 +18,7 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="Microsoft.Z3" Version="4.9.1" />
         <ProjectReference Include="..\CsCheck\CsCheck.csproj" />
     </ItemGroup>
 </Project>

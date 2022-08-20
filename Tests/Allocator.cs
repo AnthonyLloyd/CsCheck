@@ -1,6 +1,8 @@
 ﻿namespace Tests;
 
 using System;
+using System.Collections.Generic;
+using Microsoft.Z3;
 
 #nullable enable
 
@@ -22,22 +24,13 @@ public static class Allocator
         return sum;
     }
 
-    static double AbsoluteErrorChange(double weight, long n, double sumWeights, long total, int increment)
+    static double AbsoluteWeightErrorChange(long total, double weight, double sumWeights, long n, int increment)
     {
-        var change = sumWeights / (increment * total);
-        var weightn = sumWeights * n / total;
-        return Math.Abs(weightn - weight + change) - Math.Abs(weightn - weight);
+        return Math.Abs((n + increment) * sumWeights / total - weight) - Math.Abs(n * sumWeights / total - weight);
     }
 
-    public static long[] ErrorMinimising(long total, double[] weights)
+    private static void AllocateResidual(long total, double[] weights, double sumWeights, IList<long> results, long residual)
     {
-        var sumWeights = Sum(weights);
-        var results = new long[weights.Length];
-        for (int i = 0; i < weights.Length; i++)
-            results[i] = (long)Math.Round(total * weights[i] / sumWeights);
-        var residual = total - Sum(results);
-        if (residual >= results.Length || residual <= -results.Length)
-            throw new Exception($"Numeric overflow, total={total}, sum weights={sumWeights}, residual={residual}");
         var increment = Math.Sign(residual);
         while (residual != 0)
         {
@@ -48,7 +41,7 @@ public static class Allocator
             for (int i = 0; i < weights.Length; i++)
             {
                 var weight = weights[i];
-                var abs = AbsoluteErrorChange(weight, results[i], sumWeights, total, increment);
+                var abs = AbsoluteWeightErrorChange(total, weight, sumWeights, results[i], increment);
                 var rel = abs / Math.Abs(weight);
                 var wei = sumWeights > 0.0 ? -weight : weight;
                 if (abs < minAbs || (abs == minAbs && (rel < minRel || (rel == minRel && wei < minWei))))
@@ -62,6 +55,18 @@ public static class Allocator
             results[minIndex] += increment;
             residual -= increment;
         }
+    }
+
+    public static long[] Allocate(long total, double[] weights)
+    {
+        var sumWeights = Sum(weights);
+        var results = new long[weights.Length];
+        for (int i = 0; i < weights.Length; i++)
+            results[i] = (long)Math.Round(total * weights[i] / sumWeights);
+        var residual = total - Sum(results);
+        if (residual >= results.Length || residual <= -results.Length)
+            throw new Exception($"Numeric overflow, total={total}, sum weights={sumWeights}, residual={residual}");
+        AllocateResidual(total, weights, sumWeights, results, residual);
         return results;
     }
 
@@ -70,7 +75,7 @@ public static class Allocator
         var results = new long[totals.Length][];
         var sumTotals = Sum(totals);
         var sumWeights = Sum(weights);
-        var residualWeights = ErrorMinimising(sumTotals, weights);
+        var residualWeights = Allocate(sumTotals, weights);
         var residualTotals = new long[totals.Length];
         for (int t = 0; t < totals.Length; t++)
         {
@@ -105,7 +110,7 @@ public static class Allocator
                     var result = resultsT[w];
                     if ((long)Math.Ceiling(total * weights[w] / sumWeights) == result) continue;
                     var weight = weights[w];
-                    var abs = AbsoluteErrorChange(weight, resultsT[w], sumWeights, total, 1);
+                    var abs = AbsoluteWeightErrorChange(total, weight, sumWeights, resultsT[w], 1);
                     var rel = abs / Math.Abs(weight);
                     var wei = sumWeights > 0.0 ? -weight : weight;
                     if (abs < minAbs || (abs == minAbs && (rel < minRel || (rel == minRel && wei < minWei))))
@@ -243,7 +248,7 @@ public static class Allocator
         }
         t = results.Length - 1;
         var next = results[t];
-        for(; t > 0 ; t--)
+        for (; t > 0; t--)
         {
             var resultsT1 = results[t - 1];
             for (int i = 0; i < next.Length; i++)
@@ -251,6 +256,89 @@ public static class Allocator
             next = resultsT1;
         }
         return results;
+    }
+
+    public static bool TryAllocate(long[] totals, double[] weights, out long[][] results)
+    {
+        results = new long[totals.Length][];
+        var sumTotals = Sum(totals);
+        var sumWeights = Sum(weights);
+        var residualWeights = Allocate(sumTotals, weights);
+        var residualTotals = new long[totals.Length];
+        for (int t = 0; t < totals.Length; t++)
+        {
+            var total = totals[t];
+            var residualT = total;
+            var resultsT = new long[weights.Length];
+            results[t] = resultsT;
+            for (int w = 0; w < weights.Length; w++)
+            {
+                var allocj = (long)Math.Floor(total * weights[w] / sumWeights);
+                resultsT[w] = allocj;
+                residualT -= allocj;
+                residualWeights[w] -= allocj;
+            }
+            residualTotals[t] = residualT;
+        }
+
+        using var ctx = new Context();
+        var bools = new BoolExpr[residualTotals.Length][];
+        var i = 0;
+        for (var t = 0; t < residualTotals.Length; t++)
+        {
+            var bools_t = new BoolExpr[residualWeights.Length];
+            for (var w = 0; w < residualWeights.Length; w++)
+                bools_t[w] = ctx.MkBoolConst(ctx.MkSymbol(i++));
+            bools[t] = bools_t;
+        }
+        var one = ctx.MkInt(1);
+        var zero = ctx.MkInt(0);
+        var eqns = new BoolExpr[residualTotals.Length + residualWeights.Length];
+        for (var t = 0; t < residualTotals.Length; t++)
+        {
+            var bools_t = bools[t];
+            var expr = (IntExpr)ctx.MkITE(bools_t[0], one, zero);
+            for (var w = 1; w < residualWeights.Length; w++)
+                expr = (IntExpr)ctx.MkITE(bools_t[w], expr + one, expr);
+            eqns[t] = ctx.MkEq(expr, ctx.MkInt(residualTotals[t]));
+        }
+        for (var w = 0; w < residualWeights.Length; w++)
+        {
+            var expr = (IntExpr)ctx.MkITE(bools[0][w], one, zero);
+            for (var t = 1; t < residualTotals.Length; t++)
+                expr = (IntExpr)ctx.MkITE(bools[t][w], expr + one, expr);
+            eqns[residualTotals.Length + w] = ctx.MkEq(expr, ctx.MkInt(residualWeights[w]));
+        }
+        IntExpr sumExpr = zero;
+        for (var t = 0; t < residualTotals.Length; t++)
+        {
+            var resultsT = results[t];
+            var total = totals[t];
+            for (var w = 0; w < residualWeights.Length; w++)
+                {
+                var increase_tw = (int)(10000 * AbsoluteWeightErrorChange(total, weights[w], sumWeights, resultsT[w], 1));
+                sumExpr = (IntExpr)ctx.MkITE(bools[t][w], sumExpr + ctx.MkInt(increase_tw), sumExpr);
+            }
+        }
+        var optimize = ctx.MkOptimize();
+        optimize.Assert(eqns);
+        optimize.MkMinimize(sumExpr);
+        if (optimize.Check() != Status.SATISFIABLE) return false;
+        foreach (var constResult in optimize.Model.Consts)
+        {
+            switch (((BoolExpr)constResult.Value).BoolValue)
+            {
+                case Z3_lbool.Z3_L_UNDEF:
+                    return false;
+                case Z3_lbool.Z3_L_TRUE:
+                    {
+                        var (t, w) = Math.DivRem(((IntSymbol)constResult.Key.Name).Int, weights.Length);
+                        results[t][w]++;
+                        break;
+                    }
+            }
+        }
+        return true;
     }
 }
 
