@@ -27,7 +27,6 @@ public static class Allocator
         {
             var minAbs = double.MaxValue;
             var minRel = double.MaxValue;
-            var minWei = double.MaxValue;
             var minIndex = 0;
             for (int i = 0; i < weights.Length; i++)
             {
@@ -39,12 +38,10 @@ public static class Allocator
                 var error = results[i] * sumWeights - quantity * weight;
                 var abs = Math.Abs(error + increment * sumWeights) - Math.Abs(error); // increase in the error
                 var rel = abs / Math.Abs(weight); // increase in the relative error to the allocation/weight
-                var wei = sumWeights > 0.0 ? -weight : weight; // if both the same take the largest then the first normalised weight
-                if (abs < minAbs || (abs == minAbs && (rel < minRel || (rel == minRel && wei < minWei))))
+                if (abs < minAbs || (abs == minAbs && rel < minRel))
                 {
                     minAbs = abs;
                     minRel = rel;
-                    minWei = wei;
                     minIndex = i;
                 }
             }
