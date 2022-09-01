@@ -25,7 +25,7 @@ public static class Allocator
         var increment = Math.Sign(residual);
         while (residual != 0)
         {
-            var minAbs = double.MaxValue;
+            var minInc = double.MaxValue;
             var minRel = double.MaxValue;
             var minIndex = 0;
             for (int i = 0; i < weights.Length; i++)
@@ -36,14 +36,13 @@ public static class Allocator
                 // weight error:      var error = results[i] * sumWeights / quantity - weight;
                 // norm weight error: var error = results[i] / quantity - weight / sumWeights;
                 var error = results[i] * sumWeights - quantity * weight;
-                var abs = Math.Abs(error + increment * sumWeights) - Math.Abs(error); // increase in the error
-                var rel = abs / Math.Abs(weight); // increase in the relative error to the allocation/weight
-                if (abs < minAbs || (abs == minAbs && rel < minRel))
-                {
-                    minAbs = abs;
-                    minRel = rel;
-                    minIndex = i;
-                }
+                var inc = Math.Abs(error + increment * sumWeights) - Math.Abs(error); // increase in the error
+                if (inc > minInc) continue;
+                var rel = inc / Math.Abs(weight); // relative increase in the error to the allocation/weight
+                if (inc == minInc && rel >= minRel) continue;
+                minInc = inc;
+                minRel = rel;
+                minIndex = i;
             }
             results[minIndex] += increment;
             residual -= increment;
