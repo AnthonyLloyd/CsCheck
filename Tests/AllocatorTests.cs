@@ -10,10 +10,10 @@ using Xunit;
 public class AllocatorTests
 {
     readonly static Gen<(long Total, double[] Weights)> genAllSigns =
-        Gen.Select(Gen.Long[-100, 100], Gen.Double[-100, 100, 100].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
+        Gen.Select(Gen.Long[-100, 100], Gen.Double[0, 100, 100].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
 
     readonly static Gen<(long Total, double[] Weights)> genIntegerWeights =
-        Gen.Select(Gen.Long[-100, 100], Gen.Int[-100, 100].Cast<double>().Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
+        Gen.Select(Gen.Long[-100, 100], Gen.Int[0, 100].Cast<double>().Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
 
     [Fact]
     public void ErrorMinimising_TotalsCorrectly()

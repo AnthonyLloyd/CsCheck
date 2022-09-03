@@ -22,33 +22,30 @@ public static class Allocator
         }
         if (residual >= results.Length || residual <= -results.Length)
             throw new Exception($"Numeric overflow, quantity={quantity}, weights={string.Join(',', weights)}, residual={residual}");
-        var increment = Math.Sign(residual);
+        if (Math.Sign(sumWeights) * Math.Sign(residual) == -1)
+        {
+            sumWeights = -sumWeights;
+            quantity = -quantity;
+        }
         while (residual != 0)
         {
-            var minInc = double.MaxValue;
-            var maxWei = double.MinValue;
-            var minIndex = 0;
+            var maxError = double.Epsilon;
+            var maxWeight = 0.0;
+            var index = 0;
             for (int i = 0; i < weights.Length; i++)
             {
                 var weight = weights[i];
-                // the following gives better handling of calculation rounding errors than:
-                // allocation error:  var error = results[i] - quantity * weight / sumWeights;
-                // weight error:      var error = results[i] * sumWeights / quantity - weight;
-                // norm weight error: var error = results[i] / quantity - weight / sumWeights;
-                var error = results[i] * sumWeights - quantity * weight;
-                var inc = Math.Abs(error + increment * sumWeights) - Math.Abs(error); // increase in the error
-                if (inc > minInc) continue;
+                var error = quantity * weight - results[i] * sumWeights;
+                if (error < maxError) continue;
                 var wei = Math.Abs(weight);
-                if (inc == minInc && wei <= maxWei) continue;
-                minInc = inc;
-                maxWei = wei;
-                minIndex = i;
+                if (error == maxError && wei <= maxWeight) continue;
+                maxError = error;
+                maxWeight = wei;
+                index = i;
             }
-            results[minIndex] += increment;
-            residual -= increment;
+            results[index] += Math.Sign(residual);
+            residual -= Math.Sign(residual);
         }
         return results;
     }
 }
-
-// 1 or 1-2f
