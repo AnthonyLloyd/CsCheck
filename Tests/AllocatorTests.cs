@@ -43,7 +43,7 @@ public class AllocatorTests
     public void ErrorMinimising_HasSmallestAllocationError()
         => AllocatorCheck.HasSmallestAllocationError(genAllSigns, Allocator.Allocate, true);
 
-    [Fact]
+    [Fact(Skip = "Not true but interesting cases")]
     public void ErrorMinimising_HasSmallestAllocationError_ExactForIntegerWeights()
         => AllocatorCheck.HasSmallestAllocationError(genIntegerWeights, Allocator.Allocate, false);
 
@@ -109,5 +109,6 @@ public class AllocatorTests
         Assert.Equal(new long[] { -3, 1, 1 }, Allocator.Allocate(-1, new[] { -24.0, 6.0, 8.0 }));
         Assert.Equal(new long[] { 0, 0, -1 }, Allocator.Allocate(-1, new[] { -2.0, -4.0, 16.0 }));
         Assert.Equal(new long[] { -2, -2, 3 }, Allocator.Allocate(-1, new[] { 31.0, 19.0, -38.0 }));
+        Assert.Equal(new long[] { 1, 4 }, Allocator.Allocate(5, new[] { 1.0, 9.0 }));
     }
 }

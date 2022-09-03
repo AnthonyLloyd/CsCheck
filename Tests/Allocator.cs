@@ -26,7 +26,7 @@ public static class Allocator
         while (residual != 0)
         {
             var minInc = double.MaxValue;
-            var minRel = double.MaxValue;
+            var maxWei = double.MinValue;
             var minIndex = 0;
             for (int i = 0; i < weights.Length; i++)
             {
@@ -38,10 +38,10 @@ public static class Allocator
                 var error = results[i] * sumWeights - quantity * weight;
                 var inc = Math.Abs(error + increment * sumWeights) - Math.Abs(error); // increase in the error
                 if (inc > minInc) continue;
-                var rel = inc / Math.Abs(weight); // relative increase in the error to the allocation/weight
-                if (inc == minInc && rel >= minRel) continue;
+                var wei = Math.Abs(weight);
+                if (inc == minInc && wei <= maxWei) continue;
                 minInc = inc;
-                minRel = rel;
+                maxWei = wei;
                 minIndex = i;
             }
             results[minIndex] += increment;
@@ -50,3 +50,5 @@ public static class Allocator
         return results;
     }
 }
+
+// 1 or 1-2f
