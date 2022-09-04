@@ -98,8 +98,9 @@ public class AllocatorTests
     }
 
     [Fact]
-    public void ErrorMinimising_SmallTotalWeight()
+    public void ErrorMinimising_Exceptions()
     {
+        Assert.Throws<Exception>(() => Allocator.Allocate(0, new[] { 0.0, 0.0, 0.0 }));
         Assert.Throws<Exception>(() => Allocator.Allocate(42, new[] { 1.0, -2.0, 1.0, 1e-30 }));
     }
 

@@ -12,40 +12,42 @@ public static class Allocator
         var sumWeights = 0.0;
         for (int i = 0; i < weights.Length; i++)
             sumWeights += weights[i];
-        var results = new long[weights.Length];
         var residual = quantity;
+        var results = new long[weights.Length];
         for (int i = 0; i < weights.Length; i++)
         {
             var allocation = (long)Math.Round(quantity * weights[i] / sumWeights, MidpointRounding.AwayFromZero);
-            results[i] = allocation;
             residual -= allocation;
+            results[i] = allocation;
         }
-        if (residual >= results.Length || residual <= -results.Length)
-            throw new Exception($"Numeric overflow, quantity={quantity}, weights={string.Join(',', weights)}, residual={residual}");
-        if (Math.Sign(sumWeights) * Math.Sign(residual) == -1)
+        if (residual == 0)
+            return results;
+        if (residual >= weights.Length || residual <= -weights.Length)
+            throw new Exception($"Allocate numeric overflow, quantity={quantity}, weights={string.Join(',', weights)}, residual={residual}");
+        if (sumWeights > 0 && residual < 0 || sumWeights < 0 && residual > 0)
         {
             sumWeights = -sumWeights;
             quantity = -quantity;
         }
-        while (residual != 0)
+        do
         {
             var maxError = double.Epsilon;
             var maxWeight = 0.0;
             var index = 0;
             for (int i = 0; i < weights.Length; i++)
             {
-                var weight = weights[i];
-                var error = quantity * weight - results[i] * sumWeights;
+                var error = quantity * weights[i] - results[i] * sumWeights;
                 if (error < maxError) continue;
-                var wei = Math.Abs(weight);
-                if (error == maxError && wei <= maxWeight) continue;
+                var weight = Math.Abs(weights[i]);
+                if (error == maxError && weight <= maxWeight) continue;
                 maxError = error;
-                maxWeight = wei;
+                maxWeight = weight;
                 index = i;
             }
-            results[index] += Math.Sign(residual);
-            residual -= Math.Sign(residual);
-        }
+            var increment = Math.Sign(residual);
+            residual -= increment;
+            results[index] += increment;
+        } while (residual != 0);
         return results;
     }
 }
