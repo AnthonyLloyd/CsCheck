@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using CsCheck;
 
+#nullable enable
+
 internal static class AllocatorCheck
 {
     public static void TotalsCorrectly(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate)
@@ -94,14 +96,20 @@ internal static class AllocatorCheck
         });
     }
 
-    public static void HasSmallestAllocationError(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate, bool close)
+    public static void HasSmallestAllocationError(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate, bool exact)
     {
-        static double Error(long[] allocations, long quantity, double[] weights, double sumWeights)
+        static (double, double) Error(long[] allocations, long quantity, double[] weights, double sumWeights)
         {
-            double error = 0;
+            double errorAbs = 0, errorRel = 0;
             for (int i = 0; i < allocations.Length; i++)
-                error += Math.Abs(allocations[i] - quantity * weights[i] / sumWeights);
-            return error;
+            {
+                var weight = weights[i];
+                var error = Math.Abs(allocations[i] * sumWeights - quantity * weight);
+                if (error == 0) continue;
+                errorAbs += error;
+                errorRel += error / Math.Abs(weight);
+            }
+            return (errorAbs, errorRel);
         }
         static Gen<(int, int)[]> GenChanges(int i)
         {
@@ -116,14 +124,16 @@ internal static class AllocatorCheck
         {
             var sumWeights = weights.Sum();
             var allocations = allocate(quantity, weights);
-            var errorBefore = Error(allocations, quantity, weights, sumWeights);
+            var (errorBeforeAbs, errorBeforeRel) = Error(allocations, quantity, weights, sumWeights);
             foreach (var (i, j) in changes)
             {
                 allocations[i]--;
                 allocations[j]++;
             }
-            var errorAfter = Error(allocations, quantity, weights, sumWeights);
-            return errorAfter >= errorBefore || (close && Check.AreClose(1e-12, 1e-9, errorAfter, errorBefore));
+            var (errorAfterAbs, errorAfterRel) = Error(allocations, quantity, weights, sumWeights);
+            return errorAfterAbs > errorBeforeAbs
+               || (errorAfterAbs == errorBeforeAbs && errorAfterRel >= errorBeforeRel)
+               || (!exact && Check.AreClose(1e-12, 1e-9, errorAfterAbs, errorBeforeAbs));
         });
     }
 }

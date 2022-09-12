@@ -9,14 +9,8 @@ using Xunit;
 
 public class AllocatorTests
 {
-    readonly Action<string> writeLine;
-    public AllocatorTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
-
     readonly static Gen<(long Quantity, double[] Weights)> genAllSigns =
-        Gen.Select(Gen.Long[-1000, 1000], Gen.Double[-1000, 1000, 100].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
-
-    readonly static Gen<(long Quantity, double[] Weights)> genIntegerWeights =
-        Gen.Select(Gen.Long[-1000, 1000], Gen.Int[-1000, 1000].Cast<double>().Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
+        Gen.Select(Gen.Long[-1000, 1000], Gen.Double[-100000, 100000, 10000].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
 
     [Fact]
     public void Allocate_TotalsCorrectly()
@@ -43,12 +37,23 @@ public class AllocatorTests
         => AllocatorCheck.GivesOppositeForNegativeBoth(genAllSigns, Allocator.Allocate);
 
     [Fact]
-    public void Allocate_HasSmallestAllocationError()
+    public void Allocate_HasSmallestAllocationError_Close()
+        => AllocatorCheck.HasSmallestAllocationError(genAllSigns, Allocator.Allocate, false);
+
+    [Fact()]
+    public void Allocate_HasSmallestAllocationError_Exact()
         => AllocatorCheck.HasSmallestAllocationError(genAllSigns, Allocator.Allocate, true);
 
-    [Fact(Skip = "Not true but interesting cases")]
-    public void Allocate_HasSmallestAllocationError_ExactForIntegerWeights()
+    readonly static Gen<(long Quantity, double[] Weights)> genIntegerWeights =
+        Gen.Select(Gen.Long[-1000, 1000], Gen.Int[-100000, 100000].Cast<double>().Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
+
+    [Fact]
+    public void Allocate_HasSmallestAllocationError_IntegerWeights_Close()
         => AllocatorCheck.HasSmallestAllocationError(genIntegerWeights, Allocator.Allocate, false);
+
+    [Fact]
+    public void Allocate_HasSmallestAllocationError_IntegerWeights_Exact()
+        => AllocatorCheck.HasSmallestAllocationError(genIntegerWeights, Allocator.Allocate, true);
 
     [Fact]
     public void Allocate_Twitter()
@@ -114,14 +119,5 @@ public class AllocatorTests
         Assert.Equal(new long[] { 0, 0, -1 }, Allocator.Allocate(-1, new[] { -2.0, -4.0, 16.0 }));
         Assert.Equal(new long[] { -2, -2, 3 }, Allocator.Allocate(-1, new[] { 31.0, 19.0, -38.0 }));
         Assert.Equal(new long[] { 1, 4 }, Allocator.Allocate(5, new[] { 1.0, 9.0 }));
-    }
-
-    [Fact]
-    public void Allocate_Performance()
-    {
-        genAllSigns.Faster(
-            (q, w) => Allocator.Allocate(q, w),
-            (q, w) => Allocator.AllocateBenchmark(q, w)
-        , threads: 1, repeat: 100).Output(writeLine);
     }
 }
