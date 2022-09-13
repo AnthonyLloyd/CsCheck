@@ -36,7 +36,7 @@ public class AllocatorTests
     public void Allocate_GivesOppositeForNegativeBoth()
         => AllocatorCheck.GivesOppositeForNegativeBoth(genAllSigns, Allocator.Allocate);
 
-    [Fact()]
+    [Fact]
     public void Allocate_HasSmallestAllocationError()
         => AllocatorCheck.HasSmallestAllocationError(genAllSigns, Allocator.Allocate);
 
