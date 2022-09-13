@@ -36,24 +36,9 @@ public class AllocatorTests
     public void Allocate_GivesOppositeForNegativeBoth()
         => AllocatorCheck.GivesOppositeForNegativeBoth(genAllSigns, Allocator.Allocate);
 
-    [Fact]
-    public void Allocate_HasSmallestAllocationErrorClose()
-        => AllocatorCheck.HasSmallestAllocationErrorClose(genAllSigns, Allocator.Allocate);
-
     [Fact()]
-    public void Allocate_HasSmallestAllocationErrorExact()
-        => AllocatorCheck.HasSmallestAllocationErrorExact(genAllSigns, Allocator.Allocate);
-
-    readonly static Gen<(long Quantity, double[] Weights)> genIntegerWeights =
-        Gen.Select(Gen.Long[-1000, 1000], Gen.Int[-100000, 100000].Cast<double>().Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
-
-    [Fact]
-    public void Allocate_HasSmallestAllocationErrorClose_IntegerWeights()
-        => AllocatorCheck.HasSmallestAllocationErrorClose(genIntegerWeights, Allocator.Allocate);
-
-    [Fact]
-    public void Allocate_HasSmallestAllocationErrorExact_IntegerWeights()
-        => AllocatorCheck.HasSmallestAllocationErrorExact(genIntegerWeights, Allocator.Allocate);
+    public void Allocate_HasSmallestAllocationError()
+        => AllocatorCheck.HasSmallestAllocationError(genAllSigns, Allocator.Allocate);
 
     [Fact]
     public void Allocate_Twitter()

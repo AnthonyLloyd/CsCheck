@@ -96,46 +96,7 @@ internal static class AllocatorCheck
         });
     }
 
-    public static void HasSmallestAllocationErrorClose(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate)
-    {
-        static (double, double) Error(long[] allocations, long quantity, double[] weights, double sumWeights)
-        {
-            double errorAbs = 0, errorRel = 0;
-            for (int i = 0; i < allocations.Length; i++)
-            {
-                var weight = weights[i];
-                var error = Math.Abs(allocations[i] - quantity * weight / sumWeights);
-                if (error == 0) continue;
-                errorAbs += error;
-                errorRel += error / Math.Abs(weight);
-            }
-            return (errorAbs, errorRel);
-        }
-        static Gen<HashSet<(int, int)>> GenChanges(int i)
-        {
-            var genInt = Gen.Int[0, i - 1];
-            return Gen.Select(genInt, genInt)
-                .Where((i, j) => i != j)
-                .HashSet[1, i];
-        }
-        gen.Where((_, ws) => ws.Length >= 2)
-        .SelectMany((quantity, weights) => GenChanges(weights.Length).Select(i => (quantity, weights, i)))
-        .Sample((quantity, weights, changes) =>
-        {
-            var sumWeights = weights.Sum();
-            var allocations = allocate(quantity, weights);
-            var (errorBeforeAbs, errorBeforeRel) = Error(allocations, quantity, weights, sumWeights);
-            foreach (var (i, j) in changes)
-            {
-                allocations[i]--;
-                allocations[j]++;
-            }
-            var (errorAfterAbs, errorAfterRel) = Error(allocations, quantity, weights, sumWeights);
-            return errorAfterAbs > errorBeforeAbs || Check.AreClose(1e-12, 1e-9, errorAfterAbs, errorBeforeAbs);
-        });
-    }
-
-    public static void HasSmallestAllocationErrorExact(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate)
+    public static void HasSmallestAllocationError(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate)
     {
         static (double, double) Error(long[] allocations, long quantity, double[] weights, double sumWeights)
         {
