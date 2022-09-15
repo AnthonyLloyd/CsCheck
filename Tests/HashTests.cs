@@ -292,7 +292,9 @@ public class HashTests
         double[] powCache = new double[] { 1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18,
             1e19, 1e20, 1e21, 1e22, 1e23, 1e24, 1e25, 1e26, 1e27, 1e28, 1e29, 1e30, 1e31 };
         double Pow3(int n) => powCache[n];
-        Gen.Int[0, 31].Faster(i =>  _ = Pow2(i), i => _ = Pow1(i), repeat: 100).Output(writeLine);
-        Gen.Int[0, 31].Faster(i =>  _ = Pow3(i), i => _ = Pow1(i), repeat: 100).Output(writeLine);
+#pragma warning disable RCS1021 // Convert lambda expression body to expression body.
+        Gen.Int[0, 31].Faster(i => { Pow2(i); }, i => { Pow1(i); }, repeat: 100).Output(writeLine);
+        Gen.Int[0, 31].Faster(i => { Pow3(i); }, i => { Pow1(i); }, repeat: 100).Output(writeLine);
+#pragma warning restore RCS1021 // Convert lambda expression body to expression body.
     }
 }
