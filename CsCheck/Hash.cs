@@ -66,7 +66,10 @@ public sealed class Hash : IRegression
     {
         if (stream is not null)
         {
-            if (writing) serialize(stream, val);
+            if (writing)
+            {
+                serialize(stream, val);
+            }
             else
             {
                 var val2 = deserialize(stream);
@@ -111,7 +114,6 @@ public sealed class Hash : IRegression
         return Path.Combine(CacheDir, Path.GetDirectoryName(filePath),
             Path.GetFileNameWithoutExtension(filePath) + "." + memberName + "=" + expectedHashCode + ".has");
     }
-
 
     // The hashcode is stored in the lower 32 bits for both with and without offset.
     // The 33rd bit is a flag for no offset. Meaning a range of values for no offset of (0x100000000,0x1FFFFFFFF) = (4_294_967_296,8_589_934_591) ie 10 digits always.
@@ -161,7 +163,10 @@ public sealed class Hash : IRegression
                     File.Move(filename + threadId, filename);
                 }
                 else
+                {
                     File.Delete(filename + threadId);
+                }
+
                 replaceLock[filename!].ExitWriteLock();
             }
             replaceLock[filename!].ExitUpgradeableReadLock();
@@ -273,7 +278,10 @@ public sealed class Hash : IRegression
             }
             else if (SignificantFigures.HasValue)
             {
-                if (val == 0.0) roundingFractions!.Add(0);
+                if (val == 0.0)
+                {
+                    roundingFractions!.Add(0);
+                }
                 else
                 {
                     val *= Pow10Double(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
@@ -290,7 +298,6 @@ public sealed class Hash : IRegression
             }
             else if (SignificantFigures.HasValue)
             {
-
                 if (val != 0.0)
                 {
                     var scale = Pow10Double(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
@@ -318,7 +325,10 @@ public sealed class Hash : IRegression
             }
             else if (SignificantFigures.HasValue)
             {
-                if (val == 0.0f) roundingFractions!.Add(0);
+                if (val == 0.0f)
+                {
+                    roundingFractions!.Add(0);
+                }
                 else
                 {
                     val *= Pow10Float(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
@@ -365,7 +375,10 @@ public sealed class Hash : IRegression
             }
             else if (SignificantFigures.HasValue)
             {
-                if (val == 0.0M) roundingFractions!.Add(0);
+                if (val == 0.0M)
+                {
+                    roundingFractions!.Add(0);
+                }
                 else
                 {
                     val *= Pow10Decimal(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10((double)Math.Abs(val))));
@@ -638,7 +651,10 @@ public sealed class Hash : IRegression
         }
         public static void WriteVarint(Stream stream, uint val)
         {
-            if (val < 128u) stream.WriteByte((byte)val);
+            if (val < 128u)
+            {
+                stream.WriteByte((byte)val);
+            }
             else if (val < 0x4000u)
             {
                 stream.WriteByte((byte)((val >> 7) | 128u));
@@ -702,11 +718,17 @@ public sealed class Hash : IRegression
         uint previousLength = _length++;
         uint position = previousLength % 4;
         if (position == 0)
+        {
             _queue1 = val;
+        }
         else if (position == 1)
+        {
             _queue2 = val;
+        }
         else if (position == 2)
+        {
             _queue3 = val;
+        }
         else
         {
             _v1 = Round(_v1, _queue1);

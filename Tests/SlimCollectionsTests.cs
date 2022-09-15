@@ -152,7 +152,7 @@ public class SlimCollectionsTests
         .SampleMetamorphic(
             Gen.Select(Gen.Int[0, 100], Gen.Byte, Gen.Int[0, 100], Gen.Byte).Metamorphic<MapSlim<int, byte>>(
                 (d, t) => { d[t.V0] = t.V1; d[t.V2] = t.V3; },
-                (d, t) => { if (t.V0 == t.V2) d[t.V2] = t.V3; else { d[t.V2] = t.V3; d[t.V0] = t.V1; } }
+                (d, t) => { if (t.V0 == t.V2) { d[t.V2] = t.V3; } else { d[t.V2] = t.V3; d[t.V0] = t.V1; } }
             )
         );
     }
@@ -230,7 +230,6 @@ public class SlimCollectionsTests
     }
 }
 
-
 public class ListSlim<T> : IReadOnlyList<T>
 {
     static class Holder { internal static T[] Initial = Array.Empty<T>(); }
@@ -245,7 +244,11 @@ public class ListSlim<T> : IReadOnlyList<T>
             entries = new T[ts.Count];
             ts.CopyTo(entries, 0);
         }
-        else entries = items.ToArray();
+        else
+        {
+            entries = items.ToArray();
+        }
+
         count = entries.Length;
     }
     public int Count => count;
@@ -283,7 +286,10 @@ public class ListSlim<T> : IReadOnlyList<T>
             e[c] = item;
             count = c + 1;
         }
-        else AddWithResize(item);
+        else
+        {
+            AddWithResize(item);
+        }
     }
 
     public T[] ToArray()
@@ -485,7 +491,10 @@ public class MapSlim<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : I
         var hashCode = key.GetHashCode();
         var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
         while (i >= 0 && !key.Equals(ent[i].Key)) i = ent[i].Next;
-        if (i >= 0) return ref ent[i].Value;
+        if (i >= 0)
+        {
+            return ref ent[i].Value;
+        }
         else
         {
             i = count;

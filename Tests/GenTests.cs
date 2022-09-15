@@ -25,7 +25,7 @@ public class GenTests
     [Fact]
     public void Bool_Distribution()
     {
-        var frequency = 10;
+        const int frequency = 10;
         var expected = ArrayRepeat(2, frequency);
         Gen.Bool.Select(i => i ? 1 : 0).Array[2 * frequency]
         .Select(sample => Tally(2, sample))
@@ -46,8 +46,8 @@ public class GenTests
     [Fact]
     public void SByte_Distribution()
     {
-        var buckets = 70;
-        var frequency = 10;
+        const int buckets = 70;
+        const int frequency = 10;
         var expected = ArrayRepeat(buckets, frequency);
         Gen.SByte[0, (sbyte)(buckets - 1)]
         .Cast<int>().Array[frequency * buckets]
@@ -69,8 +69,8 @@ public class GenTests
     [Fact]
     public void Byte_Distribution()
     {
-        var buckets = 70;
-        var frequency = 10;
+        const int buckets = 70;
+        const int frequency = 10;
         var expected = ArrayRepeat(buckets, frequency);
         Gen.Byte[0, (byte)(buckets - 1)]
         .Cast<int>().Array[frequency * buckets]
@@ -98,8 +98,8 @@ public class GenTests
     [Fact]
     public void Short_Distribution()
     {
-        var buckets = 70;
-        var frequency = 10;
+        const int buckets = 70;
+        const int frequency = 10;
         var expected = ArrayRepeat(buckets, frequency);
         Gen.Short[0, (short)(buckets - 1)]
         .Cast<int>().Array[frequency * buckets]
@@ -121,8 +121,8 @@ public class GenTests
     [Fact]
     public void UShort_Distribution()
     {
-        var buckets = 70;
-        var frequency = 10;
+        const int buckets = 70;
+        const int frequency = 10;
         var expected = ArrayRepeat(buckets, frequency);
         Gen.UShort[0, (ushort)(buckets - 1)]
         .Cast<int>().Array[frequency * buckets]
@@ -201,8 +201,8 @@ public class GenTests
     [Fact]
     public void Int_Distribution()
     {
-        var buckets = 70;
-        var frequency = 10;
+        const int buckets = 70;
+        const int frequency = 10;
         int[] expected = ArrayRepeat(buckets, frequency);
         Gen.Int[0, buckets - 1].Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
@@ -250,10 +250,10 @@ public class GenTests
     [Fact]
     public void UInt_Distribution()
     {
-        var buckets = 70;
-        var frequency = 10;
+        const int buckets = 70;
+        const int frequency = 10;
         var expected = ArrayRepeat(buckets, frequency);
-        Gen.UInt[0, (uint)(buckets - 1)]
+        Gen.UInt[0, buckets - 1]
         .Cast<int>().Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .SampleOne(actual => Check.ChiSquared(expected, actual));
@@ -306,8 +306,8 @@ public class GenTests
     [Fact]
     public void Long_Distribution()
     {
-        var buckets = 70;
-        var frequency = 10;
+        const int buckets = 70;
+        const int frequency = 10;
         var expected = ArrayRepeat(buckets, frequency);
         Gen.Long[0, buckets - 1]
         .Cast<int>().Array[frequency * buckets]
@@ -329,8 +329,8 @@ public class GenTests
     [Fact]
     public void ULong_Distribution()
     {
-        var buckets = 70;
-        var frequency = 10;
+        const int buckets = 70;
+        const int frequency = 10;
         var expected = ArrayRepeat(buckets, frequency);
         Gen.ULong[0, (ulong)(buckets - 1)]
         .Cast<int>().Array[frequency * buckets]
@@ -364,8 +364,8 @@ public class GenTests
     [Fact]
     public void Single_Distribution()
     {
-        var buckets = 70;
-        var frequency = 10;
+        const int buckets = 70;
+        const int frequency = 10;
         var expected = ArrayRepeat(buckets, frequency);
         Gen.Single.Unit
         .Select(i => (int)(i * buckets))
@@ -443,8 +443,8 @@ public class GenTests
     [Fact]
     public void Double_Distribution()
     {
-        var buckets = 70;
-        var frequency = 10;
+        const int buckets = 70;
+        const int frequency = 10;
         var expected = ArrayRepeat(buckets, frequency);
         Gen.Double.Unit
         .Select(i => (int)(i * buckets))
@@ -542,8 +542,8 @@ public class GenTests
     [Fact]
     public void Decimal_Distribution()
     {
-        var buckets = 70;
-        var frequency = 10;
+        const int buckets = 70;
+        const int frequency = 10;
         var expected = ArrayRepeat(buckets, frequency);
         Gen.Decimal.Unit
         .Select(i => (int)(i * buckets))
@@ -588,13 +588,13 @@ public class GenTests
     [Fact]
     public void DateTimeOffset()
     {
-        Gen.DateTimeOffset.Sample(i => { });
+        Gen.DateTimeOffset.Sample(_ => { });
     }
 
     [Fact]
     public void Guid()
     {
-        Gen.Guid.Sample(i => { });
+        Gen.Guid.Sample(_ => { });
     }
 
     [Fact]
@@ -611,8 +611,8 @@ public class GenTests
     [Fact]
     public void Char_Distribution()
     {
-        var buckets = 70;
-        var frequency = 10;
+        const int buckets = 70;
+        const int frequency = 10;
         var expected = ArrayRepeat(buckets, frequency);
         Gen.Char[(char)0, (char)(buckets - 1)]
         .Cast<int>().Array[frequency * buckets]
@@ -623,7 +623,7 @@ public class GenTests
     [Fact]
     public void Char_Array()
     {
-        var chars = "abcdefghijklmopqrstuvwxyz0123456789_/";
+        const string chars = "abcdefghijklmopqrstuvwxyz0123456789_/";
         Gen.Char[chars].Sample(c => chars.Contains(c));
     }
 
@@ -685,7 +685,7 @@ public class GenTests
     [Fact]
     public void Frequency()
     {
-        var frequency = 10;
+        const int frequency = 10;
         (from f in Gen.Select(Gen.Int[1, 5], Gen.Int[1, 5], Gen.Int[1, 5])
          let expected = new[] { f.V0 * frequency, f.V1 * frequency, f.V2 * frequency }
          from actual in Gen.FrequencyConst((f.V0, 0), (f.V1, 1), (f.V2, 2))
@@ -712,7 +712,7 @@ public class GenTests
     [Fact]
     public void RecursiveDepth()
     {
-        int maxDepth = 4;
+        const int maxDepth = 4;
         Gen.Recursive<MyObj>((i, my) =>
             Gen.Select(Gen.Int, my.Array[0, i < maxDepth ? 6 : 0], (i, a) => new MyObj(i, a))
         )

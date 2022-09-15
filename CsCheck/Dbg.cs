@@ -688,7 +688,10 @@ public static class Dbg
                 e[c] = item;
                 count = c + 1;
             }
-            else AddWithResize(item);
+            else
+            {
+                AddWithResize(item);
+            }
         }
 
         public IEnumerator<T> GetEnumerator()
@@ -766,7 +769,10 @@ public static class Dbg
             var hashCode = key.GetHashCode();
             var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
             while (i >= 0 && !key.Equals(ent[i].Key)) i = ent[i].Next;
-            if (i >= 0) return ref ent[i].Value;
+            if (i >= 0)
+            {
+                return ref ent[i].Value;
+            }
             else
             {
                 i = count;

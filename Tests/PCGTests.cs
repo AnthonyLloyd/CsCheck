@@ -160,7 +160,7 @@ public class PCGTests
     {
         Gen.UInt[1, uint.MaxValue].Select(genPCG)
         .Select(t => (Max: t.V0, x: t.V1.Next(t.V0)))
-        .Sample(t => t.x >= 0 && t.x <= t.Max);
+        .Sample(t => t.x <= t.Max);
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public class PCGTests
     {
         Gen.ULong[1, ulong.MaxValue].Select(genPCG)
         .Select(t => (Max: t.V0, x: t.V1.Next64(t.V0)))
-        .Sample(t => t.x >= 0UL && t.x <= t.Max);
+        .Sample(t => t.x <= t.Max);
     }
 
     [Fact]

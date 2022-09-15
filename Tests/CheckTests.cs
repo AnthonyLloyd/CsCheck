@@ -78,9 +78,14 @@ public class CheckTests
         int I = a.GetLength(0), J = a.GetLength(1), K = b.GetLength(1);
         var c = new double[I, K];
         for (int i = 0; i < I; i++)
+        {
             for (int j = 0; j < J; j++)
+            {
                 for (int k = 0; k < K; k++)
                     c[i, k] += a[i, j] * b[j, k];
+            }
+        }
+
         return c;
     }
 
@@ -89,6 +94,7 @@ public class CheckTests
         int I = a.GetLength(0), J = a.GetLength(1), K = b.GetLength(1);
         var c = new double[I, K];
         for (int i = 0; i < I; i++)
+        {
             for (int k = 0; k < K; k++)
             {
                 double t = 0.0;
@@ -96,22 +102,30 @@ public class CheckTests
                     t += a[i, j] * b[j, k];
                 c[i, k] = t;
             }
+        }
+
         return c;
     }
 
     [Fact]
     public void Faster_Matrix_Multiply_Fixed()
     {
-        int I = 30, J = 37, K = 29;
+        const int I = 30, J = 37, K = 29;
         var rand = new Random(42);
         var a = new double[I, J];
         for (int i = 0; i < I; i++)
+        {
             for (int j = 0; j < J; j++)
                 a[i, j] = rand.NextDouble();
+        }
+
         var b = new double[J, K];
         for (int j = 0; j < J; j++)
+        {
             for (int k = 0; k < K; k++)
                 b[j, k] = rand.NextDouble();
+        }
+
         Check.Faster(
             () => MulIKJ(a, b),
             () => MulIJK(a, b),
@@ -229,10 +243,7 @@ public class CheckTests
                 bag.Add(i);
                 list.Add(i);
             }),
-            Gen.Operation<ConcurrentBag<int>, List<int>>((bag, list) =>
-            {
-                Assert.Equal(bag.TryTake(out var i), list.Remove(i));
-            })
+            Gen.Operation<ConcurrentBag<int>, List<int>>((bag, list) => Assert.Equal(bag.TryTake(out var i), list.Remove(i)))
             , threads: 1
         );
     }

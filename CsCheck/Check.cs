@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 
 public sealed class CsCheckException : Exception
 {
+    private CsCheckException() {}
     public CsCheckException(string message) : base(message) { }
     public CsCheckException(string message, Exception? exception) : base(message, exception) { }
 }
@@ -117,6 +118,7 @@ public static partial class Check
         long total = seed is null ? 0 : 1;
         var cde = new CountdownEvent(threads);
         while (threads-- > 0)
+        {
             ThreadPool.UnsafeQueueUserWorkItem(_ =>
             {
                 var pcg = PCG.ThreadPCG;
@@ -152,6 +154,8 @@ public static partial class Check
                 }
                 cde.Signal();
             }, null);
+        }
+
         cde.Wait();
         if (minPCG is not null)
         {
@@ -298,6 +302,7 @@ public static partial class Check
         long total = seed is null ? 0 : 1;
         var tasks = new Task[threads];
         while (threads-- > 0)
+        {
             tasks[threads] = Task.Run(async () =>
             {
                 var pcg = PCG.ThreadPCG;
@@ -332,6 +337,8 @@ public static partial class Check
                     Interlocked.Increment(ref total);
                 }
             });
+        }
+
         await Task.WhenAll(tasks);
         if (minPCG is not null)
         {
@@ -486,6 +493,7 @@ public static partial class Check
         long total = seed is null ? 0 : 1;
         var cde = new CountdownEvent(threads);
         while (threads-- > 0)
+        {
             ThreadPool.UnsafeQueueUserWorkItem(_ =>
             {
                 var pcg = PCG.ThreadPCG;
@@ -515,7 +523,10 @@ public static partial class Check
                                 }
                             }
                         }
-                        else skipped++;
+                        else
+                        {
+                            skipped++;
+                        }
                     }
                     catch (Exception e)
                     {
@@ -536,6 +547,8 @@ public static partial class Check
                 }
                 cde.Signal();
             }, null);
+        }
+
         cde.Wait();
         if (minPCG is not null)
         {
@@ -690,6 +703,7 @@ public static partial class Check
         long total = seed is null ? 0 : 1;
         var tasks = new Task[threads];
         while (threads-- > 0)
+        {
             tasks[threads] = Task.Run(async () =>
             {
                 var pcg = PCG.ThreadPCG;
@@ -719,7 +733,10 @@ public static partial class Check
                                 }
                             }
                         }
-                        else skipped++;
+                        else
+                        {
+                            skipped++;
+                        }
                     }
                     catch (Exception e)
                     {
@@ -739,6 +756,8 @@ public static partial class Check
                     Interlocked.Increment(ref total);
                 }
             });
+        }
+
         await Task.WhenAll(tasks);
         if (minPCG is not null)
         {
@@ -906,7 +925,7 @@ public static partial class Check
             opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2)) : op;
         }
 
-        Gen.Create((PCG pcg, Size? min, out Size size) =>
+        Gen.Create((PCG pcg, Size? _, out Size size) =>
         {
             var stream = pcg.Stream;
             var seed = pcg.Seed;
@@ -1074,7 +1093,6 @@ public static partial class Check
             State1 = state1; State2 = state2; Stream = stream; Seed = seed;
         }
         public T State1; public T State2; public uint Stream; public ulong Seed; public Exception? Exception;
-
     }
 
     /// <summary>Sample metamorphic (two path) operations on a random initial state checking that both paths are equal.
@@ -1098,7 +1116,7 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         print ??= Print;
 
-        Gen.Create((PCG pcg, Size? min, out Size size) =>
+        Gen.Create((PCG pcg, Size? _, out Size size) =>
         {
             var stream = pcg.Stream;
             var seed = pcg.Seed;
@@ -1194,7 +1212,7 @@ public static partial class Check
 
         bool firstIteration = true;
 
-        Gen.Create((PCG pcg, Size? min, out Size size) =>
+        Gen.Create((PCG pcg, Size? _, out Size size) =>
         {
             var stream = pcg.Stream;
             var seed = pcg.Seed;
@@ -1394,8 +1412,8 @@ public static partial class Check
             equal, seed, iter, time, threads, print, replay);
 
     /// <summary>Assert actual is in line with expected using a chi-squared test to 6 sigma.</summary>
-    /// <param name="actual">The actual bin counts.</param>
     /// <param name="expected">The expected bin counts.</param>
+    /// <param name="actual">The actual bin counts.</param>
     public static void ChiSquared(int[] expected, int[] actual)
     {
         if (expected.Length != actual.Length) throw new CsCheckException("Expected and actual lengths need to be the same.");
@@ -1410,8 +1428,7 @@ public static partial class Check
         // chi-squared distribution has Mean = k and Variance = 2 k where k is the number of degrees of freedom.
         int k = expected.Length - 1;
         double sigmaSquared = (chi - k) * (chi - k) / k / 2.0;
-        if (sigmaSquared > 36.0) throw new CsCheckException(
-            "Chi-squared standard deviation = " + Math.Sqrt(sigmaSquared).ToString("0.0"));
+        if (sigmaSquared > 36.0) throw new CsCheckException("Chi-squared standard deviation = " + Math.Sqrt(sigmaSquared).ToString("0.0"));
     }
 
     /// <summary>Assert the first function is faster than the second to a given sigma.</summary>
@@ -1434,6 +1451,7 @@ public static partial class Check
         var mre = new ManualResetEventSlim();
         Exception? exception = null;
         while (threads-- > 0)
+        {
             ThreadPool.UnsafeQueueUserWorkItem(_ =>
             {
                 try
@@ -1463,6 +1481,8 @@ public static partial class Check
                     mre.Set();
                 }
             }, null);
+        }
+
         bool completed = mre.Wait(timeout * 1000);
         if (exception is not null) throw exception;
         if (raiseexception)
@@ -1494,6 +1514,7 @@ public static partial class Check
         var mre = new ManualResetEventSlim();
         Exception? exception = null;
         while (threads-- > 0)
+        {
             ThreadPool.UnsafeQueueUserWorkItem(_ =>
             {
                 try
@@ -1557,6 +1578,8 @@ public static partial class Check
                     mre.Set();
                 }
             }, null);
+        }
+
         bool completed = mre.Wait(timeout * 1000);
         if (exception is not null) throw exception;
         if (raiseexception)
@@ -1587,6 +1610,7 @@ public static partial class Check
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
         while (threads-- > 0)
+        {
             Task.Run(async () =>
             {
                 try
@@ -1646,6 +1670,8 @@ public static partial class Check
                     }
                 }
             });
+        }
+
         return tcs.Task;
     }
 
@@ -1670,6 +1696,7 @@ public static partial class Check
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
         while (threads-- > 0)
+        {
             Task.Run(async () =>
             {
                 try
@@ -1771,6 +1798,8 @@ public static partial class Check
                     }
                 }
             });
+        }
+
         return tcs.Task;
     }
 
@@ -1797,6 +1826,7 @@ public static partial class Check
         var mre = new ManualResetEventSlim();
         Exception? exception = null;
         while (threads-- > 0)
+        {
             ThreadPool.UnsafeQueueUserWorkItem(__ =>
             {
                 var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
@@ -1834,6 +1864,8 @@ public static partial class Check
                     mre.Set();
                 }
             }, null);
+        }
+
         var completed = mre.Wait(timeout * 1000);
         if (exception is not null) throw exception;
         if (raiseexception)
@@ -1965,6 +1997,7 @@ public static partial class Check
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
         while (threads-- > 0)
+        {
             Task.Run(async () =>
             {
                 var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
@@ -2032,6 +2065,8 @@ public static partial class Check
                     }
                 }
             });
+        }
+
         return tcs.Task;
     }
 
@@ -2157,6 +2192,7 @@ public static partial class Check
         var mre = new ManualResetEventSlim();
         Exception? exception = null;
         while (threads-- > 0)
+        {
             ThreadPool.UnsafeQueueUserWorkItem(__ =>
             {
                 var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
@@ -2164,7 +2200,6 @@ public static partial class Check
                 T? t = default;
                 try
                 {
-
                     while (true)
                     {
                         if (mre.IsSet) return;
@@ -2229,6 +2264,8 @@ public static partial class Check
                     mre.Set();
                 }
             }, null);
+        }
+
         var completed = mre.Wait(timeout * 1000);
         if (exception is not null) throw exception;
         if (raiseexception)
@@ -2368,6 +2405,7 @@ public static partial class Check
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
         while (threads-- > 0)
+        {
             Task.Run(async () =>
             {
                 var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
@@ -2375,7 +2413,6 @@ public static partial class Check
                 T? t = default;
                 try
                 {
-
                     while (true)
                     {
                         if (isSet) return;
@@ -2478,6 +2515,8 @@ public static partial class Check
                     }
                 }
             });
+        }
+
         return tcs.Task;
     }
 
@@ -2599,6 +2638,7 @@ public static partial class Check
             string? message = null;
             var threads = Environment.ProcessorCount;
             while (threads-- > 0)
+            {
                 ThreadPool.UnsafeQueueUserWorkItem(__ =>
                 {
                     var pcg = PCG.ThreadPCG;
@@ -2618,10 +2658,11 @@ public static partial class Check
                                     mre.Set();
                                 }
                             }
-
                         }
                     }
                 }, null);
+            }
+
             mre.Wait();
             throw new CsCheckException(message!);
         }

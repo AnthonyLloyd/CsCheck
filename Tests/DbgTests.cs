@@ -27,7 +27,7 @@ public class DbgTests
         }
 
         Dbg.Call("cache");
-        var x = "hello";
+        const string x = "hello";
         var y = Dbg.Info(s => Enumerable(s), x).DbgCache().DbgInfo();
         Dbg.Regression.Delete();
         Dbg.Output(writeLine);

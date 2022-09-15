@@ -42,9 +42,8 @@ public static class Causal
         var now = Stopwatch.GetTimestamp();
         var lockTaken = false;
         spinLock.Enter(ref lockTaken);
-        if (delayName == name && delayTime < 0)
-            if (delayCount++ == 0)
-                onSince = now;
+        if (delayName == name && delayTime < 0 && delayCount++ == 0)
+            onSince = now;
         var localTotalDelay = totalDelay;
         var localOnSince = onSince;
         if (lockTaken) spinLock.Exit(false);
@@ -83,16 +82,19 @@ public static class Causal
                         + ((onSince == 0L ? 0L : now - onSince)
                         + (region.OnSince == 0L ? 0L : region.OnSince - region.Start)) * delayTime / -100L;
                     if (lockTaken) spinLock.Exit(false);
-                    while (Stopwatch.GetTimestamp() < wait) { };
+                    while (Stopwatch.GetTimestamp() < wait) { }
                 }
             }
             else if (delayTime > 0 && region.Name == delayName)
             {
                 if (lockTaken) spinLock.Exit(false);
-                var wait = now + (now - region.Start) * delayTime / 100L;
-                while (Stopwatch.GetTimestamp() < wait) { };
+                var wait = now + ((now - region.Start) * delayTime / 100L);
+                while (Stopwatch.GetTimestamp() < wait) { }
             }
-            else if (lockTaken) spinLock.Exit(false);
+            else if (lockTaken)
+            {
+                spinLock.Exit(false);
+            }
         }
     }
 
@@ -123,12 +125,17 @@ public static class Causal
         {
             var totalTimePct = Run(RunType.CollectTimes, null, 0) * Environment.ProcessorCount * 0.01;
             foreach (var row in summary)
+            {
                 foreach (var (s, t) in times)
+                {
                     if (row.Region == s)
                     {
                         row.Count++;
                         row.Time += t / totalTimePct;
                     }
+                }
+            }
+
             times.Clear();
         }
         var delays = new (string?, int, MedianEstimator)[1 + 6 * summary.Length];
@@ -148,15 +155,19 @@ public static class Causal
         if (time < 0)
         {
             for (i = 0; i < iter; i++)
+            {
                 foreach (var (name, delay, estimator) in delays)
                     estimator.Add(Run(RunType.Delay, name, delay));
+            }
         }
         else
         {
             long target = Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
             while (Stopwatch.GetTimestamp() < target)
+            {
                 foreach (var (name, delay, estimator) in delays)
                     estimator.Add(Run(RunType.Delay, name, delay));
+            }
         }
         runType = RunType.Nothing;
         MedianEstimate Estimate(int i) => new(delays[i].Item3);

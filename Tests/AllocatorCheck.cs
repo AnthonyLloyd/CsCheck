@@ -37,8 +37,11 @@ internal static class AllocatorCheck
             var allocationsPositive = allocate(quantity, weights);
             var allocationsNegative = allocate(-quantity, weights);
             for (int i = 0; i < allocationsPositive.Length; i++)
+            {
                 if (allocationsPositive[i] != -allocationsNegative[i])
                     return false;
+            }
+
             return true;
         });
     }
@@ -51,8 +54,11 @@ internal static class AllocatorCheck
             var negativeWeights = Array.ConvertAll(weights, i => -i);
             var allocationsNegative = allocate(quantity, negativeWeights);
             for (int i = 0; i < allocationsPositive.Length; i++)
+            {
                 if (allocationsPositive[i] != allocationsNegative[i])
                     return false;
+            }
+
             return true;
         });
     }
@@ -65,8 +71,11 @@ internal static class AllocatorCheck
             var negativeWeights = Array.ConvertAll(weights, i => -i);
             var allocationsNegative = allocate(-quantity, negativeWeights);
             for (int i = 0; i < allocationsPositive.Length; i++)
+            {
                 if (allocationsPositive[i] != -allocationsNegative[i])
                     return false;
+            }
+
             return true;
         });
     }
@@ -86,9 +95,8 @@ internal static class AllocatorCheck
             {
                 var weight = weights[i];
                 var allocation = allocations[i];
-                if (weight != lastWeight)
-                    if (allocation < lastAllocation)
-                        return false;
+                if (weight != lastWeight && allocation < lastAllocation)
+                    return false;
                 lastWeight = weight;
                 lastAllocation = allocation;
             }

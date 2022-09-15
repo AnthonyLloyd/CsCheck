@@ -64,7 +64,10 @@ public static class ArraySerializer
 {
     public static void WriteVarint(byte[] bytes, ref int pos, uint val)
     {
-        if (val < 128u) bytes[pos++] = (byte)val;
+        if (val < 128u)
+        {
+            bytes[pos++] = (byte)val;
+        }
         else if (val < 0x4000u)
         {
             bytes[pos++] = (byte)((val >> 7) | 128u);

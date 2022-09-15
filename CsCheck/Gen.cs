@@ -130,7 +130,7 @@ public static class Gen
     public static Gen<T> Create<T>(GenDelegate<T> gen) => new GenCreate<T>(gen);
 
     /// <summary>Create a generator from a function.</summary>
-    public static Gen<T> Create<T>(Func<PCG, (T, Size)> gen) => new GenCreate<T>((PCG pcg, Size? min, out Size size) =>
+    public static Gen<T> Create<T>(Func<PCG, (T, Size)> gen) => new GenCreate<T>((PCG pcg, Size? _, out Size size) =>
       {
           T t;
           (t, size) = gen(pcg);
@@ -138,10 +138,10 @@ public static class Gen
       });
 
     /// <summary>Create a constant generator.</summary>
-    public static Gen<T> Const<T>(T value) => Create((PCG pcg, Size? min, out Size size) => { size = new Size(0L); return value; });
+    public static Gen<T> Const<T>(T value) => Create((PCG _, Size? __, out Size size) => { size = new Size(0L); return value; });
 
     /// <summary>Create a constant generator.</summary>
-    public static Gen<T> Const<T>(Func<T> value) => Create((PCG pcg, Size? min, out Size size) => { size = new Size(0L); return value(); });
+    public static Gen<T> Const<T>(Func<T> value) => Create((PCG _, Size? __, out Size size) => { size = new Size(0L); return value(); });
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T, R>(this Gen<T> gen, Func<T, R> selector) =>
@@ -928,7 +928,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
         while (true)
         {
@@ -938,7 +938,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2)> Where<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<(T1, T2)> Where<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
         while (true)
         {
@@ -948,7 +948,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3)> Where<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<(T1, T2, T3)> Where<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
         while (true)
         {
@@ -958,7 +958,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4)> Where<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<(T1, T2, T3, T4)> Where<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
         while (true)
         {
@@ -968,7 +968,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4, T5)> Where<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<(T1, T2, T3, T4, T5)> Where<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
         while (true)
         {
@@ -978,7 +978,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4, T5, T6)> Where<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<(T1, T2, T3, T4, T5, T6)> Where<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
         while (true)
         {
@@ -988,7 +988,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4, T5, T6, T7)> Where<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<(T1, T2, T3, T4, T5, T6, T7)> Where<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
         while (true)
         {
@@ -998,7 +998,7 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> Where<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> Where<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
         while (true)
         {
@@ -1092,7 +1092,7 @@ public static class Gen
     public static Gen<T> Recursive<T>(Func<Gen<T>, Gen<T>> f)
     {
         Gen<T>? gen = null;
-        gen = f(Create((PCG pcg, Size? min, out Size size) => gen!.Generate(pcg, null, out size)));
+        gen = f(Create((PCG pcg, Size? _, out Size size) => gen!.Generate(pcg, null, out size)));
         return gen!;
     }
 
@@ -1102,7 +1102,7 @@ public static class Gen
     /// <param name="f">The function to create the generator give the depth and an instance of the generator.</param>
     public static Gen<T> Recursive<T>(Func<int, Gen<T>, Gen<T>> f)
     {
-        Gen<T> gen(int i) => f(i, Create((PCG pcg, Size? min, out Size size) => gen(i + 1).Generate(pcg, null, out size)));
+        Gen<T> gen(int i) => f(i, Create((PCG pcg, Size? _, out Size size) => gen(i + 1).Generate(pcg, null, out size)));
         return gen(0);
     }
 
@@ -1114,7 +1114,7 @@ public static class Gen
     public static Gen<T> Recursive<T>(Func<Gen<T>, Gen<T>> f, GenMap<T> map)
     {
         Gen<T>? gen = null;
-        gen = f(Create((PCG pcg, Size? min, out Size size) => map(gen!.Generate(pcg, null, out size), ref size)));
+        gen = f(Create((PCG pcg, Size? _, out Size size) => map(gen!.Generate(pcg, null, out size), ref size)));
         return gen;
     }
 
@@ -1125,7 +1125,7 @@ public static class Gen
     /// <param name="map">The type and size map function.</param>
     public static Gen<T> Recursive<T>(Func<int, Gen<T>, Gen<T>> f, GenMap<T> map)
     {
-        Gen<T> gen(int i) => f(i, Create((PCG pcg, Size? min, out Size size) => map(gen(i + 1).Generate(pcg, null, out size), ref size)));
+        Gen<T> gen(int i) => f(i, Create((PCG pcg, Size? _, out Size size) => map(gen(i + 1).Generate(pcg, null, out size), ref size)));
         return gen(0);
     }
 
@@ -1156,7 +1156,7 @@ public static class Gen
     }
 
     /// <summary>Create a generator by shuffling the elements.</summary>
-    public static Gen<T[]> Shuffle<T>(T[] constants) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<T[]> Shuffle<T>(T[] constants) => Create((PCG pcg, Size? _, out Size size) =>
     {
         Shuffle(constants, pcg, 0);
         size = new Size(0L);
@@ -1164,7 +1164,7 @@ public static class Gen
     });
 
     /// <summary>Shuffle the generated elements.</summary>
-    public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen) => Create((PCG pcg, Size? _, out Size size) =>
     {
         var a = gen.Generate(pcg, null, out size);
         Shuffle(a, pcg, 0);
@@ -1172,7 +1172,7 @@ public static class Gen
     });
 
     /// <summary>Create a generator by shuffling the elements.</summary>
-    public static Gen<T[]> Shuffle<T>(T[] a, int length) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<T[]> Shuffle<T>(T[] a, int length) => Create((PCG pcg, Size? _, out Size size) =>
     {
         size = new Size(0L);
         int lower = Math.Max(a.Length - length, 0);
@@ -1197,7 +1197,7 @@ public static class Gen
         SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
 
     /// <summary>Create a generator by shuffling the elements.</summary>
-    public static Gen<List<T>> Shuffle<T>(List<T> a) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<List<T>> Shuffle<T>(List<T> a) => Create((PCG pcg, Size? _, out Size size) =>
     {
         Shuffle(a, pcg, 0);
         size = new Size(0L);
@@ -1205,7 +1205,7 @@ public static class Gen
     });
 
     /// <summary>Create a generator by shuffling the generated elements.</summary>
-    public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => Create((PCG pcg, Size? _, out Size size) =>
     {
         var a = gen.Generate(pcg, null, out size);
         Shuffle(a, pcg, 0);
@@ -1213,7 +1213,7 @@ public static class Gen
     });
 
     /// <summary>Create a generator by shuffling the elements.</summary>
-    public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => Create((PCG pcg, Size? min, out Size size) =>
+    public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => Create((PCG pcg, Size? _, out Size size) =>
     {
         size = new Size(0L);
         int lower = Math.Max(a.Count - length, 0);
@@ -1238,16 +1238,16 @@ public static class Gen
         SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
 
     public static GenOperation<T> Operation<T>(string name, Action<T> action)
-        => new((PCG pcg, Size? min, out Size size) => { size = new Size(0L); return (name, action); });
+        => new((PCG _, Size? __, out Size size) => { size = new Size(0L); return (name, action); });
 
     public static GenOperation<T> Operation<T>(Action<T> action)
-        => new((PCG pcg, Size? min, out Size size) => { size = new Size(0L); return ("", action); }, true);
+        => new((PCG _, Size? __, out Size size) => { size = new Size(0L); return ("", action); }, true);
 
     public static GenOperation<Actual, Model> Operation<Actual, Model>(string name, Action<Actual, Model> action)
-        => new((PCG pcg, Size? min, out Size size) => { size = new Size(0L); return (name, action); });
+        => new((PCG _, Size? __, out Size size) => { size = new Size(0L); return (name, action); });
 
     public static GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, Model> action)
-        => new((PCG pcg, Size? min, out Size size) => { size = new Size(0L); return ("", action); }, true);
+        => new((PCG _, Size? __, out Size size) => { size = new Size(0L); return ("", action); }, true);
 
     public static readonly GenBool Bool = new();
     public static readonly GenSByte SByte = new();
@@ -1296,7 +1296,7 @@ public sealed class GenSByte : Gen<sbyte>
         get
         {
             uint l = (uint)(finish - start) + 1u;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 sbyte i = (sbyte)(start + pcg.Next(l));
                 size = new Size(Zigzag(i) + 1UL);
@@ -1320,7 +1320,7 @@ public sealed class GenByte : Gen<byte>
         {
             uint s = start;
             uint l = finish - s + 1u;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 byte i = (byte)(s + pcg.Next(l));
                 size = new Size(i + 1UL);
@@ -1349,7 +1349,7 @@ public sealed class GenShort : Gen<short>
         get
         {
             uint l = (uint)(finish - start) + 1u;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 short i = (short)(start + pcg.Next(l));
                 size = new Size(Zigzag(i) + 1UL);
@@ -1372,7 +1372,7 @@ public sealed class GenUShort : Gen<ushort>
         get
         {
             uint l = (uint)(finish - start) + 1u;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 ushort i = (ushort)(start + pcg.Next(l));
                 size = new Size(i + 1UL);
@@ -1396,13 +1396,13 @@ public sealed class GenInt : Gen<int>
         size = new Size((s << 27 | i & 0x7FFFFFFUL) + 1UL);
         return -Unzigzag(i);
     }
-    public Gen<int> Uniform = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<int> Uniform = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         int i = (int)pcg.Next();
         size = new Size(Zigzag(i) + 1UL);
         return i;
     });
-    public Gen<int> Positive = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<int> Positive = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint s = pcg.Next(31);
         int i = 1 << (int)s;
@@ -1410,7 +1410,7 @@ public sealed class GenInt : Gen<int>
         size = new Size((s << 27 | (ulong)i & 0x7FFFFFFUL) + 1UL);
         return i;
     });
-    public Gen<int> NonNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<int> NonNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint s = pcg.Next(31);
         int i = 1 << (int)s;
@@ -1423,7 +1423,7 @@ public sealed class GenInt : Gen<int>
         get
         {
             uint l = (uint)(finish - start) + 1u;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 int i = (int)(start + pcg.Next(l));
                 size = new Size(Zigzag(i) + 1UL);
@@ -1458,7 +1458,7 @@ public sealed class GenUInt : Gen<uint>
         get
         {
             uint l = finish - start + 1u;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 uint i = start + pcg.Next(l);
                 size = new Size(i + 1UL);
@@ -1501,9 +1501,8 @@ public sealed class GenLong : Gen<long>
     {
         get
         {
-
             ulong l = (ulong)(finish - start) + 1ul;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 long i = start + (long)pcg.Next64(l);
                 size = new Size(Zigzag(i) + 1UL);
@@ -1528,7 +1527,7 @@ public sealed class GenULong : Gen<ulong>
         get
         {
             ulong l = finish - start + 1ul;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 ulong i = start + pcg.Next64(l);
                 size = new Size(i + 1UL);
@@ -1558,7 +1557,7 @@ public sealed class GenFloat : Gen<float>
         {
             finish -= start;
             start -= finish;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 uint i = pcg.Next() >> 9;
                 size = new Size(i + 1UL);
@@ -1567,70 +1566,70 @@ public sealed class GenFloat : Gen<float>
         }
     }
     /// <summary>In the range 0.0 &lt;= x &lt;= max including special values.</summary>
-    public Gen<float> NonNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<float> NonNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint i = pcg.Next();
         size = new Size(i + 1UL);
         return Math.Abs(new FloatConverter { I = i }.F);
     });
     /// <summary>In the range 0.0f &lt;= x &lt; 1.0f.</summary>
-    public Gen<float> Unit = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<float> Unit = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint i = pcg.Next() >> 9;
         size = new Size(i + 1UL);
         return new FloatConverter { I = i | 0x3F800000 }.F - 1f;
     });
     /// <summary>In the range 1.0f &lt;= x &lt; 2.0f.</summary>
-    public Gen<float> OneTwo = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<float> OneTwo = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint i = pcg.Next() >> 9;
         size = new Size(i + 1UL);
         return new FloatConverter { I = i | 0x3F800000 }.F;
     });
     /// <summary>In the range 0.0 &lt; x &lt;= inf without nan.</summary>
-    public Gen<float> Positive = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<float> Positive = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint i = pcg.Next() >> 1;
         size = new Size(i + 1UL);
         return (i & 0x7F800000U) == 0x7F800000U ? (i & 0xFU) + 1U : new FloatConverter { I = i + 1U }.F;
     });
     /// <summary>In the range -inf &lt;= x &lt; 0.0 without nan.</summary>
-    public Gen<float> Negative = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<float> Negative = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint i = pcg.Next() >> 1;
         size = new Size(i + 1UL);
         return (i & 0x7F800000U) == 0x7F800000U ? -((i & 0xFU) + 1U) : new FloatConverter { I = (i + 1U) | 0x80000000U }.F;
     });
     /// <summary>Without special values nan and inf.</summary>
-    public Gen<float> Normal = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<float> Normal = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint i = pcg.Next();
         size = new Size(i + 1UL);
         return (i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU)) : new FloatConverter { I = i }.F;
     });
     /// <summary>In the range 0.0 &lt; x &lt;= max without special values nan and inf.</summary>
-    public Gen<float> NormalPositive = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<float> NormalPositive = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint i = pcg.Next() >> 1;
         size = new Size(i + 1UL);
         return (i & 0x7F800000U) == 0x7F800000U || i == 0U ? (i & 0xFU) + 1U : new FloatConverter { I = i }.F;
     });
     /// <summary>In the range min &lt;= x &lt; 0.0 without special values nan and inf.</summary>
-    public Gen<float> NormalNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<float> NormalNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint i = pcg.Next() >> 1;
         size = new Size(i + 1UL);
         return (i & 0x7F800000U) == 0x7F800000U || i == 0U ? -((i & 0xFU) + 1U) : new FloatConverter { I = i | 0x80000000U }.F;
     });
     /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
-    public Gen<float> NormalNonNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<float> NormalNonNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint i = pcg.Next() >> 1;
         size = new Size(i + 1UL);
         return (i & 0x7F800000U) == 0x7F800000U ? i & 0xFU : new FloatConverter { I = i }.F;
     });
     /// <summary>In the range min &lt;= x &lt;= 0.0 without special values nan and inf.</summary>
-    public Gen<float> NormalNonPositive = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<float> NormalNonPositive = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint i = pcg.Next() >> 1;
         size = new Size(i + 1UL);
@@ -1657,7 +1656,7 @@ public sealed class GenFloat : Gen<float>
     };
 
     /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
-    public Gen<float> Special = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<float> Special = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         uint i = pcg.Next();
         size = new Size(i + 1UL);
@@ -1679,7 +1678,7 @@ public sealed class GenDouble : Gen<double>
         {
             finish -= start;
             start -= finish;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 ulong i = pcg.Next64() >> 12;
                 size = new Size(i + 1UL);
@@ -1700,70 +1699,70 @@ public sealed class GenDouble : Gen<double>
             );
 
     /// <summary>In the range 0.0 &lt;= x &lt;= inf, can be nan.</summary>
-    public Gen<double> NonNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<double> NonNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         ulong i = pcg.Next64();
         size = new Size((i >> 12) + 1UL);
         return Math.Abs(BitConverter.Int64BitsToDouble((long)i));
     });
     /// <summary>In the range 0.0 &lt;= x &lt; 1.0.</summary>
-    public Gen<double> Unit = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<double> Unit = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         ulong i = pcg.Next64() >> 12;
         size = new Size(i + 1UL);
         return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1.0;
     });
     /// <summary>In the range 1.0 &lt;= x &lt; 2.0.</summary>
-    public Gen<double> OneTwo = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<double> OneTwo = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         ulong i = pcg.Next64() >> 12;
         size = new Size(i + 1UL);
         return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000);
     });
     /// <summary>In the range 0.0 &lt; x &lt;= inf without nan.</summary>
-    public Gen<double> Positive = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<double> Positive = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         ulong i = pcg.Next64() >> 1;
         size = new Size((i >> 11) + 1UL);
         return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? ((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)(i + 1UL));
     });
     /// <summary>In the range -inf &lt;= x &lt; 0.0 without nan.</summary>
-    public Gen<double> Negative = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<double> Negative = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         ulong i = pcg.Next64() >> 1;
         size = new Size((i >> 11) + 1UL);
         return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? -(double)((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)((i + 1UL) | 0x8000000000000000U));
     });
     /// <summary>Without special values nan and inf.</summary>
-    public Gen<double> Normal = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<double> Normal = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         ulong i = pcg.Next64();
         size = new Size((i >> 12) + 1UL);
         return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL)) : BitConverter.Int64BitsToDouble((long)i);
     });
     /// <summary>In the range 0.0 &lt; x &lt;= max without special values nan and inf.</summary>
-    public Gen<double> NormalPositive = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<double> NormalPositive = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         ulong i = pcg.Next64() >> 1;
         size = new Size((i >> 11) + 1UL);
         return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U || i == 0L ? ((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)i);
     });
     /// <summary>In the range min &lt;= x &lt; 0.0 without special values nan and inf.</summary>
-    public Gen<double> NormalNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<double> NormalNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         ulong i = pcg.Next64() >> 1;
         size = new Size((i >> 11) + 1UL);
         return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U || i == 0L ? -(double)((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)(i | 0x8000000000000000U));
     });
     /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
-    public Gen<double> NormalNonNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<double> NormalNonNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         ulong i = pcg.Next64() >> 1;
         size = new Size((i >> 11) + 1UL);
         return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? i & 0xFUL : BitConverter.Int64BitsToDouble((long)i);
     });
     /// <summary>In the range min &lt;= x &lt;= 0.0 without special values nan and inf.</summary>
-    public Gen<double> NormalNonPositive = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<double> NormalNonPositive = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         ulong i = pcg.Next64() >> 1;
         size = new Size((i >> 11) + 1UL);
@@ -1789,7 +1788,7 @@ public sealed class GenDouble : Gen<double>
         _ => 0.0,
     };
     /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
-    public Gen<double> Special = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<double> Special = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         ulong i = pcg.Next64();
         size = new Size((i >> 12) + 1UL);
@@ -1822,7 +1821,7 @@ public sealed class GenDecimal : Gen<decimal>
         {
             finish -= start;
             start -= finish;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 var i = pcg.Next64() >> 12;
                 size = new Size(i + 1UL);
@@ -1830,14 +1829,14 @@ public sealed class GenDecimal : Gen<decimal>
             });
         }
     }
-    public Gen<decimal> NonNegative = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<decimal> NonNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         var scale = (byte)pcg.Next(29);
         var hi = (int)pcg.Next();
         size = new Size((ulong)scale << 32 + hi);
         return new decimal((int)pcg.Next(), (int)pcg.Next(), hi, false, scale);
     });
-    public Gen<decimal> Unit = Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<decimal> Unit = Gen.Create((PCG pcg, Size? _, out Size size) =>
     {
         ulong i = pcg.Next64() >> 12;
         size = new Size(i + 1UL);
@@ -1859,7 +1858,7 @@ public sealed class GenDateTime : Gen<DateTime>
         get
         {
             ulong l = (ulong)(finish.Ticks - start.Ticks) + 1ul;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 ulong i = (ulong)start.Ticks + pcg.Next64(l);
                 size = new Size(i + 1UL);
@@ -1884,7 +1883,7 @@ public sealed class GenDate : Gen<DateTime>
         {
             uint s = (uint)(start.Ticks / TimeSpan.TicksPerDay);
             uint l = (uint)((finish.Ticks - start.Ticks) / TimeSpan.TicksPerDay) + 1u;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 uint i = s + pcg.Next(l);
                 size = new Size(i + 1UL);
@@ -1907,7 +1906,7 @@ public sealed class GenTimeSpan : Gen<TimeSpan>
         get
         {
             ulong l = (ulong)(finish.Ticks - start.Ticks) + 1ul;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 ulong i = (ulong)start.Ticks + pcg.Next64(l);
                 size = new Size(i + 1UL);
@@ -1963,7 +1962,7 @@ public sealed class GenChar : Gen<char>
         {
             uint s = start;
             uint l = finish + 1u - s;
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 var i = pcg.Next(l);
                 size = new Size(i + 1UL);
@@ -1975,7 +1974,7 @@ public sealed class GenChar : Gen<char>
     {
         get
         {
-            return Gen.Create((PCG pcg, Size? min, out Size size) =>
+            return Gen.Create((PCG pcg, Size? _, out Size size) =>
             {
                 var i = pcg.Next((uint)chars.Length);
                 size = new Size(i + 1UL);
@@ -2051,7 +2050,6 @@ public sealed class GenArrayUnique<T> : Gen<T[]>
         int i = 0;
         while (i < length)
         {
-
             var v = gen.Generate(pcg, null, out var s);
             var bad = 0;
             if (hs.Add(v))
@@ -2059,7 +2057,10 @@ public sealed class GenArrayUnique<T> : Gen<T[]>
                 vs[i++] = v;
                 size.Add(s);
             }
-            else if (++bad == 1000) throw new CsCheckException("Failing to add to ArrayUnique");
+            else if (++bad == 1000)
+            {
+                throw new CsCheckException("Failing to add to ArrayUnique");
+            }
         }
         size = new Size(sizeI, size);
         return vs;
@@ -2126,8 +2127,11 @@ public sealed class GenArray2D<T> : Gen<T[,]>
         var vs = new T[length0, length1];
         if (min is not null && min.I < size.I) return vs;
         for (int i = 0; i < length0; i++)
+        {
             for (int j = 0; j < length1; j++)
                 vs[i, j] = gen.Generate(pcg, null, out _);
+        }
+
         return vs;
     }
     public override T[,] Generate(PCG pcg, Size? min, out Size size)
@@ -2200,7 +2204,10 @@ public sealed class GenHashSet<T> : Gen<HashSet<T>>
                 length--;
                 bad = 0;
             }
-            else if (++bad == 1000) throw new CsCheckException("Failing to add to HashSet");
+            else if (++bad == 1000)
+            {
+                throw new CsCheckException("Failing to add to HashSet");
+            }
         }
         size = new Size(sizeI, size);
         return vs;
@@ -2248,7 +2255,10 @@ public sealed class GenDictionary<K, V> : Gen<Dictionary<K, V>>
                 i--;
                 bad = 0;
             }
-            else if (++bad == 1000) throw new CsCheckException("Failing to add to Dictionary");
+            else if (++bad == 1000)
+            {
+                throw new CsCheckException("Failing to add to Dictionary");
+            }
         }
         size = new Size(sizeI, size);
         return vs;
@@ -2296,7 +2306,10 @@ public sealed class GenSortedDictionary<K, V> : Gen<SortedDictionary<K, V>>
                 i--;
                 bad = 0;
             }
-            else if (++bad == 1000) throw new CsCheckException("Failing to add to SortedDictionary");
+            else if (++bad == 1000)
+            {
+                throw new CsCheckException("Failing to add to SortedDictionary");
+            }
         }
         size = new Size(sizeI, size);
         return vs;

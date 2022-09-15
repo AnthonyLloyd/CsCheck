@@ -120,7 +120,7 @@ namespace ReverseComplementNew
                         {
                             lo = 0;
                             loPage = pages[++loPageID];
-                            if (previous == null || !previous.IsAlive)
+                            if (previous?.IsAlive != true)
                                 canWriteCount = loPageID;
                         }
                         if (hi == -1)
@@ -412,7 +412,7 @@ namespace FastaUtils
     using System.Threading;
     using CsCheck;
 
-    public class Fasta
+    public static class Fasta
     {
         public const string Filename = "input25000000.txt";
         const int Width = 60;
@@ -539,7 +539,7 @@ namespace FastaUtils
                 "GCTACTCGGGAGGCTGAGGCAGGAGAATCGCTTGAACCCGGG" +
                 "AGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCC" +
                 "AGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA");
-            var linesPerBlock = (LinesPerBlock / 287 + 1) * 287;
+            const int linesPerBlock = (LinesPerBlock / 287 + 1) * 287;
             var repeatedBytes = bytePool.Rent(Width1 * linesPerBlock);
             for (int i = 0; i <= linesPerBlock * Width - 1; i++)
                 repeatedBytes[1 + i + i / Width] = table[i % 287];

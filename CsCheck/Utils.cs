@@ -45,7 +45,6 @@ public static partial class Check
 
     static bool IsPropertyType(object o)
     {
-
         var t = o.GetType();
         if (!t.IsGenericType) return false;
         var gt = t.GetGenericTypeDefinition();
@@ -125,25 +124,42 @@ public static partial class Check
     /// <summary>Default equal implementation. Handles most collections ordered for IList like or unordered for ICollection based.</summary>
     public static bool Equal<T>(T a, T b)
     {
-        if (a is null && b is null) return true;
-        else if (a is null || b is null) return false;
-        else if (a is IEquatable<T> aieq) return aieq.Equals(b);
+        if (a is null && b is null)
+        {
+            return true;
+        }
+        else if (a is null || b is null)
+        {
+            return false;
+        }
+        else if (a is IEquatable<T> aieq)
+        {
+            return aieq.Equals(b);
+        }
         else if (a is Array aa2 && b is Array ba2 && aa2.Rank == 2)
         {
             int I = aa2.GetLength(0), J = aa2.GetLength(1);
             if (I != ba2.GetLength(0) || J != ba2.GetLength(1)) return false;
             for (int i = 0; i < I; i++)
+            {
                 for (int j = 0; j < J; j++)
+                {
                     if (!aa2.GetValue(i, j).Equals(ba2.GetValue(i, j)))
                         return false;
+                }
+            }
+
             return true;
         }
         else if (a is IList ail && b is IList bil)
         {
             if (ail.Count != bil.Count) return false;
             for (int i = 0; i < ail.Count; i++)
+            {
                 if (!ail[i].Equals(bil[i]))
                     return false;
+            }
+
             return true;
         }
         else if (a.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null)
@@ -180,8 +196,11 @@ public static partial class Check
         {
             if (ail.Count != bil.Count) return false;
             for (int i = 0; i < ail.Count; i++)
+            {
                 if (!ail[i].Equals(bil[i]))
                     return false;
+            }
+
             return true;
         }
         else if (actual.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null
@@ -387,7 +406,11 @@ public sealed class MedianEstimator
                     }
                 }
             }
-            else if (s > Q4) Q4 = s;
+            else if (s > Q4)
+            {
+                Q4 = s;
+            }
+
             int h;
             double delta, d1, d2;
             s = (N - 1) * 0.25 + 1 - N1;
@@ -476,7 +499,10 @@ public sealed class MedianEstimator
                 Q0 = Q1;
                 Q1 = s;
             }
-            else Q0 = s;
+            else
+            {
+                Q0 = s;
+            }
         }
         else if (N == 4)
         {
@@ -498,7 +524,10 @@ public sealed class MedianEstimator
                 Q4 = Q3;
                 Q3 = s;
             }
-            else Q4 = s;
+            else
+            {
+                Q4 = s;
+            }
         }
         else if (N == 3)
         {
@@ -513,7 +542,10 @@ public sealed class MedianEstimator
                 Q3 = Q2;
                 Q2 = s;
             }
-            else Q3 = s;
+            else
+            {
+                Q3 = s;
+            }
         }
         else if (N == 2)
         {
@@ -522,9 +554,15 @@ public sealed class MedianEstimator
                 Q1 = Q2;
                 Q2 = s;
             }
-            else Q1 = s;
+            else
+            {
+                Q1 = s;
+            }
         }
-        else Q2 = s;
+        else
+        {
+            Q2 = s;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
