@@ -18,6 +18,7 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="Google.OrTools" Version="9.4.1874" />
         <ProjectReference Include="..\CsCheck\CsCheck.csproj" />
     </ItemGroup>
 </Project>
