@@ -36,11 +36,15 @@ public static class AllocateMany
         }
         var solver = Solver.CreateSolver("SCIP");
         solver.SetTimeLimit(timeout);
-        //solver.SetNumThreads(16);
+        solver.SetNumThreads(16);
         //var b = solver.SetSolverSpecificParametersAsString("parallel/mode=0\nparallel/minnthreads=16\nparallel/maxnthreads=16\nlimits/time=180\n");
         //if (!b) throw new Exception("aaa");
-        var a = solver.MakeIntVarMatrix(dedup.Count, n.Length, 0, double.PositiveInfinity);
-        var z = solver.MakeNumVar(double.NegativeInfinity, double.PositiveInfinity, "");
+
+        var a = new Variable[dedup.Count, n.Length];
+        for (i = 0; i < dedup.Count; i++)
+            for (int j = 0; j < n.Length; j++)
+                a[i, j] = solver.MakeIntVar(0, Math.Min(q[i], n[j]), "");
+        var z = solver.MakeNumVar(p.Zip(q, (x, y) => x * y).Sum() / q.Sum(), p.Max(), "");
         i = 0;
         foreach (var q_i in dedup.Values)
         {
