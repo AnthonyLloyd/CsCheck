@@ -9,13 +9,13 @@ namespace Tests;
 
 public static class AllocateMany
 {
-    public static long[][] Allocate(double[] p, long[] q, double[] w, int timeout = 600_000)
+    public static long[][] Allocate(double[] p, long[] q, double[] w, int timeout = 300_000)
     {
         var n = Allocator.Allocate(q.Sum(), w);
         return AllocateCore(p, q, n, timeout);
     }
 
-    public static long[][] Allocate(double[] p, long[] q, long[] n, int timeout = 600_000)
+    public static long[][] Allocate(double[] p, long[] q, long[] n, int timeout = 300_000)
     {
         if (q.Sum() != n.Sum())
             throw new Exception($"{q.Sum()} != {n.Sum()}");
@@ -24,6 +24,10 @@ public static class AllocateMany
 
     private static long[][] AllocateCore(double[] p, long[] q, long[] n, int timeout)
     {
+        var pBar = p.Zip(q, (x, y) => x * y).Sum() / q.Sum();
+        //for (int k = 0; k < p.Length; k++)
+        //    p[k] = (p[k]/* - pBar*/) / pBar;
+
         var dedup = new Dictionary<double, long>(p.Length);
         int i = 0;
         for (; i < p.Length; i++)
@@ -36,15 +40,17 @@ public static class AllocateMany
         }
         var solver = Solver.CreateSolver("SCIP");
         solver.SetTimeLimit(timeout);
-        solver.SetNumThreads(16);
+        //solver.SetNumThreads(16);
         //var b = solver.SetSolverSpecificParametersAsString("parallel/mode=0\nparallel/minnthreads=16\nparallel/maxnthreads=16\nlimits/time=180\n");
         //if (!b) throw new Exception("aaa");
+
+        var dedupQs = dedup.Values.ToArray();
 
         var a = new Variable[dedup.Count, n.Length];
         for (i = 0; i < dedup.Count; i++)
             for (int j = 0; j < n.Length; j++)
-                a[i, j] = solver.MakeIntVar(0, Math.Min(q[i], n[j]), "");
-        var z = solver.MakeNumVar(p.Zip(q, (x, y) => x * y).Sum() / q.Sum(), p.Max(), "");
+                a[i, j] = solver.MakeIntVar(0, Math.Min(dedupQs[i], n[j]), "");
+        var z = solver.MakeNumVar(pBar, p.Max(), "");
         i = 0;
         foreach (var q_i in dedup.Values)
         {
