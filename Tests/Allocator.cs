@@ -1,6 +1,7 @@
 ﻿namespace Tests;
 
 using System;
+using System.Linq;
 
 #nullable enable
 
@@ -48,6 +49,34 @@ public static class Allocator
                 results[index] += increment;
                 residual -= increment;
             } while (residual != 0);
+        }
+        return results;
+    }
+
+    public static long[] Allocate_BalinskiYoung(long quantity, double[] weights)
+    {
+        var sumWeights = weights.Sum();
+        var results = new long[weights.Length];
+        long h = 0;
+        while (h++ != quantity)
+        {
+            var max = double.MinValue;
+            var index = -1;
+            for (int i = 0; i < weights.Length; i++)
+            {
+                var r = results[i];
+                var w = weights[i];
+                if (r < w * h / sumWeights)
+                {
+                    var v = w / (1 + r);
+                    if (v > max)
+                    {
+                        max = v;
+                        index = i;
+                    }
+                }
+            }
+            results[index]++;
         }
         return results;
     }

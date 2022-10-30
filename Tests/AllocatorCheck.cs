@@ -104,6 +104,20 @@ internal static class AllocatorCheck
         });
     }
 
+    public static void NoAlabamaParadox(Gen<(long Total, double[] Weights)> gen, Func<long, double[], long[]> allocate)
+    {
+        gen.Where((total, weights) => total > 0 && weights.All(w => w >= 0))
+        .Sample((total, weights) =>
+        {
+            var allocations = allocate(total, weights);
+            var allocationsPlus = allocate(total + 1, weights);
+            for (int i = 0; i < allocations.Length; i++)
+                if (allocations[i] > allocationsPlus[i])
+                    return false;
+            return true;
+        });
+    }
+
     public static void HasSmallestAllocationError(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate)
     {
         static (double, double) Error(long[] allocations, long quantity, double[] weights, double sumWeights)

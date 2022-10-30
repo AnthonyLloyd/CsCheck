@@ -12,6 +12,9 @@ public class AllocatorTests
     readonly static Gen<(long Quantity, double[] Weights)> genAllSigns =
         Gen.Select(Gen.Long[-1000, 1000], Gen.Double[-100000, 100000, 10000].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
 
+    readonly static Gen<(long Quantity, double[] Weights)> genPositive =
+        Gen.Select(Gen.Long[0, 1000], Gen.Double[0, 100, 10].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
+
     [Fact]
     public void Allocate_TotalsCorrectly()
         => AllocatorCheck.TotalsCorrectly(genAllSigns, Allocator.Allocate);
@@ -39,6 +42,21 @@ public class AllocatorTests
     [Fact]
     public void Allocate_HasSmallestAllocationError()
         => AllocatorCheck.HasSmallestAllocationError(genAllSigns, Allocator.Allocate);
+
+    [Fact]
+    public void Allocate_BalinskiYoung_TotalsCorrectly()
+        => AllocatorCheck.TotalsCorrectly(genPositive, Allocator.Allocate_BalinskiYoung);
+
+    [Fact]
+    public void Allocate_BalinskiYoung_BetweenFloorAndCeiling()
+        => AllocatorCheck.BetweenFloorAndCeiling(genPositive, Allocator.Allocate_BalinskiYoung);
+
+    [Fact]
+    public void Allocate_BalinskiYoung_SmallerWeightsDontGetLargerAllocation()
+        => AllocatorCheck.SmallerWeightsDontGetLargerAllocation(genPositive, Allocator.Allocate_BalinskiYoung);
+    [Fact]
+    public void Allocate_BalinskiYoung_NoAlabamaParadox()
+        => AllocatorCheck.NoAlabamaParadox(genPositive, Allocator.Allocate_BalinskiYoung);
 
     [Fact]
     public void Allocate_Twitter()
@@ -105,4 +123,5 @@ public class AllocatorTests
         Assert.Equal(new long[] { -2, -2, 3 }, Allocator.Allocate(-1, new[] { 31.0, 19.0, -38.0 }));
         Assert.Equal(new long[] { 1, 4 }, Allocator.Allocate(5, new[] { 1.0, 9.0 }));
     }
+
 }
