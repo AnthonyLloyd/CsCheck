@@ -123,5 +123,4 @@ public class AllocatorTests
         Assert.Equal(new long[] { -2, -2, 3 }, Allocator.Allocate(-1, new[] { 31.0, 19.0, -38.0 }));
         Assert.Equal(new long[] { 1, 4 }, Allocator.Allocate(5, new[] { 1.0, 9.0 }));
     }
-
 }

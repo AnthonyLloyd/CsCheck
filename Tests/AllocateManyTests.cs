@@ -7,9 +7,6 @@ namespace Tests;
 
 public class AllocateManyTests
 {
-    readonly Action<string> writeLine;
-    public AllocateManyTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
-
     [Fact]
     public void Simple()
     {

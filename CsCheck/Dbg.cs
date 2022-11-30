@@ -103,7 +103,7 @@ public static class Dbg
         times = new();
         if (regressionStream is not null)
         {
-            regressionStream.Close();
+            regressionStream.Dispose();
             regressionStream = null;
         }
     }
@@ -340,33 +340,45 @@ public static class Dbg
     /// <summary>Saves a sequence of values on the first run and compares them on subsequent runs.</summary>
     public static RegressionStream Regression => regressionStream ??= new RegressionStream(Path.Combine(Hash.CacheDir, "Dbg.Regression.has"));
 
-    public sealed class RegressionStream : IRegression
+    public sealed class RegressionStream : IRegression, IDisposable
     {
         readonly string filename;
-        readonly FileStream? stream; // If not null then reading
+        readonly bool reading;
+        readonly FileStream stream;
         string lastString = "null";
         double absolute = 1e-12, relative = 1e-9;
         public RegressionStream(string filename)
         {
             this.filename = filename;
-            if(File.Exists(filename)) stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
-            else Directory.CreateDirectory(Path.GetDirectoryName(filename));
+            if (File.Exists(filename))
+            {
+                stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
+                reading = true;
+            }
+            else
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(filename));
+                stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
+                reading = false;
+            }
         }
 
         public void Delete()
         {
             regressionStream = null;
-            stream?.Dispose();
+            stream.Dispose();
             if (File.Exists(filename)) File.Delete(filename);
         }
 
-        public void Close()
+        public void Dispose()
         {
-            if (stream is not null && stream.Length != stream.Position)
+            if (reading && stream.Length != stream.Position)
                 throw new CsCheckException($"file (length {stream.Length}) contains more data than read (length {stream.Position})");
             regressionStream = null;
-            stream?.Dispose();
+            stream.Dispose();
         }
+
+        public void Close() => Dispose();
 
         public void Tolerance(double absolute = 0.0, double relative = 0.0)
         {
@@ -376,7 +388,7 @@ public static class Dbg
 
         public void Add(bool val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadBool(stream);
                 if (val != val2)
@@ -384,14 +396,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteBool(stream, val);
             }
         }
 
         public void Add(sbyte val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadSByte(stream);
                 if (val != val2)
@@ -399,14 +410,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteSByte(stream, val);
             }
         }
 
         public void Add(byte val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadByte(stream);
                 if (val != val2)
@@ -414,14 +424,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteByte(stream, val);
             }
         }
 
         public void Add(short val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadShort(stream);
                 if (val != val2)
@@ -429,14 +438,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteShort(stream, val);
             }
         }
 
         public void Add(ushort val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadUShort(stream);
                 if (val != val2)
@@ -444,14 +452,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteUShort(stream, val);
             }
         }
 
         public void Add(int val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadInt(stream);
                 if (val != val2)
@@ -459,14 +466,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteInt(stream, val);
             }
         }
 
         public void Add(uint val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadUInt(stream);
                 if (val != val2)
@@ -474,14 +480,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteUInt(stream, val);
             }
         }
 
         public void Add(long val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadLong(stream);
                 if (val != val2)
@@ -489,14 +494,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteLong(stream, val);
             }
         }
 
         public void Add(ulong val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadULong(stream);
                 if (val != val2)
@@ -504,14 +508,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteULong(stream, val);
             }
         }
 
         public void Add(DateTime val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadDateTime(stream);
                 if (val != val2)
@@ -519,14 +522,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteDateTime(stream, val);
             }
         }
 
         public void Add(TimeSpan val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadTimeSpan(stream);
                 if (val != val2)
@@ -534,14 +536,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteTimeSpan(stream, val);
             }
         }
 
         public void Add(DateTimeOffset val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadDateTimeOffset(stream);
                 if (val != val2)
@@ -549,14 +550,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteDateTimeOffset(stream, val);
             }
         }
 
         public void Add(Guid val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadGuid(stream);
                 if (val != val2)
@@ -564,14 +564,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteGuid(stream, val);
             }
         }
 
         public void Add(char val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadChar(stream);
                 if (val != val2)
@@ -579,7 +578,6 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteChar(stream, val);
             }
         }
@@ -587,7 +585,7 @@ public static class Dbg
         public void Add(string val)
         {
             val ??= "null";
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadString(stream);
                 if (val != val2)
@@ -595,7 +593,6 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteString(stream, val);
             }
             lastString = val;
@@ -603,7 +600,7 @@ public static class Dbg
 
         public void Add(double val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadDouble(stream);
                 if (Math.Abs(val - val2) > absolute + relative * (Math.Abs(val) + Math.Abs(val2)))
@@ -611,14 +608,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteDouble(stream, val);
             }
         }
 
         public void Add(float val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadFloat(stream);
                 if (Math.Abs(val - val2) > absolute + relative * (Math.Abs(val) + Math.Abs(val2)))
@@ -626,14 +622,13 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteFloat(stream, val);
             }
         }
 
         public void Add(decimal val)
         {
-            if (stream is not null)
+            if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadDecimal(stream);
                 if ((double)Math.Abs(val - val2) > absolute + relative * (double)(Math.Abs(val) + Math.Abs(val2)))
@@ -641,7 +636,6 @@ public static class Dbg
             }
             else
             {
-                using var stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 Hash.StreamSerializer.WriteDecimal(stream, val);
             }
         }
