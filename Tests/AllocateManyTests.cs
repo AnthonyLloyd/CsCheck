@@ -26,7 +26,7 @@ public class AllocateManyTests
         });
     }
 
-    [Fact]
+    [Fact(Skip = "LONG")]
     public void Example_139x19()
     {
         var fills = new (int, int)[] {

@@ -1045,14 +1045,22 @@ public static class Gen
         foreach (var (i, _) in constants) total += i;
         return Create((PCG pcg, Size? min, out Size size) =>
         {
-            size = new Size(0x1_0000_0000UL);
-            if (min is not null && min.I < size.I) return default!;
-            var v = (int)pcg.Next((uint)total);
-            foreach (var i in constants)
+            if (min?.I < 0x1_0000_0000UL)
             {
-                v -= i.Frequency;
-                if (v < 0) return i.Constant;
+                size = new Size(0x1_0000_0000UL);
+                return default!;
             }
+            var v = (int)pcg.Next((uint)total);
+            for(var i = 0; i < constants.Length; i++)
+            {
+                v -= constants[i].Frequency;
+                if (v < 0)
+                {
+                    size = new Size(0x1_0000_0000UL + (ulong)i);
+                    return constants[i].Constant;
+                }
+            }
+            size = new Size(0UL);
             return default!;
         });
     }
@@ -1070,17 +1078,17 @@ public static class Gen
                 min = min.I == 0x1_0000_0000UL ? min.Next : null;
             }
             var v = (int)pcg.Next((uint)total);
-            foreach (var i in gens)
+            for (var i = 0; i < gens.Length; i++)
             {
-                v -= i.Frequency;
+                v -= gens[i].Frequency;
                 if (v < 0)
                 {
-                    var r = i.Generator.Generate(pcg, min, out size);
-                    size = new Size(0x1_0000_0000UL, size);
+                    var r = gens[i].Generator.Generate(pcg, min, out size);
+                    size = new Size(0x1_0000_0000UL + (ulong)i, size);
                     return r;
                 }
             }
-            size = new Size(0L);
+            size = new Size(0UL);
             return default!;
         });
     }
@@ -1237,6 +1245,53 @@ public static class Gen
     public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int start, int finish) =>
         SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
 
+    public static Gen<T?> Nullable<T>(this Gen<T> gen, double nullFraction = 0.2) where T : struct
+    {
+        var nullLimit = (uint)(nullFraction * uint.MaxValue);
+        return Create((PCG pcg, Size? min, out Size size) =>
+        {
+            if (min is not null)
+            {
+                if (min.I < 0x1_0000_0000UL) { size = new Size(0x1_0000_0000UL); return default!; }
+                min = min.I == 0x1_0000_0000UL ? min.Next : null;
+            }
+            var v = pcg.Next();
+            if (pcg.Next() < nullLimit)
+            {
+                var r = gen.Generate(pcg, min, out size);
+                size = new Size(0x1_0000_0001UL, size);
+                return new T?(r);
+            }
+            size = new Size(0x1_0000_0000UL);
+            return default;
+        });
+    }
+
+    public static Gen<T?> Null<T>(this Gen<T> gen, double nullFraction = 0.2) where T : class
+    {
+        var nullLimit = (uint)(nullFraction * uint.MaxValue);
+        return Create((PCG pcg, Size? min, out Size size) =>
+        {
+            if (min is not null)
+            {
+                if (min.I < 0x1_0000_0000UL) { size = new Size(0x1_0000_0000UL); return default!; }
+                min = min.I == 0x1_0000_0000UL ? min.Next : null;
+            }
+            var v = pcg.Next();
+            if (pcg.Next() < nullLimit)
+            {
+                var r = gen.Generate(pcg, min, out size);
+                size = new Size(0x1_0000_0001UL, size);
+                return r;
+            }
+            else
+            {
+                size = new Size(0x1_0000_0000UL);
+                return null;
+            }
+        });
+    }
+
     public static GenOperation<T> Operation<T>(string name, Action<T> action)
         => new((PCG _, Size? __, out Size size) => { size = new Size(0L); return (name, action); });
 
@@ -1310,7 +1365,7 @@ public sealed class GenByte : Gen<byte>
 {
     public override byte Generate(PCG pcg, Size? min, out Size size)
     {
-        byte i = (byte)(pcg.Next() & 255u);
+        byte i = (byte)pcg.Next();
         size = new Size(i + 1UL);
         return i;
     }

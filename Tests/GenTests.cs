@@ -1,10 +1,13 @@
 ﻿namespace Tests;
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using CsCheck;
 using Xunit;
+
+#nullable enable
 
 public class GenTests
 {
@@ -722,6 +725,20 @@ public class GenTests
             return Depth(i) <= maxDepth;
         });
     }
+
+    public abstract record ValueOrRange();
+    public sealed record ValueOrRange_Value(double Value) : ValueOrRange;
+    public sealed record ValueOrRange_Range(double Lower, double? Upper) : ValueOrRange;
+    enum ParameterType { Price, Spread, Yield, Discount }
+
+    // Generators
+    private static readonly Gen<ValueOrRange> genValueOrRange =
+        Gen.OneOf<ValueOrRange>(
+            Gen.Double.Select(i => new ValueOrRange_Value(i)),
+            Gen.Select(Gen.Double, Gen.Double.Nullable(), (u, l) => new ValueOrRange_Range(u, l))
+        );
+    private static readonly Gen<Dictionary<DateTime, List<(ParameterType Type, ValueOrRange Value)>>> genExample =
+        Gen.Dictionary(Gen.DateTime, Gen.Select(Gen.Enum<ParameterType>(), genValueOrRange).List);
 }
 
 [StructLayout(LayoutKind.Explicit)]

@@ -36,6 +36,23 @@ No Reflection was used in the making of this product.
 
 ## Random testing
 
+### Generator Example
+```csharp
+public abstract record ValueOrRange();
+public sealed record ValueOrRange_Value(double Value) : ValueOrRange;
+public sealed record ValueOrRange_Range(double Lower, double? Upper) : ValueOrRange;
+public enum ParameterType { Price, Spread, Yield, Discount }
+
+// Generators
+private static readonly Gen<ValueOrRange> genValueOrRange =
+    Gen.OneOf<ValueOrRange>(
+        Gen.Double.Select(i => new ValueOrRange_Value(i)),
+        Gen.Select(Gen.Double, Gen.Double.Nullable(), (u, l) => new ValueOrRange_Range(u, l))
+    );
+private static readonly Gen<Dictionary<DateTime, List<(ParameterType Type, ValueOrRange Value)>>> genExample =
+    Gen.Dictionary(Gen.DateTime, Gen.Select(Gen.Enum<ParameterType>(), genValueOrRange).List);
+```
+
 ### Unit Single
 ```csharp
 [Fact]

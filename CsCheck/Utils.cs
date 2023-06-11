@@ -83,8 +83,6 @@ public static partial class Check
             || gt == typeof(ValueTuple<,,>)
             || gt == typeof(ValueTuple<,,,>)
             || gt == typeof(ValueTuple<,,,,>)
-            || gt == typeof(ValueTuple<,,,,>)
-            || gt == typeof(ValueTuple<,,,,>)
             || gt == typeof(ValueTuple<,,,,,>)
             || gt == typeof(ValueTuple<,,,,,,>)
             || gt == typeof(ValueTuple<,,,,,,,>);
