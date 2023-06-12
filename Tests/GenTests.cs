@@ -732,12 +732,12 @@ public class GenTests
     enum ParameterType { Price, Spread, Yield, Discount }
 
     // Generators
-    private static readonly Gen<ValueOrRange> genValueOrRange =
+    static readonly Gen<ValueOrRange> genValueOrRange =
         Gen.OneOf<ValueOrRange>(
             Gen.Double.Select(i => new ValueOrRange_Value(i)),
             Gen.Select(Gen.Double, Gen.Double.Nullable(), (u, l) => new ValueOrRange_Range(u, l))
         );
-    private static readonly Gen<Dictionary<DateTime, List<(ParameterType Type, ValueOrRange Value)>>> genExample =
+    static readonly Gen<Dictionary<DateTime, List<(ParameterType Type, ValueOrRange Value)>>> genExample =
         Gen.Dictionary(Gen.DateTime, Gen.Select(Gen.Enum<ParameterType>(), genValueOrRange).List);
 }
 
