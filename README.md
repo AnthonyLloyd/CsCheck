@@ -34,9 +34,7 @@ More to see in the [Tests](Tests). There are also 1,000+ F# tests using CsCheck 
 
 No Reflection was used in the making of this product.
 
-## Random testing
-
-### Generator Example
+## Generator Creation Example
 ```csharp
 public abstract record ValueOrRange();
 public sealed record ValueOrRange_Value(double Value) : ValueOrRange;
@@ -52,6 +50,8 @@ private static readonly Gen<ValueOrRange> genValueOrRange =
 private static readonly Gen<Dictionary<DateTime, List<(ParameterType Type, ValueOrRange Value)>>> genExample =
     Gen.Dictionary(Gen.DateTime, Gen.Select(Gen.Enum<ParameterType>(), genValueOrRange).List);
 ```
+
+## Random testing
 
 ### Unit Single
 ```csharp

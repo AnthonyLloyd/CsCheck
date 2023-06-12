@@ -1330,9 +1330,9 @@ public sealed class GenBool : Gen<bool>
 {
     public override bool Generate(PCG pcg, Size? min, out Size size)
     {
-        uint i = pcg.Next();
+        uint i = pcg.Next() & 1U;
         size = new Size(i + 1UL);
-        return (i & 1U) == 0U;
+        return i == 0U;
     }
 }
 
@@ -1342,7 +1342,7 @@ public sealed class GenSByte : Gen<sbyte>
     static ulong Zigzag(sbyte i) => (ulong)((i << 1) ^ (i >> 7));
     public override sbyte Generate(PCG pcg, Size? min, out Size size)
     {
-        sbyte i = (sbyte)(pcg.Next() & 255u);
+        sbyte i = (sbyte)pcg.Next();
         size = new Size(Zigzag(i) + 1UL);
         return i;
     }
@@ -1418,7 +1418,7 @@ public sealed class GenUShort : Gen<ushort>
 {
     public override ushort Generate(PCG pcg, Size? min, out Size size)
     {
-        ushort i = (ushort)(pcg.Next() & 65535u);
+        ushort i = (ushort)pcg.Next();
         size = new Size(i + 1UL);
         return i;
     }
