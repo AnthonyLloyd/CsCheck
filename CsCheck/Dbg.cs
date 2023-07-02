@@ -137,7 +137,7 @@ public static class Dbg
         public long Start;
 
         /// <summary>End the time measurement.</summary>
-        public void End()
+        public readonly void End()
         {
             var timestamp = Stopwatch.GetTimestamp();
             lock (times) times.GetValueOrNullRef(Name).Item1 += timestamp - Start;
@@ -145,7 +145,7 @@ public static class Dbg
         }
 
         /// <summary>Record time to this line.</summary>
-        public void Line([CallerLineNumber] int line = 0)
+        public readonly void Line([CallerLineNumber] int line = 0)
         {
             var timestamp = Stopwatch.GetTimestamp();
             lock (times)
@@ -156,10 +156,10 @@ public static class Dbg
             }
         }
 
-        public void Dispose() => End();
+        public readonly void Dispose() => End();
 
         /// <summary>End the time measurement and start a new one.</summary>
-        public TimeRegion EndStart<T>(T t)
+        public readonly TimeRegion EndStart<T>(T t)
         {
             End();
             return Time(t);
@@ -312,7 +312,7 @@ public static class Dbg
         {
             int index = 0;
             for (; index < _cache.Count; index++) yield return _cache[index];
-            for (; _enumerator is not null && _enumerator.MoveNext(); index++)
+            for (; _enumerator?.MoveNext() == true; index++)
             {
                 var current = _enumerator.Current;
                 _cache.Add(current);

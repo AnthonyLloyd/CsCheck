@@ -18,8 +18,7 @@
             Check.Faster(
                 ReverseComplementNew.RevComp.NotMain,
                 ReverseComplementOld.RevComp.NotMain,
-                threads: 1, timeout: 600_000, sigma: 6
-            )
+                sigma: 6, threads: 1, timeout: 600_000)
             .Output(writeLine);
         }
     }

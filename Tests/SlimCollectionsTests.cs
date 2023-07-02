@@ -64,7 +64,7 @@ public class SlimCollectionsTests
                     d.Add(array[i]);
                 return d.Count;
             },
-            repeat: 500, sigma: 20, raiseexception: false
+            sigma: 20, repeat: 500, raiseexception: false
         ).Output(writeLine);
 
         Dbg.Output(writeLine);
@@ -127,7 +127,7 @@ public class SlimCollectionsTests
             {
                 foreach (var i in items) hashset.Contains(i);
             },
-            repeat: 100
+            repeat: 1000
         ).Output(writeLine);
     }
 

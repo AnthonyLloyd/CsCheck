@@ -600,6 +600,6 @@ public struct MedianEstimate
         Median = a.Median / b.Median,
         Error = Math.Sqrt(Sqr(a.Error / a.Median) * Sqr(b.Error / b.Median)) * Math.Abs(a.Median / b.Median)
     };
-    public override string ToString() => Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0").PadLeft(5)
+    public override readonly string ToString() => Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0").PadLeft(5)
                                        + " ±" + Math.Min(Error, 99.9).ToString("0.0").PadLeft(4);
 }

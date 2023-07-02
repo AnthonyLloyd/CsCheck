@@ -7,7 +7,7 @@ using CsCheck;
 
 #nullable enable
 
-internal static class AllocatorCheck
+internal static class Allocator_Check
 {
     public static void TotalsCorrectly(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate)
     {

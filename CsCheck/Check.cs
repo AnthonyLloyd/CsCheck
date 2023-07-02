@@ -1192,7 +1192,7 @@ public static partial class Check
         print ??= Print;
         if (replay == -1) replay = Replay;
         int[]? replayThreads = null;
-        if (seed is not null && seed.Contains("["))
+        if (seed?.Contains("[") == true)
         {
             int i = seed.IndexOf('[');
             int j = seed.IndexOf(']', i + 1);
