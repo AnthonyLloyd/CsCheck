@@ -735,7 +735,7 @@ public class GenTests
     static readonly Gen<ValueOrRange> genValueOrRange =
         Gen.OneOf<ValueOrRange>(
             Gen.Double.Select(i => new ValueOrRange_Value(i)),
-            Gen.Select(Gen.Double, Gen.Double.Nullable(), (u, l) => new ValueOrRange_Range(u, l))
+            Gen.Double.SelectMany(l => Gen.Double[l, l + 100].Nullable().Select(u => new ValueOrRange_Range(l, u)))
         );
     static readonly Gen<Dictionary<DateTime, List<(ParameterType Type, ValueOrRange Value)>>> genExample =
         Gen.Dictionary(Gen.DateTime, Gen.Select(Gen.Enum<ParameterType>(), genValueOrRange).List);
