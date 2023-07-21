@@ -56,28 +56,29 @@ public static class Allocator
     public static long[] Allocate_BalinskiYoung(long quantity, double[] weights)
     {
         var sumWeights = weights.Sum();
-        var results = new long[weights.Length];
-        long h = 0;
-        while (h++ != quantity)
+        var allocations = new long[weights.Length];
+        for (var q = 1L; q <= quantity; q++)
         {
-            var max = double.MinValue;
+            var rmax = double.MinValue;
+            var amin = long.MaxValue;
             var index = -1;
             for (int i = 0; i < weights.Length; i++)
             {
-                var r = results[i];
+                var a = allocations[i];
                 var w = weights[i];
-                if (r < w * h / sumWeights)
+                if (a < w * q / sumWeights) // to keep to quota rule
                 {
-                    var v = w / (1 + r);
-                    if (v > max)
+                    var r = w / (1 + a); // divisor method
+                    if (r > rmax || (r == rmax && a < amin))
                     {
-                        max = v;
+                        rmax = r;
+                        amin = a;
                         index = i;
                     }
                 }
             }
-            results[index]++;
+            allocations[index]++;
         }
-        return results;
+        return allocations;
     }
 }

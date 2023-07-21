@@ -59,6 +59,13 @@ public class AllocatorTests
         => AllocatorCheck.NoAlabamaParadox(genPositive, Allocator.Allocate_BalinskiYoung);
 
     [Fact]
+    public void Allocate_BalinskiYoung_MinErrorExample()
+    {
+        var actual = Allocator.Allocate_BalinskiYoung(10L, new[] { 10.0, 20.0, 30.0 });
+        Assert.Equal(new long[] { 2, 3, 5 }, actual);
+    }
+
+    [Fact]
     public void Allocate_Twitter()
     {
         var actual = Allocator.Allocate(100, new[] { 406.0, 348.0, 246.0, 0.0 });
