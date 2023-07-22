@@ -5,6 +5,8 @@
 Well it did originate with the Haskell library QuickCheck, but there isn't anything particularly functional about random testing.
 
 We should also drop the term property-based. Developers often get stuck trying to think what 'property' their code has.
+Random testing is lot more than validating a property. The most powerful random tests are model-based followed by metamorphic.
+We should be thinking of those first.
 
 It's better to think of it as a more automated and powerful way of doing example based testing.
 When coming up with a small number of simple examples consider if the test could be written for a range of examples instead.
