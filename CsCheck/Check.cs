@@ -117,45 +117,44 @@ public static partial class Check
                     : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
         long total = seed is null ? 0 : 1;
         var cde = new CountdownEvent(threads);
-        while (threads-- > 0)
+        void Worker(object? _)
         {
-            ThreadPool.UnsafeQueueUserWorkItem(_ =>
+            var pcg = PCG.ThreadPCG;
+            Size? s = null;
+            T? t = default;
+            while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
             {
-                var pcg = PCG.ThreadPCG;
-                Size? s = null;
-                T? t = default;
-                while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
+                ulong state = pcg.State;
+                try
                 {
-                    ulong state = pcg.State;
-                    try
+                    t = gen.Generate(pcg, minSize, out s);
+                    if (Size.IsLessThan(s, minSize))
+                        assert(t);
+                    else
+                        Interlocked.Increment(ref skipped);
+                }
+                catch (Exception e)
+                {
+                    lock (cde)
                     {
-                        t = gen.Generate(pcg, minSize, out s);
                         if (Size.IsLessThan(s, minSize))
-                            assert(t);
-                        else
-                            skipped++;
-                    }
-                    catch (Exception e)
-                    {
-                        lock (cde)
                         {
-                            if (Size.IsLessThan(s, minSize))
-                            {
-                                shrinks++;
-                                minPCG = pcg;
-                                minState = state;
-                                minSize = s;
-                                minT = t;
-                                minException = e;
-                            }
+                            shrinks++;
+                            minPCG = pcg;
+                            minState = state;
+                            minSize = s;
+                            minT = t;
+                            minException = e;
                         }
                     }
-                    Interlocked.Increment(ref total);
                 }
-                cde.Signal();
-            }, null);
+                Interlocked.Increment(ref total);
+            }
+            cde.Signal();
         }
-
+        while (--threads > 0)
+            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
+        Worker(null);
         cde.Wait();
         if (minPCG is not null)
         {
@@ -317,7 +316,7 @@ public static partial class Check
                         if (Size.IsLessThan(s, minSize))
                             await assert(t);
                         else
-                            skipped++;
+                            Interlocked.Increment(ref skipped);
                     }
                     catch (Exception e)
                     {
@@ -492,63 +491,62 @@ public static partial class Check
                     : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
         long total = seed is null ? 0 : 1;
         var cde = new CountdownEvent(threads);
-        while (threads-- > 0)
+        void Worker(object? _)
         {
-            ThreadPool.UnsafeQueueUserWorkItem(_ =>
+            var pcg = PCG.ThreadPCG;
+            Size? s = null;
+            T? t = default;
+            while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
             {
-                var pcg = PCG.ThreadPCG;
-                Size? s = null;
-                T? t = default;
-                while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
+                ulong state = pcg.State;
+                try
                 {
-                    ulong state = pcg.State;
-                    try
+                    t = gen.Generate(pcg, minSize, out s);
+                    if (Size.IsLessThan(s, minSize))
                     {
-                        t = gen.Generate(pcg, minSize, out s);
-                        if (Size.IsLessThan(s, minSize))
+                        if (!predicate(t))
                         {
-                            if (!predicate(t))
+                            lock (cde)
                             {
-                                lock (cde)
+                                if (Size.IsLessThan(s, minSize))
                                 {
-                                    if (Size.IsLessThan(s, minSize))
-                                    {
-                                        shrinks++;
-                                        minPCG = pcg;
-                                        minState = state;
-                                        minSize = s;
-                                        minT = t;
-                                        minException = null;
-                                    }
+                                    shrinks++;
+                                    minPCG = pcg;
+                                    minState = state;
+                                    minSize = s;
+                                    minT = t;
+                                    minException = null;
                                 }
                             }
                         }
-                        else
-                        {
-                            skipped++;
-                        }
                     }
-                    catch (Exception e)
+                    else
                     {
-                        lock (cde)
+                        Interlocked.Increment(ref skipped);
+                    }
+                }
+                catch (Exception e)
+                {
+                    lock (cde)
+                    {
+                        if (Size.IsLessThan(s, minSize))
                         {
-                            if (Size.IsLessThan(s, minSize))
-                            {
-                                shrinks++;
-                                minPCG = pcg;
-                                minState = state;
-                                minSize = s;
-                                minT = t;
-                                minException = e;
-                            }
+                            shrinks++;
+                            minPCG = pcg;
+                            minState = state;
+                            minSize = s;
+                            minT = t;
+                            minException = e;
                         }
                     }
-                    Interlocked.Increment(ref total);
                 }
-                cde.Signal();
-            }, null);
+                Interlocked.Increment(ref total);
+            }
+            cde.Signal();
         }
-
+        while (--threads > 0)
+            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
+        Worker(null);
         cde.Wait();
         if (minPCG is not null)
         {
@@ -735,7 +733,7 @@ public static partial class Check
                         }
                         else
                         {
-                            skipped++;
+                            Interlocked.Increment(ref skipped);
                         }
                     }
                     catch (Exception e)
@@ -2637,32 +2635,30 @@ public static partial class Check
             T? ret = default;
             string? message = null;
             var threads = Environment.ProcessorCount;
-            while (threads-- > 0)
+            void Worker(object? _)
             {
-                ThreadPool.UnsafeQueueUserWorkItem(__ =>
+                var pcg = PCG.ThreadPCG;
+                while (!mre.IsSet)
                 {
-                    var pcg = PCG.ThreadPCG;
-                    while (true)
+                    var state = pcg.State;
+                    var t = gen.Generate(pcg, null, out var _);
+                    if (predicate(t))
                     {
-                        if (mre.IsSet) return;
-                        var state = pcg.State;
-                        var t = gen.Generate(pcg, null, out _);
-                        if (predicate(t))
+                        lock (mre)
                         {
-                            lock (mre)
+                            if (message is null)
                             {
-                                if (message is null)
-                                {
-                                    message = "Example " + typeof(T).Name + " seed = \"" + pcg.ToString(state) + "\"";
-                                    ret = t;
-                                    mre.Set();
-                                }
+                                message = "Example " + typeof(T).Name + " seed = \"" + pcg.ToString(state) + "\"";
+                                ret = t;
+                                mre.Set();
                             }
                         }
                     }
-                }, null);
+                }
             }
-
+            while (--threads > 0)
+                ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
+            Worker(null);
             mre.Wait();
             throw new CsCheckException(message!);
         }
