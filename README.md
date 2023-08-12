@@ -27,6 +27,7 @@ CsCheck also has functionality to make multiple types of testing simple and fast
 - [Performance testing](#Performance-testing)
 - [Debug utilities](#Debug-utilities)
 - [Configuration](#Configuration)
+- [Development](#Development)
 
 The following tests are in xUnit but could equally be used in any testing framework.
 
@@ -579,3 +580,11 @@ $env:CsCheck_Sigma = 50; dotnet test -c Release -l 'console;verbosity=detailed' 
 
 $env:CsCheck_Threads = 1; dotnet test -c Release -l 'console;verbosity=detailed' --filter Perf; rm env:CsCheck*
 ```
+
+## Development
+
+Contributions are very welome!
+
+CsCheck was designed to be easily extended. If you have created a cool `Gen` or extension please consider a PR.
+
+Apache 2 and free forever.
