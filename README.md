@@ -583,7 +583,7 @@ $env:CsCheck_Threads = 1; dotnet test -c Release -l 'console;verbosity=detailed'
 
 ## Development
 
-Contributions are very welome!
+Contributions are very welcome!
 
 CsCheck was designed to be easily extended. If you have created a cool `Gen` or extension please consider a PR.
 
