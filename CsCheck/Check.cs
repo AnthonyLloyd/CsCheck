@@ -1432,7 +1432,7 @@ public static partial class Check
     /// <summary>Assert the first function is faster than the second to a given sigma.</summary>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
@@ -1495,7 +1495,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
@@ -1591,7 +1591,7 @@ public static partial class Check
     /// <summary>Assert the first function is faster than the second to a given sigma.</summary>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
@@ -1677,7 +1677,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
@@ -1805,7 +1805,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -1856,9 +1856,9 @@ public static partial class Check
                 }
                 catch (Exception e)
                 {
-                    var tstring = Print(t);
-                    if (tstring.Length > 100) tstring = tstring.Substring(0, 100);
-                    exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tstring, e);
+                    var tString = Print(t);
+                    if (tString.Length > 100) tString = tString.Substring(0, 100);
+                    exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
                     mre.Set();
                 }
             }, null);
@@ -1878,7 +1878,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -1892,7 +1892,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -1906,7 +1906,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -1920,7 +1920,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -1934,7 +1934,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -1948,7 +1948,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -1962,7 +1962,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -1976,7 +1976,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2072,7 +2072,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2086,7 +2086,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2100,7 +2100,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2114,7 +2114,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2128,7 +2128,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2142,7 +2142,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2156,7 +2156,7 @@ public static partial class Check
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2171,7 +2171,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2256,9 +2256,9 @@ public static partial class Check
                 }
                 catch (Exception e)
                 {
-                    var tstring = Print(t);
-                    if (tstring.Length > 100) tstring = tstring.Substring(0, 100);
-                    exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tstring, e);
+                    var tString = Print(t);
+                    if (tString.Length > 100) tString = tString.Substring(0, 100);
+                    exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
                     mre.Set();
                 }
             }, null);
@@ -2279,7 +2279,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2294,7 +2294,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2309,7 +2309,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2324,7 +2324,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2339,7 +2339,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2354,7 +2354,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2369,7 +2369,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2384,7 +2384,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2523,7 +2523,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2538,7 +2538,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2553,7 +2553,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2568,7 +2568,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2583,7 +2583,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2598,7 +2598,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2613,7 +2613,7 @@ public static partial class Check
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
     /// <param name="assertEqual">An assert test of if the faster and slower code returns an equal value (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothosis (default 6).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
     /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
@@ -2671,7 +2671,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Check Equals, IEquatable and GetHashCode are consistent.</summary>
+    /// <summary>Check Equals, <see cref="IEquatable{T}"/> and GetHashCode are consistent.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>

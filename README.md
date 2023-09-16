@@ -321,7 +321,7 @@ Standard Output Messages:
 
  The first number is the estimated median performance improvement with the interquartile range in the square brackets.
  The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
- distribution for the null hypothosis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
+ distribution for the null hypothesis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
 
 ### Matrix Multiply
 
@@ -564,7 +564,7 @@ threads - The number of threads to run the sample on (default number logical CPU
 timeout - The timeout in seconds to use for Faster (default 60 seconds).  
 print - A function to convert the state to a string for error reporting (default Check.Print).  
 equal - A function to check if the two states are the same (default Check.Equal).  
-sigma - For Faster sigma is the number of standard deviations from the null hypothosis (default 6).  
+sigma - For Faster sigma is the number of standard deviations from the null hypothesis (default 6).  
 replay - The number of times to retry the seed to reproduce a SampleConcurrent fail (default 100).  
 
 Global defaults can also be set via environment variables:
