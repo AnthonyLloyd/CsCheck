@@ -209,23 +209,23 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void MapSlim_Performance_Increment()
     {
-        Gen.Byte.Array
-        .Select(a => (a, new MapSlim<byte, int>(), new Dictionary<int, int>()))
+        Gen.Int[0, 255].Array
+        .Select(a => (a, new MapSlim<int, int>(), new Dictionary<int, int>()))
         .Faster(
-    (items, mapslim, _) =>
-    {
-        foreach (var b in items)
-            mapslim.GetValueOrNullRef(b)++;
-    },
-    (items, _, dict) =>
-    {
-        foreach (var b in items)
-        {
-            dict.TryGetValue(b, out int c);
-            dict[b] = c + 1;
-        }
-    },
-            repeat: 500, sigma: 10
+            (items, mapslim, _) =>
+            {
+                foreach (var b in items)
+                    mapslim.GetValueOrNullRef(b)++;
+            },
+            (items, _, dict) =>
+            {
+                foreach (var b in items)
+                {
+                    dict.TryGetValue(b, out int c);
+                    dict[b] = c + 1;
+                }
+            },
+            repeat: 1000, sigma: 10
         ).Output(writeLine);
     }
 }
