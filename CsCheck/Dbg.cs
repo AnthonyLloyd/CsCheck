@@ -295,11 +295,10 @@ public static class Dbg
         return new CachedEnumerable<T>(e);
     }
 
-    sealed class CachedEnumerable<T> : IEnumerable<T>, IDisposable
+    sealed class CachedEnumerable<T>(IEnumerable<T> enumerable) : IEnumerable<T>, IDisposable
     {
-        IEnumerator<T>? _enumerator;
+        IEnumerator<T>? _enumerator = enumerable.GetEnumerator();
         readonly List<T> _cache = new();
-        public CachedEnumerable(IEnumerable<T> enumerable) => _enumerator = enumerable.GetEnumerator();
         public IEnumerator<T> GetEnumerator()
         {
             int index = 0;
@@ -635,7 +634,7 @@ public static class Dbg
 
     sealed class ListSlim<T> : IReadOnlyList<T>
     {
-        static class Holder { internal static T[] Initial = Array.Empty<T>(); }
+        static class Holder { internal static T[] Initial = []; }
         T[] entries;
         int count;
         public ListSlim() => entries = Holder.Initial;

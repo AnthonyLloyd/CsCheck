@@ -196,14 +196,13 @@ public static class Causal
         return Profile(() => action(gen.Generate(pcg, null, out _)), iter, time);
     }
 
-    public sealed class Result
+    public sealed class Result(Result.Row[] rows)
     {
-        public Result(Row[] rows) => Rows = rows;
-        public class Row {
-            public Row(string region) => Region = region;
-            public string Region; public int Count; public double Time; public MedianEstimate P10, P5, N5, N10, N15, N20;
+        public class Row(string region)
+        {
+            public string Region = region; public int Count; public double Time; public MedianEstimate P10, P5, N5, N10, N15, N20;
         }
-        public Row[] Rows;
+        public Row[] Rows = rows;
         public override string ToString()
         {
             var sb = new StringBuilder("\n| Region         |  Count  |  Time%  |    +10%     |     +5%     |     -5%     |    -10%     |    -15%     |    -20%     |\n|:---------------|--------:|--------:|------------:|------------:|------------:|------------:|------------:|------------:|\n");
