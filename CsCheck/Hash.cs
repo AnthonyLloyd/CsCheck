@@ -86,7 +86,7 @@ public sealed class Hash : IRegression
         SignificantFigures = significantFigures;
         if (offset == -1)
         {
-            roundingFractions = new List<int>();
+            roundingFractions = [];
             return;
         }
         if (!expectedHash.HasValue) return;
@@ -115,7 +115,7 @@ public sealed class Hash : IRegression
             Path.GetFileNameWithoutExtension(filePath) + "." + memberName + "=" + expectedHashCode + ".has");
     }
 
-    // The hashcode is stored in the lower 32 bits for both with and without offset.
+    // The hash code is stored in the lower 32 bits for both with and without offset.
     // The 33rd bit is a flag for no offset. Meaning a range of values for no offset of (0x100000000,0x1FFFFFFFF) = (4_294_967_296,8_589_934_591) ie 10 digits always.
     // The offset is shifted 33 bits and the bit above this set giving a range of (0x4000000000000000,(500_000_000 < 33) | 0x4000000000000000) | 0xFFFFFFFF)
     // = (4_611_686_018_427_387_904,8_906_653_318_722_355_199)
@@ -410,14 +410,14 @@ public sealed class Hash : IRegression
         }
     }
 
-    static readonly double[] pow10Double = new double[] { 1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14,
-        1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22, 1e23, 1e24, 1e25, 1e26, 1e27, 1e28, 1e29, 1e30, 1e31 };
+    static readonly double[] pow10Double = [ 1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14,
+        1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22, 1e23, 1e24, 1e25, 1e26, 1e27, 1e28, 1e29, 1e30, 1e31 ];
     static double Pow10Double(int i) => i >= 0 ? pow10Double[i] : 1.0 / pow10Double[-i];
-    static readonly float[] pow10Float = new float[] { 1e0f, 1e1f, 1e2f, 1e3f, 1e4f, 1e5f, 1e6f, 1e7f, 1e8f, 1e9f, 1e10f, 1e11f, 1e12f, 1e13f, 1e14f,
-        1e15f, 1e16f, 1e17f, 1e18f, 1e19f, 1e20f, 1e21f, 1e22f, 1e23f, 1e24f, 1e25f, 1e26f, 1e27f, 1e28f, 1e29f, 1e30f, 1e31f };
+    static readonly float[] pow10Float = [ 1e0f, 1e1f, 1e2f, 1e3f, 1e4f, 1e5f, 1e6f, 1e7f, 1e8f, 1e9f, 1e10f, 1e11f, 1e12f, 1e13f, 1e14f,
+        1e15f, 1e16f, 1e17f, 1e18f, 1e19f, 1e20f, 1e21f, 1e22f, 1e23f, 1e24f, 1e25f, 1e26f, 1e27f, 1e28f, 1e29f, 1e30f, 1e31f ];
     static float Pow10Float(int i) => i >= 0 ? pow10Float[i] : 1.0f / pow10Float[-i];
-    static readonly decimal[] pow10Decimal = new decimal[] { 1e0M, 1e1M, 1e2M, 1e3M, 1e4M, 1e5M, 1e6M, 1e7M, 1e8M, 1e9M, 1e10M, 1e11M, 1e12M, 1e13M, 1e14M,
-        1e15M, 1e16M, 1e17M, 1e18M, 1e19M, 1e20M, 1e21M, 1e22M, 1e23M, 1e24M, 1e25M, 1e26M, 1e27M, 1e28M };
+    static readonly decimal[] pow10Decimal = [ 1e0M, 1e1M, 1e2M, 1e3M, 1e4M, 1e5M, 1e6M, 1e7M, 1e8M, 1e9M, 1e10M, 1e11M, 1e12M, 1e13M, 1e14M,
+        1e15M, 1e16M, 1e17M, 1e18M, 1e19M, 1e20M, 1e21M, 1e22M, 1e23M, 1e24M, 1e25M, 1e26M, 1e27M, 1e28M ];
     static decimal Pow10Decimal(int i) => i >= 0 ? pow10Decimal[i] : 1.0M / pow10Decimal[-i];
 
     internal static class StreamSerializer

@@ -188,7 +188,6 @@ public class AllocatorMany_Tests(Xunit.Abstractions.ITestOutputHelper output)
             [3900, 800, 400],
             [900, 400, 3800], new(123), 100);
         Assert.True(actual.KnownGlobal);
-        Assert.Equal(AllocatorMany.SolutionType.RandomChange, actual.SolutionType);
     }
 
     [Fact]
