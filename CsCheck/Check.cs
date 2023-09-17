@@ -251,7 +251,7 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), seed, iter, time, threads, print);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
@@ -259,16 +259,19 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Dictionary<string, long> Sample<T>(this Gen<T> gen, Func<T, string> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static void Sample<T>(this Gen<T> gen, Func<T, string> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
+        Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new Dbg.MapSlim<string, long>());
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
         void action(T t) => d.Value.GetValueOrNullRef(classify(t))++;
         Sample(gen, action, seed, iter, time, threads, print);
-        return d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
     }
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
@@ -276,28 +279,136 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="classifyPrint"></param>
-    public static Dictionary<string, long> Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, string> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, Action<string>? classifyPrint = null)
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, string> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null,
+        Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new Dbg.MapSlim<string, long>(), true);
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        void action(T1 t1, T2 t2) => d.Value.GetValueOrNullRef(classify(t1, t2))++;
+        Sample(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, string> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
         void action(T1 t1, T2 t2, T3 t3) => d.Value.GetValueOrNullRef(classify(t1, t2, t3))++;
         Sample(gen, action, seed, iter, time, threads, print);
         var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        int maxLength = 0;
-        long total = 0;
-        classifyPrint ??= Console.WriteLine;
-        foreach (var kv in result)
-        {
-            total += kv.Value;
-            if (kv.Key.Length > maxLength) maxLength = kv.Key.Length;
-        }
-        foreach (var kc in result.OrderByDescending(i => i.Value))
-        {
-            var percent = ((float)kc.Value / total).ToString("0.00%").PadLeft(7);
-            classifyPrint(string.Concat(kc.Key.PadRight(maxLength), percent, " ", kc.Value));
-        }
-        return result;
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, string> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        void action(T1 t1, T2 t2, T3 t3, T4 t4) => d.Value.GetValueOrNullRef(classify(t1, t2, t3, t4))++;
+        Sample(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, string> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        void action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) => d.Value.GetValueOrNullRef(classify(t1, t2, t3, t4, t5))++;
+        Sample(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, string> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        void action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6) => d.Value.GetValueOrNullRef(classify(t1, t2, t3, t4, t5, t6))++;
+        Sample(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, string> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        void action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7) => d.Value.GetValueOrNullRef(classify(t1, t2, t3, t4, t5, t6, t7))++;
+        Sample(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, string> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        void action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8) => d.Value.GetValueOrNullRef(classify(t1, t2, t3, t4, t5, t6, t7, t8))++;
+        Sample(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -482,6 +593,166 @@ public static partial class Check
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> assert,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), seed, iter, time, threads, print);
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task<string>> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        async Task action(T t) => d.Value.GetValueOrNullRef(await classify(t))++;
+        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static async Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<string>> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        async Task action(T1 t1, T2 t2) => d.Value.GetValueOrNullRef(await classify(t1, t2))++;
+        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static async Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<string>> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        async Task action(T1 t1, T2 t2, T3 t3) => d.Value.GetValueOrNullRef(await classify(t1, t2, t3))++;
+        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static async Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<string>> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        async Task action(T1 t1, T2 t2, T3 t3, T4 t4) => d.Value.GetValueOrNullRef(await classify(t1, t2, t3, t4))++;
+        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static async Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<string>> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        async Task action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) => d.Value.GetValueOrNullRef(await classify(t1, t2, t3, t4, t5))++;
+        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static async Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<string>> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        async Task action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6) => d.Value.GetValueOrNullRef(await classify(t1, t2, t3, t4, t5, t6))++;
+        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static async Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<string>> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        async Task action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7) => d.Value.GetValueOrNullRef(await classify(t1, t2, t3, t4, t5, t6, t7))++;
+        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
+
+    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
+    public static async Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<string>> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
+        Action<string>? writeLine = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        async Task action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8) => d.Value.GetValueOrNullRef(await classify(t1, t2, t3, t4, t5, t6, t7, t8))++;
+        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        PrintClassify(result, writeLine ?? Console.WriteLine);
+    }
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>

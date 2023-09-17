@@ -119,6 +119,70 @@ public static partial class Check
         _ => t.ToString(),
     };
 
+    private static void PrintClassify(Dictionary<string, long> result, Action<string> writeLine)
+    {
+        int maxLength = 0;
+        long total = 0;
+        foreach (var kv in result)
+        {
+            total += kv.Value;
+            var a = kv.Key.Split('/');
+            var l = (a.Length - 1) * 2 + a[a.Length - 1].Length;
+            if (l > maxLength) maxLength = l;
+        }
+        foreach (var (summary, count) in result.SelectMany(kv =>
+        {
+            var a = kv.Key.Split('/');
+            return Enumerable.Range(1, a.Length - 1).Select(i => string.Join("/", a.Take(i)));
+        }).Distinct()
+                                        .Select(summary =>
+                                        {
+                                            var total = 0L;
+                                            foreach (var kv in result)
+                                            {
+                                                if (kv.Key.StartsWith(summary))
+                                                    total += kv.Value;
+                                            }
+                                            return (summary, total);
+                                        }).ToList())
+            result.Add(summary, count);
+
+        var x = result.Select(kv =>
+        {
+            var a = kv.Key.Split('/');
+            var r = new long[a.Length];
+            for (int i = 0; i < a.Length - 1; i++)
+                r[i] = result[string.Join("/", a.Take(i + 1))];
+            r[r.Length - 1] = kv.Value;
+            return r;
+        });
+
+        foreach (var kv in result.OrderByDescending(kv =>
+        {
+            var a = kv.Key.Split('/');
+            var r = new long[a.Length];
+            for (int i = 0; i < a.Length - 1; i++)
+                r[i] = result[string.Join("/", a.Take(i + 1))];
+            r[r.Length - 1] = kv.Value;
+            return r;
+        }, Comparer<long[]>.Create((x, y) =>
+        {
+            for (int i = 0; i < Math.Min(x.Length, y.Length); i++)
+            {
+                var c = x[i].CompareTo(y[i]);
+                if (c != 0)
+                    return c;
+            }
+            return -x.Length.CompareTo(y.Length);
+        })))
+        {
+            var percent = ((float)kv.Value / total).ToString("0.00%").PadLeft(8);
+            var a = kv.Key.Split('/');
+            var name = new string(' ', 2 * (a.Length - 1)) + a[a.Length - 1];
+            writeLine(string.Concat(name.PadRight(maxLength), percent, " ", kv.Value));
+        }
+    }
+
     /// <summary>Default equal implementation. Handles most collections ordered for IList like or unordered for ICollection based.</summary>
     public static bool Equal<T>(T a, T b)
     {
@@ -297,7 +361,7 @@ public static partial class Check
         while (next.Count != 0)
         {
             var current = next;
-            next = new();
+            next = [];
             foreach (var (start, ids, seq) in current)
             {
                 for (int i = start; i < ids.Length; i++)
@@ -584,14 +648,9 @@ public sealed class MedianEstimator
 }
 
 /// <summary>Median estimate with error. Supports mathematical operators.</summary>
-public struct MedianEstimate
+public struct MedianEstimate(MedianEstimator e)
 {
-    public double Median, Error;
-    public MedianEstimate(MedianEstimator e)
-    {
-        Median = e.Median;
-        Error = (e.Q3 - e.Q1) * 0.5;
-    }
+    public double Median = e.Median, Error = (e.Q3 - e.Q1) * 0.5;
     static double Sqr(double x) => x * x;
     public static MedianEstimate operator -(double a, MedianEstimate e) => new() { Median = a - e.Median, Error = e.Error };
     public static MedianEstimate operator *(MedianEstimate e, double a) => new() { Median = e.Median * a, Error = e.Error * a };

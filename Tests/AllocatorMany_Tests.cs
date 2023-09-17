@@ -98,8 +98,8 @@ public class AllocatorMany_Tests(Xunit.Abstractions.ITestOutputHelper output)
             var allocation = AllocatorMany.Allocate(rowPrice, rowTotal, colTotal, new Random(seed), 1);
             if (!TotalsCorrectly(rowTotal, colTotal, allocation.Solution))
                 throw new Exception("Does not total correctly");
-            return (allocation.KnownGlobal ? "Global/" : "Local/") + allocation.SolutionType.ToString();
-        }, time: 10, threads: 1, classifyPrint: writeLine);
+            return $"{(allocation.KnownGlobal ? "Global" : "Local")}/{allocation.SolutionType}";
+        }, time: 10, threads: 1, writeLine: writeLine);
     }
 
     [Fact]

@@ -225,7 +225,7 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
             dict[b] = c + 1;
         }
     },
-            repeat: 100
+            repeat: 500, sigma: 10
         ).Output(writeLine);
     }
 }
