@@ -1717,6 +1717,57 @@ public sealed class GenFloat : Gen<float>
         size = new Size(i + 1UL);
         return (i & 0xF0U) == 0xD0U ? MakeSpecial(i) : new FloatConverter { I = i }.F;
     });
+
+    /// <summary>A rational float num/den between start and finish where den is between 1 and denominator.</summary>
+    /// <param name="start">The lowest value.</param>
+    /// <param name="finish">The highest value.</param>
+    /// <param name="denominator">The maximum values of the fraction denominator.</param>
+    public Gen<float> this[int start, int finish, int denominator]
+        => Gen.Int[1, denominator]
+            .SelectMany(den =>
+                Gen.Int[start * den, finish * den]
+                .Select(num => ((float)num) / den)
+            );
+
+    public sealed class FloatWithInt : Gen<float>
+    {
+        static readonly Gen<float> gen = Gen.OneOf(Gen.Int.Cast<float>(), Gen.Float);
+        public override float Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
+        public Gen<float> this[float start, float finish]
+        {
+            get
+            {
+                var intStart = (int)Math.Ceiling(start);
+                var intFinish = (int)Math.Floor(finish);
+                return intStart <= intFinish
+                    ? Gen.OneOf(
+                        Gen.Int[intStart, intFinish].Cast<float>(),
+                        Gen.Float[start, finish])
+                    : Gen.Float[start, finish];
+            }
+        }
+    }
+    /// <summary>Gen with 50% int values.</summary>
+    public FloatWithInt WithInt => new();
+
+    public sealed class FloatWithRational
+    {
+        public Gen<float> this[float start, float finish, int denominator]
+        {
+            get
+            {
+                var intStart = (int)Math.Ceiling(start);
+                var intFinish = (int)Math.Floor(finish);
+                return intStart <= intFinish
+                    ? Gen.OneOf(
+                        Gen.Float[intStart, intFinish, denominator],
+                        Gen.Float[start, finish])
+                    : Gen.Float[start, finish];
+            }
+        }
+    }
+    /// <summary>Gen with 50% rational values.</summary>
+    public FloatWithRational WithRational => new();
 }
 
 public sealed class GenDouble : Gen<double>
@@ -2347,7 +2398,7 @@ public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictiona
         }
         size = new Size(sizeI, size);
         return vs;
-    }
+    }   
     public override Dictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
         => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
     public Gen<Dictionary<K, V>> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
