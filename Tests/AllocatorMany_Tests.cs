@@ -5,10 +5,9 @@ using System.Linq;
 using CsCheck;
 using Xunit;
 
-public class AllocatorMany_Tests
+public class AllocatorMany_Tests(Xunit.Abstractions.ITestOutputHelper output)
 {
-    readonly Action<string> writeLine;
-    public AllocatorMany_Tests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
+    readonly Action<string> writeLine = output.WriteLine;
 
     [Fact]
     public void RoundingSolutionTest()
@@ -88,7 +87,7 @@ public class AllocatorMany_Tests
                 Gen.Int[0, 5].Array[J].Where(a => a.Sum() > 0).Array[I],
                 Gen.Int[0, 10].Array[I],
                 Gen.Int.Uniform))
-        .Select((solution,
+        .Sample((solution,
                  rowPrice,
                  seed) =>
         {
@@ -97,76 +96,75 @@ public class AllocatorMany_Tests
             for (int j = 0; j < colTotal.Length; j++)
                 colTotal[j] = solution.SumCol(j);
             var allocation = AllocatorMany.Allocate(rowPrice, rowTotal, colTotal, new Random(seed), 1);
-            return (rowTotal, colTotal, allocation);
-        })
-        .DbgClassify(a => (a.allocation.KnownGlobal ? "Global " : " Local ") + a.allocation.SolutionType.ToString())
-        .Sample((rowTotal, colTotal, allocation) => TotalsCorrectly(rowTotal, colTotal, allocation.Solution), time: 10, threads: 1);
-        Dbg.Output(writeLine);
+            if (!TotalsCorrectly(rowTotal, colTotal, allocation.Solution))
+                throw new Exception("Does not total correctly");
+            return (allocation.KnownGlobal ? "Global/" : "Local/") + allocation.SolutionType.ToString();
+        }, time: 10, threads: 1, classifyPrint: writeLine);
     }
 
     [Fact]
     public void Simple()
     {
-        var actual = AllocatorMany.Allocate(new[] { 9, 2, 1 }, new[] { 1, 20, 20 }, new[] { 21, 0, 10, 0, 10 }, new(), 100);
+        var actual = AllocatorMany.Allocate([9, 2, 1], [1, 20, 20], [21, 0, 10, 0, 10], new(), 100);
         Assert.True(actual.KnownGlobal);
         Assert.Equal(AllocatorMany.SolutionType.RoundingMinimum, actual.SolutionType);
-        Assert.Equal(new [] { new[] { 1, 0, 0, 0, 0 }, new[] { 6, 0, 7, 0, 7 }, new[] { 14, 0, 3, 0, 3 } }, actual.Solution);
+        Assert.Equal([[1, 0, 0, 0, 0], [6, 0, 7, 0, 7], [14, 0, 3, 0, 3]], actual.Solution);
     }
 
     [Fact]
     public void Example01()
     {
-        var actual = AllocatorMany.Allocate(new[] { 96625, 96620 }, new[] { 4, 6 }, new[] { 4, 1, 1, 1, 1, 1, 1 }, new(), 100);
+        var actual = AllocatorMany.Allocate([96625, 96620], [4, 6], [4, 1, 1, 1, 1, 1, 1], new(), 100);
         Assert.True(actual.KnownGlobal);
         Assert.Equal(AllocatorMany.SolutionType.EveryCombination, actual.SolutionType);
-        Assert.Equal(new[] { new[] { 3, 1, 0, 0, 0, 0, 0 }, new[] { 1, 0, 1, 1, 1, 1, 1 } }, actual.Solution);
+        Assert.Equal([[3, 1, 0, 0, 0, 0, 0], [1, 0, 1, 1, 1, 1, 1]], actual.Solution);
     }
 
     [Fact]
     public void Example02()
     {
-        var actual = AllocatorMany.Allocate(new[] { 12, 11 }, new[] { 50, 30 }, new[] { 20, 60 }, new(), 100);
+        var actual = AllocatorMany.Allocate([12, 11], [50, 30], [20, 60], new(), 100);
         Assert.True(actual.KnownGlobal);
         Assert.Equal(AllocatorMany.SolutionType.RoundingMinimum, actual.SolutionType);
-        Assert.Equal(new[] { new[] { 12, 38 }, new[] { 8, 22 } }, actual.Solution);
+        Assert.Equal([[12, 38], [8, 22]], actual.Solution);
     }
 
     [Fact]
     public void Example03()
     {
-        var actual = AllocatorMany.Allocate(new[] { 12, 11, 15 }, new[] { 56, 42, 14 }, new[] { 28, 63, 21 }, new(), 100);
+        var actual = AllocatorMany.Allocate([12, 11, 15], [56, 42, 14], [28, 63, 21], new(), 100);
         Assert.True(actual.KnownGlobal);
         Assert.Equal(AllocatorMany.SolutionType.RoundingMinimum, actual.SolutionType);
-        Assert.Equal(new[] { new[] { 16, 31, 9 }, new[] { 9, 24, 9 }, new[] { 3, 8, 3 } }, actual.Solution);
+        Assert.Equal([[16, 31, 9], [9, 24, 9], [3, 8, 3]], actual.Solution);
     }
 
     [Fact]
     public void Example04()
     {
         var actual = AllocatorMany.Allocate(
-            new[] { 3175, 3174, 3173, 3170, 3169, 3168, 3167 },
-            new[] { 2, 3, 1, 1, 1, 2, 1 },
-            new[] { 4, 1, 1, 1, 1, 1, 1, 1 }, new(), 100);
+            [3175, 3174, 3173, 3170, 3169, 3168, 3167],
+            [2, 3, 1, 1, 1, 2, 1],
+            [4, 1, 1, 1, 1, 1, 1, 1], new(), 100);
         Assert.True(actual.KnownGlobal);
         Assert.Equal(AllocatorMany.SolutionType.EveryCombination, actual.SolutionType);
-        Assert.Equal(new[] {
-            new[] { 2, 0, 0, 0, 0, 0, 0, 0 },
-            new[] { 0, 1, 1, 1, 0, 0, 0, 0 },
-            new[] { 0, 0, 0, 0, 1, 0, 0, 0 },
-            new[] { 0, 0, 0, 0, 0, 1, 0, 0 },
-            new[] { 0, 0, 0, 0, 0, 0, 1, 0 },
-            new[] { 1, 0, 0, 0, 0, 0, 0, 1 },
-            new[] { 1, 0, 0, 0, 0, 0, 0, 0 },
-        }, actual.Solution);
+        Assert.Equal([
+            [2, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 0],
+            [1, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0],
+        ], actual.Solution);
     }
 
     [Fact]
     public void Example05()
     {
         var actual = AllocatorMany.Allocate(
-            new[] { 37060, 37073, 37748, 38051 },
-            new[] { 586, 1055, 7183, 5560 },
-            new[] { 2744, 413, 524, 10582, 121 }, new(123), 100);
+            [37060, 37073, 37748, 38051],
+            [586, 1055, 7183, 5560],
+            [2744, 413, 524, 10582, 121], new(123), 100);
         Assert.True(actual.KnownGlobal);
         Assert.Equal(AllocatorMany.SolutionType.RandomChange, actual.SolutionType);
     }
@@ -175,9 +173,9 @@ public class AllocatorMany_Tests
     public void Example06()
     {
         var actual = AllocatorMany.Allocate(
-            new[] { 127584, 127678, 128097, 128157, 128483 },
-            new[] { 1, 1, 1, 1, 1 },
-            new[] { 0, 1, 1, 0, 0, 1, 0, 1, 1, 0 }, new(), 100);
+            [127584, 127678, 128097, 128157, 128483],
+            [1, 1, 1, 1, 1],
+            [0, 1, 1, 0, 0, 1, 0, 1, 1, 0], new(), 100);
         Assert.True(actual.KnownGlobal);
         Assert.Equal(AllocatorMany.SolutionType.OnesColumn, actual.SolutionType);
     }
@@ -186,9 +184,9 @@ public class AllocatorMany_Tests
     public void Example07()
     {
         var actual = AllocatorMany.Allocate(
-            new[] { 34378, 34506, 34535 },
-            new[] { 3900, 800, 400 },
-            new[] { 900, 400, 3800 }, new(123), 100);
+            [34378, 34506, 34535],
+            [3900, 800, 400],
+            [900, 400, 3800], new(123), 100);
         Assert.True(actual.KnownGlobal);
         Assert.Equal(AllocatorMany.SolutionType.RandomChange, actual.SolutionType);
     }
@@ -197,9 +195,9 @@ public class AllocatorMany_Tests
     public void Example08()
     {
         var actual = AllocatorMany.Allocate(
-            new[] { 18880, 18916, 18920 },
-            new[] { 1861271, 61527, 67534 },
-            new[] { 381549, 56645, 69287, 1466297, 16554 }, new(123), 2);
+            [18880, 18916, 18920],
+            [1861271, 61527, 67534],
+            [381549, 56645, 69287, 1466297, 16554], new(123), 2);
         Assert.False(actual.KnownGlobal);
         Assert.Equal(AllocatorMany.SolutionType.RandomChange, actual.SolutionType);
     }
@@ -208,21 +206,21 @@ public class AllocatorMany_Tests
     public void Example09()
     {
         var actual = AllocatorMany.Allocate(
-            new[] { 96030, 96050, 96040, 95055, 96040, 96035, 96035, 96035 },
-            new[] { 1, 1, 1, 1, 1, 1, 1, 1 },
-            new[] { 1, 5, 2 }, new(123), 100);
+            [96030, 96050, 96040, 95055, 96040, 96035, 96035, 96035],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 5, 2], new(123), 100);
         Assert.True(actual.KnownGlobal);
         Assert.Equal(AllocatorMany.SolutionType.EveryCombination, actual.SolutionType);
-        Assert.Equal(new[] {
-            new[] { 1, 0, 0 },
-            new[] { 0, 1, 0 },
-            new[] { 0, 1, 0 },
-            new[] { 0, 1, 0 },
-            new[] { 0, 1, 0 },
-            new[] { 0, 1, 0 },
-            new[] { 0, 0, 1 },
-            new[] { 0, 0, 1 },
-        }, actual.Solution);
+        Assert.Equal([
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 1, 0],
+            [0, 1, 0],
+            [0, 1, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+            [0, 0, 1],
+        ], actual.Solution);
     }
 
     [Fact]
@@ -239,13 +237,13 @@ public class AllocatorMany_Tests
             var random = new Random(seed);
             var colTotal = Allocator.Allocate(rowTotal.Sum(), weight);
             var allocation = AllocatorMany.Allocate(rowPrice, rowTotal, colTotal, random, 1);
-            var away = new[] {
-                new[] { 19, 13, 2, 3, 12, 1, 2, 10, 16, 0 },
-                new[] { 1, 2, 15, 4, 5, 3, 12, 4, 4, 19 },
-                new[] { 0, 0, 1, 0, 1, 0, 1, 0, 0, 1 },
-                new[] { 1, 1, 14, 4, 12, 5, 0, 4, 0, 0 },
-                new[] { 11, 8, 1, 2, 3, 0, 5, 6, 11, 7 },
-            };
+            int[][] away = [
+                [19, 13, 2, 3, 12, 1, 2, 10, 16, 0],
+                [1, 2, 15, 4, 5, 3, 12, 4, 4, 19],
+                [0, 0, 1, 0, 1, 0, 1, 0, 0, 1],
+                [1, 1, 14, 4, 12, 5, 0, 4, 0, 0],
+                [11, 8, 1, 2, 3, 0, 5, 6, 11, 7],
+            ];
             if (!TotalsCorrectly(rowTotal, colTotal, away))
                 return false;
         var awayColCostError = AllocatorMany.ColCostError(AllocatorMany.ShiftToStartAtZeroAndScaleUp(rowPrice), rowTotal, colTotal, away);

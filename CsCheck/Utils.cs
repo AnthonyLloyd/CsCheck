@@ -109,7 +109,7 @@ public static partial class Check
         string s => s,
         Array { Rank: 2 } a => PrintArray2D(a),
         IList { Count: <= 12 } l => "[" + string.Join(", ", l.Cast<object>().Select(Print)) + "]",
-        IList l => $"L={l.Count} [{Print(l[0])}, {Print(l[1])}, {Print(l[2])}, {Print(l[3])} ... {Print(l[l.Count - 4])}, {Print(l[l.Count - 3])}, {Print(l[l.Count - 2])}, {Print(l[l.Count - 1])}]",
+        IList l => $"L={l.Count} [{Print(l[0])}, {Print(l[1])}, {Print(l[2])}, {Print(l[3])}, {Print(l[4])}, {Print(l[5])} ... {Print(l[l.Count - 6])}, {Print(l[l.Count - 5])}, {Print(l[l.Count - 4])}, {Print(l[l.Count - 3])}, {Print(l[l.Count - 2])}, {Print(l[l.Count - 1])}]",
         IEnumerable<object> e when e.Take(12).Count() <= 12 => "{" + string.Join(", ", e.Select(Print)) + "}",
         IEnumerable<object> e when e.Take(999).Count() <= 999 => "L=" + e.Count() + " {" + string.Join(", ", e.Select(Print)) + "}",
         IEnumerable<object> e => "L>999 {" + string.Join(", ", e.Take(6).Select(Print)) + " ... }",
@@ -333,7 +333,7 @@ public static partial class Check
     /// Check if two doubles are within the given absolute and relative tolerance.
     /// </summary>
     /// <param name="atol">The absolute tolerance.</param>
-    /// <param name="rtol">The releative tolerance.</param>
+    /// <param name="rtol">The relative tolerance.</param>
     /// <param name="a">The first double.</param>
     /// <param name="b">The second double.</param>
     /// <returns>True if the values satisfy |a-b| &#8804; atol + rtol max(|a|,|b|).</returns>

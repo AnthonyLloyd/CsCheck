@@ -61,7 +61,7 @@ public static class Dbg
         }
         foreach (var kc in counts.OrderByDescending(i => i.Value))
         {
-            var percent = ((float)kc.Value / total).ToString("0.0%").PadLeft(7);
+            var percent = ((float)kc.Value / total).ToString("0.00%").PadLeft(7);
             yield return string.Concat("Count: ", kc.Key.PadRight(maxLength), percent, " ", kc.Value);
         }
         maxLength = 0;
@@ -177,14 +177,7 @@ public static class Dbg
     /// <summary>Start a time measurement. Function name when parameter not set.</summary>
     public static TimeRegion Time([CallerMemberName] string name = "") => Time<string>(name);
 
-    ///// <summary>Add IEnumerable item debug info.</summary>
-    //public static IEnumerable<T> DbgInfo<T>(this IEnumerable<T> source, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
-    //{
-    //    source = source.ToList();
-    //    Info(string.Concat(name, " ", line, " : ", Check.Print(source)));
-    //    return source;
-    //}
-
+    //[Obsolete("Use the string return overloads on Sample, will be removed on the next major version", false)]
     /// <summary>Classify and count generated types debug info.</summary>
     public static Gen<T> DbgClassify<T>(this Gen<T> gen, Func<T, string> name) =>
         Gen.Create((PCG pcg, Size? min, out Size size) =>
@@ -697,7 +690,7 @@ public static class Dbg
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    sealed class MapSlim<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
+    internal sealed class MapSlim<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
     {
         struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
         static class Holder { internal static Entry[] Initial = new Entry[1]; }

@@ -27,7 +27,8 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
 Run one thread using calling thread for sync Sample.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <LangVersion>10.0</LangVersion>
+		<LangVersion>12.0</LangVersion>
+		<LangVersion>preview</LangVersion>
         <WarningLevel>999</WarningLevel>
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

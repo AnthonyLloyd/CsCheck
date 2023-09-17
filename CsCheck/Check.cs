@@ -15,6 +15,7 @@
 namespace CsCheck;
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -249,6 +250,55 @@ public static partial class Check
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> assert,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), seed, iter, time, threads, print);
+
+    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    public static Dictionary<string, long> Sample<T>(this Gen<T> gen, Func<T, string> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new Dbg.MapSlim<string, long>());
+        void action(T t) => d.Value.GetValueOrNullRef(classify(t))++;
+        Sample(gen, action, seed, iter, time, threads, print);
+        return d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+    }
+
+    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="classifyPrint"></param>
+    public static Dictionary<string, long> Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, string> classify,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, Action<string>? classifyPrint = null)
+    {
+        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new Dbg.MapSlim<string, long>(), true);
+        void action(T1 t1, T2 t2, T3 t3) => d.Value.GetValueOrNullRef(classify(t1, t2, t3))++;
+        Sample(gen, action, seed, iter, time, threads, print);
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        int maxLength = 0;
+        long total = 0;
+        classifyPrint ??= Console.WriteLine;
+        foreach (var kv in result)
+        {
+            total += kv.Value;
+            if (kv.Key.Length > maxLength) maxLength = kv.Key.Length;
+        }
+        foreach (var kc in result.OrderByDescending(i => i.Value))
+        {
+            var percent = ((float)kc.Value / total).ToString("0.00%").PadLeft(7);
+            classifyPrint(string.Concat(kc.Key.PadRight(maxLength), percent, " ", kc.Value));
+        }
+        return result;
+    }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -883,13 +933,9 @@ public static partial class Check
     public static Task SampleOneAsync<T>(this Gen<T> gen, Func<T, Task<bool>> predicate, string? seed = null, Func<T, string>? print = null)
         => SampleAsync(gen, predicate, seed, 1, -2, 1, print);
 
-    sealed class ModelBasedData<Actual, Model>
+    sealed class ModelBasedData<Actual, Model>(Actual actualState, Model modelState, uint stream, ulong seed, (string, Action<Actual, Model>)[] operations)
     {
-        public ModelBasedData(Actual actualState, Model modelState, uint stream, ulong seed, (string, Action<Actual, Model>)[] operations)
-        {
-            ActualState = actualState; ModelState = modelState; Stream = stream; Seed = seed; Operations = operations;
-        }
-        public Actual ActualState; public Model ModelState; public uint Stream; public ulong Seed; public (string, Action<Actual, Model>)[] Operations; public Exception? Exception;
+        public Actual ActualState = actualState; public Model ModelState = modelState; public uint Stream = stream; public ulong Seed = seed; public (string, Action<Actual, Model>)[] Operations = operations; public Exception? Exception;
     }
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
@@ -1085,12 +1131,9 @@ public static partial class Check
         => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
             equal, seed, iter, time, threads, printActual, printModel);
 
-    sealed class MetamorphicData<T> {
-        public MetamorphicData(T state1, T state2, uint stream, ulong seed)
-        {
-            State1 = state1; State2 = state2; Stream = stream; Seed = seed;
-        }
-        public T State1; public T State2; public uint Stream; public ulong Seed; public Exception? Exception;
+    sealed class MetamorphicData<T>(T state1, T state2, uint stream, ulong seed)
+    {
+        public T State1 = state1; public T State2 = state2; public uint Stream = stream; public ulong Seed = seed; public Exception? Exception;
     }
 
     /// <summary>Sample metamorphic (two path) operations on a random initial state checking that both paths are equal.
@@ -1157,13 +1200,9 @@ public static partial class Check
         });
     }
 
-    sealed class ConcurrentData<T>
+    sealed class ConcurrentData<T>(T state, uint stream, ulong seed, (string, Action<T>)[] operations, int threads)
     {
-        public ConcurrentData(T state, uint stream, ulong seed, (string, Action<T>)[] operations, int threads)
-        {
-            State = state; Stream = stream; Seed = seed; Operations = operations; Threads = threads;
-        }
-        public T State; public uint Stream; public ulong Seed; public (string, Action<T>)[] Operations; public int Threads; public int[]? ThreadIds; public Exception? Exception;
+        public T State = state; public uint Stream = stream; public ulong Seed = seed; public (string, Action<T>)[] Operations = operations; public int Threads = threads; public int[]? ThreadIds; public Exception? Exception;
     }
 
     internal const int MAX_CONCURRENT_OPERATIONS = 10;
@@ -2056,9 +2095,9 @@ public static partial class Check
                     {
                         if (isSet) return;
                         isSet = true;
-                        var tstring = Print(t);
-                        if (tstring.Length > 100) tstring = tstring.Substring(0, 100);
-                        tcs.SetException(new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tstring, e));
+                        var tString = Print(t);
+                        if (tString.Length > 100) tString = tString.Substring(0, 100);
+                        tcs.SetException(new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e));
                         return;
                     }
                 }
@@ -2506,9 +2545,9 @@ public static partial class Check
                     {
                         if (isSet) return;
                         isSet = true;
-                        var tstring = Print(t);
-                        if (tstring.Length > 100) tstring = tstring.Substring(0, 100);
-                        tcs.SetException(new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tstring, e));
+                        var tString = Print(t);
+                        if (tString.Length > 100) tString = tString.Substring(0, 100);
+                        tcs.SetException(new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e));
                         return;
                     }
                 }
