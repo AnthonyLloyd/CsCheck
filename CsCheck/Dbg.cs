@@ -177,7 +177,6 @@ public static class Dbg
     /// <summary>Start a time measurement. Function name when parameter not set.</summary>
     public static TimeRegion Time([CallerMemberName] string name = "") => Time<string>(name);
 
-    //[Obsolete("Use the string return overloads on Sample, will be removed on the next major version", false)]
     /// <summary>Classify and count generated types debug info.</summary>
     public static Gen<T> DbgClassify<T>(this Gen<T> gen, Func<T, string> name) =>
         Gen.Create((PCG pcg, Size? min, out Size size) =>

@@ -1495,7 +1495,7 @@ public sealed class GenInt : Gen<int>
     /// <summary>Skew the distribution towards either end.
     /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
     /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
-    public IntSkew Skew = new();
+    public IntSkew Skew => new();
 }
 
 public sealed class GenUInt : Gen<uint>
@@ -1535,7 +1535,7 @@ public sealed class GenUInt : Gen<uint>
     /// <summary>Skew the distribution towards either end.
     /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
     /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
-    public UIntSkew Skew = new();
+    public UIntSkew Skew => new();
 }
 
 public sealed class GenLong : Gen<long>
@@ -1744,7 +1744,7 @@ public sealed class GenDouble : Gen<double>
 
     /// <summary>A rational double num/den between start and finish where den is between 1 and denominator.</summary>
     /// <param name="start">The lowest value.</param>
-    /// <param name="finish">The hghest value.</param>
+    /// <param name="finish">The highest value.</param>
     /// <param name="denominator">The maximum values of the fraction denominator.</param>
     public Gen<double> this[int start, int finish, int denominator]
         => Gen.Int[1, denominator]
@@ -1858,7 +1858,47 @@ public sealed class GenDouble : Gen<double>
     /// <summary>Skew the distribution towards either end.
     /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
     /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
-    public DoubleSkew Skew = new();
+    public DoubleSkew Skew => new();
+
+    public sealed class DoubleWithInt : Gen<double>
+    {
+        static readonly Gen<double> gen = Gen.OneOf(Gen.Int.Cast<double>(), Gen.Double);
+        public override double Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
+        public Gen<double> this[double start, double finish]
+        {
+            get
+            {
+                var intStart = (int)Math.Ceiling(start);
+                var intFinish = (int)Math.Floor(finish);
+                return intStart <= intFinish
+                    ? Gen.OneOf(
+                        Gen.Int[intStart, intFinish].Cast<double>(),
+                        Gen.Double[start, finish])
+                    : Gen.Double[start, finish];
+            }
+        }
+    }
+    /// <summary>Gen with 50% int values.</summary>
+    public DoubleWithInt WithInt => new();
+
+    public sealed class DoubleWithRational
+    {
+        public Gen<double> this[double start, double finish, int denominator]
+        {
+            get
+            {
+                var intStart = (int)Math.Ceiling(start);
+                var intFinish = (int)Math.Floor(finish);
+                return intStart <= intFinish
+                    ? Gen.OneOf(
+                        Gen.Double[intStart, intFinish, denominator],
+                        Gen.Double[start, finish])
+                    : Gen.Double[start, finish];
+            }
+        }
+    }
+    /// <summary>Gen with 50% rational values.</summary>
+    public DoubleWithRational WithRational => new();
 }
 
 public sealed class GenDecimal : Gen<decimal>
@@ -2053,10 +2093,9 @@ public sealed class GenString : Gen<string>
         Gen.Char[chars].Array.Select(i => new string(i));
 }
 
-public sealed class GenArray<T> : Gen<T[]>
+public sealed class GenArray<T>(Gen<T> gen) : Gen<T[]>
 {
-    readonly Gen<T> gen;
-    public GenArray(Gen<T> gen) => this.gen = gen;
+    readonly Gen<T> gen = gen;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     T[] Generate(PCG pcg, Size? min, int length, out Size size)
     {
@@ -2090,10 +2129,9 @@ public sealed class GenArray<T> : Gen<T[]>
     );
 }
 
-public sealed class GenArrayUnique<T> : Gen<T[]>
+public sealed class GenArrayUnique<T>(Gen<T> gen) : Gen<T[]>
 {
-    readonly Gen<T> gen;
-    public GenArrayUnique(Gen<T> gen) => this.gen = gen;
+    readonly Gen<T> gen = gen;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     T[] Generate(PCG pcg, Size? min, int length, out Size size)
     {
@@ -2134,10 +2172,9 @@ public sealed class GenArrayUnique<T> : Gen<T[]>
     );
 }
 
-public sealed class GenEnumerable<T> : Gen<IEnumerable<T>>
+public sealed class GenEnumerable<T>(Gen<T> gen) : Gen<IEnumerable<T>>
 {
-    readonly Gen<T> gen;
-    public GenEnumerable(Gen<T> gen) => this.gen = gen;
+    readonly Gen<T> gen = gen;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     IEnumerable<T> Generate(PCG pcg, Size? min, int length, out Size size)
     {
@@ -2171,10 +2208,10 @@ public sealed class GenEnumerable<T> : Gen<IEnumerable<T>>
     );
 }
 
-public sealed class GenArray2D<T> : Gen<T[,]>
+public sealed class GenArray2D<T>(Gen<T> gen) : Gen<T[,]>
 {
-    readonly Gen<T> gen;
-    public GenArray2D(Gen<T> gen) => this.gen = gen;
+    readonly Gen<T> gen = gen;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     T[,] Generate(PCG pcg, Size? min, int length0, int length1, out Size size)
     {
@@ -2202,10 +2239,9 @@ public sealed class GenArray2D<T> : Gen<T[,]>
     );
 }
 
-public sealed class GenList<T> : Gen<List<T>>
+public sealed class GenList<T>(Gen<T> gen) : Gen<List<T>>
 {
-    readonly Gen<T> gen;
-    public GenList(Gen<T> gen) => this.gen = gen;
+    readonly Gen<T> gen = gen;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     List<T> Generate(PCG pcg, Size? min, int length, out Size size)
     {
@@ -2239,10 +2275,9 @@ public sealed class GenList<T> : Gen<List<T>>
     );
 }
 
-public sealed class GenHashSet<T> : Gen<HashSet<T>>
+public sealed class GenHashSet<T>(Gen<T> gen) : Gen<HashSet<T>>
 {
-    readonly Gen<T> gen;
-    public GenHashSet(Gen<T> gen) => this.gen = gen;
+    readonly Gen<T> gen = gen;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     HashSet<T> Generate(PCG pcg, Size? min, int length, out Size size)
     {
@@ -2281,15 +2316,10 @@ public sealed class GenHashSet<T> : Gen<HashSet<T>>
     );
 }
 
-public sealed class GenDictionary<K, V> : Gen<Dictionary<K, V>>
+public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictionary<K, V>>
 {
-    readonly Gen<K> genK;
-    readonly Gen<V> genV;
-    public GenDictionary(Gen<K> genK, Gen<V> genV)
-    {
-        this.genK = genK;
-        this.genV = genV;
-    }
+    readonly Gen<K> genK = genK;
+    readonly Gen<V> genV = genV;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     Dictionary<K, V> Generate(PCG pcg, Size? min, int length, out Size size)
     {
@@ -2332,15 +2362,10 @@ public sealed class GenDictionary<K, V> : Gen<Dictionary<K, V>>
     );
 }
 
-public sealed class GenSortedDictionary<K, V> : Gen<SortedDictionary<K, V>>
+public sealed class GenSortedDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<SortedDictionary<K, V>>
 {
-    readonly Gen<K> genK;
-    readonly Gen<V> genV;
-    public GenSortedDictionary(Gen<K> genK, Gen<V> genV)
-    {
-        this.genK = genK;
-        this.genV = genV;
-    }
+    readonly Gen<K> genK = genK;
+    readonly Gen<V> genV = genV;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     SortedDictionary<K, V> Generate(PCG pcg, Size? min, int length, out Size size)
     {

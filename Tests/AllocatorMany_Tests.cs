@@ -235,7 +235,7 @@ public class AllocatorMany_Tests(Xunit.Abstractions.ITestOutputHelper output)
         {
             var random = new Random(seed);
             var colTotal = Allocator.Allocate(rowTotal.Sum(), weight);
-            var allocation = AllocatorMany.Allocate(rowPrice, rowTotal, colTotal, random, 1);
+            var allocation = AllocatorMany.Allocate(rowPrice, rowTotal, colTotal, random, 10);
             int[][] away = [
                 [19, 13, 2, 3, 12, 1, 2, 10, 16, 0],
                 [1, 2, 15, 4, 5, 3, 12, 4, 4, 19],
