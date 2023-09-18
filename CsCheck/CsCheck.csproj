@@ -22,14 +22,13 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>2.13.0</Version>
+        <Version>2.13.1</Version>
         <PackageReleaseNotes>
-Added Sample classify overloads.
-Added Gen.Double.WithInt, Gen.Double.WithRational, Gen.Float.WithInt, Gen.Float.WithRational.
-		</PackageReleaseNotes>
+Minor format bug fix in the classify overloads.
+        </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
-		<LangVersion>12.0</LangVersion>
-		<LangVersion>preview</LangVersion>
+        <LangVersion>12.0</LangVersion>
+        <LangVersion>preview</LangVersion>
         <WarningLevel>999</WarningLevel>
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

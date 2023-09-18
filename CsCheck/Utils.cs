@@ -121,15 +121,7 @@ public static partial class Check
 
     private static void PrintClassify(Dictionary<string, long> result, Action<string> writeLine)
     {
-        int maxLength = 0;
-        long total = 0;
-        foreach (var kv in result)
-        {
-            total += kv.Value;
-            var a = kv.Key.Split('/');
-            var l = (a.Length - 1) * 2 + a[a.Length - 1].Length;
-            if (l > maxLength) maxLength = l;
-        }
+        long total = result.Values.Sum();
         foreach (var (summary, count) in result.SelectMany(kv =>
         {
             var a = kv.Key.Split('/');
@@ -146,6 +138,14 @@ public static partial class Check
                                             return (summary, total);
                                         }).ToList())
             result.Add(summary, count);
+
+        int maxLength = 0;
+        foreach (var kv in result)
+        {
+            var a = kv.Key.Split('/');
+            var l = (a.Length - 1) * 2 + a[a.Length - 1].Length;
+            if (l > maxLength) maxLength = l;
+        }
 
         var x = result.Select(kv =>
         {
