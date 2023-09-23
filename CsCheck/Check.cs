@@ -264,16 +264,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         void action(T t)
         {
-            var c = classify(t);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = classify(t);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         Sample(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -289,16 +288,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         void action(T1 t1, T2 t2)
         {
-            var c = classify(t1, t2);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = classify(t1, t2);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         Sample(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -314,16 +312,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         void action(T1 t1, T2 t2, T3 t3)
         {
-            var c = classify(t1, t2, t3);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = classify(t1, t2, t3);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         Sample(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -339,16 +336,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         void action(T1 t1, T2 t2, T3 t3, T4 t4)
         {
-            var c = classify(t1, t2, t3, t4);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = classify(t1, t2, t3, t4);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         Sample(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -364,16 +360,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         void action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5)
         {
-            var c = classify(t1, t2, t3, t4, t5);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = classify(t1, t2, t3, t4, t5);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         Sample(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -389,16 +384,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         void action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6)
         {
-            var c = classify(t1, t2, t3, t4, t5, t6);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = classify(t1, t2, t3, t4, t5, t6);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         Sample(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -414,16 +408,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         void action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7)
         {
-            var c = classify(t1, t2, t3, t4, t5, t6, t7);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = classify(t1, t2, t3, t4, t5, t6, t7);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         Sample(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -439,16 +432,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         void action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8)
         {
-            var c = classify(t1, t2, t3, t4, t5, t6, t7, t8);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = classify(t1, t2, t3, t4, t5, t6, t7, t8);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         Sample(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -647,16 +639,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         async Task action(T t)
         {
-            var c = await classify(t);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = await classify(t);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -672,16 +663,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         async Task action(T1 t1, T2 t2)
         {
-            var c = await classify(t1, t2);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = await classify(t1, t2);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -697,16 +687,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         async Task action(T1 t1, T2 t2, T3 t3)
         {
-            var c = await classify(t1, t2, t3);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = await classify(t1, t2, t3);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -722,16 +711,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         async Task action(T1 t1, T2 t2, T3 t3, T4 t4)
         {
-            var c = await classify(t1, t2, t3, t4);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = await classify(t1, t2, t3, t4);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -747,16 +735,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         async Task action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5)
         {
-            var c = await classify(t1, t2, t3, t4, t5);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = await classify(t1, t2, t3, t4, t5);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -772,16 +759,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         async Task action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6)
         {
-            var c = await classify(t1, t2, t3, t4, t5, t6);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = await classify(t1, t2, t3, t4, t5, t6);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -797,16 +783,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         async Task action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7)
         {
-            var c = await classify(t1, t2, t3, t4, t5, t6, t7);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = await classify(t1, t2, t3, t4, t5, t6, t7);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -822,16 +807,15 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
         Action<string>? writeLine = null)
     {
-        var d = new ThreadLocal<Dbg.MapSlim<string, long>>(() => new(), true);
+        var classifier = new Classifier();
         async Task action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8)
         {
-            var c = await classify(t1, t2, t3, t4, t5, t6, t7, t8);
-            if (c is not null)
-                d.Value.GetValueOrNullRef(c)++;
+            var time = Stopwatch.GetTimestamp();
+            var name = await classify(t1, t2, t3, t4, t5, t6, t7, t8);
+            classifier.Add(name, time - Stopwatch.GetTimestamp());
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        PrintClassify(result, writeLine ?? Console.WriteLine);
+        classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>

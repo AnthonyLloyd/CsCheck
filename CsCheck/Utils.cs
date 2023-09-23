@@ -22,6 +22,7 @@ using System.Threading;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using static CsCheck.Causal;
 
 public static partial class Check
 {
@@ -118,70 +119,6 @@ public static partial class Check
         T ft when IsFieldType(ft) => PrintFields(ft),
         _ => t.ToString(),
     };
-
-    private static void PrintClassify(Dictionary<string, long> result, Action<string> writeLine)
-    {
-        long total = result.Values.Sum();
-        foreach (var (summary, count) in result.SelectMany(kv =>
-        {
-            var a = kv.Key.Split('/');
-            return Enumerable.Range(1, a.Length - 1).Select(i => string.Join("/", a.Take(i)));
-        }).Distinct()
-                                        .Select(summary =>
-                                        {
-                                            var total = 0L;
-                                            foreach (var kv in result)
-                                            {
-                                                if (kv.Key.StartsWith(summary))
-                                                    total += kv.Value;
-                                            }
-                                            return (summary, total);
-                                        }).ToList())
-            result.Add(summary, count);
-
-        int maxLength = 0;
-        foreach (var kv in result)
-        {
-            var a = kv.Key.Split('/');
-            var l = (a.Length - 1) * 2 + a[a.Length - 1].Length;
-            if (l > maxLength) maxLength = l;
-        }
-
-        var x = result.Select(kv =>
-        {
-            var a = kv.Key.Split('/');
-            var r = new long[a.Length];
-            for (int i = 0; i < a.Length - 1; i++)
-                r[i] = result[string.Join("/", a.Take(i + 1))];
-            r[r.Length - 1] = kv.Value;
-            return r;
-        });
-
-        foreach (var kv in result.OrderByDescending(kv =>
-        {
-            var a = kv.Key.Split('/');
-            var r = new long[a.Length];
-            for (int i = 0; i < a.Length - 1; i++)
-                r[i] = result[string.Join("/", a.Take(i + 1))];
-            r[r.Length - 1] = kv.Value;
-            return r;
-        }, Comparer<long[]>.Create((x, y) =>
-        {
-            for (int i = 0; i < Math.Min(x.Length, y.Length); i++)
-            {
-                var c = x[i].CompareTo(y[i]);
-                if (c != 0)
-                    return c;
-            }
-            return -x.Length.CompareTo(y.Length);
-        })))
-        {
-            var percent = ((float)kv.Value / total).ToString("0.00%").PadLeft(8);
-            var a = kv.Key.Split('/');
-            var name = new string(' ', 2 * (a.Length - 1)) + a[a.Length - 1];
-            writeLine(string.Concat(name.PadRight(maxLength), percent, " ", kv.Value));
-        }
-    }
 
     /// <summary>Default equal implementation. Handles most collections ordered for IList like or unordered for ICollection based.</summary>
     public static bool Equal<T>(T a, T b)
@@ -661,4 +598,79 @@ public struct MedianEstimate(MedianEstimator e)
     };
     public override readonly string ToString() => Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0").PadLeft(5)
                                        + " ±" + Math.Min(Error, 99.9).ToString("0.0").PadLeft(4);
+}
+
+public sealed class Classifier
+{
+    readonly ThreadLocal<Dbg.MapSlim<string, long>> d = new(() => new(), true);
+    public void Add(string name, long time)
+    {
+        if (name is not null)
+            d.Value.GetValueOrNullRef(name)++;
+    }
+    public void Print(Action<string>? writeLine)
+    {
+        writeLine ??= Console.WriteLine;
+        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
+        long total = result.Values.Sum();
+        foreach (var (summary, count) in result.SelectMany(kv =>
+        {
+            var a = kv.Key.Split('/');
+            return Enumerable.Range(1, a.Length - 1).Select(i => string.Join("/", a.Take(i)));
+        }).Distinct()
+                                        .Select(summary =>
+                                        {
+                                            var total = 0L;
+                                            foreach (var kv in result)
+                                            {
+                                                if (kv.Key.StartsWith(summary))
+                                                    total += kv.Value;
+                                            }
+                                            return (summary, total);
+                                        }).ToList())
+            result.Add(summary, count);
+
+        int maxLength = 0;
+        foreach (var kv in result)
+        {
+            var a = kv.Key.Split('/');
+            var l = (a.Length - 1) * 2 + a[a.Length - 1].Length;
+            if (l > maxLength) maxLength = l;
+        }
+
+        var x = result.Select(kv =>
+        {
+            var a = kv.Key.Split('/');
+            var r = new long[a.Length];
+            for (int i = 0; i < a.Length - 1; i++)
+                r[i] = result[string.Join("/", a.Take(i + 1))];
+            r[r.Length - 1] = kv.Value;
+            return r;
+        });
+
+        foreach (var kv in result.OrderByDescending(kv =>
+        {
+            var a = kv.Key.Split('/');
+            var r = new long[a.Length];
+            for (int i = 0; i < a.Length - 1; i++)
+                r[i] = result[string.Join("/", a.Take(i + 1))];
+            r[r.Length - 1] = kv.Value;
+            return r;
+        }, Comparer<long[]>.Create((x, y) =>
+        {
+            for (int i = 0; i < Math.Min(x.Length, y.Length); i++)
+            {
+                var c = x[i].CompareTo(y[i]);
+                if (c != 0)
+                    return c;
+            }
+            return -x.Length.CompareTo(y.Length);
+        })))
+        {
+            var percent = ((float)kv.Value / total).ToString("0.00%").PadLeft(8);
+            var a = kv.Key.Split('/');
+            var name = new string(' ', 2 * (a.Length - 1)) + a[a.Length - 1];
+            writeLine(string.Concat(name.PadRight(maxLength), percent, " ", kv.Value));
+        }
+    }
 }
