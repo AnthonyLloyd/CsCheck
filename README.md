@@ -158,6 +158,41 @@ public void RecursiveDepth()
 }
 ```
 
+### Classify
+```csharp
+[Fact]
+public void AllocatorMany_Random_Classify()
+{
+    Gen.Select(Gen.Int[3, 30], Gen.Int[3, 15]).SelectMany((rows, cols) =>
+        Gen.Select(
+            Gen.Int[0, 5].Array[cols].Where(a => a.Sum() > 0).Array[rows],
+            Gen.Int[900, 1000].Array[rows],
+            Gen.Int.Uniform))
+    .Sample((solution,
+             rowPrice,
+             seed) =>
+    {
+        var rowTotal = Array.ConvertAll(solution, row => row.Sum());
+        var colTotal = Enumerable.Range(0, solution[0].Length).Select(col => solution.SumCol(col)).ToArray();
+        var allocation = AllocatorMany.Allocate(rowPrice, rowTotal, colTotal, new(seed), time: 60);
+        if (!TotalsCorrectly(rowTotal, colTotal, allocation.Solution))
+            throw new Exception("Does not total correctly");
+        return $"{(allocation.KnownGlobal ? "Global" : "Local")}/{allocation.SolutionType}";
+    }, time: 900, writeLine: writeLine);
+}
+```
+
+|                    | Count |       % |   Median |   Lower Q |   Upper Q |
+|--------------------|------:|--------:|---------:|----------:|----------:|
+| Global             |   464 |  50.38% |          |           |           |
+|   RoundingMinimum  |   330 |  35.83% |      1ms |       0ms |       5ms |
+|   EveryCombination |   111 |  12.05% |     59ms |       4ms |   1,741ms |
+|   RandomChange     |    23 |   2.50% | 59,590ms |  57,022ms |  59,974ms |
+| Local              |   457 |  49.62% |          |           |           |
+|   RoundingMinimum  |   303 |  32.90% | 60,000ms |  60,000ms |  60,001ms |
+|   RandomChange     |    86 |   9.34% | 60,000ms |  60,000ms |  60,001ms |
+|   EveryCombination |    68 |   7.38% | 60,000ms |  60,000ms |  60,001ms |
+
 ## Model-based testing
 
 Model-based is the most efficient form of random testing.

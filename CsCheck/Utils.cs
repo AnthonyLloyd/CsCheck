@@ -23,6 +23,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using static CsCheck.Causal;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 
 public static partial class Check
 {
@@ -368,7 +370,7 @@ public sealed class MedianEstimator
     /// <summary>The first, lower quartile, or 25th percentile value.</summary>
     public double LowerQuartile => Q1;
     /// <summary>The second quartile, median, or 50th percentile value.</summary>
-    public double Median => Q2;
+    public double Median => N == 4 ? (Q2 + Q3) * 0.5 : N == 2 ? (Q1 + Q2) * 0.5 : Q2;
     /// <summary>The third, upper quartile, or 75th percentile value.</summary>
     public double UpperQuartile => Q3;
     /// <summary>The maximum or 100th percentile value.</summary>
@@ -602,61 +604,68 @@ public struct MedianEstimate(MedianEstimator e)
 
 public sealed class Classifier
 {
-    readonly ThreadLocal<Dbg.MapSlim<string, long>> d = new(() => new(), true);
+    readonly ConcurrentDictionary<string, MedianEstimator> estimators = new();
+    [ThreadStatic]
+    MedianEstimator nextEstimator = new();
+    int nullCount;
     public void Add(string name, long time)
     {
         if (name is not null)
-            d.Value.GetValueOrNullRef(name)++;
+        {
+            var estimator = estimators.GetOrAdd(name, nextEstimator);
+            if (ReferenceEquals(estimator, nextEstimator))
+                nextEstimator = new();
+            lock (estimator)
+            {
+                estimator.Add(time);
+            }
+        }
+        else
+            Interlocked.Increment(ref nullCount);
     }
     public void Print(Action<string>? writeLine)
     {
         writeLine ??= Console.WriteLine;
-        var result = d.Values.SelectMany(i => i).GroupBy(i => i.Key).ToDictionary(i => i.Key, i => i.Sum(j => j.Value));
-        long total = result.Values.Sum();
-        foreach (var (summary, count) in result.SelectMany(kv =>
-        {
-            var a = kv.Key.Split('/');
-            return Enumerable.Range(1, a.Length - 1).Select(i => string.Join("/", a.Take(i)));
-        }).Distinct()
+        long total = estimators.Values.Sum(i => i.N);
+        foreach (var (summary, s) in estimators.SelectMany(kv =>
+                                        {
+                                            var a = kv.Key.Split('/');
+                                            return Enumerable.Range(1, a.Length - 1).Select(i => string.Join("/", a.Take(i)));
+                                        }).Distinct()
                                         .Select(summary =>
                                         {
-                                            var total = 0L;
-                                            foreach (var kv in result)
+                                            var total = new MedianEstimator();
+                                            foreach (var kv in estimators)
                                             {
                                                 if (kv.Key.StartsWith(summary))
-                                                    total += kv.Value;
+                                                    total.N += kv.Value.N;
                                             }
                                             return (summary, total);
                                         }).ToList())
-            result.Add(summary, count);
+            estimators[summary] = s;
 
         int maxLength = 0;
-        foreach (var kv in result)
+        foreach (var kv in estimators)
         {
             var a = kv.Key.Split('/');
             var l = (a.Length - 1) * 2 + a[a.Length - 1].Length;
             if (l > maxLength) maxLength = l;
         }
-
-        var x = result.Select(kv =>
+        var nLength = Math.Max(estimators.Values.Max(i => i.N).ToString("#,##0").Length, 5);
+        var lowerLength = Math.Max(Math.Round(estimators.Values.Max(i => i.Q1) / Stopwatch.Frequency * 1000).ToString("#,##0").Length, 7);
+        var medianLength = Math.Max(Math.Round(estimators.Values.Max(i => i.Q2) / Stopwatch.Frequency * 1000).ToString("#,##0").Length, 6);
+        var upperLength = Math.Max(Math.Round(estimators.Values.Max(i => i.Q3) / Stopwatch.Frequency * 1000).ToString("#,##0").Length, 7);
+        writeLine($"| {new string(' ', maxLength)} | {"Count".PadLeft(nLength)} |       % |   {"Median".PadLeft(medianLength)} |   {"Lower Q".PadLeft(lowerLength)} |   {"Upper Q".PadLeft(upperLength)} |");
+        writeLine($"|-{new string('-', maxLength)}-|-{new string('-', nLength)}:|--------:|-{new string('-', medianLength)}--:|-{new string('-', lowerLength)}--:|-{new string('-', upperLength)}--:|");
+        foreach (var kv in estimators.OrderByDescending(kv =>
         {
             var a = kv.Key.Split('/');
-            var r = new long[a.Length];
+            var r = new int[a.Length];
             for (int i = 0; i < a.Length - 1; i++)
-                r[i] = result[string.Join("/", a.Take(i + 1))];
-            r[r.Length - 1] = kv.Value;
+                r[i] = estimators[string.Join("/", a.Take(i + 1))].N;
+            r[r.Length - 1] = kv.Value.N;
             return r;
-        });
-
-        foreach (var kv in result.OrderByDescending(kv =>
-        {
-            var a = kv.Key.Split('/');
-            var r = new long[a.Length];
-            for (int i = 0; i < a.Length - 1; i++)
-                r[i] = result[string.Join("/", a.Take(i + 1))];
-            r[r.Length - 1] = kv.Value;
-            return r;
-        }, Comparer<long[]>.Create((x, y) =>
+        }, Comparer<int[]>.Create((x, y) =>
         {
             for (int i = 0; i < Math.Min(x.Length, y.Length); i++)
             {
@@ -667,10 +676,26 @@ public sealed class Classifier
             return -x.Length.CompareTo(y.Length);
         })))
         {
-            var percent = ((float)kv.Value / total).ToString("0.00%").PadLeft(8);
             var a = kv.Key.Split('/');
-            var name = new string(' ', 2 * (a.Length - 1)) + a[a.Length - 1];
-            writeLine(string.Concat(name.PadRight(maxLength), percent, " ", kv.Value));
+            var name = (new string((char)160, 2 * (a.Length - 1)) + a[a.Length - 1]).PadRight(maxLength);
+            var output = $"| {name} | {kv.Value.N.ToString("#,##0").PadLeft(nLength)} | {(float)kv.Value.N / total,7:0.00%} |";
+            if (kv.Value.Q2 != 0)
+            {
+                var median = Math.Round(kv.Value.Median / Stopwatch.Frequency * 1000).ToString("#,##0").PadLeft(medianLength);
+                if (kv.Value.N < 5)
+                    output += $" {median}ms | {new string(' ', lowerLength)}   | {new string(' ', upperLength)}   |";
+                else
+                {
+                    var lower = Math.Round(kv.Value.LowerQuartile / Stopwatch.Frequency * 1000).ToString("#,##0").PadLeft(lowerLength);
+                    var upper = Math.Round(kv.Value.UpperQuartile / Stopwatch.Frequency * 1000).ToString("#,##0").PadLeft(upperLength);
+                    output += $" {median}ms | {lower}ms | {upper}ms |";
+                }
+            }
+            else
+                output += $" {new string(' ', medianLength)}   | {new string(' ', lowerLength)}   | {new string(' ', upperLength)}   |";
+            writeLine(output);
         }
+        if (nullCount > 0)
+            writeLine($"Null Count: {nullCount:#,##0}");
     }
 }

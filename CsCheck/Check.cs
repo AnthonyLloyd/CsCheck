@@ -269,7 +269,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         Sample(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -293,7 +293,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         Sample(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -317,7 +317,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         Sample(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -341,7 +341,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         Sample(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -365,7 +365,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         Sample(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -389,7 +389,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5, t6);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         Sample(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -413,7 +413,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5, t6, t7);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         Sample(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -437,7 +437,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5, t6, t7, t8);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         Sample(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -644,7 +644,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -668,7 +668,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -692,7 +692,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -716,7 +716,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -740,7 +740,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -764,7 +764,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5, t6);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -788,7 +788,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5, t6, t7);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);
@@ -812,7 +812,7 @@ public static partial class Check
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5, t6, t7, t8);
-            classifier.Add(name, time - Stopwatch.GetTimestamp());
+            classifier.Add(name, Stopwatch.GetTimestamp() - time);
         }
         await SampleAsync(gen, action, seed, iter, time, threads, print);
         classifier.Print(writeLine);

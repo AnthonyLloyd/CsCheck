@@ -80,26 +80,24 @@ public class AllocatorMany_Tests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
-    public void Random()
+    public void AllocatorMany_Random_Classify()
     {
-        Gen.Select(Gen.Int[1, 10], Gen.Int[1, 10]).SelectMany((I, J) =>
+        Gen.Select(Gen.Int[3, 30], Gen.Int[3, 15]).SelectMany((rows, cols) =>
             Gen.Select(
-                Gen.Int[0, 5].Array[J].Where(a => a.Sum() > 0).Array[I],
-                Gen.Int[0, 10].Array[I],
+                Gen.Int[0, 5].Array[cols].Where(a => a.Sum() > 0).Array[rows],
+                Gen.Int[900, 1000].Array[rows],
                 Gen.Int.Uniform))
         .Sample((solution,
                  rowPrice,
                  seed) =>
         {
-            var rowTotal = Array.ConvertAll(solution, x => x.Sum());
-            var colTotal = new int[solution[0].Length];
-            for (int j = 0; j < colTotal.Length; j++)
-                colTotal[j] = solution.SumCol(j);
-            var allocation = AllocatorMany.Allocate(rowPrice, rowTotal, colTotal, new Random(seed), 1);
+            var rowTotal = Array.ConvertAll(solution, row => row.Sum());
+            var colTotal = Enumerable.Range(0, solution[0].Length).Select(col => solution.SumCol(col)).ToArray();
+            var allocation = AllocatorMany.Allocate(rowPrice, rowTotal, colTotal, new(seed), time: 1);
             if (!TotalsCorrectly(rowTotal, colTotal, allocation.Solution))
                 throw new Exception("Does not total correctly");
             return $"{(allocation.KnownGlobal ? "Global" : "Local")}/{allocation.SolutionType}";
-        }, time: 10, threads: 1, writeLine: writeLine);
+        }, time: 10, writeLine: writeLine);
     }
 
     [Fact]
