@@ -161,7 +161,7 @@ public void RecursiveDepth()
 ### Classify
 ```csharp
 [Fact]
-public void AllocatorMany_Random_Classify()
+public void AllocatorMany_Classify()
 {
     Gen.Select(Gen.Int[3, 30], Gen.Int[3, 15]).SelectMany((rows, cols) =>
         Gen.Select(
@@ -178,7 +178,7 @@ public void AllocatorMany_Random_Classify()
         if (!TotalsCorrectly(rowTotal, colTotal, allocation.Solution))
             throw new Exception("Does not total correctly");
         return $"{(allocation.KnownGlobal ? "Global" : "Local")}/{allocation.SolutionType}";
-    }, time: 900, writeLine: writeLine);
+    }, time: 900, writeLine: output.WriteLine);
 }
 ```
 

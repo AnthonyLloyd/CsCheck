@@ -605,14 +605,13 @@ public struct MedianEstimate(MedianEstimator e)
 public sealed class Classifier
 {
     readonly ConcurrentDictionary<string, MedianEstimator> estimators = new();
-    [ThreadStatic]
-    MedianEstimator nextEstimator = new();
+    [ThreadStatic] static MedianEstimator? nextEstimator;
     int nullCount;
     public void Add(string name, long time)
     {
         if (name is not null)
         {
-            var estimator = estimators.GetOrAdd(name, nextEstimator);
+            var estimator = estimators.GetOrAdd(name, nextEstimator ??= new());
             if (ReferenceEquals(estimator, nextEstimator))
                 nextEstimator = new();
             lock (estimator)
@@ -651,12 +650,17 @@ public sealed class Classifier
             var l = (a.Length - 1) * 2 + a[a.Length - 1].Length;
             if (l > maxLength) maxLength = l;
         }
+
+        var (timeString, timeUnit) = TimeFormat(estimators.Values.Max(i => i.Median));
+
         var nLength = Math.Max(estimators.Values.Max(i => i.N).ToString("#,##0").Length, 5);
-        var lowerLength = Math.Max(Math.Round(estimators.Values.Max(i => i.Q1) / Stopwatch.Frequency * 1000).ToString("#,##0").Length, 7);
-        var medianLength = Math.Max(Math.Round(estimators.Values.Max(i => i.Q2) / Stopwatch.Frequency * 1000).ToString("#,##0").Length, 6);
-        var upperLength = Math.Max(Math.Round(estimators.Values.Max(i => i.Q3) / Stopwatch.Frequency * 1000).ToString("#,##0").Length, 7);
-        writeLine($"| {new string(' ', maxLength)} | {"Count".PadLeft(nLength)} |       % |   {"Median".PadLeft(medianLength)} |   {"Lower Q".PadLeft(lowerLength)} |   {"Upper Q".PadLeft(upperLength)} |");
-        writeLine($"|-{new string('-', maxLength)}-|-{new string('-', nLength)}:|--------:|-{new string('-', medianLength)}--:|-{new string('-', lowerLength)}--:|-{new string('-', upperLength)}--:|");
+        var lowerLength = Math.Max(timeString(estimators.Values.Max(i => i.LowerQuartile)).Length, 7);
+        var medianLength = Math.Max(timeString(estimators.Values.Max(i => i.Median)).Length, 7);
+        var upperLength = Math.Max(timeString(estimators.Values.Max(i => i.UpperQuartile)).Length, 7);
+        var minimumLength = Math.Max(timeString(estimators.Values.Max(i => i.Minimum)).Length, 7);
+        var maximumLength = Math.Max(timeString(estimators.Values.Max(i => i.Maximum)).Length, 7);
+        writeLine($"| {new string(' ', maxLength)} | {"Count".PadLeft(nLength)} |       % |   {"Median".PadLeft(medianLength)} |   {"Lower Q".PadLeft(lowerLength)} |   {"Upper Q".PadLeft(upperLength)} |   {"Minimum".PadLeft(minimumLength)} |   {"Maximum".PadLeft(maximumLength)} |");
+        writeLine($"|-{new string('-', maxLength)}-|-{new string('-', nLength)}:|--------:|-{new string('-', medianLength)}--:|-{new string('-', lowerLength)}--:|-{new string('-', upperLength)}--:|-{new string('-', minimumLength)}--:|-{new string('-', maximumLength)}--:|");
         foreach (var kv in estimators.OrderByDescending(kv =>
         {
             var a = kv.Key.Split('/');
@@ -681,21 +685,36 @@ public sealed class Classifier
             var output = $"| {name} | {kv.Value.N.ToString("#,##0").PadLeft(nLength)} | {(float)kv.Value.N / total,7:0.00%} |";
             if (kv.Value.Q2 != 0)
             {
-                var median = Math.Round(kv.Value.Median / Stopwatch.Frequency * 1000).ToString("#,##0").PadLeft(medianLength);
+                var median = timeString(kv.Value.Median).PadLeft(medianLength);
                 if (kv.Value.N < 5)
-                    output += $" {median}ms | {new string(' ', lowerLength)}   | {new string(' ', upperLength)}   |";
+                    output += $" {median}{timeUnit} | {new string(' ', lowerLength)}   | {new string(' ', upperLength)}   | {new string(' ', minimumLength)}   | {new string(' ', maximumLength)}   |";
                 else
                 {
-                    var lower = Math.Round(kv.Value.LowerQuartile / Stopwatch.Frequency * 1000).ToString("#,##0").PadLeft(lowerLength);
-                    var upper = Math.Round(kv.Value.UpperQuartile / Stopwatch.Frequency * 1000).ToString("#,##0").PadLeft(upperLength);
-                    output += $" {median}ms | {lower}ms | {upper}ms |";
+                    var lower = timeString(kv.Value.LowerQuartile).PadLeft(lowerLength);
+                    var upper = timeString(kv.Value.UpperQuartile).PadLeft(upperLength);
+                    var minimum = timeString(kv.Value.Minimum).PadLeft(minimumLength);
+                    var maximum = timeString(kv.Value.Maximum).PadLeft(maximumLength);
+                    output += $" {median}{timeUnit} | {lower}{timeUnit} | {upper}{timeUnit} | {minimum}{timeUnit} | {maximum}{timeUnit} |";
                 }
             }
             else
-                output += $" {new string(' ', medianLength)}   | {new string(' ', lowerLength)}   | {new string(' ', upperLength)}   |";
+                output += $" {new string(' ', medianLength)}   | {new string(' ', lowerLength)}   | {new string(' ', upperLength)}   | {new string(' ', minimumLength)}   | {new string(' ', maximumLength)}   |";
             writeLine(output);
         }
         if (nullCount > 0)
             writeLine($"Null Count: {nullCount:#,##0}");
     }
+
+    static (Func<double, string>, string) TimeFormat(double maxValue) =>
+        (maxValue * 1000.0 / Stopwatch.Frequency) switch
+        {
+            >= 1_000_000 => (d => (d * 1_000 / Stopwatch.Frequency).ToString("#,##0"), "ms"),
+            >= 100_000 => (d => (d * 1_000 / Stopwatch.Frequency).ToString("#,##0.0"), "ms"),
+            >= 10_000 => (d => (d * 1_000 / Stopwatch.Frequency).ToString("#,##0.00"), "ms"),
+            >= 1_000 => (d => (d * 1_000 / Stopwatch.Frequency).ToString("#,##0.000"), "ms"),
+            >= 100 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("#,##0.0"), "μs"),
+            >= 10 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("#,##0.00"), "μs"),
+            >= 1 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("#,##0.000"), "μs"),
+            _ => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("#,##0.0000"), "μs"),
+        };
 }

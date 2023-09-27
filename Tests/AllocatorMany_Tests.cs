@@ -7,8 +7,6 @@ using Xunit;
 
 public class AllocatorMany_Tests(Xunit.Abstractions.ITestOutputHelper output)
 {
-    readonly Action<string> writeLine = output.WriteLine;
-
     [Fact]
     public void RoundingSolutionTest()
     {
@@ -80,7 +78,7 @@ public class AllocatorMany_Tests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
-    public void AllocatorMany_Random_Classify()
+    public void AllocatorMany_Classify()
     {
         Gen.Select(Gen.Int[3, 30], Gen.Int[3, 15]).SelectMany((rows, cols) =>
             Gen.Select(
@@ -97,7 +95,7 @@ public class AllocatorMany_Tests(Xunit.Abstractions.ITestOutputHelper output)
             if (!TotalsCorrectly(rowTotal, colTotal, allocation.Solution))
                 throw new Exception("Does not total correctly");
             return $"{(allocation.KnownGlobal ? "Global" : "Local")}/{allocation.SolutionType}";
-        }, time: 10, writeLine: writeLine);
+        }, time: 10, writeLine: output.WriteLine);
     }
 
     [Fact]
