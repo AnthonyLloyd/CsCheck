@@ -182,16 +182,16 @@ public void AllocatorMany_Classify()
 }
 ```
 
-|                    | Count |       % |   Median |   Lower Q |   Upper Q |
-|--------------------|------:|--------:|---------:|----------:|----------:|
-| Global             |   464 |  50.38% |          |           |           |
-|   RoundingMinimum  |   330 |  35.83% |      1ms |       0ms |       5ms |
-|   EveryCombination |   111 |  12.05% |     59ms |       4ms |   1,741ms |
-|   RandomChange     |    23 |   2.50% | 59,590ms |  57,022ms |  59,974ms |
-| Local              |   457 |  49.62% |          |           |           |
-|   RoundingMinimum  |   303 |  32.90% | 60,000ms |  60,000ms |  60,001ms |
-|   RandomChange     |    86 |   9.34% | 60,000ms |  60,000ms |  60,001ms |
-|   EveryCombination |    68 |   7.38% | 60,000ms |  60,000ms |  60,001ms |
+|                    | Count |       % |      Median |     Lower Q |     Upper Q |     Minimum |     Maximum |
+|--------------------|------:|--------:|------------:|------------:|------------:|------------:|------------:|
+| Global             |   458 |  50.22% |             |             |             |             |             |
+|   RoundingMinimum  |   343 |  37.61% |      2.68ms |      0.50ms |     10.85ms |      0.03ms |    190.92ms |
+|   EveryCombination |    87 |   9.54% |    173.99ms |     16.80ms |  1,199.64ms |      0.20ms | 42,257.35ms |
+|   RandomChange     |    28 |   3.07% | 59,592.98ms | 55,267.94ms | 59,901.58ms | 38,575.41ms | 60,107.64ms |
+| Local              |   454 |  49.78% |             |             |             |             |             |
+|   RoundingMinimum  |   301 |  33.00% | 60,000.12ms | 60,000.04ms | 60,003.70ms | 60,000.02ms | 60,144.84ms |
+|   RandomChange     |    90 |   9.87% | 60,000.06ms | 60,000.03ms | 60,004.41ms | 60,000.02ms | 60,136.59ms |
+|   EveryCombination |    63 |   6.91% | 60,000.10ms | 60,000.03ms | 60,001.29ms | 60,000.01ms | 60,019.36ms |
 
 ## Model-based testing
 
