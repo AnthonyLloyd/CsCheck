@@ -1166,6 +1166,7 @@ public static class Gen
     /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<T[]> Shuffle<T>(T[] constants) => Create((PCG pcg, Size? _, out Size size) =>
     {
+        constants = (T[])constants.Clone();
         Shuffle(constants, pcg, 0);
         size = new Size(0L);
         return constants;
@@ -1182,6 +1183,7 @@ public static class Gen
     /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<T[]> Shuffle<T>(T[] a, int length) => Create((PCG pcg, Size? _, out Size size) =>
     {
+        a = (T[])a.Clone();
         size = new Size(0L);
         int lower = Math.Max(a.Length - length, 0);
         Shuffle(a, pcg, lower);
