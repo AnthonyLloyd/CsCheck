@@ -41,11 +41,11 @@ public class FSumTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void TwoSum_Perf()
     {
-        Gen.Double[-2_000_000_000, 2_000_000_000, 2_000_000_000].Array[2, 100]
+        Gen.Double[-2_000_000_000, 2_000_000_000, 2_000_000_000].Array[100, 100]
         .Faster(
             Maths.FSum,
             Maths.FSum_Original
-        , sigma: 10, repeat: 100)
+        , sigma: 20, repeat: 100)
         .Output(output.WriteLine);
     }
 
