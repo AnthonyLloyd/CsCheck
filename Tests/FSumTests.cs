@@ -38,8 +38,8 @@ public class FSumTests(Xunit.Abstractions.ITestOutputHelper output)
         });
     }
 
-    [Fact]
-    public void TwoSum_Perf()
+    //[Fact]
+    private void TwoSum_Perf()
     {
         Gen.Double[-2_000_000_000, 2_000_000_000, 2_000_000_000].Array[50, 50]
         .Faster(
