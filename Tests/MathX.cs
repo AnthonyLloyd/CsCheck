@@ -27,17 +27,14 @@ public static class MathX
     {
         var hi = a + b;
         var a2 = hi - b;
-        var b2 = hi - a2;
-        var lo = (a - a2) + (b - b2);
-        return (hi, lo);
+        return (hi, a2 - hi + b + (a - a2));
     }
 
     public static (double hi, double lo) FastTwoSum(double a, double b)
     {
         Debug.Assert(Math.Abs(a) >= Math.Abs(b));
         var hi = a + b;
-        var b2 = hi - a;
-        return (hi, b - b2);
+        return (hi, a - hi + b);
     }
 
     public static double KSum(this double[] values)

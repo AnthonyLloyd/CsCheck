@@ -5,29 +5,50 @@ using System;
 using System.Linq;
 using Xunit;
 
+public readonly struct Number(double d)
+{
+    readonly double _d = d;
+    public static implicit operator double(Number r) => r._d;
+}
+
 public class MathXTests
 {
-    private static Gen<double> GenNumber(double start, double finish, int denominator)
+    private static Gen<double> GenNumber(double start, double finish, int denominator = 100, int minExp = -100)
     {
-        var genInteger = start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
+        var integer = start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
             : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue), (int)Math.Min(Math.Floor(finish), int.MaxValue)];
-        var genRational = genInteger
-            .SelectMany(i => Gen.Int[2, denominator].SelectMany(den => Gen.Int[1 - den, den - 1].Select(num => (double)num / den + i)))
-            .Where(r => r >= start && r <= finish);
-        var startExp = (int)Math.Floor(Math.Log10(Math.Abs(start)));
-        var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish)));
-        finishExp = Math.Max(finishExp, startExp);
-        startExp = -finishExp;
-        var genExponential = Gen.Select(Gen.Double.OneTwo, Gen.Int[startExp, finishExp], Gen.Bool)
-            .Select((m, e, s) => (m - 1) * Math.Pow(10, e + 1) * (s ? -1 : 1))
-            .Where(e => e >= start && e <= finish);
-        return Gen.OneOf(genInteger.Cast<double>(), genRational, genExponential);
+        var rational = Gen.Int[2, denominator]
+            .SelectMany(den => Gen.Int[1 - den, den - 1].Select(num => (double)num / den))
+            .Select(integer, (f, i) => f + i);
+        var startExp = Math.Log10(Math.Abs(start));
+        var finishExp = Math.Log10(Math.Abs(finish));
+        var genMantissa = Gen.Int[1, 9999].Select(i => i * 0.001);
+        Gen<double> exponential;
+        if (start <= 0 && finish >= 0)
+        {
+            exponential = Gen.OneOf(
+                Gen.Int[minExp, (int)Math.Ceiling(finishExp)].Select(genMantissa, (e, m) => Math.Pow(10, e) * m),
+                Gen.Int[minExp, (int)Math.Ceiling(startExp)].Select(genMantissa, (e, m) => -Math.Pow(10, e) * m));
+        }
+        else if(start >= 0 && finish >= 0)
+        {
+            exponential =
+                Gen.Int[(int)Math.Floor(startExp), (int)Math.Ceiling(finishExp)]
+                .Select(genMantissa, (e, m) => Math.Pow(10, e) * m);
+        }
+        else
+        {
+            exponential =
+                Gen.Int[(int)Math.Floor(finishExp), (int)Math.Ceiling(startExp)]
+                .Select(genMantissa, (e, m) => -Math.Pow(10, e) * m);
+        }
+        return Gen.OneOf(integer.Cast<double>(), rational, exponential).Where(r => r >= start && r <= finish);
     }
 
     [Fact]
     public void Mantissa()
     {
-        Gen.Double[-1e20, 1e20]
+        GenNumber(-1e123, 1e123)
         .Sample(d =>
         {
             var m1 = MathX.Mantissa(d, out var e1);
@@ -39,7 +60,7 @@ public class MathXTests
     [Fact]
     public void TwoSum_FastTwoSum_Are_Equal_Check()
     {
-        var genNum = GenNumber(-1e123, 1e123, 1_000_000);
+        var genNum = GenNumber(-1e123, 1e123);
         Gen.Select(genNum, genNum)
         .Where((a, b) => Math.Abs(a) >= Math.Abs(b))
         .Sample((a, b) => MathX.TwoSum(a, b) == MathX.FastTwoSum(a, b));
@@ -48,7 +69,7 @@ public class MathXTests
     [Fact]
     public void TwoSum_Twice_Check()
     {
-        var genNum = GenNumber(-1e123, 1e123, 1_000_000);
+        var genNum = GenNumber(-1e123, 1e123);
         Gen.Select(genNum, genNum)
         .Sample((a, b) =>
         {
@@ -92,7 +113,7 @@ public class MathXTests
     [Fact]
     public void FSum_Shuffle_Check()
     {
-        GenNumber(-1e123, 1e123, 1_000_000).Array[3, 100]
+        GenNumber(-1e123, 1e123).Array[3, 100]
         .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
         .Sample((original, shuffled) =>
         {
@@ -126,7 +147,7 @@ public class MathXTests
     [Fact]
     public void SSum_Shuffle_Check()
     {
-        GenNumber(-1e123, 1e123, 1000).Array[2, 10]
+        GenNumber(-1e123, 1e123).Array[2, 10]
         .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
         .Sample((original, shuffled) =>
         {
@@ -139,7 +160,7 @@ public class MathXTests
     [Fact]
     public void SSum_Negative_Check()
     {
-        GenNumber(-1e123, 1e123, 1000).Array[2, 10]
+        GenNumber(-1e123, 1e123).Array[2, 10]
         .Sample(original =>
         {
             var originalSum = MathX.SSum(original);
@@ -153,7 +174,7 @@ public class MathXTests
     [Fact]
     public void SSum_Shuffle_Negative_Check()
     {
-        GenNumber(-1e123, 1e123, 1000).Array[2, 10]
+        GenNumber(-1e123, 1e123).Array[2, 10]
         .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
         .Sample((original, shuffled) =>
         {
