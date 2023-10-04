@@ -40,6 +40,18 @@ public static class MathX
         return (hi, b - b2);
     }
 
+    public static double KSum(this double[] values)
+    {
+        var sum = 0.0;
+        var err = 0.0;
+        for (int i = 0; i < values.Length; i++)
+        {
+            (sum, var e) = TwoSum(sum, values[i]);
+            err += e;
+        }
+        return sum + err;
+    }
+
     public static double FSum(this double[] values)
     {
         Span<double> partials = stackalloc double[16];
@@ -72,6 +84,30 @@ public static class MathX
         while (--count >= 0)
             lo += partials[count];
         return lo + hi;
+    }
+
+    public static double SSum(this double[] values)
+    {
+        if (values.Length == 0)
+            return 0.0;
+        values = (double[])values.Clone();
+        Array.Sort(values, (x, y) => Math.Abs(x).CompareTo(Math.Abs(y)));
+        var prev = values[0];
+        for (int i = 1; i < values.Length; i++)
+        {
+            var next = values[i];
+            if (next == -prev)
+            {
+                values[i - 1] = 0;
+                values[i] = 0;
+                prev = 0;
+            }
+            else
+            {
+                prev = next;
+            }
+        }
+        return values.FSum();
     }
 
     public static double LSum(IEnumerable<double> values)
