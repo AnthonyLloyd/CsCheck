@@ -22,7 +22,6 @@ using System.Threading;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using static CsCheck.Causal;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
@@ -105,6 +104,72 @@ public static partial class Check
         return sb.ToString();
     }
 
+    /// <summary>Small double string representation.</summary>
+    public static string Print(double d)
+    {
+        static bool TryFraction(double d, out int who, out int num, out int den)
+        {
+            for (who = (int)Math.Floor(d); who <= (int)Math.Ceiling(d); who++)
+            {
+                var frac = d - who;
+                den = 1;
+                while (++den < 1000)
+                {
+                    num = (int)Math.Round(frac * den);
+                    if (num != 0 && AreClose(Ulps, who + (double)num / den, d))
+                        return true;
+                }
+            }
+            num = 0;
+            den = 0;
+            return false;
+        }
+        static bool TryExponential(double d, out int num, out int exp)
+        {
+            var isNeg = d < 0;
+            d = Math.Abs(d);
+            exp = (int)Math.Floor(Math.Log10(d)) - 3;
+            var p10 = Math.Pow(10, exp);
+            num = (int)Math.Round(d / p10);
+            if (AreClose(Ulps, num * p10, d))
+            {
+                if (isNeg)
+                    num = -num;
+                while (num % 10 == 0)
+                {
+                    num /= 10;
+                    exp++;
+                }
+                return true;
+            }
+            num = 0;
+            exp = 0;
+            return false;
+        }
+        var s = d.ToString();
+        if (AreClose(Ulps, Math.Round(d), d))
+        {
+            var r = ((int)Math.Round(d)).ToString();
+            if (r.Length < s.Length)
+                s = r;
+        }
+        if (TryFraction(d, out var who, out var num, out var den))
+        {
+            var fra1 = num > 0 ? $"{who}+{num}d/{den}" : $"{who}{num}d/{den}";
+            var fra2 = $"{who * den + num}d/{den}";
+            var fra = fra1.Length < fra2.Length ? fra1 : fra2;
+            if (fra.Length < s.Length)
+                s = fra;
+        }
+        if (TryExponential(d, out num, out var exp))
+        {
+            var es = exp == 0 ? num.ToString() : $"{num}e{exp}";
+            if (es.Length < s.Length)
+                s = es;
+        }
+        return s;
+    }
+
     /// <summary>Default print implementation. Handles most collections and tuple like types.</summary>
     public static string Print<T>(T t) => t switch
     {
@@ -119,6 +184,9 @@ public static partial class Check
         IEnumerable e => Print(e.Cast<object>()),
         T pt when IsPropertyType(pt) => PrintProperties(pt),
         T ft when IsFieldType(ft) => PrintFields(ft),
+        double d => Print(d),
+        float f => Print((double)f),
+        decimal d => Print((double)d),
         _ => t.ToString(),
     };
 
@@ -332,9 +400,7 @@ public static partial class Check
         return copy;
     }
 
-    /// <summary>
-    /// Check if two doubles are within the given absolute and relative tolerance.
-    /// </summary>
+    /// <summary>Check if two doubles are within the given absolute and relative tolerance.</summary>
     /// <param name="atol">The absolute tolerance.</param>
     /// <param name="rtol">The relative tolerance.</param>
     /// <param name="a">The first double.</param>
@@ -345,6 +411,18 @@ public static partial class Check
         var areCloseLhs = Math.Abs(a - b);
         var areCloseRhs = atol + rtol * Math.Max(Math.Abs(a), Math.Abs(b));
         return areCloseLhs <= areCloseRhs;
+    }
+
+    /// <summary>Check if two doubles are within the given <paramref name="ulps"/> tolerance.</summary>
+    /// <param name="ulps">Unit in the last place</param>
+    /// <param name="a">The first double.</param>
+    /// <param name="b">The second double.</param>
+    /// <returns>True if a - b in ulp units &#8804; <paramref name="ulps"/>.</returns>
+    public static bool AreClose(int ulps, double a, double b)
+    {
+        var al = BitConverter.DoubleToInt64Bits(a);
+        var bl = BitConverter.DoubleToInt64Bits(b);
+        return Math.Abs(bl - al) <= ulps;
     }
 }
 

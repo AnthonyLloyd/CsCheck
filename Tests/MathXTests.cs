@@ -5,44 +5,40 @@ using System;
 using System.Linq;
 using Xunit;
 
-public readonly struct Number(double d)
-{
-    readonly double _d = d;
-    public static implicit operator double(Number r) => r._d;
-}
-
 public class MathXTests
 {
-    private static Gen<double> GenNumber(double start, double finish, int denominator = 100, int minExp = -100)
+    private static Gen<double> GenNumber(double start, double finish, int denominator = 100, int minExp = -100, int maxMan = 9999)
     {
         var integer = start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
             : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue), (int)Math.Min(Math.Floor(finish), int.MaxValue)];
         var rational = Gen.Int[2, denominator]
             .SelectMany(den => Gen.Int[1 - den, den - 1].Select(num => (double)num / den))
-            .Select(integer, (f, i) => f + i);
+            .Select(integer, (f, i) => f + i)
+            .Where(r => r >= start && r <= finish);
         var startExp = Math.Log10(Math.Abs(start));
         var finishExp = Math.Log10(Math.Abs(finish));
-        var genMantissa = Gen.Int[1, 9999].Select(i => i * 0.001);
+        var genMantissa = Gen.Int[1, maxMan];
         Gen<double> exponential;
         if (start <= 0 && finish >= 0)
         {
             exponential = Gen.OneOf(
-                Gen.Int[minExp, (int)Math.Ceiling(finishExp)].Select(genMantissa, (e, m) => Math.Pow(10, e) * m),
-                Gen.Int[minExp, (int)Math.Ceiling(startExp)].Select(genMantissa, (e, m) => -Math.Pow(10, e) * m));
+                Gen.Int[minExp, (int)Math.Ceiling(finishExp)].Select(genMantissa, (e, m) => Math.Pow(10, e - 3) * m),
+                Gen.Int[minExp, (int)Math.Ceiling(startExp)].Select(genMantissa, (e, m) => -Math.Pow(10, e - 3) * m));
         }
-        else if(start >= 0 && finish >= 0)
+        else if (start >= 0 && finish >= 0)
         {
             exponential =
                 Gen.Int[(int)Math.Floor(startExp), (int)Math.Ceiling(finishExp)]
-                .Select(genMantissa, (e, m) => Math.Pow(10, e) * m);
+                .Select(genMantissa, (e, m) => Math.Pow(10, e - 3) * m);
         }
         else
         {
             exponential =
                 Gen.Int[(int)Math.Floor(finishExp), (int)Math.Ceiling(startExp)]
-                .Select(genMantissa, (e, m) => -Math.Pow(10, e) * m);
+                .Select(genMantissa, (e, m) => -Math.Pow(10, e - 3) * m);
         }
-        return Gen.OneOf(integer.Cast<double>(), rational, exponential).Where(r => r >= start && r <= finish);
+        exponential = exponential.Where(r => r >= start && r <= finish);
+        return Gen.OneOf(integer.Cast<double>(), rational, exponential);
     }
 
     [Fact]
@@ -119,13 +115,7 @@ public class MathXTests
         {
             var originalSum = MathX.FSum(original);
             var shuffledSum = MathX.FSum(shuffled);
-            var originalMan = MathX.Mantissa(originalSum, out var originalExp);
-            var shuffledMan = MathX.Mantissa(shuffledSum, out var shuffledExp);
-            if (shuffledExp < originalExp)
-                originalMan <<= originalExp - shuffledExp;
-            else
-                shuffledMan <<= shuffledExp - originalExp;
-            return Math.Abs(originalMan - shuffledMan) <= 1;
+            return Check.AreClose(1, originalSum, shuffledSum);
         });
     }
 

@@ -49,6 +49,8 @@ public static partial class Check
     public static double Sigma = 6.0;
     /// <summary>The timeout in seconds to use for Faster (default 60 seconds).</summary>
     public static int Timeout = 60;
+    /// <summary>The number of ulps to approximate to when printing doubles and floats.</summary>
+    public static int Ulps = 4;
 
     static Check()
     {
@@ -66,6 +68,8 @@ public static partial class Check
         if (!string.IsNullOrWhiteSpace(sigma)) Sigma = double.Parse(sigma);
         var timeout = Environment.GetEnvironmentVariable("CsCheck_Timeout");
         if (!string.IsNullOrWhiteSpace(timeout)) Timeout = int.Parse(timeout);
+        var ulps = Environment.GetEnvironmentVariable("CsCheck_Ulps");
+        if (!string.IsNullOrWhiteSpace(ulps)) Ulps = int.Parse(ulps);
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
