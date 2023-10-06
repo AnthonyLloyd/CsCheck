@@ -1,6 +1,7 @@
 ﻿namespace Tests;
 
 using CsCheck;
+using System.Linq;
 using Xunit;
 
 public class PCGTests
@@ -115,9 +116,9 @@ public class PCGTests
         genPCG
         .Select(i => i.Next())
         .Array[20]
-        .SampleOne(t =>
+        .Sample(t =>
         {
-            var expected = GenTests.ArrayRepeat(32, 10);
+            var expected = Enumerable.Repeat(10, 32).ToArray();
             var actual = new int[32];
             foreach (var i in t)
             {
@@ -129,7 +130,7 @@ public class PCGTests
                 }
             }
             Check.ChiSquared(expected, actual);
-        });
+        }, iter: 1);
     }
 
     [Fact]
@@ -138,9 +139,9 @@ public class PCGTests
         genPCG
         .Select(i => i.Next64())
         .Array[20]
-        .SampleOne(t =>
+        .Sample(t =>
         {
-            var expected = GenTests.ArrayRepeat(64, 10);
+            var expected = Enumerable.Repeat(10, 64).ToArray();
             var actual = new int[64];
             foreach (var i in t)
             {
@@ -152,7 +153,7 @@ public class PCGTests
                 }
             }
             Check.ChiSquared(expected, actual);
-        });
+        }, iter: 1);
     }
 
     [Fact]

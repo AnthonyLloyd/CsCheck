@@ -1,7 +1,6 @@
 ﻿namespace Tests;
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using CsCheck;
@@ -11,13 +10,6 @@ using Xunit;
 
 public class GenTests
 {
-    public static int[] ArrayRepeat(int n, int x)
-    {
-        var a = new int[n];
-        Array.Fill(a, x);
-        return a;
-    }
-
     static int[] Tally(int n, int[] ia)
     {
         var a = new int[n];
@@ -29,10 +21,10 @@ public class GenTests
     public void Bool_Distribution()
     {
         const int frequency = 10;
-        var expected = ArrayRepeat(2, frequency);
+        var expected = Enumerable.Repeat(frequency, 2).ToArray();
         Gen.Bool.Select(i => i ? 1 : 0).Array[2 * frequency]
         .Select(sample => Tally(2, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -51,11 +43,11 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = ArrayRepeat(buckets, frequency);
+        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
         Gen.SByte[0, (sbyte)(buckets - 1)]
         .Cast<int>().Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -74,11 +66,11 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = ArrayRepeat(buckets, frequency);
+        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
         Gen.Byte[0, (byte)(buckets - 1)]
         .Cast<int>().Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -103,11 +95,11 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = ArrayRepeat(buckets, frequency);
-        Gen.Short[0, (short)(buckets - 1)]
+        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        Gen.Short[0, buckets - 1]
         .Cast<int>().Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -126,11 +118,11 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = ArrayRepeat(buckets, frequency);
-        Gen.UShort[0, (ushort)(buckets - 1)]
+        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        Gen.UShort[0, buckets - 1]
         .Cast<int>().Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -206,10 +198,10 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        int[] expected = ArrayRepeat(buckets, frequency);
+        int[] expected = Enumerable.Repeat(frequency, buckets).ToArray();
         Gen.Int[0, buckets - 1].Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -255,11 +247,11 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = ArrayRepeat(buckets, frequency);
+        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
         Gen.UInt[0, buckets - 1]
         .Cast<int>().Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -311,11 +303,11 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = ArrayRepeat(buckets, frequency);
+        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
         Gen.Long[0, buckets - 1]
         .Cast<int>().Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -334,11 +326,11 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = ArrayRepeat(buckets, frequency);
-        Gen.ULong[0, (ulong)(buckets - 1)]
+        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        Gen.ULong[0, buckets - 1]
         .Cast<int>().Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -369,12 +361,12 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = ArrayRepeat(buckets, frequency);
+        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
         Gen.Single.Unit
         .Select(i => (int)(i * buckets))
         .Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -448,12 +440,12 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = ArrayRepeat(buckets, frequency);
+        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
         Gen.Double.Unit
         .Select(i => (int)(i * buckets))
         .Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -547,12 +539,12 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = ArrayRepeat(buckets, frequency);
+        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
         Gen.Decimal.Unit
         .Select(i => (int)(i * buckets))
         .Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -616,11 +608,11 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = ArrayRepeat(buckets, frequency);
+        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
         Gen.Char[(char)0, (char)(buckets - 1)]
         .Cast<int>().Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .SampleOne(actual => Check.ChiSquared(expected, actual));
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1);
     }
 
     [Fact]
@@ -640,7 +632,7 @@ public class GenTests
     }
 
     [Fact]
-    public void Enumerable()
+    public void AnEnumerable()
     {
         Gen.UShort[1, 1000]
         .Enumerable[10, 100]
@@ -695,7 +687,7 @@ public class GenTests
                         .Array[frequency * (f.V0 + f.V1 + f.V2)]
                         .Select(sample => Tally(3, sample))
          select (expected, actual))
-        .SampleOne(t => Check.ChiSquared(t.expected, t.actual));
+        .Sample(t => Check.ChiSquared(t.expected, t.actual), iter: 1);
     }
 
     [Fact]
@@ -725,20 +717,6 @@ public class GenTests
             return Depth(i) <= maxDepth;
         });
     }
-
-    public abstract record ValueOrRange();
-    public sealed record ValueOrRange_Value(double Value) : ValueOrRange;
-    public sealed record ValueOrRange_Range(double Lower, double? Upper) : ValueOrRange;
-    enum ParameterType { Price, Spread, Yield, Discount }
-
-    // Generators
-    static readonly Gen<ValueOrRange> genValueOrRange =
-       Gen.OneOf<ValueOrRange>(
-         Gen.Double.Select(i => new ValueOrRange_Value(i)),
-         Gen.Double.SelectMany(l => Gen.Double[l, l + 100].Nullable().Select(u => new ValueOrRange_Range(l, u)))
-       );
-    static readonly Gen<Dictionary<DateTime, List<(ParameterType Type, ValueOrRange Value)>>> genExample =
-       Gen.Dictionary(Gen.DateTime, Gen.Select(Gen.Enum<ParameterType>(), genValueOrRange).List);
 }
 
 [StructLayout(LayoutKind.Explicit)]

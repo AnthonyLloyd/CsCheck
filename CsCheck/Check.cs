@@ -1240,38 +1240,6 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), seed, iter, time, threads, print);
 
-    /// <summary>Sample the gen once calling the assert.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void SampleOne<T>(this Gen<T> gen, Action<T> assert, string? seed = null, Func<T, string>? print = null)
-        => Sample(gen, assert, seed, 1, -2, 1, print);
-
-    /// <summary>Sample the gen once calling the assert.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Task SampleOneAsync<T>(this Gen<T> gen, Func<T, Task> assert, string? seed = null, Func<T, string>? print = null)
-        => SampleAsync(gen, assert, seed, 1, -2, 1, print);
-
-    /// <summary>Sample the gen once calling the predicate.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void SampleOne<T>(this Gen<T> gen, Func<T, bool> predicate, string? seed = null, Func<T, string>? print = null)
-        => Sample(gen, predicate, seed, 1, -2, 1, print);
-
-    /// <summary>Sample the gen once calling the predicate.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Task SampleOneAsync<T>(this Gen<T> gen, Func<T, Task<bool>> predicate, string? seed = null, Func<T, string>? print = null)
-        => SampleAsync(gen, predicate, seed, 1, -2, 1, print);
-
     sealed class ModelBasedData<Actual, Model>(Actual actualState, Model modelState, uint stream, ulong seed, (string, Action<Actual, Model>)[] operations)
     {
         public Actual ActualState = actualState; public Model ModelState = modelState; public uint Stream = stream; public ulong Seed = seed; public (string, Action<Actual, Model>)[] Operations = operations; public Exception? Exception;

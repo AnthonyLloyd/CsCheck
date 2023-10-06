@@ -84,10 +84,10 @@ public void Int_Distribution()
 {
     int buckets = 70;
     int frequency = 10;
-    int[] expected = ArrayRepeat(buckets, frequency);
+    int[] expected = Enumerable.Repeat(frequency, buckets).ToArray();
     Gen.Int[0, buckets - 1].Array[frequency * buckets]
     .Select(sample => Tally(buckets, sample))
-    .SampleOne(actual => Check.ChiSquared(expected, actual));
+    .Sample(actual => Check.ChiSquared(expected, actual));
 }
 ```
 
