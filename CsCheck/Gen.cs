@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 
 /// <summary>Size representation of Gen generated data.</summary>
 public sealed class Size
@@ -61,7 +62,7 @@ public interface IGen<out T>
 public abstract class Gen<T> : IGen<T>
 {
     public abstract T Generate(PCG pcg, Size? min, out Size size);
-    public Gen<R> Cast<R>() => Gen.Create((PCG pcg, Size? min, out Size size) =>
+    public Gen<R> Cast<R>() => Gen.Create((PCG pcg, Size? min, out Size size) => // TODO: rename to Convert? Is Cast name correct?
     {
         var o = Generate(pcg, min, out size);
         return o is R t ? t : (R)Convert.ChangeType(o, typeof(R));
@@ -930,11 +931,13 @@ public static class Gen
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
-        while (true)
+        int i = 200;
+        while (i-- > 0)
         {
             var t = gen.Generate(pcg, null, out size);
             if (predicate(t)) return t;
         }
+        throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
@@ -1780,18 +1783,66 @@ public sealed class GenDouble : Gen<double>
         size = new Size((i >> 12) + 1UL);
         return BitConverter.Int64BitsToDouble((long)i);
     }
-    public Gen<double> this[double start, double finish]
+    private Gen<double> EvenlyDistributed(double start, double finish)
+    {
+        finish -= start;
+        start -= finish;
+        return Gen.Create((PCG pcg, Size? _, out Size size) =>
+        {
+            ulong i = pcg.Next64() >> 12;
+            size = new Size(i + 1UL);
+            return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * finish + start;
+        });
+    }
+    public Gen<double> this[double start, double finish, int denominator = 100, int minExp = -100, int maxMan = 9999]
     {
         get
         {
-            finish -= start;
-            start -= finish;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
+            var gens = new List<IGen<double>>();
+            if (Math.Ceiling(start) <= Math.Floor(start))
             {
-                ulong i = pcg.Next64() >> 12;
-                size = new Size(i + 1UL);
-                return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * finish + start;
-            });
+                var integer = start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
+                    : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue), (int)Math.Min(Math.Floor(finish), int.MaxValue)];
+                gens.Add(integer.Cast<double>());
+            }
+            if (Math.Ceiling(start * denominator) <= Math.Floor(finish * denominator))
+            {
+                var lower = denominator - 1;
+                while (Math.Ceiling(start * lower) <= Math.Floor(finish * lower) && lower > 1)
+                    lower--;
+                var rational = Gen.Int[lower + 1, denominator]
+                    .Where(den => Math.Floor(finish * den) >= Math.Ceiling(start * den))
+                    .SelectMany(den => Gen.Int[(int)Math.Ceiling(start * den), (int)Math.Floor(finish * den)].Select(num => (double)num / den));
+                gens.Add(rational);
+            }
+            Gen<double>? exponential = null;
+            if (start <= 0 && finish >= 0)
+            {
+                var startExp = Math.Log10(Math.Abs(start));
+                var finishExp = Math.Log10(Math.Abs(finish));
+                var genMantissa = Gen.Int[1, maxMan];
+                exponential = Gen.OneOf(
+                    Gen.Int[minExp, (int)Math.Ceiling(finishExp)].Select(genMantissa, (e, m) => Math.Pow(10, e - 3) * m),
+                    Gen.Int[minExp, (int)Math.Ceiling(startExp)].Select(genMantissa, (e, m) => -Math.Pow(10, e - 3) * m));
+            }
+            else if (start >= 0 && finish >= 0)
+            {
+                var startExp = (int)Math.Floor(Math.Log10(Math.Abs(start)));
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish)));
+                if (finishExp > startExp + 2)
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int[1, maxMan], (e, m) => Math.Pow(10, e - 3) * m);
+            }
+            else
+            {
+                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start)));
+                var finishExp = (int)Math.Floor(Math.Log10(Math.Abs(finish)));
+                if (startExp > finishExp + 2)
+                    exponential = Gen.Int[finishExp, startExp].Select(Gen.Int[1, maxMan], (e, m) => -Math.Pow(10, e - 3) * m);
+            }
+            if (exponential is not null)
+                gens.Add(exponential.Where(r => r >= start && r <= finish));
+            gens.Add(EvenlyDistributed(start, finish));
+            return Gen.OneOf(gens.ToArray());
         }
     }
 

@@ -107,18 +107,14 @@ public static partial class Check
     /// <summary>Small double string representation.</summary>
     public static string Print(double d)
     {
-        static bool TryFraction(double d, out int who, out int num, out int den)
+        static bool TryFraction(double d, out int num, out int den)
         {
-            for (who = (int)Math.Floor(d); who <= (int)Math.Ceiling(d); who++)
+            den = 1;
+            while (++den < 1000)
             {
-                var frac = d - who;
-                den = 1;
-                while (++den < 1000)
-                {
-                    num = (int)Math.Round(frac * den);
-                    if (num != 0 && AreClose(Ulps, who + (double)num / den, d))
-                        return true;
-                }
+                num = (int)Math.Round(d * den);
+                if (num != 0 && AreClose(Ulps, (double)num / den, d))
+                    return true;
             }
             num = 0;
             den = 0;
@@ -153,10 +149,12 @@ public static partial class Check
             if (r.Length < s.Length)
                 s = r;
         }
-        if (TryFraction(d, out var who, out var num, out var den))
+        if (TryFraction(d, out var num, out var den))
         {
-            var fra1 = num > 0 ? $"{who}+{num}d/{den}" : $"{who}{num}d/{den}";
-            var fra2 = $"{who * den + num}d/{den}";
+            var fra1 = $"{num}d/{den}";
+            var who = num  / den;
+            num -= who * den;
+            var fra2 = num > 0 ? $"{who}+{num}d/{den}" : $"{who}{num}d/{den}";
             var fra = fra1.Length < fra2.Length ? fra1 : fra2;
             if (fra.Length < s.Length)
                 s = fra;
@@ -414,7 +412,7 @@ public static partial class Check
     }
 
     /// <summary>Check if two doubles are within the given <paramref name="ulps"/> tolerance.</summary>
-    /// <param name="ulps">Unit in the last place</param>
+    /// <param name="ulps">Units in the last place</param>
     /// <param name="a">The first double.</param>
     /// <param name="b">The second double.</param>
     /// <returns>True if a - b in ulp units &#8804; <paramref name="ulps"/>.</returns>

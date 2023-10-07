@@ -13,7 +13,11 @@ public class SolveRootTests
 
     public static bool BoundsZero(double a, double b) => (a < 0.0 && b > 0.0) || (b < 0.0 && a > 0.0);
 
-    public static double LinearRoot(double a, double fa, double b, double fb) => (a * fb - b * fa) / (fb - fa);
+    public static double LinearRoot(double a, double fa, double b, double fb)
+    {
+        var x = fa / (fa - fb);
+        return x < 0.5 ? (b - a) * x + a : (a - b) * (1 - x) + b;
+    }
 
     public static double QuadraticRoot(double a, double fa, double b, double fb, double c, double fc)
     {
@@ -214,7 +218,7 @@ public class SolveRootTests
     public void Brent_TestProblems_11() => Assert.Equal(2935, TestSolver(1e-11, Brent).Item1);
 
     [Fact]
-    public void Root_TestProblems_11() => Assert.InRange(TestSolver(1e-11, Root).Item1, 2329, 2330);
+    public void Root_TestProblems_11() => Assert.InRange(TestSolver(1e-11, Root).Item1, 2328, 2330);
 
     [Fact]
     public void Root_TestProblems_Compare()

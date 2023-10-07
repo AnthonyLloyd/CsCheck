@@ -1,28 +1,10 @@
 ﻿namespace Tests;
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 
 public static class MathX
 {
-    public static long Mantissa(double d, out int exponent)
-    {
-        var bits = BitConverter.DoubleToInt64Bits(d);
-        exponent = (int)((bits >> 52) & 0x7FFL);
-        var mantissa = bits & 0xF_FFFF_FFFF_FFFF;
-        if (exponent == 0)
-        {
-            exponent = -1074;
-        }
-        else
-        {
-            exponent -= 1075;
-            mantissa |= 1L << 52;
-        }
-        return (bits & (1L << 63)) == 0 ? mantissa : -mantissa;
-    }
-
     public static (double hi, double lo) TwoSum(double a, double b)
     {
         var hi = a + b;
@@ -30,11 +12,25 @@ public static class MathX
         return (hi, a2 - hi + b + (a - a2));
     }
 
+    public static (double hi, double lo) TwoDiff(double a, double b)
+    {
+        var hi = a - b;
+        var b2 = a - hi;
+        var a2 = hi + b2;
+        return (hi, a - a2 + (b2 - b));
+    }
+
     public static (double hi, double lo) FastTwoSum(double a, double b)
     {
         Debug.Assert(Math.Abs(a) >= Math.Abs(b));
         var hi = a + b;
         return (hi, a - hi + b);
+    }
+
+    public static (double hi, double lo) TwoProduct(double a, double b)
+    {
+        var prod = a * b;
+        return (prod, Math.FusedMultiplyAdd(a, b, -prod));
     }
 
     public static double KSum(this double[] values)
@@ -107,24 +103,20 @@ public static class MathX
         return values.FSum();
     }
 
-    public static double LSum(IEnumerable<double> values)
+    public static long Mantissa(double d, out int exponent)
     {
-        var totalMantissa = 0L;
-        var totalExponent = 0;
-        foreach (var v in values)
+        var bits = BitConverter.DoubleToInt64Bits(d);
+        exponent = (int)((bits >> 52) & 0x7FFL);
+        var mantissa = bits & 0xF_FFFF_FFFF_FFFF;
+        if (exponent == 0)
         {
-            var mantissa = Mantissa(v, out var exponent);
-            if (totalExponent > exponent)
-            {
-                totalMantissa <<= totalExponent - exponent;
-                totalExponent = exponent;
-            }
-            else
-            {
-                mantissa <<= exponent - totalExponent;
-            }
-            totalMantissa += mantissa;
+            exponent = -1074;
         }
-        return Math.ScaleB(totalMantissa, totalExponent);
+        else
+        {
+            exponent -= 1075;
+            mantissa |= 1L << 52;
+        }
+        return (bits & (1L << 63)) == 0 ? mantissa : -mantissa;
     }
 }
