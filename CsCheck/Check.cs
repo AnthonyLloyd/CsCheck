@@ -3120,19 +3120,27 @@ public sealed class FasterResult
     }
     public void Add(long faster, long slower)
     {
-        lock (Median)
+        if (faster < slower)
         {
-            if (faster < slower)
+            var x = (double)(slower - faster) / slower;
+            lock (Median)
             {
                 Faster++;
-                Median.Add(((double)(slower - faster)) / slower);
+                Median.Add(x);
             }
-            else if (slower < faster)
+        }
+        else if (slower < faster)
+        {
+            var x = (double)(slower - faster) / faster;
+            lock (Median)
             {
                 Slower++;
-                Median.Add(((double)(slower - faster)) / faster);
+                Median.Add(x);
             }
-            else
+        }
+        else
+        {
+            lock (Median)
             {
                 Median.Add(0.0);
             }

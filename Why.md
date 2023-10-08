@@ -21,7 +21,7 @@ In fact a test that generates any example and runs for a long time is close to b
 A 'long time' could be 60 seconds in CsCheck since examples are run in parallel by default and often millions can be run in this time.
 
 When a random test finds a bug it will shrink it down to the smallest possible example so you can more easily reproduce and diagnose the problem.
-CsCheck is particularly good at this as it's the only library that can always skrink to the simplest example and reproduce it directly.
+CsCheck is particularly good at this as it's the only library that can always shrink to the simplest example and reproduce it directly.
 
 ## Gen It
 
@@ -39,7 +39,7 @@ Fluent style composition similar to LINQ is a much more robust and extensible op
 - Serialization - the number of bugs seen in serialization code (looking at you json) is almost criminal given how easy it is to roundtrip test serialization using random testing.
 - Caches and collections - often a key part of server and client side code these can be tested against a suitable simplified test model with `Model Based` testing.
 - Calculations and algorithms - often possible to generalize examples for calculations and algorithms and check the result given the input. Algorithm often have properties they must guarantee. Rounding error issues automatically tested.
-- Code refactoring - keep a copy of the original code with the test, refactor for simplicity and performance, safe in the knowledge it still produces the same results. Pair with a `Faster` test to monitor the relative performance over a range of inputs. Or if a copy is not feasible create a lengthy `Regression` test.
+- Code refactoring - keep a copy of the original code with the test, refactor for simplicity and performance, safe in the knowledge it still produces the same results. Pair with a `Faster` test to monitor the relative performance over a range of inputs. Or if a copy is not feasible create a `Regression` test to comprehensively make sure there is no change.
 - Multithreading and concurrency - test on the same object instance across multiple threads and examples. Shrink even works for `Concurrency` testing.
 
 ## Raise Your Game
