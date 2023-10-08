@@ -35,17 +35,9 @@ public sealed class Size
 
     public void Add(Size a)
     {
-        try
-        {
-            checked
-            {
-                I += a.I;
-            }
-        }
-        catch
-        {
-            I = ulong.MaxValue;
-        }
+
+        var nI = I + a.I;
+        I = nI >= I && nI >= a.I ? nI : ulong.MaxValue;
         if (a.Next is not null)
         {
             if (Next is null) Next = a.Next;
@@ -59,7 +51,7 @@ public sealed class Size
         final.Next = s;
     }
 
-    public static bool IsLessThan(Size? s1, Size? s2) => s1 is not null && (s2 is null || s1.I < s2.I || (s1.I == s2.I && IsLessThan(s1.Next, s2.Next)));
+    public static bool IsLessThan(Size? s1, Size? s2) => s1 is not null && s2 is not null && (s1.I < s2.I || (s1.I == s2.I && IsLessThan(s1.Next, s2.Next)));
 }
 
 public interface IGen<out T>
@@ -217,15 +209,11 @@ public static class Gen
     public static Gen<R> Select<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2,
         Func<T1, T2, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x2_0000_0000UL) { size = new Size(0x2_0000_0000UL); return default!; }
-            min = min.I == 0x2_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
-        size = new Size(0x2_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2);
     });
 
@@ -233,17 +221,14 @@ public static class Gen
     public static Gen<R> Select<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3,
         Func<T1, T2, T3, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x3_0000_0000UL) { size = new Size(0x3_0000_0000UL); return default!; }
-            min = min.I == 0x3_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0x3_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3);
     });
 
@@ -251,19 +236,17 @@ public static class Gen
     public static Gen<R> Select<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Func<T1, T2, T3, T4, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x4_0000_0000UL) { size = new Size(0x4_0000_0000UL); return default!; }
-            min = min.I == 0x4_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0x4_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4);
     });
 
@@ -271,21 +254,20 @@ public static class Gen
     public static Gen<R> Select<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Func<T1, T2, T3, T4, T5, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x5_0000_0000UL) { size = new Size(0x5_0000_0000UL); return default!; }
-            min = min.I == 0x5_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
+        if (Size.IsLessThan(min, size)) return default!;
         size.Add(s);
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0x5_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4, v5);
     });
 
@@ -293,23 +275,23 @@ public static class Gen
     public static Gen<R> Select<T1, T2, T3, T4, T5, T6, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x6_0000_0000UL) { size = new Size(0x6_0000_0000UL); return default!; }
-            min = min.I == 0x6_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v6 = gen6.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0x6_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4, v5, v6);
     });
 
@@ -318,25 +300,26 @@ public static class Gen
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) =>
         Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x7_0000_0000UL) { size = new Size(0x7_0000_0000UL); return default!; }
-            min = min.I == 0x7_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v6 = gen6.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v7 = gen7.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0x7_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4, v5, v6, v7);
     });
 
@@ -345,27 +328,29 @@ public static class Gen
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector)
         => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x8_0000_0000UL) { size = new Size(0x8_0000_0000UL); return default!; }
-            min = min.I == 0x8_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v6 = gen6.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v7 = gen7.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v8 = gen8.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0x8_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4, v5, v6, v7, v8);
     });
 
@@ -374,29 +359,32 @@ public static class Gen
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9,
         Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x9_0000_0000UL) { size = new Size(0x9_0000_0000UL); return default!; }
-            min = min.I == 0x9_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v6 = gen6.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v7 = gen7.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v8 = gen8.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v9 = gen9.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0x9_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9);
     });
 
@@ -405,31 +393,35 @@ public static class Gen
         Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
     Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0xA_0000_0000UL) { size = new Size(0xA_0000_0000UL); return default!; }
-            min = min.I == 0xA_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v6 = gen6.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v7 = gen7.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v8 = gen8.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v9 = gen9.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v10 = gen10.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0xA_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10);
     });
 
@@ -438,33 +430,38 @@ public static class Gen
         Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11,
     Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0xB_0000_0000UL) { size = new Size(0xB_0000_0000UL); return default!; }
-            min = min.I == 0xB_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v6 = gen6.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v7 = gen7.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v8 = gen8.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v9 = gen9.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v10 = gen10.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v11 = gen11.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0xB_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11);
     });
 
@@ -473,35 +470,41 @@ public static class Gen
         Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12,
     Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0xC_0000_0000UL) { size = new Size(0xC_0000_0000UL); return default!; }
-            min = min.I == 0xC_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v6 = gen6.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v7 = gen7.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v8 = gen8.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v9 = gen9.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v10 = gen10.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v11 = gen11.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v12 = gen12.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0xC_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12);
     });
 
@@ -511,37 +514,44 @@ public static class Gen
         Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13,
     Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0xD_0000_0000UL) { size = new Size(0xD_0000_0000UL); return default!; }
-            min = min.I == 0xD_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v6 = gen6.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v7 = gen7.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v8 = gen8.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v9 = gen9.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v10 = gen10.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v11 = gen11.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v12 = gen12.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v13 = gen13.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0xD_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13);
     });
 
@@ -551,39 +561,47 @@ public static class Gen
         Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14,
     Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0xE_0000_0000UL) { size = new Size(0xE_0000_0000UL); return default!; }
-            min = min.I == 0xE_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v6 = gen6.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v7 = gen7.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v8 = gen8.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v9 = gen9.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v10 = gen10.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v11 = gen11.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v12 = gen12.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v13 = gen13.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v14 = gen14.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0xE_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14);
     });
 
@@ -593,41 +611,50 @@ public static class Gen
         Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14, Gen<T15> gen15,
     Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0xF_0000_0000UL) { size = new Size(0xF_0000_0000UL); return default!; }
-            min = min.I == 0xF_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v6 = gen6.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v7 = gen7.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v8 = gen8.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v9 = gen9.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v10 = gen10.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v11 = gen11.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v12 = gen12.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v13 = gen13.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v14 = gen14.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v15 = gen15.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0xF_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15);
     });
 
@@ -637,58 +664,63 @@ public static class Gen
         Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14, Gen<T15> gen15, Gen<T16> gen16,
     Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x10_0000_0000UL) { size = new Size(0x10_0000_0000UL); return default!; }
-            min = min.I == 0x10_0000_0000UL ? min.Next : null;
-        }
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v6 = gen6.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v7 = gen7.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v8 = gen8.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v9 = gen9.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v10 = gen10.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v11 = gen11.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v12 = gen12.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v13 = gen13.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v14 = gen14.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v15 = gen15.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v16 = gen16.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0x10_0000_0000UL, size);
+        if (Size.IsLessThan(min, size)) return default!;
         return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16);
     });
 
     /// <summary>Projects each element of a generator into a tuple.</summary>
     public static Gen<(T0 V0, T1 V1)> Select<T0, T1>(this Gen<T0> gen0, Gen<T1> gen1) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x2_0000_0000UL) { size = new Size(0x2_0000_0000UL); return default; }
-            min = min.I == 0x2_0000_0000UL ? min.Next : null;
-        }
         var v0 = gen0.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v1 = gen1.Generate(pcg, min, out var s);
         size.Add(s);
-        size = new Size(0x2_0000_0000UL, size);
         return (v0, v1);
     });
 
@@ -696,17 +728,13 @@ public static class Gen
     public static Gen<(T0 V0, T1 V1, T2 V2)> Select<T0, T1, T2>(this Gen<T0> gen0, Gen<T1> gen1, Gen<T2> gen2)
         => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x3_0000_0000UL) { size = new Size(0x3_0000_0000UL); return default; }
-            min = min.I == 0x3_0000_0000UL ? min.Next : null;
-        }
         var v0 = gen0.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v1 = gen1.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0x3_0000_0000UL, size);
         return (v0, v1, v2);
     });
 
@@ -714,19 +742,16 @@ public static class Gen
     public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> Select<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x4_0000_0000UL) { size = new Size(0x4_0000_0000UL); return default; }
-            min = min.I == 0x4_0000_0000UL ? min.Next : null;
-        }
         var v0 = gen0.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v1 = gen1.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0x4_0000_0000UL, size);
         return (v0, v1, v2, v3);
     });
 
@@ -734,21 +759,19 @@ public static class Gen
     public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3, T4 V4)> Select<T0, T1, T2, T3, T4>(this Gen<T0> gen0, Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        if (min is not null)
-        {
-            if (min.I < 0x5_0000_0000UL) { size = new Size(0x5_0000_0000UL); return default; }
-            min = min.I == 0x5_0000_0000UL ? min.Next : null;
-        }
         var v0 = gen0.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v1 = gen1.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, min, out s);
         size.Add(s);
-        size = new Size(0x5_0000_0000UL, size);
         return (v0, v1, v2, v3, v4);
     });
 
@@ -756,31 +779,30 @@ public static class Gen
     public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3, T4 V4, T5 V5)> Select<T0, T1, T2, T3, T4, T5>(this Gen<T0> gen0, Gen<T1> gen1,
         Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5) => Create((PCG pcg, Size? min, out Size size) =>
         {
-            if (min is not null)
-            {
-                if (min.I < 0x6_0000_0000UL) { size = new Size(0x6_0000_0000UL); return default; }
-                min = min.I == 0x6_0000_0000UL ? min.Next : null;
-            }
             var v0 = gen0.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             var v1 = gen1.Generate(pcg, min, out var s);
             size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
             var v2 = gen2.Generate(pcg, min, out s);
             size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
             var v3 = gen3.Generate(pcg, min, out s);
             size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
             var v4 = gen4.Generate(pcg, min, out s);
             size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
             var v5 = gen5.Generate(pcg, min, out s);
             size.Add(s);
-            size = new Size(0x6_0000_0000UL, size);
             return (v0, v1, v2, v3, v4, v5);
         });
 
-    public static Gen<(T0 V0, T1 V1)> SelectTuple<T0, T1>(this Gen<T0> gen, Func<T0, Gen<T1>> selector)
+    public static Gen<(T0 V0, T1 V1)> SelectTuple<T0, T1>(this Gen<T0> gen, Func<T0, Gen<T1>> selector) // TODO: remove?
         => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen.Generate(pcg, min, out size);
-        if (min is not null && min.I < size.I) return default;
+        if (Size.IsLessThan(min, size)) return default!;
         var vR = selector(v1).Generate(pcg, null, out Size sR);
         size.Append(sR);
         return (v1, vR);
@@ -790,9 +812,10 @@ public static class Gen
         Func<T0, T1, Gen<T2>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v0 = gen0.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v1 = gen1.Generate(pcg, min, out var s);
         size.Add(s);
-        if (min is not null && min.I < size.I) return default;
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = selector(v0, v1).Generate(pcg, null, out s);
         size.Append(s);
         return (v0, v1, v2);
@@ -802,11 +825,13 @@ public static class Gen
         Func<T0, T1, T2, Gen<T3>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v0 = gen0.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v1 = gen1.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out s);
         size.Add(s);
-        if (min is not null && min.I < size.I) return default;
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = selector(v0, v1, v2).Generate(pcg, null, out s);
         size.Append(s);
         return (v0, v1, v2, v3);
@@ -816,7 +841,7 @@ public static class Gen
     public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, IGen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen.Generate(pcg, min, out size);
-        if (min is not null && min.I < size.I) return default!;
+        if (Size.IsLessThan(min, size)) return default!;
         var vR = selector(v1).Generate(pcg, null, out var sR);
         size.Append(sR);
         return vR;
@@ -827,9 +852,10 @@ public static class Gen
         => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
-        if (min is not null && min.I < size.I) return default!;
+        if (Size.IsLessThan(min, size)) return default!;
         var vR = selector(v1, v2).Generate(pcg, null, out s);
         size.Append(s);
         return vR;
@@ -840,11 +866,13 @@ public static class Gen
         Func<T1, T2, T3, Gen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen1.Generate(pcg, min, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
-        if (min is not null && min.I < size.I) return default!;
+        if (Size.IsLessThan(min, size)) return default!;
         var vR = selector(v1, v2, v3).Generate(pcg, null, out s);
         size.Append(s);
         return vR;
@@ -855,13 +883,16 @@ public static class Gen
         Func<T1, T2, T3, T4, Gen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen1.Generate(pcg, null, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, null, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, null, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, null, out s);
         size.Add(s);
-        if (min is not null && min.I < size.I) return default!;
+        if (Size.IsLessThan(min, size)) return default!;
         var vR = selector(v1, v2, v3, v4).Generate(pcg, null, out s);
         size.Append(s);
         return vR;
@@ -872,15 +903,19 @@ public static class Gen
         Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen1.Generate(pcg, null, out size);
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = gen2.Generate(pcg, null, out var s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v3 = gen3.Generate(pcg, null, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v4 = gen4.Generate(pcg, null, out s);
         size.Add(s);
+        if (Size.IsLessThan(min, size)) return default!;
         var v5 = gen5.Generate(pcg, null, out s);
         size.Add(s);
-        if (min is not null && min.I < size.I) return default!;
+        if (Size.IsLessThan(min, size)) return default!;
         var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, null, out s);
         size.Append(s);
         return vR;
@@ -891,9 +926,10 @@ public static class Gen
         => Create((PCG pcg, Size? min, out Size size) =>
     {
         var v1 = gen1.Generate(pcg, null, out size);
-        if (min is not null && min.I < size.I) return default!;
+        if (Size.IsLessThan(min, size)) return default!;
         var v2 = genSelector(v1).Generate(pcg, null, out var s);
         size.Append(s);
+        if (Size.IsLessThan(min, size)) return default!;
         return resultSelector(v1, v2);
     });
 
@@ -901,7 +937,7 @@ public static class Gen
     public static Gen<R> SelectMany<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, IGen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var (v1, v2) = gen.Generate(pcg, min, out size);
-        if (min is not null && min.I < size.I) return default!;
+        if (Size.IsLessThan(min, size)) return default!;
         var vR = selector(v1, v2).Generate(pcg, null, out var sR);
         size.Append(sR);
         return vR;
@@ -911,7 +947,7 @@ public static class Gen
     public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, IGen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var (v1, v2, v3) = gen.Generate(pcg, min, out size);
-        if (min is not null && min.I < size.I) return default!;
+        if (Size.IsLessThan(min, size)) return default!;
         var vR = selector(v1, v2, v3).Generate(pcg, null, out var sR);
         size.Append(sR);
         return vR;
@@ -921,7 +957,7 @@ public static class Gen
     public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, IGen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var (v1, v2, v3, v4) = gen.Generate(pcg, min, out size);
-        if (min is not null && min.I < size.I) return default!;
+        if (Size.IsLessThan(min, size)) return default!;
         var vR = selector(v1, v2, v3, v4).Generate(pcg, null, out var sR);
         size.Append(sR);
         return vR;
@@ -931,7 +967,7 @@ public static class Gen
     public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, IGen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
         var (v1, v2, v3, v4, v5) = gen.Generate(pcg, min, out size);
-        if (min is not null && min.I < size.I) return default!;
+        if (Size.IsLessThan(min, size)) return default!;
         var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, null, out var sR);
         size.Append(sR);
         return vR;
@@ -940,7 +976,7 @@ public static class Gen
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
-        int i = 200;
+        int i = 100;
         while (i-- > 0)
         {
             var t = gen.Generate(pcg, null, out size);
@@ -952,79 +988,91 @@ public static class Gen
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2)> Where<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
-        while (true)
+        int i = 100;
+        while (i-- > 0)
         {
             var (t1, t2) = gen.Generate(pcg, null, out size);
             if (predicate(t1, t2)) return (t1, t2);
         }
+        throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2, T3)> Where<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
-        while (true)
+        int i = 100;
+        while (i-- > 0)
         {
             var (t1, t2, t3) = gen.Generate(pcg, null, out size);
             if (predicate(t1, t2, t3)) return (t1, t2, t3);
         }
+        throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2, T3, T4)> Where<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
-        while (true)
+        int i = 100;
+        while (i-- > 0)
         {
             var (t1, t2, t3, t4) = gen.Generate(pcg, null, out size);
             if (predicate(t1, t2, t3, t4)) return (t1, t2, t3, t4);
         }
+        throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2, T3, T4, T5)> Where<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
-        while (true)
+        int i = 100;
+        while (i-- > 0)
         {
             var (t1, t2, t3, t4, t5) = gen.Generate(pcg, null, out size);
             if (predicate(t1, t2, t3, t4, t5)) return (t1, t2, t3, t4, t5);
         }
+        throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2, T3, T4, T5, T6)> Where<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
-        while (true)
+        int i = 100;
+        while (i-- > 0)
         {
             var (t1, t2, t3, t4, t5, t6) = gen.Generate(pcg, null, out size);
             if (predicate(t1, t2, t3, t4, t5, t6)) return (t1, t2, t3, t4, t5, t6);
         }
+        throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2, T3, T4, T5, T6, T7)> Where<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
-        while (true)
+        int i = 100;
+        while (i-- > 0)
         {
             var (t1, t2, t3, t4, t5, t6, t7) = gen.Generate(pcg, null, out size);
             if (predicate(t1, t2, t3, t4, t5, t6, t7)) return (t1, t2, t3, t4, t5, t6, t7);
         }
+        throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
     public static Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> Where<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
     {
-        while (true)
+        int i = 100;
+        while (i-- > 0)
         {
             var (t1, t2, t3, t4, t5, t6, t7, t8) = gen.Generate(pcg, null, out size);
             if (predicate(t1, t2, t3, t4, t5, t6, t7, t8)) return (t1, t2, t3, t4, t5, t6, t7, t8);
         }
+        throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Create a generator where the element is one of the constants.</summary>
     public static Gen<T> OneOfConst<T>(params T[] constants) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        var l = (uint)constants.Length;
-        if (min is not null && min.I < l) l = (uint)min.I + 1;
-        var i = pcg.Next(l);
+        var i = pcg.Next((uint)constants.Length);
         size = new Size(i);
         return constants[i];
     });
@@ -1032,9 +1080,7 @@ public static class Gen
     /// <summary>Create a generator where the element is generated from one of the generators.</summary>
     public static Gen<T> OneOf<T>(params IGen<T>[] gens) => Create((PCG pcg, Size? min, out Size size) =>
     {
-        var l = (uint)gens.Length;
-        if (min is not null && min.I < l) l = (uint)min.I + 1;
-        var i = pcg.Next(l);
+        var i = pcg.Next((uint)gens.Length);
         var next = i == min?.I ? min.Next : null;
         var r = gens[i].Generate(pcg, next, out size);
         size = new Size(i, size);
@@ -1054,7 +1100,6 @@ public static class Gen
         foreach (var (i, _) in constants) l += (uint)i;
         return Create((PCG pcg, Size? min, out Size size) =>
         {
-            if (min is not null && min.I < l) l = (uint)min.I + 1;
             var v = (int)pcg.Next(l);
             size = new Size((ulong)v);
             for (var j = 0; j < constants.Length; j++)
@@ -1075,7 +1120,6 @@ public static class Gen
         foreach (var (i, _) in gens) l += (uint)i;
         return Create((PCG pcg, Size? min, out Size size) =>
         {
-            if (min is not null && min.I < l) l = (uint)min.I + 1;
             var nSize = pcg.Next(l);
             var v = (int)nSize;
             for (var i = 0; i < gens.Length; i++)
@@ -1152,7 +1196,7 @@ public static class Gen
 
     public static GenSortedDictionary<K, V> SortedDictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new(genK, genV);
 
-    static void Shuffle<T>(IList<T> a, PCG pcg, int lower)
+    static void ShuffleInPlace<T>(IList<T> a, PCG pcg, int lower)
     {
         for (int i = a.Count - 1; i > lower; i--)
         {
@@ -1168,7 +1212,7 @@ public static class Gen
     public static Gen<T[]> Shuffle<T>(T[] constants) => Create((PCG pcg, Size? _, out Size size) =>
     {
         constants = (T[])constants.Clone();
-        Shuffle(constants, pcg, 0);
+        ShuffleInPlace(constants, pcg, 0);
         size = new Size(0L);
         return constants;
     });
@@ -1177,7 +1221,7 @@ public static class Gen
     public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen) => Create((PCG pcg, Size? _, out Size size) =>
     {
         var a = gen.Generate(pcg, null, out size);
-        Shuffle(a, pcg, 0);
+        ShuffleInPlace(a, pcg, 0);
         return a;
     });
 
@@ -1187,7 +1231,7 @@ public static class Gen
         a = (T[])a.Clone();
         size = new Size(0L);
         int lower = Math.Max(a.Length - length, 0);
-        Shuffle(a, pcg, lower);
+        ShuffleInPlace(a, pcg, lower);
         if (lower == 0) return a;
         var r = new T[length];
         for (int i = 0; i < r.Length; i++)
@@ -1210,7 +1254,8 @@ public static class Gen
     /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<List<T>> Shuffle<T>(List<T> a) => Create((PCG pcg, Size? _, out Size size) =>
     {
-        Shuffle(a, pcg, 0);
+        a = new List<T>(a);
+        ShuffleInPlace(a, pcg, 0);
         size = new Size(0L);
         return a;
     });
@@ -1219,16 +1264,17 @@ public static class Gen
     public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => Create((PCG pcg, Size? _, out Size size) =>
     {
         var a = gen.Generate(pcg, null, out size);
-        Shuffle(a, pcg, 0);
+        ShuffleInPlace(a, pcg, 0);
         return a;
     });
 
     /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => Create((PCG pcg, Size? _, out Size size) =>
     {
+        a = new List<T>(a);
         size = new Size(0L);
         int lower = Math.Max(a.Count - length, 0);
-        Shuffle(a, pcg, lower);
+        ShuffleInPlace(a, pcg, lower);
         if (lower == 0) return a;
         var r = new List<T>(length);
         for (int i = 0; i < length; i++)
@@ -1253,20 +1299,16 @@ public static class Gen
         var nullLimit = (uint)(nullFraction * uint.MaxValue);
         return Create((PCG pcg, Size? min, out Size size) =>
         {
-            if (min is not null)
-            {
-                if (min.I < 0x1_0000_0000UL) { size = new Size(0x1_0000_0000UL); return default!; }
-                min = min.I == 0x1_0000_0000UL ? min.Next : null;
-            }
             var v = pcg.Next();
             if (pcg.Next() < nullLimit)
             {
-                var r = gen.Generate(pcg, min, out size);
-                size = new Size(0x1_0000_0001UL, size);
-                return new T?(r);
+                size = new Size(0);
+                return default;
             }
-            size = new Size(0x1_0000_0000UL);
-            return default;
+            var next = min?.I == 1 ? min.Next : null;
+            var r = gen.Generate(pcg, next, out size);
+            size = new Size(1, size);
+            return new T?(r);
         });
     }
 
@@ -1275,23 +1317,15 @@ public static class Gen
         var nullLimit = (uint)(nullFraction * uint.MaxValue);
         return Create((PCG pcg, Size? min, out Size size) =>
         {
-            if (min is not null)
-            {
-                if (min.I < 0x1_0000_0000UL) { size = new Size(0x1_0000_0000UL); return default!; }
-                min = min.I == 0x1_0000_0000UL ? min.Next : null;
-            }
-            var v = pcg.Next();
             if (pcg.Next() < nullLimit)
             {
-                var r = gen.Generate(pcg, min, out size);
-                size = new Size(0x1_0000_0001UL, size);
-                return r;
-            }
-            else
-            {
-                size = new Size(0x1_0000_0000UL);
+                size = new Size(0);
                 return null;
             }
+            var next = min?.I == 1 ? min.Next : null;
+            var r = gen.Generate(pcg, next, out size);
+            size = new Size(1, size);
+            return r;
         });
     }
 
@@ -1333,9 +1367,9 @@ public sealed class GenBool : Gen<bool>
 {
     public override bool Generate(PCG pcg, Size? min, out Size size)
     {
-        uint i = pcg.Next() & 1U;
-        size = new Size(i + 1UL);
-        return i == 0U;
+        var i = pcg.Next() & 1U;
+        size = new Size(i);
+        return i == 1U;
     }
 }
 
@@ -1345,8 +1379,8 @@ public sealed class GenSByte : Gen<sbyte>
     static ulong Zigzag(sbyte i) => (ulong)((i << 1) ^ (i >> 7));
     public override sbyte Generate(PCG pcg, Size? min, out Size size)
     {
-        sbyte i = (sbyte)pcg.Next();
-        size = new Size(Zigzag(i) + 1UL);
+        var i = (sbyte)pcg.Next();
+        size = new Size(Zigzag(i));
         return i;
     }
     public Gen<sbyte> this[sbyte start, sbyte finish]

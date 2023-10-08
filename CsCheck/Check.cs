@@ -99,18 +99,18 @@ public static partial class Check
         {
             var pcg = PCG.Parse(seed);
             ulong state = pcg.State;
-            Size? s = null;
+            Size? size = null;
             T? t = default;
             try
             {
-                assert(t = gen.Generate(pcg, null, out s));
+                assert(t = gen.Generate(pcg, null, out size));
             }
             catch (Exception e)
             {
                 shrinks++;
                 minPCG = pcg;
                 minState = state;
-                minSize = s;
+                minSize = size;
                 minT = t;
                 minException = e;
             }
@@ -124,15 +124,15 @@ public static partial class Check
         void Worker(object? _)
         {
             var pcg = PCG.ThreadPCG;
-            Size? s = null;
+            Size? size = null;
             T? t = default;
             while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
             {
                 ulong state = pcg.State;
                 try
                 {
-                    t = gen.Generate(pcg, minSize, out s);
-                    if (Size.IsLessThan(s, minSize))
+                    t = gen.Generate(pcg, minSize, out size);
+                    if (minSize is null || Size.IsLessThan(size, minSize))
                         assert(t);
                     else
                         Interlocked.Increment(ref skipped);
@@ -141,12 +141,12 @@ public static partial class Check
                 {
                     lock (cde)
                     {
-                        if (Size.IsLessThan(s, minSize))
+                        if (minSize is null || Size.IsLessThan(size, minSize))
                         {
                             shrinks++;
                             minPCG = pcg;
                             minState = state;
-                            minSize = s;
+                            minSize = size;
                             minT = t;
                             minException = e;
                         }
@@ -474,18 +474,18 @@ public static partial class Check
         {
             var pcg = PCG.Parse(seed);
             ulong state = pcg.State;
-            Size? s = null;
+            Size? size = null;
             T? t = default;
             try
             {
-                await assert(t = gen.Generate(pcg, null, out s));
+                await assert(t = gen.Generate(pcg, null, out size));
             }
             catch (Exception e)
             {
                 shrinks++;
                 minPCG = pcg;
                 minState = state;
-                minSize = s;
+                minSize = size;
                 minT = t;
                 minException = e;
             }
@@ -501,15 +501,15 @@ public static partial class Check
             tasks[threads] = Task.Run(async () =>
             {
                 var pcg = PCG.ThreadPCG;
-                Size? s = null;
+                Size? size = null;
                 T? t = default;
                 while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
                 {
                     ulong state = pcg.State;
                     try
                     {
-                        t = gen.Generate(pcg, minSize, out s);
-                        if (Size.IsLessThan(s, minSize))
+                        t = gen.Generate(pcg, minSize, out size);
+                        if (minSize is null || Size.IsLessThan(size, minSize))
                             await assert(t);
                         else
                             Interlocked.Increment(ref skipped);
@@ -518,12 +518,12 @@ public static partial class Check
                     {
                         lock (tasks)
                         {
-                            if (Size.IsLessThan(s, minSize))
+                            if (minSize is null || Size.IsLessThan(size, minSize))
                             {
                                 shrinks++;
                                 minPCG = pcg;
                                 minState = state;
-                                minSize = s;
+                                minSize = size;
                                 minT = t;
                                 minException = e;
                             }
@@ -849,17 +849,17 @@ public static partial class Check
         {
             var pcg = PCG.Parse(seed);
             ulong state = pcg.State;
-            Size? s = null;
+            Size? size = null;
             T? t = default;
             try
             {
-                t = gen.Generate(pcg, null, out s);
+                t = gen.Generate(pcg, null, out size);
                 if (!predicate(t))
                 {
                     shrinks++;
                     minPCG = pcg;
                     minState = state;
-                    minSize = s;
+                    minSize = size;
                     minT = t;
                 }
             }
@@ -868,7 +868,7 @@ public static partial class Check
                 shrinks++;
                 minPCG = pcg;
                 minState = state;
-                minSize = s;
+                minSize = size;
                 minT = t;
                 minException = e;
             }
@@ -882,26 +882,26 @@ public static partial class Check
         void Worker(object? _)
         {
             var pcg = PCG.ThreadPCG;
-            Size? s = null;
+            Size? size = null;
             T? t = default;
             while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
             {
                 ulong state = pcg.State;
                 try
                 {
-                    t = gen.Generate(pcg, minSize, out s);
-                    if (Size.IsLessThan(s, minSize))
+                    t = gen.Generate(pcg, minSize, out size);
+                    if (minSize is null || Size.IsLessThan(size, minSize))
                     {
                         if (!predicate(t))
                         {
                             lock (cde)
                             {
-                                if (Size.IsLessThan(s, minSize))
+                                if (minSize is null || Size.IsLessThan(size, minSize))
                                 {
                                     shrinks++;
                                     minPCG = pcg;
                                     minState = state;
-                                    minSize = s;
+                                    minSize = size;
                                     minT = t;
                                     minException = null;
                                 }
@@ -917,12 +917,12 @@ public static partial class Check
                 {
                     lock (cde)
                     {
-                        if (Size.IsLessThan(s, minSize))
+                        if (minSize is null || Size.IsLessThan(size, minSize))
                         {
                             shrinks++;
                             minPCG = pcg;
                             minState = state;
-                            minSize = s;
+                            minSize = size;
                             minT = t;
                             minException = e;
                         }
@@ -1058,17 +1058,17 @@ public static partial class Check
         {
             var pcg = PCG.Parse(seed);
             ulong state = pcg.State;
-            Size? s = null;
+            Size? size = null;
             T? t = default;
             try
             {
-                t = gen.Generate(pcg, null, out s);
+                t = gen.Generate(pcg, null, out size);
                 if (!await predicate(t))
                 {
                     shrinks++;
                     minPCG = pcg;
                     minState = state;
-                    minSize = s;
+                    minSize = size;
                     minT = t;
                 }
             }
@@ -1077,7 +1077,7 @@ public static partial class Check
                 shrinks++;
                 minPCG = pcg;
                 minState = state;
-                minSize = s;
+                minSize = size;
                 minT = t;
                 minException = e;
             }
@@ -1093,26 +1093,26 @@ public static partial class Check
             tasks[threads] = Task.Run(async () =>
             {
                 var pcg = PCG.ThreadPCG;
-                Size? s = null;
+                Size? size = null;
                 T? t = default;
                 while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
                 {
                     ulong state = pcg.State;
                     try
                     {
-                        t = gen.Generate(pcg, minSize, out s);
-                        if (Size.IsLessThan(s, minSize))
+                        t = gen.Generate(pcg, minSize, out size);
+                        if (minSize is null || Size.IsLessThan(size, minSize))
                         {
                             if (!await predicate(t))
                             {
                                 lock (tasks)
                                 {
-                                    if (Size.IsLessThan(s, minSize))
+                                    if (minSize is null || Size.IsLessThan(size, minSize))
                                     {
                                         shrinks++;
                                         minPCG = pcg;
                                         minState = state;
-                                        minSize = s;
+                                        minSize = size;
                                         minT = t;
                                         minException = null;
                                     }
@@ -1128,12 +1128,12 @@ public static partial class Check
                     {
                         lock (tasks)
                         {
-                            if (Size.IsLessThan(s, minSize))
+                            if (minSize is null || Size.IsLessThan(size, minSize))
                             {
                                 shrinks++;
                                 minPCG = pcg;
                                 minState = state;
-                                minSize = s;
+                                minSize = size;
                                 minT = t;
                                 minException = e;
                             }
