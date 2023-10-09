@@ -632,15 +632,6 @@ public class GenTests
     }
 
     [Fact]
-    public void AnEnumerable()
-    {
-        Gen.UShort[1, 1000]
-        .Enumerable[10, 100]
-        .Sample(l => l.Count() >= 10 && l.Count() <= 100
-                  && l.All(i => i is >= 1 and <= 1000));
-    }
-
-    [Fact]
     public void HashSet()
     {
         Gen.ULong[1, 1000]

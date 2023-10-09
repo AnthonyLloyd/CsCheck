@@ -108,7 +108,6 @@ public abstract class Gen<T> : IGen<T>
     });
 
     public GenArray<T> Array => new(this);
-    public GenEnumerable<T> Enumerable => new(this);
     public GenArray2D<T> Array2D => new(this);
     public GenList<T> List => new(this);
     public GenHashSet<T> HashSet => new(this);
@@ -131,19 +130,11 @@ public static class Gen
     /// <summary>Create a generator from a function.</summary>
     public static Gen<T> Create<T>(GenDelegate<T> gen) => new GenCreate<T>(gen);
 
-    /// <summary>Create a generator from a function.</summary>
-    public static Gen<T> Create<T>(Func<PCG, (T, Size)> gen) => new GenCreate<T>((PCG pcg, Size? _, out Size size) =>
-      {
-          T t;
-          (t, size) = gen(pcg);
-          return t;
-      });
+    /// <summary>Create a constant generator.</summary>
+    public static Gen<T> Const<T>(T value) => Create((PCG _, Size? __, out Size size) => { size = new Size(0); return value; });
 
     /// <summary>Create a constant generator.</summary>
-    public static Gen<T> Const<T>(T value) => Create((PCG _, Size? __, out Size size) => { size = new Size(0L); return value; });
-
-    /// <summary>Create a constant generator.</summary>
-    public static Gen<T> Const<T>(Func<T> value) => Create((PCG _, Size? __, out Size size) => { size = new Size(0L); return value(); });
+    public static Gen<T> Const<T>(Func<T> value) => Create((PCG _, Size? __, out Size size) => { size = new Size(0); return value(); });
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T, R>(this Gen<T> gen, Func<T, R> selector) =>
@@ -974,96 +965,104 @@ public static class Gen
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
+    public static Gen<T> Where<T>(this Gen<T> gen, Func<T, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         int i = 100;
         while (i-- > 0)
         {
-            var t = gen.Generate(pcg, null, out size);
+            var t = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             if (predicate(t)) return t;
         }
         throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2)> Where<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
+    public static Gen<(T1, T2)> Where<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         int i = 100;
         while (i-- > 0)
         {
-            var (t1, t2) = gen.Generate(pcg, null, out size);
+            var (t1, t2) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             if (predicate(t1, t2)) return (t1, t2);
         }
         throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3)> Where<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
+    public static Gen<(T1, T2, T3)> Where<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         int i = 100;
         while (i-- > 0)
         {
-            var (t1, t2, t3) = gen.Generate(pcg, null, out size);
+            var (t1, t2, t3) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             if (predicate(t1, t2, t3)) return (t1, t2, t3);
         }
         throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4)> Where<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
+    public static Gen<(T1, T2, T3, T4)> Where<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         int i = 100;
         while (i-- > 0)
         {
-            var (t1, t2, t3, t4) = gen.Generate(pcg, null, out size);
+            var (t1, t2, t3, t4) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             if (predicate(t1, t2, t3, t4)) return (t1, t2, t3, t4);
         }
         throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4, T5)> Where<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
+    public static Gen<(T1, T2, T3, T4, T5)> Where<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         int i = 100;
         while (i-- > 0)
         {
-            var (t1, t2, t3, t4, t5) = gen.Generate(pcg, null, out size);
+            var (t1, t2, t3, t4, t5) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             if (predicate(t1, t2, t3, t4, t5)) return (t1, t2, t3, t4, t5);
         }
         throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4, T5, T6)> Where<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
+    public static Gen<(T1, T2, T3, T4, T5, T6)> Where<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         int i = 100;
         while (i-- > 0)
         {
-            var (t1, t2, t3, t4, t5, t6) = gen.Generate(pcg, null, out size);
+            var (t1, t2, t3, t4, t5, t6) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             if (predicate(t1, t2, t3, t4, t5, t6)) return (t1, t2, t3, t4, t5, t6);
         }
         throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4, T5, T6, T7)> Where<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
+    public static Gen<(T1, T2, T3, T4, T5, T6, T7)> Where<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         int i = 100;
         while (i-- > 0)
         {
-            var (t1, t2, t3, t4, t5, t6, t7) = gen.Generate(pcg, null, out size);
+            var (t1, t2, t3, t4, t5, t6, t7) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             if (predicate(t1, t2, t3, t4, t5, t6, t7)) return (t1, t2, t3, t4, t5, t6, t7);
         }
         throw new CsCheckException("Failing Where max count");
     });
 
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
-    public static Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> Where<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate) => Create((PCG pcg, Size? _, out Size size) =>
+    public static Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> Where<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate) => Create((PCG pcg, Size? min, out Size size) =>
     {
         int i = 100;
         while (i-- > 0)
         {
-            var (t1, t2, t3, t4, t5, t6, t7, t8) = gen.Generate(pcg, null, out size);
+            var (t1, t2, t3, t4, t5, t6, t7, t8) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             if (predicate(t1, t2, t3, t4, t5, t6, t7, t8)) return (t1, t2, t3, t4, t5, t6, t7, t8);
         }
         throw new CsCheckException("Failing Where max count");
@@ -1108,7 +1107,7 @@ public static class Gen
                 if (v < 0)
                     return constants[j].Constant;
             }
-            size = new Size(0UL);
+            size = new Size(0);
             return default!;
         });
     }
@@ -1133,7 +1132,7 @@ public static class Gen
                     return r;
                 }
             }
-            size = new Size(0UL);
+            size = new Size(0);
             return default!;
         });
     }
@@ -1213,7 +1212,7 @@ public static class Gen
     {
         constants = (T[])constants.Clone();
         ShuffleInPlace(constants, pcg, 0);
-        size = new Size(0L);
+        size = new Size(0);
         return constants;
     });
 
@@ -1229,7 +1228,7 @@ public static class Gen
     public static Gen<T[]> Shuffle<T>(T[] a, int length) => Create((PCG pcg, Size? _, out Size size) =>
     {
         a = (T[])a.Clone();
-        size = new Size(0L);
+        size = new Size(0);
         int lower = Math.Max(a.Length - length, 0);
         ShuffleInPlace(a, pcg, lower);
         if (lower == 0) return a;
@@ -1256,7 +1255,7 @@ public static class Gen
     {
         a = new List<T>(a);
         ShuffleInPlace(a, pcg, 0);
-        size = new Size(0L);
+        size = new Size(0);
         return a;
     });
 
@@ -1272,7 +1271,7 @@ public static class Gen
     public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => Create((PCG pcg, Size? _, out Size size) =>
     {
         a = new List<T>(a);
-        size = new Size(0L);
+        size = new Size(0);
         int lower = Math.Max(a.Count - length, 0);
         ShuffleInPlace(a, pcg, lower);
         if (lower == 0) return a;
@@ -1330,16 +1329,16 @@ public static class Gen
     }
 
     public static GenOperation<T> Operation<T>(string name, Action<T> action)
-        => new((PCG _, Size? __, out Size size) => { size = new Size(0L); return (name, action); });
+        => new((PCG _, Size? __, out Size size) => { size = new Size(0); return (name, action); });
 
     public static GenOperation<T> Operation<T>(Action<T> action)
-        => new((PCG _, Size? __, out Size size) => { size = new Size(0L); return ("", action); }, true);
+        => new((PCG _, Size? __, out Size size) => { size = new Size(0); return ("", action); }, true);
 
     public static GenOperation<Actual, Model> Operation<Actual, Model>(string name, Action<Actual, Model> action)
-        => new((PCG _, Size? __, out Size size) => { size = new Size(0L); return (name, action); });
+        => new((PCG _, Size? __, out Size size) => { size = new Size(0); return (name, action); });
 
     public static GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, Model> action)
-        => new((PCG _, Size? __, out Size size) => { size = new Size(0L); return ("", action); }, true);
+        => new((PCG _, Size? __, out Size size) => { size = new Size(0); return ("", action); }, true);
 
     public static readonly GenBool Bool = new();
     public static readonly GenSByte SByte = new();
@@ -2235,20 +2234,18 @@ public sealed class GenArray<T>(Gen<T> gen) : Gen<T[]>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     T[] Generate(PCG pcg, Size? min, int length, out Size size)
     {
-        var sizeI = ((ulong)length << 32) + 1UL;
+        var sizeI = (ulong)length << 32;
+        var total = new Size(0);
+        size = new Size(sizeI, total);
+        if(min?.I < sizeI) return default!;
+        var next = sizeI == min?.I ? min.Next : null;
         var vs = new T[length];
-        if (min is not null)
-        {
-            if (min.I < sizeI) { size = new Size(sizeI); return vs; }
-            min = min.I == sizeI ? min.Next : null;
-        }
-        var total = new Size(0L);
         for (int i = 0; i < vs.Length; i++)
         {
-            vs[i] = gen.Generate(pcg, min, out var si);
+            vs[i] = gen.Generate(pcg, next, out var si);
             total.Add(si);
+            if (Size.IsLessThan(min, size)) return default!;
         }
-        size = new Size(sizeI, total);
         return vs;
     }
     public override T[] Generate(PCG pcg, Size? min, out Size size)
@@ -2271,11 +2268,12 @@ public sealed class GenArrayUnique<T>(Gen<T> gen) : Gen<T[]>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     T[] Generate(PCG pcg, Size? min, int length, out Size size)
     {
-        var sizeI = ((ulong)length << 32) + 1UL;
-        var vs = new T[length];
-        if (min is not null && min.I < sizeI) { size = new Size(sizeI); return vs; }
-        size = new Size(0L);
+        var sizeI = (ulong)length << 32;
+        var total = new Size(0);
+        size = new Size(sizeI, total);
+        if (min?.I < sizeI) return default!;
         var hs = new HashSet<T>();
+        var vs = new T[length];
         int i = 0;
         while (i < length)
         {
@@ -2284,14 +2282,14 @@ public sealed class GenArrayUnique<T>(Gen<T> gen) : Gen<T[]>
             if (hs.Add(v))
             {
                 vs[i++] = v;
-                size.Add(s);
+                total.Add(s);
+                if (Size.IsLessThan(min, size)) return default!;
             }
             else if (++bad == 1000)
             {
                 throw new CsCheckException("Failing to add to ArrayUnique");
             }
         }
-        size = new Size(sizeI, size);
         return vs;
     }
     public override T[] Generate(PCG pcg, Size? min, out Size size)
@@ -2308,42 +2306,6 @@ public sealed class GenArrayUnique<T>(Gen<T> gen) : Gen<T[]>
     );
 }
 
-public sealed class GenEnumerable<T>(Gen<T> gen) : Gen<IEnumerable<T>>
-{
-    readonly Gen<T> gen = gen;
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    IEnumerable<T> Generate(PCG pcg, Size? min, int length, out Size size)
-    {
-        var sizeI = ((ulong)length << 32) + 1UL;
-        var vs = new T[length];
-        if (min is not null)
-        {
-            if (min.I < sizeI) { size = new Size(sizeI); return vs; }
-            min = min.I == sizeI ? min.Next : null;
-        }
-        size = new Size(0L);
-        for (int i = 0; i < vs.Length; i++)
-        {
-            vs[i] = gen.Generate(pcg, min, out var s);
-            size.Add(s);
-        }
-        size = new Size(sizeI, size);
-        return vs;
-    }
-    public override IEnumerable<T> Generate(PCG pcg, Size? min, out Size size)
-        => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<IEnumerable<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length.Generate(pcg, null, out _), out size)
-    );
-    public Gen<IEnumerable<T>> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length, out size)
-    );
-    public Gen<IEnumerable<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<IEnumerable<T>> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
-    );
-}
-
 public sealed class GenArray2D<T>(Gen<T> gen) : Gen<T[,]>
 {
     readonly Gen<T> gen = gen;
@@ -2351,15 +2313,21 @@ public sealed class GenArray2D<T>(Gen<T> gen) : Gen<T[,]>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     T[,] Generate(PCG pcg, Size? min, int length0, int length1, out Size size)
     {
-        size = new Size((((ulong)(length0 * length1)) << 32) + 1UL);
+        var sizeI = ((ulong)(length0 * length1)) << 32;
+        var total = new Size(0);
+        size = new Size(sizeI, total);
+        if (min?.I < sizeI) return default!;
+        var next = sizeI == min?.I ? min.Next : null;
         var vs = new T[length0, length1];
-        if (min is not null && min.I < size.I) return vs;
         for (int i = 0; i < length0; i++)
         {
             for (int j = 0; j < length1; j++)
-                vs[i, j] = gen.Generate(pcg, null, out _);
+            {
+                vs[i, j] = gen.Generate(pcg, next, out var s);
+                total.Add(s);
+                if (Size.IsLessThan(min, size)) return default!;
+            }
         }
-
         return vs;
     }
     public override T[,] Generate(PCG pcg, Size? min, out Size size)
@@ -2381,20 +2349,18 @@ public sealed class GenList<T>(Gen<T> gen) : Gen<List<T>>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     List<T> Generate(PCG pcg, Size? min, int length, out Size size)
     {
-        var sizeI = ((ulong)length << 32) + 1UL;
+        var sizeI = (ulong)length << 32;
+        var total = new Size(0);
+        size = new Size(sizeI, total);
+        if (min?.I < sizeI) return default!;
+        var next = sizeI == min?.I ? min.Next : null;
         var vs = new List<T>(length);
-        if (min is not null)
-        {
-            if (min.I < sizeI) { size = new Size(sizeI); return vs; }
-            min = min.I == sizeI ? min.Next : null;
-        }
-        size = new Size(0L);
         for (int i = 0; i < length; i++)
         {
-            vs.Add(gen.Generate(pcg, min, out var s));
-            size.Add(s);
+            vs.Add(gen.Generate(pcg, next, out var s));
+            total.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
         }
-        size = new Size(sizeI, size);
         return vs;
     }
     public override List<T> Generate(PCG pcg, Size? min, out Size size)
@@ -2417,16 +2383,18 @@ public sealed class GenHashSet<T>(Gen<T> gen) : Gen<HashSet<T>>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     HashSet<T> Generate(PCG pcg, Size? min, int length, out Size size)
     {
-        var sizeI = ((ulong)length << 32) + 1UL;
+        var sizeI = (ulong)length << 32;
+        var total = new Size(0);
+        size = new Size(sizeI, total);
+        if (min?.I < sizeI) return default!;
         var vs = new HashSet<T>();
-        if (min is not null && min.I < sizeI) { size = new Size(sizeI); return vs; }
-        size = new Size(0L);
         var bad = 0;
         while (length > 0)
         {
             if (vs.Add(gen.Generate(pcg, null, out var s)))
             {
-                size.Add(s);
+                total.Add(s);
+                if (Size.IsLessThan(min, size)) return default!;
                 length--;
                 bad = 0;
             }
@@ -2435,7 +2403,6 @@ public sealed class GenHashSet<T>(Gen<T> gen) : Gen<HashSet<T>>
                 throw new CsCheckException("Failing to add to HashSet");
             }
         }
-        size = new Size(sizeI, size);
         return vs;
     }
     public override HashSet<T> Generate(PCG pcg, Size? min, out Size size)
@@ -2459,10 +2426,12 @@ public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictiona
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     Dictionary<K, V> Generate(PCG pcg, Size? min, int length, out Size size)
     {
-        var sizeI = ((ulong)length << 32) + 1UL;
+        var sizeI = (ulong)length << 32;
+        var total = new Size(0);
+        size = new Size(sizeI, total);
+        if (min?.I < sizeI) return default!;
+        var next = sizeI == min?.I ? min.Next : null;
         var vs = new Dictionary<K, V>(length);
-        if (min is not null && min.I < sizeI) { size = new Size(sizeI); return vs; }
-        size = new Size(0L);
         var i = length;
         var bad = 0;
         while (i > 0)
@@ -2470,9 +2439,12 @@ public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictiona
             var k = genK.Generate(pcg, null, out var s);
             if (!vs.ContainsKey(k))
             {
-                size.Add(s);
-                vs.Add(k, genV.Generate(pcg, null, out s));
-                size.Add(s);
+                total.Add(s);
+                if (Size.IsLessThan(min, size)) return default!;
+                var v = genV.Generate(pcg, next, out s);
+                total.Add(s);
+                if (Size.IsLessThan(min, size)) return default!;
+                vs.Add(k, v);
                 i--;
                 bad = 0;
             }
@@ -2481,7 +2453,6 @@ public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictiona
                 throw new CsCheckException("Failing to add to Dictionary");
             }
         }
-        size = new Size(sizeI, size);
         return vs;
     }   
     public override Dictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
@@ -2505,10 +2476,12 @@ public sealed class GenSortedDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<So
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     SortedDictionary<K, V> Generate(PCG pcg, Size? min, int length, out Size size)
     {
-        var sizeI = ((ulong)length << 32) + 1UL;
+        var sizeI = (ulong)length << 32;
+        var total = new Size(0);
+        size = new Size(sizeI, total);
+        if (min?.I < sizeI) return default!;
+        var next = sizeI == min?.I ? min.Next : null;
         var vs = new SortedDictionary<K, V>();
-        if (min is not null && min.I < sizeI) { size = new Size(sizeI); return vs; }
-        size = new Size(0L);
         var i = length;
         var bad = 0;
         while (i > 0)
@@ -2516,9 +2489,12 @@ public sealed class GenSortedDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<So
             var k = genK.Generate(pcg, null, out var s);
             if (!vs.ContainsKey(k))
             {
-                size.Add(s);
-                vs.Add(k, genV.Generate(pcg, null, out s));
-                size.Add(s);
+                total.Add(s);
+                if (Size.IsLessThan(min, size)) return default!;
+                var v = genV.Generate(pcg, next, out s);
+                total.Add(s);
+                if (Size.IsLessThan(min, size)) return default!;
+                vs.Add(k, v);
                 i--;
                 bad = 0;
             }
@@ -2527,7 +2503,6 @@ public sealed class GenSortedDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<So
                 throw new CsCheckException("Failing to add to SortedDictionary");
             }
         }
-        size = new Size(sizeI, size);
         return vs;
     }
     public override SortedDictionary<K, V> Generate(PCG pcg, Size? min, out Size size)

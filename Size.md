@@ -14,14 +14,13 @@ i = Next(l)
 if i = min.I pass min.Next to choice gen - smaller sum type should have no restriction on values
 size = Size(i of choice, size of choice)
 
-## collections that have a variable number of elements e.g. Array, Array2D
-n = Next(max length + 1)
-if n = ShiftDown(min.I) pass min.Next to element gens else null
-size = Size(ShiftUp(n), sum element size)
+## collections that have a variable number of elements e.g. Array, Array2D - DONE
+sizeI = l << 32
+if sizeI = min.I pass min.Next to element gens else null
+size = Size(l, sum element size)
 bail out if partial size larger than min
 
-ShiftUp and ShiftDown functions because when collections are in a product type we really want collection lengths to be shrunk first.
-For fixed length collections size = sum element size. Do we need to ShiftUp the size? What are the examples of generating fixed length?
+<< 32 because when collections are in a product type we really want collection lengths to be shrunk first.
 
 ## int, long
 v = start + Next(finish - start + 1)
