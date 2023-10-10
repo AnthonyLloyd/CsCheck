@@ -31,13 +31,13 @@ public class MathXTests
     }
 
     [Fact]
-    public void TwoProduct_Check()
+    public void TwoSub_Check()
     {
         Gen.Select(genDouble, genDouble)
         .Sample((a, b) =>
         {
-            var (hi, lo) = MathX.TwoProduct(a, b);
-            return a * b == hi
+            var (hi, lo) = MathX.TwoSub(a, b);
+            return a - b == hi
                 && hi + lo == hi
                 && MathX.TwoSum(hi, lo) == (hi, lo)
                 && MathX.TwoSum(lo, hi) == (hi, lo);
@@ -45,13 +45,13 @@ public class MathXTests
     }
 
     [Fact]
-    public void TwoDiff_Check()
+    public void TwoMul_Check()
     {
         Gen.Select(genDouble, genDouble)
         .Sample((a, b) =>
         {
-            var (hi, lo) = MathX.TwoDiff(a, b);
-            return a - b == hi
+            var (hi, lo) = MathX.TwoMul(a, b);
+            return a * b == hi
                 && hi + lo == hi
                 && MathX.TwoSum(hi, lo) == (hi, lo)
                 && MathX.TwoSum(lo, hi) == (hi, lo);
@@ -68,8 +68,23 @@ public class MathXTests
         Assert.Equal(1, MathX.KSum([3.000000000000002, -1.000000000000001, -1.000000000000001]));
         Assert.Equal(1, MathX.KSum([.1, .1, .1, .1, .1, .1, .1, .1, .1, .1]));
         Assert.Equal(1, MathX.KSum([.23, .19, .17, .13, .11, .07, .05, .03, .02]));
-        Assert.Equal(2, MathX.KSum([1, 1e100, 1, -1e100]));
-        Assert.Equal(20000, MathX.KSum([10000, 1e104, 10000, -1e104]));
+        Assert.NotEqual(2, MathX.KSum([1, 1e100, 1, -1e100])); // reached it's accuracy tracking limit
+        Assert.NotEqual(20000, MathX.KSum([10000, 1e104, 10000, -1e104]));
+        Assert.NotEqual(1e-100, MathX.KSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50]));
+    }
+
+    [Fact]
+    public void NSum_Examples()
+    {
+        Assert.Equal(0, MathX.NSum([]));
+        Assert.Equal(0, MathX.NSum([0]));
+        Assert.Equal(13, MathX.NSum([13]));
+        Assert.Equal(6, MathX.NSum([13, -7]));
+        Assert.Equal(1, MathX.NSum([3.000000000000002, -1.000000000000001, -1.000000000000001]));
+        Assert.Equal(1, MathX.NSum([.1, .1, .1, .1, .1, .1, .1, .1, .1, .1]));
+        Assert.Equal(1, MathX.NSum([.23, .19, .17, .13, .11, .07, .05, .03, .02]));
+        Assert.Equal(2, MathX.NSum([1, 1e100, 1, -1e100]));
+        Assert.Equal(20000, MathX.NSum([10000, 1e104, 10000, -1e104]));
         Assert.NotEqual(1e-100, MathX.KSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50])); // reached it's accuracy tracking limit
     }
 
@@ -86,6 +101,19 @@ public class MathXTests
         Assert.Equal(2, MathX.FSum([1, 1e100, 1, -1e100]));
         Assert.Equal(20000, MathX.FSum([10000, 1e104, 10000, -1e104]));
         Assert.Equal(1e-100, MathX.FSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50]));
+    }
+
+    [Fact]
+    public void NSum_Shuffle_Check()
+    {
+        genDouble.Array[3, 100]
+        .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
+        .Sample((original, shuffled) =>
+        {
+            var originalSum = MathX.NSum(original);
+            var shuffledSum = MathX.NSum(shuffled);
+            return Check.AreClose(1, originalSum, shuffledSum);
+        });
     }
 
     [Fact]

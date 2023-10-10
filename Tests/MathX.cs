@@ -1,7 +1,6 @@
 ﻿namespace Tests;
 
 using System;
-using System.Diagnostics;
 
 public static class MathX
 {
@@ -12,7 +11,13 @@ public static class MathX
         return (hi, a2 - hi + b + (a - a2));
     }
 
-    public static (double hi, double lo) TwoDiff(double a, double b)
+    public static (double hi, double lo) FastTwoSum(double a, double b)
+    {
+        var hi = a + b;
+        return (hi, a - hi + b);
+    }
+
+    public static (double hi, double lo) TwoSub(double a, double b)
     {
         var hi = a - b;
         var b2 = a - hi;
@@ -20,31 +25,36 @@ public static class MathX
         return (hi, a - a2 + (b2 - b));
     }
 
-    public static (double hi, double lo) FastTwoSum(double a, double b)
-    {
-        Debug.Assert(Math.Abs(a) >= Math.Abs(b));
-        var hi = a + b;
-        return (hi, a - hi + b);
-    }
-
-    public static (double hi, double lo) TwoProduct(double a, double b)
+    public static (double hi, double lo) TwoMul(double a, double b)
     {
         var prod = a * b;
         return (prod, Math.FusedMultiplyAdd(a, b, -prod));
     }
 
+    /// <summary>Kahan summation</summary>
     public static double KSum(this double[] values)
     {
         var sum = 0.0;
-        var err = 0.0;
-        for (int i = 0; i < values.Length; i++)
-        {
-            (sum, var e) = TwoSum(sum, values[i]);
-            err += e;
-        }
-        return sum + err;
+        var c = 0.0;
+        foreach (var value in values)
+            (sum, c) = FastTwoSum(sum, value + c);
+        return sum;
     }
 
+    /// <summary>Neumaier summation</summary>
+    public static double NSum(this double[] values)
+    {
+        var sum = 0.0;
+        var c = 0.0;
+        foreach (var value in values)
+        {
+            (sum, var ci) = TwoSum(sum, value);
+            c += ci;
+        }
+        return sum + c;
+    }
+
+    /// <summary>Shewchuk summation</summary>
     public static double FSum(this double[] values)
     {
         Span<double> partials = stackalloc double[16];
