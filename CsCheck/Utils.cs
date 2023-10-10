@@ -422,6 +422,14 @@ public static partial class Check
         var bl = BitConverter.DoubleToInt64Bits(b);
         return Math.Abs(bl - al) <= ulps;
     }
+
+    /// <summary>Absolute difference between two doubles in ulps.</summary>
+    public static int UlpsBetween(double a, double b)
+    {
+        var al = BitConverter.DoubleToInt64Bits(a);
+        var bl = BitConverter.DoubleToInt64Bits(b);
+        return Math.Abs((int)(bl - al));
+    }
 }
 
 /// <summary>A median and quartile estimator.</summary>

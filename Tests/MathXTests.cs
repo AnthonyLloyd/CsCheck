@@ -5,7 +5,7 @@ using System;
 using System.Linq;
 using Xunit;
 
-public class MathXTests
+public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
 {
     static readonly Gen<double> genDouble = Gen.Double[-1e123, 1e123];
 
@@ -127,6 +127,45 @@ public class MathXTests
             var shuffledSum = MathX.FSum(shuffled);
             return Check.AreClose(1, originalSum, shuffledSum);
         });
+    }
+
+    [Fact]
+    public void KSum_Shuffle_Error_Distribution()
+    {
+        genDouble.Array[3, 100]
+        .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
+        .Sample((original, shuffled) =>
+        {
+            var originalSum = MathX.KSum(original);
+            var shuffledSum = MathX.KSum(shuffled);
+            return Check.UlpsBetween(originalSum, shuffledSum).ToString();
+        }, writeLine: output.WriteLine/*, time: 10*/);
+    }
+
+    [Fact]
+    public void NSum_Shuffle_Error_Distribution()
+    {
+        genDouble.Array[3, 100]
+        .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
+        .Sample((original, shuffled) =>
+        {
+            var originalSum = MathX.NSum(original);
+            var shuffledSum = MathX.NSum(shuffled);
+            return Check.UlpsBetween(originalSum, shuffledSum).ToString();
+        }, writeLine: output.WriteLine/*, time: 10*/);
+    }
+
+    [Fact]
+    public void FSum_Shuffle_Error_Distribution()
+    {
+        genDouble.Array[3, 100]
+        .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
+        .Sample((original, shuffled) =>
+        {
+            var originalSum = MathX.FSum(original);
+            var shuffledSum = MathX.FSum(shuffled);
+            return Check.UlpsBetween(originalSum, shuffledSum).ToString();
+        }, writeLine: output.WriteLine/*, time: 10*/);
     }
 
     [Fact]
