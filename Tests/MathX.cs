@@ -46,9 +46,9 @@ public static class MathX
     {
         var sum = 0.0;
         var c = 0.0;
-        foreach (var value in values)
+        for (int i = 0; i < values.Length; i++)
         {
-            (sum, var ci) = TwoSum(sum, value);
+            (sum, var ci) = TwoSum(sum, values[i]);
             c += ci;
         }
         return sum + c;
