@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 public static partial class Check
 {
@@ -151,15 +152,71 @@ public static partial class Check
         }
         if (TryFraction(d, out var num, out var den))
         {
-            var fra1 = $"{num}d/{den}";
-            var who = num  / den;
-            num -= who * den;
-            var fra2 = num > 0 ? $"{who}+{num}d/{den}" : $"{who}{num}d/{den}";
-            var fra = fra1.Length < fra2.Length ? fra1 : fra2;
+            var fra = $"{num}d/{den}";
             if (fra.Length < s.Length)
                 s = fra;
         }
         if (TryExponential(d, out num, out var exp))
+        {
+            var es = exp == 0 ? num.ToString() : $"{num}e{exp}";
+            if (es.Length < s.Length)
+                s = es;
+        }
+        return s;
+    }
+
+    /// <summary>Small float string representation.</summary>
+    public static string Print(float f)
+    {
+        static bool TryFraction(float f, out int num, out int den)
+        {
+            den = 1;
+            while (++den < 1000)
+            {
+                num = (int)Math.Round(f * den);
+                if (num != 0 && AreClose(Ulps, (float)num / den, f))
+                    return true;
+            }
+            num = 0;
+            den = 0;
+            return false;
+        }
+        static bool TryExponential(float f, out int num, out int exp)
+        {
+            var isNeg = f < 0;
+            f = Math.Abs(f);
+            exp = (int)Math.Floor(Math.Log10(f)) - 3;
+            var p10 = (float)Math.Pow(10, exp);
+            num = (int)Math.Round(f / p10);
+            if (AreClose(Ulps, num * p10, f))
+            {
+                if (isNeg)
+                    num = -num;
+                while (num % 10 == 0)
+                {
+                    num /= 10;
+                    exp++;
+                }
+                return true;
+            }
+            num = 0;
+            exp = 0;
+            return false;
+        }
+        var s = f.ToString();
+        if (AreClose(Ulps, (float)Math.Round(f), f))
+        {
+            var r = ((int)Math.Round(f)).ToString();
+            if (r.Length < s.Length)
+                s = r;
+        }
+        if (TryFraction(f, out var num, out var den))
+        {
+            var fra = $"{num}d/{den}";
+            if (fra.Length < s.Length)
+                s = fra;
+        }
+        if (TryExponential(f, out num, out var exp))
         {
             var es = exp == 0 ? num.ToString() : $"{num}e{exp}";
             if (es.Length < s.Length)
@@ -183,7 +240,7 @@ public static partial class Check
         T pt when IsPropertyType(pt) => PrintProperties(pt),
         T ft when IsFieldType(ft) => PrintFields(ft),
         double d => Print(d),
-        float f => Print((double)f),
+        float f => Print(f),
         decimal d => Print((double)d),
         _ => t.ToString(),
     };
@@ -421,6 +478,24 @@ public static partial class Check
         var al = BitConverter.DoubleToInt64Bits(a);
         var bl = BitConverter.DoubleToInt64Bits(b);
         return Math.Abs(bl - al) <= ulps;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    struct FloatConverter
+    {
+        [FieldOffset(0)] public int I;
+        [FieldOffset(0)] public float F;
+    }
+    /// <summary>Check if two floats are within the given <paramref name="ulps"/> tolerance.</summary>
+    /// <param name="ulps">Units in the last place</param>
+    /// <param name="a">The first float.</param>
+    /// <param name="b">The second float.</param>
+    /// <returns>True if a - b in ulp units &#8804; <paramref name="ulps"/>.</returns>
+    public static bool AreClose(int ulps, float a, float b)
+    {
+        var ai = new FloatConverter { F = a }.I;
+        var bi = new FloatConverter { F = b }.I;
+        return Math.Abs(bi - ai) <= ulps;
     }
 
     /// <summary>Absolute difference between two doubles in ulps.</summary>

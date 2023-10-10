@@ -138,13 +138,19 @@ public static class Gen
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T, R>(this Gen<T> gen, Func<T, R> selector) =>
-        Create((PCG pcg, Size? min, out Size size) => selector(gen.Generate(pcg, min, out size)));
+        Create((PCG pcg, Size? min, out Size size) =>
+        {
+            var t = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
+            return selector(t);
+        });
 
     /// <summary>Projects each element of a generator into a new form.</summary>
     public static Gen<R> Select<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> selector) =>
         Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             return selector(t1, t2);
         });
 
@@ -153,6 +159,7 @@ public static class Gen
         Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2, t3) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             return selector(t1, t2, t3);
         });
 
@@ -161,6 +168,7 @@ public static class Gen
         Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2, t3, t4) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             return selector(t1, t2, t3, t4);
         });
 
@@ -169,6 +177,7 @@ public static class Gen
         Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2, t3, t4, t5) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             return selector(t1, t2, t3, t4, t5);
         });
 
@@ -177,6 +186,7 @@ public static class Gen
         Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2, t3, t4, t5, t6) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             return selector(t1, t2, t3, t4, t5, t6);
         });
 
@@ -185,6 +195,7 @@ public static class Gen
         Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2, t3, t4, t5, t6, t7) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             return selector(t1, t2, t3, t4, t5, t6, t7);
         });
 
@@ -193,6 +204,7 @@ public static class Gen
         Create((PCG pcg, Size? min, out Size size) =>
         {
             var (t1, t2, t3, t4, t5, t6, t7, t8) = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
             return selector(t1, t2, t3, t4, t5, t6, t7, t8);
         });
 
@@ -789,45 +801,6 @@ public static class Gen
             return (v0, v1, v2, v3, v4, v5);
         });
 
-    public static Gen<(T0 V0, T1 V1)> SelectTuple<T0, T1>(this Gen<T0> gen, Func<T0, Gen<T1>> selector) // TODO: remove?
-        => Create((PCG pcg, Size? min, out Size size) =>
-    {
-        var v1 = gen.Generate(pcg, min, out size);
-        if (Size.IsLessThan(min, size)) return default!;
-        var vR = selector(v1).Generate(pcg, null, out Size sR);
-        size.Append(sR);
-        return (v1, vR);
-    });
-
-    public static Gen<(T0 V0, T1 V1, T2 V2)> SelectTuple<T0, T1, T2>(this Gen<T0> gen0, Gen<T1> gen1,
-        Func<T0, T1, Gen<T2>> selector) => Create((PCG pcg, Size? min, out Size size) =>
-    {
-        var v0 = gen0.Generate(pcg, min, out size);
-        if (Size.IsLessThan(min, size)) return default!;
-        var v1 = gen1.Generate(pcg, min, out var s);
-        size.Add(s);
-        if (Size.IsLessThan(min, size)) return default!;
-        var v2 = selector(v0, v1).Generate(pcg, null, out s);
-        size.Append(s);
-        return (v0, v1, v2);
-    });
-
-    public static Gen<(T0 V0, T1 V1, T2 V2, T3 V3)> SelectTuple<T0, T1, T2, T3>(this Gen<T0> gen0, Gen<T1> gen1, Gen<T2> gen2,
-        Func<T0, T1, T2, Gen<T3>> selector) => Create((PCG pcg, Size? min, out Size size) =>
-    {
-        var v0 = gen0.Generate(pcg, min, out size);
-        if (Size.IsLessThan(min, size)) return default!;
-        var v1 = gen1.Generate(pcg, min, out var s);
-        size.Add(s);
-        if (Size.IsLessThan(min, size)) return default!;
-        var v2 = gen2.Generate(pcg, min, out s);
-        size.Add(s);
-        if (Size.IsLessThan(min, size)) return default!;
-        var v3 = selector(v0, v1, v2).Generate(pcg, null, out s);
-        size.Append(s);
-        return (v0, v1, v2, v3);
-    });
-
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
     public static Gen<R> SelectMany<T, R>(this Gen<T> gen, Func<T, IGen<R>> selector) => Create((PCG pcg, Size? min, out Size size) =>
     {
@@ -1097,7 +1070,7 @@ public static class Gen
     {
         uint l = 0;
         foreach (var (i, _) in constants) l += (uint)i;
-        return Create((PCG pcg, Size? min, out Size size) =>
+        return Create((PCG pcg, Size? _, out Size size) =>
         {
             var v = (int)pcg.Next(l);
             size = new Size((ulong)v);
@@ -1107,7 +1080,6 @@ public static class Gen
                 if (v < 0)
                     return constants[j].Constant;
             }
-            size = new Size(0);
             return default!;
         });
     }
@@ -1849,12 +1821,12 @@ public sealed class GenDouble : Gen<double>
             Gen<double>? exponential = null;
             if (start <= 0 && finish >= 0)
             {
-                var startExp = Math.Log10(Math.Abs(start));
-                var finishExp = Math.Log10(Math.Abs(finish));
+                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start)));
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish)));
                 var genMantissa = Gen.Int[1, maxMan];
                 exponential = Gen.OneOf(
-                    Gen.Int[minExp, (int)Math.Ceiling(finishExp)].Select(genMantissa, (e, m) => Math.Pow(10, e - 3) * m),
-                    Gen.Int[minExp, (int)Math.Ceiling(startExp)].Select(genMantissa, (e, m) => -Math.Pow(10, e - 3) * m));
+                    Gen.Int[minExp, finishExp].Select(genMantissa, (e, m) => Math.Pow(10, e - 3) * m),
+                    Gen.Int[minExp, startExp].Select(genMantissa, (e, m) => -Math.Pow(10, e - 3) * m));
             }
             else if (start >= 0 && finish >= 0)
             {

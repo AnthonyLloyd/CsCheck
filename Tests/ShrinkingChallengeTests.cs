@@ -204,11 +204,11 @@ public class ShrinkingChallengeTests
     [Fact(Skip="fails")]
     public void No9_Deletion()
     {
-        Gen.Int.List[1, 100].SelectTuple(l => Gen.Int[0, l.Count - 1])
-        .Sample(t =>
+        Gen.Int.List[1, 100].SelectMany(l => Gen.Int[0, l.Count - 1].Select(i => (l, i)))
+        .Sample((list, i) =>
         {
-            var l = new List<int>(t.V0);
-            var x = l[t.V1];
+            var l = new List<int>(list);
+            var x = l[i];
             l.Remove(x);
             return !l.Contains(x);
         });

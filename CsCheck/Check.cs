@@ -1561,8 +1561,9 @@ public static partial class Check
             var seed = pcg.Seed;
             return (initial.Generate(pcg, null, out size), stream, seed);
         })
-        .Select(Gen.OneOf(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS].SelectTuple(ops => Gen.Int[1, Math.Min(threads, ops.Length)]), (a, b) =>
-            new ConcurrentData<T>(a.Item1, a.stream, a.seed, b.V0, b.V1)
+        .Select(Gen.OneOf(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS]
+        .SelectMany(ops => Gen.Int[1, Math.Min(threads, ops.Length)].Select(i => (ops, i))), (a, b) =>
+            new ConcurrentData<T>(a.Item1, a.stream, a.seed, b.ops, b.i)
         )
         .Sample(cd =>
         {
