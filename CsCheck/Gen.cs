@@ -51,6 +51,17 @@ public sealed class Size
         final.Next = s;
     }
 
+    public Size? Below(Size? s)
+    {
+        var r = this;
+        while (s is not null && r is not null)
+        {
+            s = s.Next;
+            r = r.Next;
+        }
+        return r;
+    }
+
     public static bool IsLessThan(Size? s1, Size? s2) => s1 is not null && s2 is not null && (s1.I < s2.I || (s1.I == s2.I && IsLessThan(s1.Next, s2.Next)));
 }
 
@@ -806,7 +817,7 @@ public static class Gen
     {
         var v1 = gen.Generate(pcg, min, out size);
         if (Size.IsLessThan(min, size)) return default!;
-        var vR = selector(v1).Generate(pcg, null, out var sR);
+        var vR = selector(v1).Generate(pcg, min?.Below(size), out var sR);
         size.Append(sR);
         return vR;
     });
@@ -820,7 +831,7 @@ public static class Gen
         var v2 = gen2.Generate(pcg, min, out var s);
         size.Add(s);
         if (Size.IsLessThan(min, size)) return default!;
-        var vR = selector(v1, v2).Generate(pcg, null, out s);
+        var vR = selector(v1, v2).Generate(pcg, min?.Below(size), out s);
         size.Append(s);
         return vR;
     });
@@ -837,7 +848,7 @@ public static class Gen
         var v3 = gen3.Generate(pcg, min, out s);
         size.Add(s);
         if (Size.IsLessThan(min, size)) return default!;
-        var vR = selector(v1, v2, v3).Generate(pcg, null, out s);
+        var vR = selector(v1, v2, v3).Generate(pcg, min?.Below(size), out s);
         size.Append(s);
         return vR;
     });
@@ -857,7 +868,7 @@ public static class Gen
         var v4 = gen4.Generate(pcg, null, out s);
         size.Add(s);
         if (Size.IsLessThan(min, size)) return default!;
-        var vR = selector(v1, v2, v3, v4).Generate(pcg, null, out s);
+        var vR = selector(v1, v2, v3, v4).Generate(pcg, min?.Below(size), out s);
         size.Append(s);
         return vR;
     });
@@ -880,7 +891,7 @@ public static class Gen
         var v5 = gen5.Generate(pcg, null, out s);
         size.Add(s);
         if (Size.IsLessThan(min, size)) return default!;
-        var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, null, out s);
+        var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, min?.Below(size), out s);
         size.Append(s);
         return vR;
     });
@@ -891,7 +902,7 @@ public static class Gen
     {
         var v1 = gen1.Generate(pcg, null, out size);
         if (Size.IsLessThan(min, size)) return default!;
-        var v2 = genSelector(v1).Generate(pcg, null, out var s);
+        var v2 = genSelector(v1).Generate(pcg, min?.Below(size), out var s);
         size.Append(s);
         if (Size.IsLessThan(min, size)) return default!;
         return resultSelector(v1, v2);
@@ -902,7 +913,7 @@ public static class Gen
     {
         var (v1, v2) = gen.Generate(pcg, min, out size);
         if (Size.IsLessThan(min, size)) return default!;
-        var vR = selector(v1, v2).Generate(pcg, null, out var sR);
+        var vR = selector(v1, v2).Generate(pcg, min?.Below(size), out var sR);
         size.Append(sR);
         return vR;
     });
@@ -912,7 +923,7 @@ public static class Gen
     {
         var (v1, v2, v3) = gen.Generate(pcg, min, out size);
         if (Size.IsLessThan(min, size)) return default!;
-        var vR = selector(v1, v2, v3).Generate(pcg, null, out var sR);
+        var vR = selector(v1, v2, v3).Generate(pcg, min?.Below(size), out var sR);
         size.Append(sR);
         return vR;
     });
@@ -922,7 +933,7 @@ public static class Gen
     {
         var (v1, v2, v3, v4) = gen.Generate(pcg, min, out size);
         if (Size.IsLessThan(min, size)) return default!;
-        var vR = selector(v1, v2, v3, v4).Generate(pcg, null, out var sR);
+        var vR = selector(v1, v2, v3, v4).Generate(pcg, min?.Below(size), out var sR);
         size.Append(sR);
         return vR;
     });
@@ -932,7 +943,7 @@ public static class Gen
     {
         var (v1, v2, v3, v4, v5) = gen.Generate(pcg, min, out size);
         if (Size.IsLessThan(min, size)) return default!;
-        var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, null, out var sR);
+        var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, min?.Below(size), out var sR);
         size.Append(sR);
         return vR;
     });

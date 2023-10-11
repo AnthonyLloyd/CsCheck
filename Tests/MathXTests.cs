@@ -169,6 +169,18 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
+    public void NSum_FSum_Error_Distribution()
+    {
+        genDouble.Array[3, 100]
+        .Sample(values =>
+        {
+            var fsumSum = MathX.FSum(values);
+            var nsumSum = MathX.NSum(values);
+            return Check.UlpsBetween(fsumSum, nsumSum).ToString();
+        }, writeLine: output.WriteLine/*, time: 10*/);
+    }
+
+    [Fact]
     public void SSum_Examples()
     {
         Assert.Equal(0, MathX.SSum([]));
