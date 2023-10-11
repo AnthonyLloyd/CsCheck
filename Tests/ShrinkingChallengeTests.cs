@@ -77,9 +77,9 @@ public class ShrinkingChallengeTests
 
         Gen.Recursive<object>(g =>
             Gen.Frequency(
-                (3, Gen.Int[-10, 10].Cast<object>()),
-                (1, Gen.Select(Gen.Const('+'), g, g).Cast<object>()),
-                (1, Gen.Select(Gen.Const('/'), g, g).Cast<object>())
+                (3, Gen.Int[-10, 10].Convert<object>()),
+                (1, Gen.Select(Gen.Const('+'), g, g).Convert<object>()),
+                (1, Gen.Select(Gen.Const('/'), g, g).Convert<object>())
             )
         )
         .Where(DivSubTerms)

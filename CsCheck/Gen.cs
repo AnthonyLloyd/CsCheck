@@ -63,10 +63,10 @@ public interface IGen<out T>
 public abstract class Gen<T> : IGen<T>
 {
     public abstract T Generate(PCG pcg, Size? min, out Size size);
-    public Gen<R> Cast<R>() => Gen.Create((PCG pcg, Size? min, out Size size) => // TODO: rename to Convert? Is Cast name correct?
+    public Gen<R> Convert<R>() => Gen.Create((PCG pcg, Size? min, out Size size) =>
     {
         var o = Generate(pcg, min, out size);
-        return o is R t ? t : (R)Convert.ChangeType(o, typeof(R));
+        return (R)System.Convert.ChangeType(o, typeof(R));
     });
 
     public GenOperation<S> Operation<S>(Func<T, string> name, Action<S, T> action) => new((PCG pcg, Size? min, out Size size) =>
@@ -1739,7 +1739,7 @@ public sealed class GenFloat : Gen<float>
 
     public sealed class FloatWithInt : Gen<float>
     {
-        static readonly Gen<float> gen = Gen.OneOf(Gen.Int.Cast<float>(), Gen.Float);
+        static readonly Gen<float> gen = Gen.OneOf(Gen.Int.Convert<float>(), Gen.Float);
         public override float Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
         public Gen<float> this[float start, float finish]
         {
@@ -1749,7 +1749,7 @@ public sealed class GenFloat : Gen<float>
                 var intFinish = (int)Math.Floor(finish);
                 return intStart <= intFinish
                     ? Gen.OneOf(
-                        Gen.Int[intStart, intFinish].Cast<float>(),
+                        Gen.Int[intStart, intFinish].Convert<float>(),
                         Gen.Float[start, finish])
                     : Gen.Float[start, finish];
             }
@@ -1806,7 +1806,7 @@ public sealed class GenDouble : Gen<double>
             {
                 var integer = start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
                     : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue), (int)Math.Min(Math.Floor(finish), int.MaxValue)];
-                myGens[0] = (1, integer.Cast<double>());
+                myGens[0] = (1, integer.Convert<double>());
             }
             if (Math.Ceiling(start * denominator) <= Math.Floor(finish * denominator))
             {
@@ -1969,7 +1969,7 @@ public sealed class GenDouble : Gen<double>
 
     public sealed class DoubleWithInt : Gen<double>
     {
-        static readonly Gen<double> gen = Gen.OneOf(Gen.Int.Cast<double>(), Gen.Double);
+        static readonly Gen<double> gen = Gen.OneOf(Gen.Int.Convert<double>(), Gen.Double);
         public override double Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
         public Gen<double> this[double start, double finish]
         {
@@ -1979,7 +1979,7 @@ public sealed class GenDouble : Gen<double>
                 var intFinish = (int)Math.Floor(finish);
                 return intStart <= intFinish
                     ? Gen.OneOf(
-                        Gen.Int[intStart, intFinish].Cast<double>(),
+                        Gen.Int[intStart, intFinish].Convert<double>(),
                         Gen.Double[start, finish])
                     : Gen.Double[start, finish];
             }
