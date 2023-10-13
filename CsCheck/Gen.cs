@@ -18,7 +18,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
-using System.Xml.Schema;
 
 /// <summary>Size representation of Gen generated data.</summary>
 public sealed class Size
@@ -66,7 +65,7 @@ public sealed class Size
     public static bool IsLessThan(Size? s1, Size? s2) => s1 is not null && s2 is not null && (s1.I < s2.I || (s1.I == s2.I && IsLessThan(s1.Next, s2.Next)));
 }
 
-public interface IGen<out T>
+public interface IGen<T>
 {
     T Generate(PCG pcg, Size? min, out Size size);
 }
@@ -75,11 +74,16 @@ public interface IGen<out T>
 public abstract class Gen<T> : IGen<T>
 {
     public abstract T Generate(PCG pcg, Size? min, out Size size);
-    public Gen<R> Convert<R>() => Gen.Create((PCG pcg, Size? min, out Size size) =>
+    sealed class GenConvert<T1, R>(Gen<T1> gen) : Gen<R>
     {
-        var o = Generate(pcg, min, out size);
-        return (R)System.Convert.ChangeType(o, typeof(R));
-    });
+        private readonly Gen<T1> gen = gen;
+        public override R Generate(PCG pcg, Size? min, out Size size)
+        {
+            var o = gen.Generate(pcg, min, out size);
+            return (R)System.Convert.ChangeType(o, typeof(R));
+        }
+    }
+    public Gen<R> Convert<R>() => new GenConvert<T, R>(this);
 
     public GenOperation<S> Operation<S>(Func<T, string> name, Action<S, T> action) => new((PCG pcg, Size? min, out Size size) =>
     {
@@ -1277,7 +1281,7 @@ public static class Gen
         }
     }
 
-    sealed class GenShuffleConst<T>(T[] constants) : Gen<T[]>
+    sealed class GenShuffleArray<T>(T[] constants) : Gen<T[]>
     {
         private readonly T[] constants = constants;
         public override T[] Generate(PCG pcg, Size? min, out Size size)
@@ -1290,23 +1294,9 @@ public static class Gen
     }
     /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<T[]> Shuffle<T>(T[] constants)
-        => new GenShuffleConst<T>(constants);
+        => new GenShuffleArray<T>(constants);
 
-    sealed class GenShuffle<T>(Gen<T[]> gen) : Gen<T[]>
-    {
-        private readonly Gen<T[]> gen = gen;
-        public override T[] Generate(PCG pcg, Size? min, out Size size)
-        {
-            var a = gen.Generate(pcg, null, out size);
-            ShuffleInPlace(a, pcg, 0);
-            return a;
-        }
-    }
-    /// <summary>Shuffle the generated elements.</summary>
-    public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen)
-        => new GenShuffle<T>(gen);
-
-    sealed class GenShuffleConstLength<T>(T[] constants, int length) : Gen<T[]>
+    sealed class GenShuffleArrayLength<T>(T[] constants, int length) : Gen<T[]>
     {
         private readonly T[] constants = constants;
         private readonly int length = length;
@@ -1325,7 +1315,7 @@ public static class Gen
     }
     /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<T[]> Shuffle<T>(T[] constants, int length)
-        => new GenShuffleConstLength<T>(constants, length);
+        => new GenShuffleArrayLength<T>(constants, length);
 
     /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<T[]> Shuffle<T>(T[] a, int start, int finish) =>
@@ -1339,36 +1329,41 @@ public static class Gen
     public static Gen<T[]> Shuffle<T>(this Gen<T[]> gen, int start, int finish) =>
         SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
 
+    sealed class GenShuffleList<T>(List<T> constants) : Gen<List<T>>
+    {
+        private readonly List<T> constants = constants;
+        public override List<T> Generate(PCG pcg, Size? min, out Size size)
+        {
+            var list = new List<T>(constants);
+            ShuffleInPlace(list, pcg, 0);
+            size = new Size(0);
+            return list;
+        }
+    }
     /// <summary>Create a generator by shuffling the elements.</summary>
-    public static Gen<List<T>> Shuffle<T>(List<T> a) => Create((PCG pcg, Size? _, out Size size) =>
-    {
-        a = new List<T>(a);
-        ShuffleInPlace(a, pcg, 0);
-        size = new Size(0);
-        return a;
-    });
+    public static Gen<List<T>> Shuffle<T>(List<T> list)
+        => new GenShuffleList<T>(list);
 
-    /// <summary>Create a generator by shuffling the generated elements.</summary>
-    public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen) => Create((PCG pcg, Size? _, out Size size) =>
+    sealed class GenShuffleListLength<T>(List<T> constants, int length) : Gen<List<T>>
     {
-        var a = gen.Generate(pcg, null, out size);
-        ShuffleInPlace(a, pcg, 0);
-        return a;
-    });
-
+        private readonly List<T> constants = constants;
+        private readonly int length = length;
+        public override List<T> Generate(PCG pcg, Size? min, out Size size)
+        {
+            var list = new List<T>(constants);
+            size = new Size(0);
+            int lower = Math.Max(list.Count - length, 0);
+            ShuffleInPlace(list, pcg, lower);
+            if (lower == 0) return list;
+            var r = new List<T>(length);
+            for (int i = 0; i < length; i++)
+                r.Add(list[i + lower]);
+            return r;
+        }
+    }
     /// <summary>Create a generator by shuffling the elements.</summary>
-    public static Gen<List<T>> Shuffle<T>(List<T> a, int length) => Create((PCG pcg, Size? _, out Size size) =>
-    {
-        a = new List<T>(a);
-        size = new Size(0);
-        int lower = Math.Max(a.Count - length, 0);
-        ShuffleInPlace(a, pcg, lower);
-        if (lower == 0) return a;
-        var r = new List<T>(length);
-        for (int i = 0; i < length; i++)
-            r.Add(a[i + lower]);
-        return r;
-    });
+    public static Gen<List<T>> Shuffle<T>(List<T> list, int length)
+        => new GenShuffleListLength<T>(list, length);
 
     /// <summary>Create a generator by shuffling the elements.</summary>
     public static Gen<List<T>> Shuffle<T>(List<T> a, int start, int finish) =>
@@ -1382,12 +1377,12 @@ public static class Gen
     public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int start, int finish) =>
         SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
 
-    public static Gen<T?> Nullable<T>(this Gen<T> gen, double nullFraction = 0.2) where T : struct
+    sealed class GenNullable<T>(Gen<T> gen, uint nullLimit) : Gen<T?> where T : struct
     {
-        var nullLimit = (uint)(nullFraction * uint.MaxValue);
-        return Create((PCG pcg, Size? min, out Size size) =>
+        private readonly Gen<T> gen = gen;
+        private readonly uint nullLimit = nullLimit;
+        public override T? Generate(PCG pcg, Size? min, out Size size)
         {
-            var v = pcg.Next();
             if (pcg.Next() < nullLimit)
             {
                 size = new Size(0);
@@ -1397,13 +1392,16 @@ public static class Gen
             var r = gen.Generate(pcg, next, out size);
             size = new Size(1, size);
             return new T?(r);
-        });
+        }
     }
+    public static Gen<T?> Nullable<T>(this Gen<T> gen, double nullFraction = 0.2) where T : struct
+        => new GenNullable<T>(gen, (uint)(nullFraction * uint.MaxValue));
 
-    public static Gen<T?> Null<T>(this Gen<T> gen, double nullFraction = 0.2) where T : class
+    sealed class GenNull<T>(Gen<T> gen, uint nullLimit) : Gen<T?> where T : class
     {
-        var nullLimit = (uint)(nullFraction * uint.MaxValue);
-        return Create((PCG pcg, Size? min, out Size size) =>
+        private readonly Gen<T> gen = gen;
+        private readonly uint nullLimit = nullLimit;
+        public override T? Generate(PCG pcg, Size? min, out Size size)
         {
             if (pcg.Next() < nullLimit)
             {
@@ -1414,7 +1412,11 @@ public static class Gen
             var r = gen.Generate(pcg, next, out size);
             size = new Size(1, size);
             return r;
-        });
+        }
+    }
+    public static Gen<T?> Null<T>(this Gen<T> gen, double nullFraction = 0.2) where T : class
+    {
+        return new GenNull<T>(gen, (uint)(nullFraction * uint.MaxValue));
     }
 
     public static GenOperation<T> Operation<T>(string name, Action<T> action)
@@ -1471,19 +1473,19 @@ public sealed class GenSByte : Gen<sbyte>
         size = new Size(Zigzag(i));
         return i;
     }
-    public Gen<sbyte> this[sbyte start, sbyte finish]
+    sealed class Range(sbyte start, uint length) : Gen<sbyte>
     {
-        get
+        private readonly sbyte start = start;
+        private readonly uint length = length;
+        public override sbyte Generate(PCG pcg, Size? min, out Size size)
         {
-            uint l = (uint)(finish - start) + 1u;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                sbyte i = (sbyte)(start + pcg.Next(l));
-                size = new Size(Zigzag(i) + 1UL);
-                return i;
-            });
+            var i = (sbyte)(start + pcg.Next(length));
+            size = new Size(Zigzag(i));
+            return i;
         }
     }
+    public Gen<sbyte> this[sbyte start, sbyte finish]
+        => new Range(start, (uint)(finish - start) + 1U);
 }
 
 public sealed class GenByte : Gen<byte>
