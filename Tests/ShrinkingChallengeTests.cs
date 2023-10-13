@@ -8,7 +8,7 @@ using Xunit;
 
 public class ShrinkingChallengeTests
 {
-    [Fact(Skip="fails")]
+    [Fact(Skip = "fails")]
     public void No1_Bound5()
     {
         static short Sum(short[] l)
@@ -19,9 +19,9 @@ public class ShrinkingChallengeTests
         }
         var sGen = Gen.Short.Array[0, 10].Where(i => Sum(i) < 256);
         Gen.Select(sGen, sGen, sGen, sGen, sGen)
-        .Sample(t =>
+        .Sample((a1, a2, a3, a4, a5) =>
         {
-            var total = Sum(t.V0) + Sum(t.V1) + Sum(t.V2) + Sum(t.V3) + Sum(t.V4);
+            var total = Sum(a1) + Sum(a2) + Sum(a3) + Sum(a4) + Sum(a5);
             return (short)total < 5 * 256;
         });
     }
@@ -105,21 +105,21 @@ public class ShrinkingChallengeTests
     public void No6_Difference_MustNotBeZero()
     {
         Gen.Int.Positive.Select(Gen.Int.Positive)
-        .Sample(t => t.V0 < 10 || t.V0 != t.V1);
+        .Sample((i0, i1) => i0 < 10 || i0 != i1);
     }
 
     [Fact(Skip="fails")]
     public void No6_Difference_MustNotBeSmall()
     {
         Gen.Int.Positive.Select(Gen.Int.Positive)
-        .Sample(t => t.V0 < 10 || Math.Abs(t.V0 - t.V1) > 4 || t.V0 == t.V1);
+        .Sample((i0, i1) => i0 < 10 || Math.Abs(i0 - i1) > 4 || i0 == i1);
     }
 
     [Fact(Skip="fails")]
     public void No6_Difference_MustNotBeOne()
     {
         Gen.Int.Positive.Select(Gen.Int.Positive)
-        .Sample(t => t.V0 < 10 || Math.Abs(t.V0 - t.V1) != 1);
+        .Sample((i0, i1) => i0 < 10 || Math.Abs(i0 - i1) != 1);
     }
 
     class Heap { public int Head; public Heap Left; public Heap Right; }

@@ -1476,31 +1476,31 @@ public static partial class Check
         {
             try
             {
-                d.V1.Item2(d.V0.State1);
-                d.V1.Item3(d.V0.State2);
-                return equal(d.V0.State1, d.V0.State2);
+                d.Item2.Item2(d.Item1.State1);
+                d.Item2.Item3(d.Item1.State2);
+                return equal(d.Item1.State1, d.Item1.State2);
             }
             catch (Exception e)
             {
-                d.V0.Exception = e;
+                d.Item1.Exception = e;
                 return false;
             }
         }, seed, iter, time, threads,
         p =>
         {
-            if (p.V0 == null) return "";
+            if (p.Item1 is null) return "";
             var sb = new StringBuilder();
-            var initialState = initial.Generate(new PCG(p.V0.Stream, p.V0.Seed), null, out _);
+            var initialState = initial.Generate(new PCG(p.Item1.Stream, p.Item1.Seed), null, out _);
             sb.Append("\nInitial State: ").Append(print(initialState));
-            sb.Append("\n   Operations: ").Append(p.V1.Item1);
-            if (p.V0.Exception is null)
+            sb.Append("\n   Operations: ").Append(p.Item2.Item1);
+            if (p.Item1.Exception is null)
             {
-                sb.Append("\nFinal State 1: ").Append(print(p.V0.State1));
-                sb.Append("\nFinal State 2: ").Append(print(p.V0.State2));
+                sb.Append("\nFinal State 1: ").Append(print(p.Item1.State1));
+                sb.Append("\nFinal State 2: ").Append(print(p.Item1.State2));
             }
             else
             {
-                sb.Append("\n    Exception: ").Append(p.V0.Exception.ToString());
+                sb.Append("\n    Exception: ").Append(p.Item1.Exception.ToString());
             }
             return sb.ToString();
         });

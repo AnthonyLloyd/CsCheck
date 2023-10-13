@@ -32,7 +32,7 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
         .SampleConcurrent(
             Gen.Byte.Operation<ListSlim<byte>>((l, i) => { lock (l) l.Add(i); }),
             Gen.Int.NonNegative.Operation<ListSlim<byte>>((l, i) => { if (i < l.Count) { var _ = l[i]; } }),
-            Gen.Int.NonNegative.Select(Gen.Byte).Operation<ListSlim<byte>>((l, t) => { if (t.V0 < l.Count) l[t.V0] = t.V1; }),
+            Gen.Int.NonNegative.Select(Gen.Byte).Operation<ListSlim<byte>>((l, t) => { if (t.Item1 < l.Count) l[t.Item1] = t.Item2; }),
             Gen.Operation<ListSlim<byte>>(l => l.ToArray())
         );
     }
@@ -139,8 +139,8 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
         .SampleModelBased(
             Gen.Select(Gen.Int[0, 100], Gen.Byte).Operation<MapSlim<int, byte>, Dictionary<int, byte>>((m, d, t) =>
             {
-                m[t.V0] = t.V1;
-                d[t.V0] = t.V1;
+                m[t.Item1] = t.Item2;
+                d[t.Item1] = t.Item2;
             })
         );
     }
@@ -151,8 +151,8 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
         Gen.Dictionary(Gen.Int, Gen.Byte).Select(d => new MapSlim<int, byte>(d))
         .SampleMetamorphic(
             Gen.Select(Gen.Int[0, 100], Gen.Byte, Gen.Int[0, 100], Gen.Byte).Metamorphic<MapSlim<int, byte>>(
-                (d, t) => { d[t.V0] = t.V1; d[t.V2] = t.V3; },
-                (d, t) => { if (t.V0 == t.V2) { d[t.V2] = t.V3; } else { d[t.V2] = t.V3; d[t.V0] = t.V1; } }
+                (d, t) => { d[t.Item1] = t.Item2; d[t.Item3] = t.Item4; },
+                (d, t) => { if (t.Item1 == t.Item3) { d[t.Item3] = t.Item4; } else { d[t.Item3] = t.Item4; d[t.Item1] = t.Item2; } }
             )
         );
     }
@@ -162,7 +162,7 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         Gen.Dictionary(Gen.Int, Gen.Byte).Select(d => new MapSlim<int, byte>(d))
         .SampleConcurrent(
-            Gen.Int.Select(Gen.Byte).Operation<MapSlim<int, byte>>((m, t) => { lock (m) m[t.V0] = t.V1; }),
+            Gen.Int.Select(Gen.Byte).Operation<MapSlim<int, byte>>((m, t) => { lock (m) m[t.Item1] = t.Item2; }),
             Gen.Int.NonNegative.Operation<MapSlim<int, byte>>((m, i) => { if (i < m.Count) { var _ = m.Key(i); } }),
             Gen.Int.Operation<MapSlim<int, byte>>((m, i) => { var _ = m.IndexOf(i); }),
             Gen.Operation<MapSlim<int, byte>>(m => { var _ = m.ToArray(); })

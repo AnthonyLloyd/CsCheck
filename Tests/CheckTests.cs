@@ -274,7 +274,7 @@ public class CheckTests
         Gen.Dictionary(Gen.Int[0, 100], Gen.Byte)[0, 10].Select(l => new ConcurrentDictionary<int, byte>(l))
         .SampleConcurrent(
             Gen.Int[0, 100].Select(Gen.Byte)
-            .Operation<ConcurrentDictionary<int, byte>>(t =>$"d[{t.V0}] = {t.V1}", (d, t) => d[t.V0] = t.V1),
+            .Operation<ConcurrentDictionary<int, byte>>(t =>$"d[{t.Item1}] = {t.Item2}", (d, t) => d[t.Item1] = t.Item2),
 
             Gen.Int[0, 100]
             .Operation<ConcurrentDictionary<int, byte>>(i => $"TryRemove({i})", (d, i) => d.TryRemove(i, out _))

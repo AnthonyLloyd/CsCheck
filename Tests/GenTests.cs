@@ -31,8 +31,8 @@ public class GenTests
     public void SByte_Range()
     {
         (from t in Gen.Select(Gen.SByte, Gen.SByte)
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.SByte[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -44,7 +44,7 @@ public class GenTests
         const int buckets = 70;
         const int frequency = 10;
         var expected = Enumerable.Repeat(frequency, buckets).ToArray();
-        Gen.SByte[0, (sbyte)(buckets - 1)]
+        Gen.SByte[0, buckets - 1]
         .Convert<int>().Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
@@ -54,8 +54,8 @@ public class GenTests
     public void Byte_Range()
     {
         (from t in Gen.Byte.Select(Gen.Byte)
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.Byte[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -83,8 +83,8 @@ public class GenTests
     public void Short_Range()
     {
         (from t in Gen.Short.Select(Gen.Short)
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.Short[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -106,8 +106,8 @@ public class GenTests
     public void UShort_Range()
     {
         (from t in Gen.UShort.Select(Gen.UShort)
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.UShort[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -129,8 +129,8 @@ public class GenTests
     public void Int_Range()
     {
         (from t in Gen.Int.Select(Gen.Int)
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.Int[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -208,10 +208,10 @@ public class GenTests
     public void Int_Skew()
     {
         (from t in Gen.Int.Select(Gen.Int, Gen.Double[-10.0, 10.0])
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
-         from value in Gen.Int.Skew[start, finish, t.V2]
-         select (value, start, finish, t.V2))
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
+         from value in Gen.Int.Skew[start, finish, t.Item3]
+         select (value, start, finish, t.Item3))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
@@ -235,8 +235,8 @@ public class GenTests
     public void UInt_Range()
     {
         (from t in Gen.UInt.Select(Gen.UInt)
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.UInt[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -258,9 +258,9 @@ public class GenTests
     public void UInt_Skew()
     {
         (from t in Gen.UInt.Select(Gen.UInt, Gen.Double[-10.0, 10.0])
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
-         from value in Gen.UInt.Skew[start, finish, t.V2]
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
+         from value in Gen.UInt.Skew[start, finish, t.Item3]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
@@ -291,8 +291,8 @@ public class GenTests
     public void Long_Range()
     {
         (from t in Gen.Long.Select(Gen.Long)
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.Long[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -314,8 +314,8 @@ public class GenTests
     public void ULong_Range()
     {
         (from t in Gen.ULong.Select(Gen.ULong)
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.ULong[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -349,8 +349,8 @@ public class GenTests
     public void Single_Range()
     {
         (from t in Gen.Single.Unit.Select(Gen.Single.Unit)
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.Single[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -428,8 +428,8 @@ public class GenTests
     public void Double_Range()
     {
         (from t in Gen.Double.Unit.Select(Gen.Double.Unit)
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.Double[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish, seed: "89rtRQWk16go", iter: 1);
@@ -452,9 +452,9 @@ public class GenTests
     public void Double_Skew()
     {
         (from t in Gen.Double.Unit.Select(Gen.Double.Unit, Gen.Double[-10.0, 10.0])
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
-         from value in Gen.Double.Skew[start, finish, t.V2]
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
+         from value in Gen.Double.Skew[start, finish, t.Item3]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
@@ -527,8 +527,8 @@ public class GenTests
     public void Decimal_Range()
     {
         (from t in Gen.Decimal.Unit.Select(Gen.Decimal.Unit)
-         let start = Math.Min(t.V0, t.V1)
-         let finish = Math.Max(t.V0, t.V1)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.Decimal[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -551,8 +551,8 @@ public class GenTests
     public void Date_Range()
     {
         (from t in Gen.Date.Select(Gen.Date)
-         let start = t.V0 < t.V1 ? t.V0 : t.V1
-         let finish = t.V0 < t.V1 ? t.V1 : t.V0
+         let start = t.Item1 < t.Item2 ? t.Item1 : t.Item2
+         let finish = t.Item1 < t.Item2 ? t.Item2 : t.Item1
          from value in Gen.Date[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -562,8 +562,8 @@ public class GenTests
     public void DateTime_Range()
     {
         (from t in Gen.DateTime.Select(Gen.DateTime)
-         let start = t.V0 < t.V1 ? t.V0 : t.V1
-         let finish = t.V0 < t.V1 ? t.V1 : t.V0
+         let start = t.Item1 < t.Item2 ? t.Item1 : t.Item2
+         let finish = t.Item1 < t.Item2 ? t.Item2 : t.Item1
          from value in Gen.DateTime[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -573,8 +573,8 @@ public class GenTests
     public void TimeSpan_Range()
     {
         (from t in Gen.TimeSpan.Select(Gen.TimeSpan)
-         let start = t.V0 < t.V1 ? t.V0 : t.V1
-         let finish = t.V0 < t.V1 ? t.V1 : t.V0
+         let start = t.Item1 < t.Item2 ? t.Item1 : t.Item2
+         let finish = t.Item1 < t.Item2 ? t.Item2 : t.Item1
          from value in Gen.TimeSpan[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -596,8 +596,8 @@ public class GenTests
     public void Char_Range()
     {
         (from t in Gen.Char.Select(Gen.Char)
-         let start = t.V0 > t.V1 ? t.V1 : t.V0
-         let finish = t.V0 > t.V1 ? t.V0 : t.V1
+         let start = t.Item1 > t.Item2 ? t.Item2 : t.Item1
+         let finish = t.Item1 > t.Item2 ? t.Item1 : t.Item2
          from value in Gen.Char[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
@@ -673,9 +673,9 @@ public class GenTests
     {
         const int frequency = 10;
         (from f in Gen.Select(Gen.Int[1, 5], Gen.Int[1, 5], Gen.Int[1, 5])
-         let expected = new[] { f.V0 * frequency, f.V1 * frequency, f.V2 * frequency }
-         from actual in Gen.FrequencyConst((f.V0, 0), (f.V1, 1), (f.V2, 2))
-                        .Array[frequency * (f.V0 + f.V1 + f.V2)]
+         let expected = new[] { f.Item1 * frequency, f.Item2 * frequency, f.Item3 * frequency }
+         from actual in Gen.FrequencyConst((f.Item1, 0), (f.Item2, 1), (f.Item3, 2))
+                        .Array[frequency * (f.Item1 + f.Item2 + f.Item3)]
                         .Select(sample => Tally(3, sample))
          select (expected, actual))
         .Sample(t => Check.ChiSquared(t.expected, t.actual), iter: 1, time: -2);

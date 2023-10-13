@@ -66,7 +66,7 @@ public class ModelTests
         public readonly static Gen<string> Name = Gen.String["ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 "];
         public readonly static Gen<Currency> Currency = Gen.Enum<Currency>();
         public readonly static Gen<Country> Country = Gen.Enum<Country>();
-        public readonly static Gen<int> Quantity = Gen.Int[-99, 99].Select(Gen.Int[0, 5]).Select(t => t.V0 * (int)Math.Pow(10, t.V1));
+        public readonly static Gen<int> Quantity = Gen.Int[-99, 99].Select(Gen.Int[0, 5]).Select((m, e) => m * (int)Math.Pow(10, e));
         public readonly static Gen<double> Coupon = Gen.Int[0, 100].Select(i => 0.125 * i);
         public readonly static Gen<double> Price = Gen.Int[0001, 9999].Select(i => 0.01 * i);
         public readonly static Gen<DateTime> Date = Gen.Date[new DateTime(2000, 1, 1), new DateTime(2040, 1, 1)];

@@ -160,26 +160,26 @@ public class PCGTests
     public void PCG_Next_UInt()
     {
         Gen.UInt[1, uint.MaxValue].Select(genPCG)
-        .Select(t => (Max: t.V0, x: t.V1.Next(t.V0)))
-        .Sample(t => t.x <= t.Max);
+        .Select((max, pcg) => (max, pcg.Next(max)))
+        .Sample((max, x) => x <= max);
     }
 
     [Fact]
     public void PCG_Next64_ULong()
     {
         Gen.ULong[1, ulong.MaxValue].Select(genPCG)
-        .Select(t => (Max: t.V0, x: t.V1.Next64(t.V0)))
-        .Sample(t => t.x <= t.Max);
+        .Select((max, pcg) => (max, pcg.Next64(max)))
+        .Sample((max, x) => x <= max);
     }
 
     [Fact]
     public void SeedString_RoundTrip()
     {
         Gen.Select(Gen.ULong, Gen.UInt)
-        .Sample(t =>
+        .Sample((i0, i1) =>
         {
-            var seed = PCG.ToSeedString(t.V0, t.V1);
-            Assert.Equal(t, PCG.ParseSeedString(seed));
+            var seed = PCG.ToSeedString(i0, i1);
+            Assert.Equal((i0, i1), PCG.ParseSeedString(seed));
         });
     }
 

@@ -88,8 +88,8 @@ namespace Tests
             .Select(i => new ImHolder<ImHashMap234<int, int>> { Im = i })
             .SampleMetamorphic(
                 Gen.Select(Gen.Int[0, upperBound], Gen.Int, Gen.Int[0, upperBound], Gen.Int).Metamorphic<ImHolder<ImHashMap234<int, int>>>(
-                    (d, t) => d.Im = d.Im.AddOrUpdate(t.V0, t.V1).AddOrUpdate(t.V2, t.V3),
-                    (d, t) => d.Im = t.V0 == t.V2 ? d.Im.AddOrUpdate(t.V2, t.V3) : d.Im.AddOrUpdate(t.V2, t.V3).AddOrUpdate(t.V0, t.V1)
+                    (d, t) => d.Im = d.Im.AddOrUpdate(t.Item1, t.Item2).AddOrUpdate(t.Item3, t.Item4),
+                    (d, t) => d.Im = t.Item1 == t.Item3 ? d.Im.AddOrUpdate(t.Item3, t.Item4) : d.Im.AddOrUpdate(t.Item3, t.Item4).AddOrUpdate(t.Item1, t.Item2)
                 )
                 , equal: (a, b) => Check.Equal(a.Im.Enumerate().Select(j => (j.Key, j.Value)), b.Im.Enumerate().Select(j => (j.Key, j.Value)))
                 , print: i => Check.Print(i.Im.Enumerate().Select(j => (j.Key, j.Value)))
@@ -109,8 +109,8 @@ namespace Tests
             .SampleModelBased(
                 Gen.Int[0, upperBound].Select(Gen.Int).Operation<ImHolder<ImHashMap234<int, int>>, Dictionary<int, int>>((h, d, kv) =>
                 {
-                    h.Im = h.Im.AddOrUpdate(kv.V0, kv.V1);
-                    d[kv.V0] = kv.V1;
+                    h.Im = h.Im.AddOrUpdate(kv.Item1, kv.Item2);
+                    d[kv.Item1] = kv.Item2;
                 })
                 , equal: (h, d) =>
                 {
