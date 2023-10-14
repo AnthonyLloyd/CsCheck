@@ -80,7 +80,7 @@ public abstract class Gen<T> : IGen<T>
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var o = gen.Generate(pcg, min, out size);
-            return (R)System.Convert.ChangeType(o, typeof(R));
+            return o is R r ? r : (R)System.Convert.ChangeType(o, typeof(R));
         }
     }
     public Gen<R> Convert<R>() => new GenConvert<T, R>(this);
