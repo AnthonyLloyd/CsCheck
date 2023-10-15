@@ -76,7 +76,6 @@ public abstract class Gen<T> : IGen<T>
     public abstract T Generate(PCG pcg, Size? min, out Size size);
     sealed class GenConvert<T1, R>(Gen<T1> gen) : Gen<R>
     {
-        private readonly Gen<T1> gen = gen;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var o = gen.Generate(pcg, min, out size);
@@ -136,10 +135,8 @@ public delegate T GenMap<T>(T v, ref Size size);
 /// <summary>Provides a set of static methods for composing generators.</summary>
 public static class Gen
 {
-    sealed class GenCreate<T> : Gen<T>
+    sealed class GenCreate<T>(GenDelegate<T> generate) : Gen<T>
     {
-        readonly GenDelegate<T> generate;
-        internal GenCreate(GenDelegate<T> generate) => this.generate = generate;
         public override T Generate(PCG pcg, Size? min, out Size size) => generate(pcg, min, out size);
     }
 
@@ -148,7 +145,6 @@ public static class Gen
 
     sealed class GenConst<T>(T value) : Gen<T>
     {
-        private readonly T value = value;
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
             size = new Size(0);
@@ -160,7 +156,6 @@ public static class Gen
 
     sealed class GenConstFunc<T>(Func<T> value) : Gen<T>
     {
-        private readonly Func<T> value = value;
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
             size = new Size(0);
@@ -172,8 +167,6 @@ public static class Gen
 
     sealed class GenSelect<T, R>(Gen<T> gen, Func<T, R> selector) : Gen<R>
     {
-        private readonly Gen<T> gen = gen;
-        private readonly Func<T, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var t = gen.Generate(pcg, min, out size);
@@ -187,8 +180,6 @@ public static class Gen
 
     sealed class GenSelectTuple<T1, T2, R>(Gen<(T1, T2)> gen, Func<T1, T2, R> selector) : Gen<R>
     {
-        private readonly Gen<(T1, T2)> gen = gen;
-        private readonly Func<T1, T2, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var (t1, t2) = gen.Generate(pcg, min, out size);
@@ -202,8 +193,6 @@ public static class Gen
 
     sealed class GenSelectTuple<T1, T2, T3, R>(Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> selector) : Gen<R>
     {
-        private readonly Gen<(T1, T2, T3)> gen = gen;
-        private readonly Func<T1, T2, T3, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var (t1, t2, t3) = gen.Generate(pcg, min, out size);
@@ -217,8 +206,6 @@ public static class Gen
 
     sealed class GenSelectTuple<T1, T2, T3, T4, R>(Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> selector) : Gen<R>
     {
-        private readonly Gen<(T1, T2, T3, T4)> gen = gen;
-        private readonly Func<T1, T2, T3, T4, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var (t1, t2, t3, t4) = gen.Generate(pcg, min, out size);
@@ -232,8 +219,6 @@ public static class Gen
 
     sealed class GenSelectTuple<T1, T2, T3, T4, T5, R>(Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> selector) : Gen<R>
     {
-        private readonly Gen<(T1, T2, T3, T4, T5)> gen = gen;
-        private readonly Func<T1, T2, T3, T4, T5, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var (t1, t2, t3, t4, t5) = gen.Generate(pcg, min, out size);
@@ -247,8 +232,6 @@ public static class Gen
 
     sealed class GenSelectTuple<T1, T2, T3, T4, T5, T6, R>(Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> selector) : Gen<R>
     {
-        private readonly Gen<(T1, T2, T3, T4, T5, T6)> gen = gen;
-        private readonly Func<T1, T2, T3, T4, T5, T6, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var (t1, t2, t3, t4, t5, t6) = gen.Generate(pcg, min, out size);
@@ -262,8 +245,6 @@ public static class Gen
 
     sealed class GenSelectTuple<T1, T2, T3, T4, T5, T6, T7, R>(Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) : Gen<R>
     {
-        private readonly Gen<(T1, T2, T3, T4, T5, T6, T7)> gen = gen;
-        private readonly Func<T1, T2, T3, T4, T5, T6, T7, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var (t1, t2, t3, t4, t5, t6, t7) = gen.Generate(pcg, min, out size);
@@ -277,8 +258,6 @@ public static class Gen
 
     sealed class GenSelectTuple<T1, T2, T3, T4, T5, T6, T7, T8, R>(Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector) : Gen<R>
     {
-        private readonly Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen = gen;
-        private readonly Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var (t1, t2, t3, t4, t5, t6, t7, t8) = gen.Generate(pcg, min, out size);
@@ -292,9 +271,6 @@ public static class Gen
 
     sealed class GenSelect<T1, T2, R>(Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, R> selector) : Gen<R>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Func<T1, T2, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -311,10 +287,6 @@ public static class Gen
 
     sealed class GenSelect<T1, T2, T3, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Func<T1, T2, T3, R> selector) : Gen<R>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Func<T1, T2, T3, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -334,11 +306,6 @@ public static class Gen
 
     sealed class GenSelect<T1, T2, T3, T4, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Func<T1, T2, T3, T4, R> selector) : Gen<R>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Gen<T4> gen4 = gen4;
-        private readonly Func<T1, T2, T3, T4, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -362,12 +329,6 @@ public static class Gen
     sealed class GenSelect<T1, T2, T3, T4, T5, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Func<T1, T2, T3, T4, T5, R> selector) : Gen<R>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Gen<T4> gen4 = gen4;
-        private readonly Gen<T5> gen5 = gen5;
-        private readonly Func<T1, T2, T3, T4, T5, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -394,13 +355,6 @@ public static class Gen
     sealed class GenSelect<T1, T2, T3, T4, T5, T6, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, R> selector) : Gen<R>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Gen<T4> gen4 = gen4;
-        private readonly Gen<T5> gen5 = gen5;
-        private readonly Gen<T6> gen6 = gen6;
-        private readonly Func<T1, T2, T3, T4, T5, T6, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -420,7 +374,6 @@ public static class Gen
             var v6 = gen6.Generate(pcg, min, out s);
             size.Add(s);
             if (Size.IsLessThan(min, size)) return default!;
-            var (a, b, c, d, e, f, g, h, i) = (1, 2, 3, 4, 5, 6, 7, 8, 9);
             return selector(v1, v2, v3, v4, v5, v6);
         }
     }
@@ -432,14 +385,6 @@ public static class Gen
     sealed class GenSelect<T1, T2, T3, T4, T5, T6, T7, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, R> selector) : Gen<R>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Gen<T4> gen4 = gen4;
-        private readonly Gen<T5> gen5 = gen5;
-        private readonly Gen<T6> gen6 = gen6;
-        private readonly Gen<T7> gen7 = gen7;
-        private readonly Func<T1, T2, T3, T4, T5, T6, T7, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -473,15 +418,6 @@ public static class Gen
     sealed class GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector) : Gen<R>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Gen<T4> gen4 = gen4;
-        private readonly Gen<T5> gen5 = gen5;
-        private readonly Gen<T6> gen6 = gen6;
-        private readonly Gen<T7> gen7 = gen7;
-        private readonly Gen<T8> gen8 = gen8;
-        private readonly Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -517,8 +453,6 @@ public static class Gen
 
     sealed class GenSelectTupleCreate<T1, T2>(Gen<T1> gen1, Gen<T2> gen2) : Gen<(T1, T2)>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
         public override (T1, T2) Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -534,9 +468,6 @@ public static class Gen
 
     sealed class GenSelectTupleCreate<T1, T2, T3>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3) : Gen<(T1, T2, T3)>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
         public override (T1, T2, T3) Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -555,10 +486,6 @@ public static class Gen
 
     sealed class GenSelectTupleCreate<T1, T2, T3, T4>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4) : Gen<(T1, T2, T3, T4)>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Gen<T4> gen4 = gen4;
         public override (T1, T2, T3, T4) Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -581,11 +508,6 @@ public static class Gen
     sealed class GenSelectTupleCreate<T1, T2, T3, T4, T5>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5) : Gen<(T1, T2, T3, T4, T5)>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Gen<T4> gen4 = gen4;
-        private readonly Gen<T5> gen5 = gen5;
         public override (T1, T2, T3, T4, T5) Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -612,12 +534,6 @@ public static class Gen
     sealed class GenSelectTupleCreate<T1, T2, T3, T4, T5, T6>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6) : Gen<(T1, T2, T3, T4, T5, T6)>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Gen<T4> gen4 = gen4;
-        private readonly Gen<T5> gen5 = gen5;
-        private readonly Gen<T6> gen6 = gen6;
         public override (T1, T2, T3, T4, T5, T6) Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -647,13 +563,6 @@ public static class Gen
     sealed class GenSelectTupleCreate<T1, T2, T3, T4, T5, T6, T7>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7) : Gen<(T1, T2, T3, T4, T5, T6, T7)>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Gen<T4> gen4 = gen4;
-        private readonly Gen<T5> gen5 = gen5;
-        private readonly Gen<T6> gen6 = gen6;
-        private readonly Gen<T7> gen7 = gen7;
         public override (T1, T2, T3, T4, T5, T6, T7) Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -686,14 +595,6 @@ public static class Gen
     sealed class GenSelectTupleCreate<T1, T2, T3, T4, T5, T6, T7, T8>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8) : Gen<(T1, T2, T3, T4, T5, T6, T7, T8)>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Gen<T4> gen4 = gen4;
-        private readonly Gen<T5> gen5 = gen5;
-        private readonly Gen<T6> gen6 = gen6;
-        private readonly Gen<T7> gen7 = gen7;
-        private readonly Gen<T8> gen8 = gen8;
         public override (T1, T2, T3, T4, T5, T6, T7, T8) Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -728,8 +629,6 @@ public static class Gen
 
     sealed class GenSelectMany<T, R>(Gen<T> gen, Func<T, IGen<R>> selector) : Gen<R>
     {
-        private readonly Gen<T> gen = gen;
-        private readonly Func<T, IGen<R>> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen.Generate(pcg, min, out size);
@@ -745,9 +644,6 @@ public static class Gen
 
     sealed class GenSelectMany<T1, T2, R>(Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, IGen<R>> selector) : Gen<R>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Func<T1, T2, IGen<R>> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -766,10 +662,6 @@ public static class Gen
 
     sealed class GenSelectMany<T1, T2, T3, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Func<T1, T2, T3, IGen<R>> selector) : Gen<R>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Func<T1, T2, T3, IGen<R>> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -791,11 +683,6 @@ public static class Gen
 
     sealed class GenSelectMany<T1, T2, T3, T4, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Func<T1, T2, T3, T4, IGen<R>> selector) : Gen<R>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Gen<T4> gen4 = gen4;
-        private readonly Func<T1, T2, T3, T4, IGen<R>> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -820,12 +707,6 @@ public static class Gen
 
     sealed class GenSelectMany<T1, T2, T3, T4, T5, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Func<T1, T2, T3, T4, T5, IGen<R>> selector) : Gen<R>
     {
-        private readonly Gen<T1> gen1 = gen1;
-        private readonly Gen<T2> gen2 = gen2;
-        private readonly Gen<T3> gen3 = gen3;
-        private readonly Gen<T4> gen4 = gen4;
-        private readonly Gen<T5> gen5 = gen5;
-        private readonly Func<T1, T2, T3, T4, T5, IGen<R>> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen1.Generate(pcg, min, out size);
@@ -853,9 +734,6 @@ public static class Gen
 
     sealed class GenSelectManyResult<T1, T2, R>(Gen<T1> gen, Func<T1, Gen<T2>> genSelector, Func<T1, T2, R> resultSelector) : Gen<R>
     {
-        private readonly Gen<T1> gen = gen;
-        private readonly Func<T1, Gen<T2>> genSelector = genSelector;
-        private readonly Func<T1, T2, R> resultSelector = resultSelector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var v1 = gen.Generate(pcg, min, out size);
@@ -872,8 +750,6 @@ public static class Gen
 
     sealed class GenSelectManyTuple<T1, T2, R>(Gen<(T1, T2)> gen, Func<T1, T2, IGen<R>> selector) : Gen<R>
     {
-        private readonly Gen<(T1, T2)> gen = gen;
-        private readonly Func<T1, T2, IGen<R>> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var (v1, v2) = gen.Generate(pcg, min, out size);
@@ -889,8 +765,6 @@ public static class Gen
 
     sealed class GenSelectManyTuple<T1, T2, T3, R>(Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, IGen<R>> selector) : Gen<R>
     {
-        private readonly Gen<(T1, T2, T3)> gen = gen;
-        private readonly Func<T1, T2, T3, IGen<R>> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var (v1, v2, v3) = gen.Generate(pcg, min, out size);
@@ -906,8 +780,6 @@ public static class Gen
 
     sealed class GenSelectManyTuple<T1, T2, T3, T4, R>(Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, IGen<R>> selector) : Gen<R>
     {
-        private readonly Gen<(T1, T2, T3, T4)> gen = gen;
-        private readonly Func<T1, T2, T3, T4, IGen<R>> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var (v1, v2, v3, v4) = gen.Generate(pcg, min, out size);
@@ -923,8 +795,6 @@ public static class Gen
 
     sealed class GenSelectManyTuple<T1, T2, T3, T4, T5, R>(Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, IGen<R>> selector) : Gen<R>
     {
-        private readonly Gen<(T1, T2, T3, T4, T5)> gen = gen;
-        private readonly Func<T1, T2, T3, T4, T5, IGen<R>> selector = selector;
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var (v1, v2, v3, v4, v5) = gen.Generate(pcg, min, out size);
@@ -940,8 +810,6 @@ public static class Gen
 
     sealed class GenWhere<T>(Gen<T> gen, Func<T, bool> predicate) : Gen<T>
     {
-        private readonly Gen<T> gen = gen;
-        private readonly Func<T, bool> predicate = predicate;
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
             int i = 100;
@@ -960,8 +828,6 @@ public static class Gen
 
     sealed class GenWhere<T1, T2>(Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate) : Gen<(T1, T2)>
     {
-        private readonly Gen<(T1, T2)> gen = gen;
-        private readonly Func<T1, T2, bool> predicate = predicate;
         public override (T1, T2) Generate(PCG pcg, Size? min, out Size size)
         {
             int i = 100;
@@ -980,8 +846,6 @@ public static class Gen
 
     sealed class GenWhere<T1, T2, T3>(Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate) : Gen<(T1, T2, T3)>
     {
-        private readonly Gen<(T1, T2, T3)> gen = gen;
-        private readonly Func<T1, T2, T3, bool> predicate = predicate;
         public override (T1, T2, T3) Generate(PCG pcg, Size? min, out Size size)
         {
             int i = 100;
@@ -1000,8 +864,6 @@ public static class Gen
 
     sealed class GenWhere<T1, T2, T3, T4>(Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate) : Gen<(T1, T2, T3, T4)>
     {
-        private readonly Gen<(T1, T2, T3, T4)> gen = gen;
-        private readonly Func<T1, T2, T3, T4, bool> predicate = predicate;
         public override (T1, T2, T3, T4) Generate(PCG pcg, Size? min, out Size size)
         {
             int i = 100;
@@ -1020,8 +882,6 @@ public static class Gen
 
     sealed class GenWhere<T1, T2, T3, T4, T5>(Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate) : Gen<(T1, T2, T3, T4, T5)>
     {
-        private readonly Gen<(T1, T2, T3, T4, T5)> gen = gen;
-        private readonly Func<T1, T2, T3, T4, T5, bool> predicate = predicate;
         public override (T1, T2, T3, T4, T5) Generate(PCG pcg, Size? min, out Size size)
         {
             int i = 100;
@@ -1040,8 +900,6 @@ public static class Gen
 
     sealed class GenWhere<T1, T2, T3, T4, T5, T6>(Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate) : Gen<(T1, T2, T3, T4, T5, T6)>
     {
-        private readonly Gen<(T1, T2, T3, T4, T5, T6)> gen = gen;
-        private readonly Func<T1, T2, T3, T4, T5, T6, bool> predicate = predicate;
         public override (T1, T2, T3, T4, T5, T6) Generate(PCG pcg, Size? min, out Size size)
         {
             int i = 100;
@@ -1060,8 +918,6 @@ public static class Gen
 
     sealed class GenWhere<T1, T2, T3, T4, T5, T6, T7>(Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate) : Gen<(T1, T2, T3, T4, T5, T6, T7)>
     {
-        private readonly Gen<(T1, T2, T3, T4, T5, T6, T7)> gen = gen;
-        private readonly Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate = predicate;
         public override (T1, T2, T3, T4, T5, T6, T7) Generate(PCG pcg, Size? min, out Size size)
         {
             int i = 100;
@@ -1080,8 +936,6 @@ public static class Gen
 
     sealed class GenWhere<T1, T2, T3, T4, T5, T6, T7, T8>(Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate) : Gen<(T1, T2, T3, T4, T5, T6, T7, T8)>
     {
-        private readonly Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen = gen;
-        private readonly Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate = predicate;
         public override (T1, T2, T3, T4, T5, T6, T7, T8) Generate(PCG pcg, Size? min, out Size size)
         {
             int i = 100;
@@ -1100,7 +954,6 @@ public static class Gen
 
     sealed class GenOneOfConst<T>(params T[] constants) : Gen<T>
     {
-        private readonly T[] constants = constants;
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
             var i = pcg.Next((uint)constants.Length);
@@ -1114,7 +967,6 @@ public static class Gen
 
     sealed class GenOneOf<T>(params IGen<T>[] gens) : Gen<T>
     {
-        private readonly IGen<T>[] gens = gens;
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
             var i = pcg.Next((uint)gens.Length);
@@ -1134,8 +986,6 @@ public static class Gen
 
     sealed class GenFrequencyConst<T>(uint total, params (int Frequency, T Constant)[] constants) : Gen<T>
     {
-        private readonly uint total = total;
-        private readonly (int Frequency, T Constant)[] constants = constants;
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
             var v = (int)pcg.Next(total);
@@ -1159,8 +1009,6 @@ public static class Gen
 
     sealed class GenFrequency<T>(uint total, params (int Frequency, IGen<T> Generator)[] gens) : Gen<T>
     {
-        private readonly uint total = total;
-        private readonly (int Frequency, IGen<T> Generator)[] gens = gens;
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
             var nSize = pcg.Next(total);
@@ -1190,7 +1038,6 @@ public static class Gen
 
     sealed class GenRecursive<T>(Func<Gen<T>> gen) : Gen<T>
     {
-        private readonly Func<Gen<T>> gen = gen;
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
             return gen().Generate(pcg, null, out size);
@@ -1219,8 +1066,6 @@ public static class Gen
 
     sealed class GenRecursiveMap<T>(Func<Gen<T>> gen, GenMap<T> map) : Gen<T>
     {
-        private readonly Func<Gen<T>> gen = gen;
-        private readonly GenMap<T> map = map;
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
             return map(gen().Generate(pcg, null, out size), ref size);
@@ -1251,7 +1096,6 @@ public static class Gen
 
     sealed class GenClone<T>(Gen<T> gen) : Gen<(T, T)>
     {
-        private readonly Gen<T> gen = gen;
         public override (T, T) Generate(PCG pcg, Size? min, out Size size)
         {
             var seed = pcg.Seed;
@@ -1283,7 +1127,6 @@ public static class Gen
 
     sealed class GenShuffleArray<T>(T[] constants) : Gen<T[]>
     {
-        private readonly T[] constants = constants;
         public override T[] Generate(PCG pcg, Size? min, out Size size)
         {
             var array = (T[])constants.Clone();
@@ -1298,8 +1141,6 @@ public static class Gen
 
     sealed class GenShuffleArrayLength<T>(T[] constants, int length) : Gen<T[]>
     {
-        private readonly T[] constants = constants;
-        private readonly int length = length;
         public override T[] Generate(PCG pcg, Size? min, out Size size)
         {
             var a = (T[])constants.Clone();
@@ -1331,7 +1172,6 @@ public static class Gen
 
     sealed class GenShuffleList<T>(List<T> constants) : Gen<List<T>>
     {
-        private readonly List<T> constants = constants;
         public override List<T> Generate(PCG pcg, Size? min, out Size size)
         {
             var list = new List<T>(constants);
@@ -1346,8 +1186,6 @@ public static class Gen
 
     sealed class GenShuffleListLength<T>(List<T> constants, int length) : Gen<List<T>>
     {
-        private readonly List<T> constants = constants;
-        private readonly int length = length;
         public override List<T> Generate(PCG pcg, Size? min, out Size size)
         {
             var list = new List<T>(constants);
@@ -1379,8 +1217,6 @@ public static class Gen
 
     sealed class GenNullable<T>(Gen<T> gen, uint nullLimit) : Gen<T?> where T : struct
     {
-        private readonly Gen<T> gen = gen;
-        private readonly uint nullLimit = nullLimit;
         public override T? Generate(PCG pcg, Size? min, out Size size)
         {
             if (pcg.Next() < nullLimit)
@@ -1399,8 +1235,6 @@ public static class Gen
 
     sealed class GenNull<T>(Gen<T> gen, uint nullLimit) : Gen<T?> where T : class
     {
-        private readonly Gen<T> gen = gen;
-        private readonly uint nullLimit = nullLimit;
         public override T? Generate(PCG pcg, Size? min, out Size size)
         {
             if (pcg.Next() < nullLimit)
@@ -1475,8 +1309,6 @@ public sealed class GenSByte : Gen<sbyte>
     }
     sealed class Range(sbyte start, uint length) : Gen<sbyte>
     {
-        private readonly sbyte start = start;
-        private readonly uint length = length;
         public override sbyte Generate(PCG pcg, Size? min, out Size size)
         {
             var i = (sbyte)(start + pcg.Next(length));
@@ -1493,23 +1325,20 @@ public sealed class GenByte : Gen<byte>
     public override byte Generate(PCG pcg, Size? min, out Size size)
     {
         byte i = (byte)pcg.Next();
-        size = new Size(i + 1UL);
+        size = new Size(i);
         return i;
     }
-    public Gen<byte> this[byte start, byte finish]
+    sealed class Range(byte start, uint length) : Gen<byte>
     {
-        get
+        public override byte Generate(PCG pcg, Size? min, out Size size)
         {
-            uint s = start;
-            uint l = finish - s + 1u;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                byte i = (byte)(s + pcg.Next(l));
-                size = new Size(i + 1UL);
-                return i;
-            });
+            var i = (byte)(start + pcg.Next(length));
+            size = new Size(i);
+            return i;
         }
     }
+    public Gen<byte> this[byte start, byte finish]
+        => new Range(start, (uint)finish - start + 1U);
 }
 
 public sealed class GenShort : Gen<short>
@@ -1523,45 +1352,41 @@ public sealed class GenShort : Gen<short>
         uint s = pcg.Next() & 15U;
         ushort i = (ushort)(1U << (int)s);
         i = (ushort)((pcg.Next() & (i - 1) | i) - 1);
-        size = new Size((s << 11 | i & 0x7FFUL) + 1UL);
+        size = new Size((s << 11 | i & 0x7FFUL));
         return (short)-Unzigzag(i);
     }
-    public Gen<short> this[short start, short finish]
+    sealed class Range(short start, uint length) : Gen<short>
     {
-        get
+        public override short Generate(PCG pcg, Size? min, out Size size)
         {
-            uint l = (uint)(finish - start) + 1u;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                short i = (short)(start + pcg.Next(l));
-                size = new Size(Zigzag(i) + 1UL);
-                return i;
-            });
+            var i = (short)(start + pcg.Next(length));
+            size = new Size(Zigzag(i));
+            return i;
         }
     }
+    public Gen<short> this[short start, short finish]
+        => new Range(start, (uint)(finish - start) + 1U);
 }
 
 public sealed class GenUShort : Gen<ushort>
 {
     public override ushort Generate(PCG pcg, Size? min, out Size size)
     {
-        ushort i = (ushort)pcg.Next();
-        size = new Size(i + 1UL);
+        var i = (ushort)pcg.Next();
+        size = new Size(i);
         return i;
     }
-    public Gen<ushort> this[ushort start, ushort finish]
+    sealed class Range(ushort start, ushort length) : Gen<ushort>
     {
-        get
+        public override ushort Generate(PCG pcg, Size? min, out Size size)
         {
-            uint l = (uint)(finish - start) + 1u;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                ushort i = (ushort)(start + pcg.Next(l));
-                size = new Size(i + 1UL);
-                return i;
-            });
+            var i = (ushort)(start + pcg.Next(length));
+            size = new Size(i);
+            return i;
         }
     }
+    public Gen<ushort> this[ushort start, ushort finish]
+        => new Range(start, (ushort)(finish - start + 1));
 }
 
 public sealed class GenInt : Gen<int>
