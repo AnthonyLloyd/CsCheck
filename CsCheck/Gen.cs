@@ -1736,20 +1736,23 @@ public sealed class GenDouble : Gen<double>
 {
     public override double Generate(PCG pcg, Size? min, out Size size)
     {
-        ulong i = pcg.Next64();
-        size = new Size((i >> 12) + 1UL);
+        var i = pcg.Next64();
+        size = new Size(i >> 12);
         return BitConverter.Int64BitsToDouble((long)i);
+    }
+    sealed class GenEvenlyDistributed(double start, double length) : Gen<double>
+    {
+        public override double Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64() >> 12;
+            size = new Size(i);
+            return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * length + start;
+        }
     }
     private Gen<double> EvenlyDistributed(double start, double finish)
     {
         finish -= start;
-        start -= finish;
-        return Gen.Create((PCG pcg, Size? _, out Size size) =>
-        {
-            ulong i = pcg.Next64() >> 12;
-            size = new Size(i + 1UL);
-            return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * finish + start;
-        });
+        return new GenEvenlyDistributed(start - finish, finish);
     }
     public Gen<double> this[double start, double finish, int denominator = 100, int minExp = -100, int maxMan = 9999]
     {
@@ -1802,88 +1805,116 @@ public sealed class GenDouble : Gen<double>
             return Gen.Frequency(myGens);
         }
     }
-
-    /// <summary>A rational double num/den between start and finish where den is between 1 and denominator.</summary>
-    /// <param name="start">The lowest value.</param>
-    /// <param name="finish">The highest value.</param>
-    /// <param name="denominator">The maximum values of the fraction denominator.</param>
-    public Gen<double> this[int start, int finish, int denominator]
-        => Gen.Int[1, denominator]
-            .SelectMany(den =>
-                Gen.Int[start * den, finish * den]
-                .Select(num => ((double)num) / den)
-            );
-
+    sealed class GenNonNegative : Gen<double>
+    {
+        public override double Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64();
+            size = new Size(i >> 12);
+            return Math.Abs(BitConverter.Int64BitsToDouble((long)i));
+        }
+    }
     /// <summary>In the range 0.0 &lt;= x &lt;= inf, can be nan.</summary>
-    public Gen<double> NonNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<double> NonNegative = new GenNonNegative();
+    sealed class GenUnit : Gen<double>
     {
-        ulong i = pcg.Next64();
-        size = new Size((i >> 12) + 1UL);
-        return Math.Abs(BitConverter.Int64BitsToDouble((long)i));
-    });
+        public override double Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64() >> 12;
+            size = new Size(i);
+            return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1.0;
+        }
+    }
     /// <summary>In the range 0.0 &lt;= x &lt; 1.0.</summary>
-    public Gen<double> Unit = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<double> Unit = new GenUnit();
+    sealed class GenOneTwo : Gen<double>
     {
-        ulong i = pcg.Next64() >> 12;
-        size = new Size(i + 1UL);
-        return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1.0;
-    });
+        public override double Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64() >> 12;
+            size = new Size(i);
+            return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000);
+        }
+    }
     /// <summary>In the range 1.0 &lt;= x &lt; 2.0.</summary>
-    public Gen<double> OneTwo = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<double> OneTwo = new GenOneTwo();
+    sealed class GenPositive : Gen<double>
     {
-        ulong i = pcg.Next64() >> 12;
-        size = new Size(i + 1UL);
-        return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000);
-    });
+        public override double Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64() >> 1;
+            size = new Size(i >> 11);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? ((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)(i + 1UL));
+        }
+    }
     /// <summary>In the range 0.0 &lt; x &lt;= inf without nan.</summary>
-    public Gen<double> Positive = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<double> Positive = new GenPositive();
+    sealed class GenNegative : Gen<double>
     {
-        ulong i = pcg.Next64() >> 1;
-        size = new Size((i >> 11) + 1UL);
-        return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? ((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)(i + 1UL));
-    });
+        public override double Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64() >> 1;
+            size = new Size(i >> 11);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? -(double)((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)((i + 1UL) | 0x8000000000000000U));
+        }
+    }
     /// <summary>In the range -inf &lt;= x &lt; 0.0 without nan.</summary>
-    public Gen<double> Negative = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<double> Negative = new GenNegative();
+    sealed class GenNormal : Gen<double>
     {
-        ulong i = pcg.Next64() >> 1;
-        size = new Size((i >> 11) + 1UL);
-        return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? -(double)((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)((i + 1UL) | 0x8000000000000000U));
-    });
+        public override double Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64();
+            size = new Size(i >> 12);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL)) : BitConverter.Int64BitsToDouble((long)i);
+        }
+    }
     /// <summary>Without special values nan and inf.</summary>
-    public Gen<double> Normal = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<double> Normal = new GenNormal();
+    sealed class GenNormalPositive : Gen<double>
     {
-        ulong i = pcg.Next64();
-        size = new Size((i >> 12) + 1UL);
-        return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL)) : BitConverter.Int64BitsToDouble((long)i);
-    });
+        public override double Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64() >> 1;
+            size = new Size(i >> 11);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U || i == 0L ? ((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)i);
+        }
+    }
     /// <summary>In the range 0.0 &lt; x &lt;= max without special values nan and inf.</summary>
-    public Gen<double> NormalPositive = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<double> NormalPositive = new GenNormalPositive();
+    sealed class GenNormalNegative : Gen<double>
     {
-        ulong i = pcg.Next64() >> 1;
-        size = new Size((i >> 11) + 1UL);
-        return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U || i == 0L ? ((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)i);
-    });
+        public override double Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64() >> 1;
+            size = new Size(i >> 11);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U || i == 0L ? -(double)((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)(i | 0x8000000000000000U));
+        }
+    }
     /// <summary>In the range min &lt;= x &lt; 0.0 without special values nan and inf.</summary>
-    public Gen<double> NormalNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<double> NormalNegative = new GenNormalNegative();
+    sealed class GenNormalNonNegative : Gen<double>
     {
-        ulong i = pcg.Next64() >> 1;
-        size = new Size((i >> 11) + 1UL);
-        return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U || i == 0L ? -(double)((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)(i | 0x8000000000000000U));
-    });
+        public override double Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64() >> 1;
+            size = new Size(i >> 11);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? i & 0xFUL : BitConverter.Int64BitsToDouble((long)i);
+        }
+    }
     /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
-    public Gen<double> NormalNonNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<double> NormalNonNegative = new GenNormalNonNegative();
+    sealed class GenNormalNonPositive : Gen<double>
     {
-        ulong i = pcg.Next64() >> 1;
-        size = new Size((i >> 11) + 1UL);
-        return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? i & 0xFUL : BitConverter.Int64BitsToDouble((long)i);
-    });
+        public override double Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64() >> 1;
+            size = new Size(i >> 11);
+            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? -(double)(i & 0xFUL) : BitConverter.Int64BitsToDouble((long)(i | 0x8000000000000000U));
+        }
+    }
     /// <summary>In the range min &lt;= x &lt;= 0.0 without special values nan and inf.</summary>
-    public Gen<double> NormalNonPositive = Gen.Create((PCG pcg, Size? _, out Size size) =>
-    {
-        ulong i = pcg.Next64() >> 1;
-        size = new Size((i >> 11) + 1UL);
-        return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? -(double)(i & 0xFUL) : BitConverter.Int64BitsToDouble((long)(i | 0x8000000000000000U));
-    });
+    public Gen<double> NormalNonPositive = new GenNormalNonPositive();
     static double MakeSpecial(ulong i) => (i & 0xFUL) switch
     {
         0x0UL => double.NaN,
@@ -1903,14 +1934,18 @@ public sealed class GenDouble : Gen<double>
         0xEUL => -4.0,
         _ => 0.0,
     };
-    /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
-    public Gen<double> Special = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    sealed class GenSpecial : Gen<double>
     {
-        ulong i = pcg.Next64();
-        size = new Size((i >> 12) + 1UL);
-        return (i & 0xF0UL) == 0xD0UL ? MakeSpecial(i) : BitConverter.Int64BitsToDouble((long)i);
-    });
-    public sealed class DoubleSkew
+        public override double Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64();
+            size = new Size(i >> 12);
+            return (i & 0xF0UL) == 0xD0UL ? MakeSpecial(i) : BitConverter.Int64BitsToDouble((long)i);
+        }
+    }
+    /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
+    public Gen<double> Special = new GenSpecial();
+    public readonly struct DoubleSkew
     {
         public Gen<double> this[double start, double finish, double a] =>
             a >= 0.0 ? Gen.Double.Unit.Select(u => start + Math.Pow(u, a + 1.0) * (finish - start))
@@ -1920,46 +1955,6 @@ public sealed class GenDouble : Gen<double>
     /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
     /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
     public DoubleSkew Skew => new();
-
-    public sealed class DoubleWithInt : Gen<double>
-    {
-        static readonly Gen<double> gen = Gen.OneOf(Gen.Int.Convert<double>(), Gen.Double);
-        public override double Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
-        public Gen<double> this[double start, double finish]
-        {
-            get
-            {
-                var intStart = (int)Math.Ceiling(start);
-                var intFinish = (int)Math.Floor(finish);
-                return intStart <= intFinish
-                    ? Gen.OneOf(
-                        Gen.Int[intStart, intFinish].Convert<double>(),
-                        Gen.Double[start, finish])
-                    : Gen.Double[start, finish];
-            }
-        }
-    }
-    /// <summary>Gen with 50% int values.</summary>
-    public DoubleWithInt WithInt => new();
-
-    public sealed class DoubleWithRational
-    {
-        public Gen<double> this[double start, double finish, int denominator]
-        {
-            get
-            {
-                var intStart = (int)Math.Ceiling(start);
-                var intFinish = (int)Math.Floor(finish);
-                return intStart <= intFinish
-                    ? Gen.OneOf(
-                        Gen.Double[intStart, intFinish, denominator],
-                        Gen.Double[start, finish])
-                    : Gen.Double[start, finish];
-            }
-        }
-    }
-    /// <summary>Gen with 50% rational values.</summary>
-    public DoubleWithRational WithRational => new();
 }
 
 public sealed class GenDecimal : Gen<decimal>
