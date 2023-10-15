@@ -1365,7 +1365,7 @@ public sealed class GenShort : Gen<short>
         }
     }
     public Gen<short> this[short start, short finish]
-        => new Range(start, (uint)(finish - start) + 1U);
+        => new Range(start, (uint)(finish - start + 1));
 }
 
 public sealed class GenUShort : Gen<ushort>
@@ -1400,49 +1400,69 @@ public sealed class GenInt : Gen<int>
         uint s = pcg.Next() & 31U;
         uint i = 1U << (int)s;
         i = (pcg.Next() & (i - 1) | i) - 1;
-        size = new Size((s << 27 | i & 0x7FFFFFFUL) + 1UL);
+        size = new Size(s << 27 | i & 0x7FFFFFFUL);
         return -Unzigzag(i);
     }
-    public Gen<int> Uniform = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    sealed class GenUniform : Gen<int>
     {
-        int i = (int)pcg.Next();
-        size = new Size(Zigzag(i) + 1UL);
-        return i;
-    });
-    public Gen<int> Positive = Gen.Create((PCG pcg, Size? _, out Size size) =>
-    {
-        uint s = pcg.Next(31);
-        int i = 1 << (int)s;
-        i = (int)pcg.Next() & (i - 1) | i;
-        size = new Size((s << 27 | (ulong)i & 0x7FFFFFFUL) + 1UL);
-        return i;
-    });
-    public Gen<int> NonNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
-    {
-        uint s = pcg.Next(31);
-        int i = 1 << (int)s;
-        i = ((int)pcg.Next() & (i - 1) | i) - 1;
-        size = new Size((s << 27 | (ulong)i & 0x7FFFFFFUL) + 1UL);
-        return i;
-    });
-    public Gen<int> this[int start, int finish]
-    {
-        get
+        public override int Generate(PCG pcg, Size? min, out Size size)
         {
-            uint l = (uint)(finish - start) + 1u;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                int i = (int)(start + pcg.Next(l));
-                size = new Size(Zigzag(i) + 1UL);
-                return i;
-            });
+            int i = (int)pcg.Next();
+            size = new Size(Zigzag(i));
+            return i;
         }
     }
-    public sealed class IntSkew
+    public Gen<int> Uniform = new GenUniform();
+    sealed class GenPositive : Gen<int>
+    {
+        public override int Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint s = pcg.Next(31);
+            int i = 1 << (int)s;
+            i = (int)pcg.Next() & (i - 1) | i;
+            size = new Size(s << 27 | (ulong)i & 0x7FFFFFFUL);
+            return i;
+        }
+    }
+    public Gen<int> Positive = new GenPositive();
+    sealed class GenNonNegative : Gen<int>
+    {
+        public override int Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint s = pcg.Next(31);
+            int i = 1 << (int)s;
+            i = ((int)pcg.Next() & (i - 1) | i) - 1;
+            size = new Size((s << 27 | (ulong)i & 0x7FFFFFFUL) + 1UL);
+            return i;
+        }
+    }
+    public Gen<int> NonNegative = new GenNonNegative();
+    sealed class Range(int start, uint length) : Gen<int>
+    {
+        public override int Generate(PCG pcg, Size? min, out Size size)
+        {
+            int i = (int)(start + pcg.Next(length));
+            size = new Size(Zigzag(i));
+            return i;
+        }
+    }
+    sealed class RangePositive(int start, uint length) : Gen<int>
+    {
+        public override int Generate(PCG pcg, Size? min, out Size size)
+        {
+            int i = (int)(start + pcg.Next(length));
+            size = new Size((uint)i);
+            return i;
+        }
+    }
+    public Gen<int> this[int start, int finish]
+        => start >= 0 ? new RangePositive(start, (uint)(finish - start + 1))
+                      : new Range(start, (uint)(finish - start + 1));
+    public readonly struct IntSkew
     {
         public Gen<int> this[int start, int finish, double a] =>
             a >= 0.0 ? Gen.Double.Unit.Select(u => start + (int)(Math.Pow(u, a + 1.0) * (1.0 + finish - start)))
-            : Gen.Double.Unit.Select(u => finish - (int)(Math.Pow(u, 1.0 - a) * (1.0 + finish - start)));
+                     : Gen.Double.Unit.Select(u => finish - (int)(Math.Pow(u, 1.0 - a) * (1.0 + finish - start)));
     }
     /// <summary>Skew the distribution towards either end.
     /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
@@ -1457,23 +1477,21 @@ public sealed class GenUInt : Gen<uint>
         uint s = pcg.Next() & 31U;
         uint i = 1U << (int)s;
         i = (pcg.Next() & (i - 1) | i) - 1;
-        size = new Size((s << 27 | i & 0x7FFF_FFFUL) + 1UL);
+        size = new Size(s << 27 | i & 0x7FFF_FFFUL);
         return i;
     }
-    public Gen<uint> this[uint start, uint finish]
+    sealed class Range(uint start, uint length) : Gen<uint>
     {
-        get
+        public override uint Generate(PCG pcg, Size? min, out Size size)
         {
-            uint l = finish - start + 1u;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                uint i = start + pcg.Next(l);
-                size = new Size(i + 1UL);
-                return i;
-            });
+            uint i = start + pcg.Next(length);
+            size = new Size(i);
+            return i;
         }
     }
-    public sealed class UIntSkew
+    public Gen<uint> this[uint start, uint finish]
+        => new Range(start, finish - start + 1U);
+    public readonly struct UIntSkew
     {
         public Gen<uint> this[double a] => Gen.Double.Unit.Select(u =>
         {
@@ -1501,22 +1519,20 @@ public sealed class GenLong : Gen<long>
         uint s = pcg.Next() & 63U;
         ulong i = 1UL << (int)s;
         i = (pcg.Next64() & (i - 1UL) | i) - 1UL;
-        size = new Size(((ulong)s << 46 | i & 0x3FFF_FFFF_FFFFU) + 1UL);
+        size = new Size((ulong)s << 46 | i & 0x3FFF_FFFF_FFFFU);
         return -Unzigzag(i);
     }
-    public Gen<long> this[long start, long finish]
+    sealed class Range(long start, ulong length) : Gen<long>
     {
-        get
+        public override long Generate(PCG pcg, Size? min, out Size size)
         {
-            ulong l = (ulong)(finish - start) + 1ul;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                long i = start + (long)pcg.Next64(l);
-                size = new Size(Zigzag(i) + 1UL);
-                return i;
-            });
+            var i = start + (long)pcg.Next64(length);
+            size = new Size(Zigzag(i));
+            return i;
         }
     }
+    public Gen<long> this[long start, long finish]
+        => new Range(start, (ulong)(finish - start + 1));
 }
 
 public sealed class GenULong : Gen<ulong>
@@ -1526,22 +1542,20 @@ public sealed class GenULong : Gen<ulong>
         uint s = pcg.Next() & 63U;
         ulong i = 1UL << (int)s;
         i = (pcg.Next64() & (i - 1UL) | i) - 1UL;
-        size = new Size(((ulong)s << 46 | i & 0x3FFF_FFFF_FFFFU) + 1UL);
+        size = new Size((ulong)s << 46 | i & 0x3FFF_FFFF_FFFFU);
         return i;
     }
-    public Gen<ulong> this[ulong start, ulong finish]
+    sealed class Range(ulong start, ulong length) : Gen<ulong>
     {
-        get
+        public override ulong Generate(PCG pcg, Size? min, out Size size)
         {
-            ulong l = finish - start + 1ul;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                ulong i = start + pcg.Next64(l);
-                size = new Size(i + 1UL);
-                return i;
-            });
+            var i = start + pcg.Next64(length);
+            size = new Size(i);
+            return i;
         }
     }
+    public Gen<ulong> this[ulong start, ulong finish]
+        => new Range(start, finish - start + 1UL);
 }
 
 public sealed class GenFloat : Gen<float>
@@ -1555,93 +1569,137 @@ public sealed class GenFloat : Gen<float>
     public override float Generate(PCG pcg, Size? min, out Size size)
     {
         uint i = pcg.Next();
-        size = new Size(i + 1UL);
+        size = new Size(i);
         return new FloatConverter { I = i }.F;
+    }
+    sealed class Range(float start, float length) : Gen<float>
+    {
+        public override float Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint i = pcg.Next() >> 9;
+            size = new Size(i);
+            return new FloatConverter { I = i | 0x3F800000 }.F * length + start;
+        }
     }
     public Gen<float> this[float start, float finish]
     {
         get
         {
             finish -= start;
-            start -= finish;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                uint i = pcg.Next() >> 9;
-                size = new Size(i + 1UL);
-                return new FloatConverter { I = i | 0x3F800000 }.F * finish + start;
-            });
+            return new Range(start - finish, finish);
+        }
+    }
+
+    sealed class GenNonNegative : Gen<float>
+    {
+        public override float Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint i = pcg.Next();
+            size = new Size(i);
+            return Math.Abs(new FloatConverter { I = i }.F);
         }
     }
     /// <summary>In the range 0.0 &lt;= x &lt;= max including special values.</summary>
-    public Gen<float> NonNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<float> NonNegative = new GenNonNegative();
+    sealed class GenUnit : Gen<float>
     {
-        uint i = pcg.Next();
-        size = new Size(i + 1UL);
-        return Math.Abs(new FloatConverter { I = i }.F);
-    });
+        public override float Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint i = pcg.Next() >> 9;
+            size = new Size(i);
+            return new FloatConverter { I = i | 0x3F800000 }.F - 1f;
+        }
+    }
     /// <summary>In the range 0.0f &lt;= x &lt; 1.0f.</summary>
-    public Gen<float> Unit = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<float> Unit = new GenUnit();
+    sealed class GenOneTwo : Gen<float>
     {
-        uint i = pcg.Next() >> 9;
-        size = new Size(i + 1UL);
-        return new FloatConverter { I = i | 0x3F800000 }.F - 1f;
-    });
+        public override float Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint i = pcg.Next() >> 9;
+            size = new Size(i);
+            return new FloatConverter { I = i | 0x3F800000 }.F;
+        }
+    }
     /// <summary>In the range 1.0f &lt;= x &lt; 2.0f.</summary>
-    public Gen<float> OneTwo = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<float> OneTwo = new GenOneTwo();
+    sealed class GenPositive : Gen<float>
     {
-        uint i = pcg.Next() >> 9;
-        size = new Size(i + 1UL);
-        return new FloatConverter { I = i | 0x3F800000 }.F;
-    });
+        public override float Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint i = pcg.Next() >> 1;
+            size = new Size(i);
+            return (i & 0x7F800000U) == 0x7F800000U ? (i & 0xFU) + 1U : new FloatConverter { I = i + 1U }.F;
+        }
+    }
     /// <summary>In the range 0.0 &lt; x &lt;= inf without nan.</summary>
-    public Gen<float> Positive = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<float> Positive = new GenPositive();
+    sealed class GenNegative : Gen<float>
     {
-        uint i = pcg.Next() >> 1;
-        size = new Size(i + 1UL);
-        return (i & 0x7F800000U) == 0x7F800000U ? (i & 0xFU) + 1U : new FloatConverter { I = i + 1U }.F;
-    });
+        public override float Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint i = pcg.Next() >> 1;
+            size = new Size(i);
+            return (i & 0x7F800000U) == 0x7F800000U ? -((i & 0xFU) + 1U) : new FloatConverter { I = (i + 1U) | 0x80000000U }.F;
+        }
+    }
     /// <summary>In the range -inf &lt;= x &lt; 0.0 without nan.</summary>
-    public Gen<float> Negative = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<float> Negative = new GenNegative();
+    sealed class GenNormal : Gen<float>
     {
-        uint i = pcg.Next() >> 1;
-        size = new Size(i + 1UL);
-        return (i & 0x7F800000U) == 0x7F800000U ? -((i & 0xFU) + 1U) : new FloatConverter { I = (i + 1U) | 0x80000000U }.F;
-    });
+        public override float Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint i = pcg.Next();
+            size = new Size(i);
+            return (i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU)) : new FloatConverter { I = i }.F;
+        }
+    }
     /// <summary>Without special values nan and inf.</summary>
-    public Gen<float> Normal = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<float> Normal = new GenNormal();
+    sealed class GenNormalPositive : Gen<float>
     {
-        uint i = pcg.Next();
-        size = new Size(i + 1UL);
-        return (i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU)) : new FloatConverter { I = i }.F;
-    });
+        public override float Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint i = pcg.Next() >> 1;
+            size = new Size(i);
+            return (i & 0x7F800000U) == 0x7F800000U || i == 0U ? (i & 0xFU) + 1U : new FloatConverter { I = i }.F;
+        }
+    }
     /// <summary>In the range 0.0 &lt; x &lt;= max without special values nan and inf.</summary>
-    public Gen<float> NormalPositive = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<float> NormalPositive = new GenNormalPositive();
+    sealed class GenNormalNegative : Gen<float>
     {
-        uint i = pcg.Next() >> 1;
-        size = new Size(i + 1UL);
-        return (i & 0x7F800000U) == 0x7F800000U || i == 0U ? (i & 0xFU) + 1U : new FloatConverter { I = i }.F;
-    });
+        public override float Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint i = pcg.Next() >> 1;
+            size = new Size(i);
+            return (i & 0x7F800000U) == 0x7F800000U || i == 0U ? -((i & 0xFU) + 1U) : new FloatConverter { I = i | 0x80000000U }.F;
+        }
+    }
     /// <summary>In the range min &lt;= x &lt; 0.0 without special values nan and inf.</summary>
-    public Gen<float> NormalNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<float> NormalNegative = new GenNormalNegative();
+    sealed class GenNormalNonNegative : Gen<float>
     {
-        uint i = pcg.Next() >> 1;
-        size = new Size(i + 1UL);
-        return (i & 0x7F800000U) == 0x7F800000U || i == 0U ? -((i & 0xFU) + 1U) : new FloatConverter { I = i | 0x80000000U }.F;
-    });
+        public override float Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint i = pcg.Next() >> 1;
+            size = new Size(i);
+            return (i & 0x7F800000U) == 0x7F800000U ? i & 0xFU : new FloatConverter { I = i }.F;
+        }
+    }
     /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
-    public Gen<float> NormalNonNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    public Gen<float> NormalNonNegative = new GenNormalNonNegative();
+    sealed class GenNormalNonPositive : Gen<float>
     {
-        uint i = pcg.Next() >> 1;
-        size = new Size(i + 1UL);
-        return (i & 0x7F800000U) == 0x7F800000U ? i & 0xFU : new FloatConverter { I = i }.F;
-    });
+        public override float Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint i = pcg.Next() >> 1;
+            size = new Size(i);
+            return (i & 0x7F800000U) == 0x7F800000U ? -(i & 0xFU) : new FloatConverter { I = i | 0x80000000U }.F;
+        }
+    }
     /// <summary>In the range min &lt;= x &lt;= 0.0 without special values nan and inf.</summary>
-    public Gen<float> NormalNonPositive = Gen.Create((PCG pcg, Size? _, out Size size) =>
-    {
-        uint i = pcg.Next() >> 1;
-        size = new Size(i + 1UL);
-        return (i & 0x7F800000U) == 0x7F800000U ? -(i & 0xFU) : new FloatConverter { I = i | 0x80000000U }.F;
-    });
+    public Gen<float> NormalNonPositive = new GenNormalNonPositive();
     static float MakeSpecial(uint i) => (i & 0xFU) switch
     {
         0x0U => float.NaN,
@@ -1661,65 +1719,17 @@ public sealed class GenFloat : Gen<float>
         0xEU => -4f,
         _ => 0f,
     };
-
+    sealed class GenSpecial : Gen<float>
+    {
+        public override float Generate(PCG pcg, Size? min, out Size size)
+        {
+            uint i = pcg.Next();
+            size = new Size(i);
+            return (i & 0xF0U) == 0xD0U ? MakeSpecial(i) : new FloatConverter { I = i }.F;
+        }
+    }
     /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
-    public Gen<float> Special = Gen.Create((PCG pcg, Size? _, out Size size) =>
-    {
-        uint i = pcg.Next();
-        size = new Size(i + 1UL);
-        return (i & 0xF0U) == 0xD0U ? MakeSpecial(i) : new FloatConverter { I = i }.F;
-    });
-
-    /// <summary>A rational float num/den between start and finish where den is between 1 and denominator.</summary>
-    /// <param name="start">The lowest value.</param>
-    /// <param name="finish">The highest value.</param>
-    /// <param name="denominator">The maximum values of the fraction denominator.</param>
-    public Gen<float> this[int start, int finish, int denominator]
-        => Gen.Int[1, denominator]
-            .SelectMany(den =>
-                Gen.Int[start * den, finish * den]
-                .Select(num => ((float)num) / den)
-            );
-
-    public sealed class FloatWithInt : Gen<float>
-    {
-        static readonly Gen<float> gen = Gen.OneOf(Gen.Int.Convert<float>(), Gen.Float);
-        public override float Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
-        public Gen<float> this[float start, float finish]
-        {
-            get
-            {
-                var intStart = (int)Math.Ceiling(start);
-                var intFinish = (int)Math.Floor(finish);
-                return intStart <= intFinish
-                    ? Gen.OneOf(
-                        Gen.Int[intStart, intFinish].Convert<float>(),
-                        Gen.Float[start, finish])
-                    : Gen.Float[start, finish];
-            }
-        }
-    }
-    /// <summary>Gen with 50% int values.</summary>
-    public FloatWithInt WithInt => new();
-
-    public sealed class FloatWithRational
-    {
-        public Gen<float> this[float start, float finish, int denominator]
-        {
-            get
-            {
-                var intStart = (int)Math.Ceiling(start);
-                var intFinish = (int)Math.Floor(finish);
-                return intStart <= intFinish
-                    ? Gen.OneOf(
-                        Gen.Float[intStart, intFinish, denominator],
-                        Gen.Float[start, finish])
-                    : Gen.Float[start, finish];
-            }
-        }
-    }
-    /// <summary>Gen with 50% rational values.</summary>
-    public FloatWithRational WithRational => new();
+    public Gen<float> Special = new GenSpecial();
 }
 
 public sealed class GenDouble : Gen<double>
