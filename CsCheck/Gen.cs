@@ -1963,36 +1963,47 @@ public sealed class GenDecimal : Gen<decimal>
     {
         var scaleAndSign = (int)pcg.Next(58);
         var hi = pcg.Next();
-        size = new Size(((ulong)scaleAndSign << 32) + hi + 1UL);
+        size = new Size(((ulong)scaleAndSign << 32) + hi);
         return new decimal((int)pcg.Next(), (int)pcg.Next(), (int)hi, (scaleAndSign & 1) == 1, (byte)(scaleAndSign >> 1));
+    }
+    sealed class Range(decimal start, decimal length) : Gen<decimal>
+    {
+        public override decimal Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64() >> 12;
+            size = new Size(i);
+            return (decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * length + start;
+        }
     }
     public Gen<decimal> this[decimal start, decimal finish]
     {
         get
         {
             finish -= start;
-            start -= finish;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                var i = pcg.Next64() >> 12;
-                size = new Size(i + 1UL);
-                return (decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * finish + start;
-            });
+            return new Range(start - finish, finish);
         }
     }
-    public Gen<decimal> NonNegative = Gen.Create((PCG pcg, Size? _, out Size size) =>
+    sealed class GenNonNegative : Gen<decimal>
     {
-        var scale = (byte)pcg.Next(29);
-        var hi = (int)pcg.Next();
-        size = new Size((ulong)scale << 32 + hi);
-        return new decimal((int)pcg.Next(), (int)pcg.Next(), hi, false, scale);
-    });
-    public Gen<decimal> Unit = Gen.Create((PCG pcg, Size? _, out Size size) =>
+        public override decimal Generate(PCG pcg, Size? min, out Size size)
+        {
+            var scale = (byte)pcg.Next(29);
+            var hi = (int)pcg.Next();
+            size = new Size((ulong)scale << 32 + hi);
+            return new decimal((int)pcg.Next(), (int)pcg.Next(), hi, false, scale);
+        }
+    }
+    public Gen<decimal> NonNegative = new GenNonNegative();
+    sealed class GenUnit : Gen<decimal>
     {
-        ulong i = pcg.Next64() >> 12;
-        size = new Size(i + 1UL);
-        return (decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1M;
-    });
+        public override decimal Generate(PCG pcg, Size? min, out Size size)
+        {
+            ulong i = pcg.Next64() >> 12;
+            size = new Size(i + 1UL);
+            return (decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1M;
+        }
+    }
+    public Gen<decimal> Unit = new GenUnit();
 }
 
 public sealed class GenDateTime : Gen<DateTime>
@@ -2000,23 +2011,21 @@ public sealed class GenDateTime : Gen<DateTime>
     const ulong max = 3155378975999999999UL; //(ulong)DateTime.MaxValue.Ticks;
     public override DateTime Generate(PCG pcg, Size? min, out Size size)
     {
-        ulong i = pcg.Next64(max);
-        size = new Size((i >> 10) + 1UL);
+        var i = pcg.Next64(max);
+        size = new Size(i >> 10);
         return new DateTime((long)i);
     }
-    public Gen<DateTime> this[DateTime start, DateTime finish]
+    sealed class Range(ulong start, ulong length) : Gen<DateTime>
     {
-        get
+        public override DateTime Generate(PCG pcg, Size? min, out Size size)
         {
-            ulong l = (ulong)(finish.Ticks - start.Ticks) + 1ul;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                ulong i = (ulong)start.Ticks + pcg.Next64(l);
-                size = new Size(i + 1UL);
-                return new DateTime((long)i);
-            });
+            ulong i = start + pcg.Next64(length);
+            size = new Size(i);
+            return new DateTime((long)i);
         }
     }
+    public Gen<DateTime> this[DateTime start, DateTime finish]
+        => new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
 }
 
 public sealed class GenDate : Gen<DateTime>
@@ -2025,23 +2034,20 @@ public sealed class GenDate : Gen<DateTime>
     public override DateTime Generate(PCG pcg, Size? min, out Size size)
     {
         uint i = pcg.Next(max);
-        size = new Size(i + 1UL);
+        size = new Size(i);
         return new DateTime(i * TimeSpan.TicksPerDay);
     }
-    public Gen<DateTime> this[DateTime start, DateTime finish]
+    sealed class Range(uint s, uint l) : Gen<DateTime>
     {
-        get
+        public override DateTime Generate(PCG pcg, Size? min, out Size size)
         {
-            uint s = (uint)(start.Ticks / TimeSpan.TicksPerDay);
-            uint l = (uint)((finish.Ticks - start.Ticks) / TimeSpan.TicksPerDay) + 1u;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                uint i = s + pcg.Next(l);
-                size = new Size(i + 1UL);
-                return new DateTime(i * TimeSpan.TicksPerDay);
-            });
+            var i = s + pcg.Next(l);
+            size = new Size(i);
+            return new DateTime(i * TimeSpan.TicksPerDay);
         }
     }
+    public Gen<DateTime> this[DateTime start, DateTime finish]
+        => new Range((uint)(start.Ticks / TimeSpan.TicksPerDay), (uint)((finish.Ticks - start.Ticks) / TimeSpan.TicksPerDay) + 1U);
 }
 
 public sealed class GenTimeSpan : Gen<TimeSpan>
@@ -2049,22 +2055,20 @@ public sealed class GenTimeSpan : Gen<TimeSpan>
     public override TimeSpan Generate(PCG pcg, Size? min, out Size size)
     {
         ulong i = pcg.Next64();
-        size = new Size((i >> 12) + 1UL);
+        size = new Size(i >> 12);
         return new TimeSpan((long)i);
     }
-    public Gen<TimeSpan> this[TimeSpan start, TimeSpan finish]
+    sealed class Range(ulong start, ulong length) : Gen<TimeSpan>
     {
-        get
+        public override TimeSpan Generate(PCG pcg, Size? min, out Size size)
         {
-            ulong l = (ulong)(finish.Ticks - start.Ticks) + 1ul;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                ulong i = (ulong)start.Ticks + pcg.Next64(l);
-                size = new Size(i + 1UL);
-                return new TimeSpan((long)i);
-            });
+            var i = start + pcg.Next64(length);
+            size = new Size(i);
+            return new TimeSpan((long)i);
         }
     }
+    public Gen<TimeSpan> this[TimeSpan start, TimeSpan finish]
+        => new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
 }
 
 public sealed class GenDateTimeOffset : Gen<DateTimeOffset>
@@ -2104,35 +2108,30 @@ public sealed class GenChar : Gen<char>
     public override char Generate(PCG pcg, Size? min, out Size size)
     {
         var i = pcg.Next() & 127u;
-        size = new Size(i + 1UL);
+        size = new Size(i);
         return (char)i;
     }
+    sealed class Range(uint start, uint length) : Gen<char>
+    {
+        public override char Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next(length);
+            size = new Size(i);
+            return (char)(start + i);
+        }
+    }
     public Gen<char> this[char start, char finish]
+        => new Range(start, finish + 1U - start);
+    sealed class GenChars(string chars) : Gen<char>
     {
-        get
+        public override char Generate(PCG pcg, Size? min, out Size size)
         {
-            uint s = start;
-            uint l = finish + 1u - s;
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                var i = pcg.Next(l);
-                size = new Size(i + 1UL);
-                return (char)(s + i);
-            });
+            var i = pcg.Next((uint)chars.Length);
+            size = new Size(i);
+            return chars[(int)i];
         }
     }
-    public Gen<char> this[string chars]
-    {
-        get
-        {
-            return Gen.Create((PCG pcg, Size? _, out Size size) =>
-            {
-                var i = pcg.Next((uint)chars.Length);
-                size = new Size(i + 1UL);
-                return chars[(int)i];
-            });
-        }
-    }
+    public Gen<char> this[string chars] => new GenChars(chars);
 }
 
 public sealed class GenString : Gen<string>
