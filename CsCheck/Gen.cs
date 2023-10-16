@@ -2338,7 +2338,7 @@ public sealed class GenList<T>(Gen<T> gen) : Gen<List<T>>
 public sealed class GenHashSet<T>(Gen<T> gen) : Gen<HashSet<T>>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    HashSet<T> Generate(PCG pcg, Size? min, int length, out Size size)
+    static HashSet<T> Generate(Gen<T> gen, PCG pcg, Size? min, int length, out Size size)
     {
         var sizeI = (ulong)length << 32;
         var total = new Size(0);
@@ -2363,23 +2363,32 @@ public sealed class GenHashSet<T>(Gen<T> gen) : Gen<HashSet<T>>
         return vs;
     }
     public override HashSet<T> Generate(PCG pcg, Size? min, out Size size)
-        => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<HashSet<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length.Generate(pcg, null, out _), out size)
-    );
-    public Gen<HashSet<T>> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length, out size)
-    );
-    public Gen<HashSet<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<HashSet<T>> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
-    );
+        => Generate(gen, pcg, min, (int)(pcg.Next() & 127U), out size);
+    sealed class GenLength(Gen<T> gen, Gen<int> length) : Gen<HashSet<T>>
+    {
+        public override HashSet<T> Generate(PCG pcg, Size? min, out Size size)
+            => GenHashSet<T>.Generate(gen, pcg, min, length.Generate(pcg, null, out _), out size);
+    }
+    public Gen<HashSet<T>> this[Gen<int> length] => new GenLength(gen, length);
+    public Gen<HashSet<T>> this[int start, int finish] => new GenLength(gen, Gen.Int[start, finish]);
+    sealed class FixedLength(Gen<T> gen, int length) : Gen<HashSet<T>>
+    {
+        public override HashSet<T> Generate(PCG pcg, Size? min, out Size size)
+            => GenHashSet<T>.Generate(gen, pcg, min, length, out size);
+    }
+    public Gen<HashSet<T>> this[int length] => new FixedLength(gen, length);
+    sealed class GenNonempty(Gen<T> gen) : Gen<HashSet<T>>
+    {
+        public override HashSet<T> Generate(PCG pcg, Size? min, out Size size)
+            => GenHashSet<T>.Generate(gen, pcg, min, (int)(pcg.Next() & 127U) + 1, out size);
+    }
+    public Gen<HashSet<T>> Nonempty => new GenNonempty(gen);
 }
 
 public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictionary<K, V>>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    Dictionary<K, V> Generate(PCG pcg, Size? min, int length, out Size size)
+    static Dictionary<K, V> Generate(Gen<K> genK, Gen<V> genV, PCG pcg, Size? min, int length, out Size size)
     {
         var sizeI = (ulong)length << 32;
         var total = new Size(0);
@@ -2411,23 +2420,32 @@ public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictiona
         return vs;
     }   
     public override Dictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
-        => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<Dictionary<K, V>> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length.Generate(pcg, null, out _), out size)
-    );
-    public Gen<Dictionary<K, V>> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length, out size)
-    );
-    public Gen<Dictionary<K, V>> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<Dictionary<K, V>> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
-    );
+        => Generate(genK, genV, pcg, min, (int)(pcg.Next() & 127U), out size);
+    sealed class GenLength(Gen<K> genK, Gen<V> genV, Gen<int> length) : Gen<Dictionary<K, V>>
+    {
+        public override Dictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
+            => GenDictionary<K, V>.Generate(genK, genV, pcg, min, length.Generate(pcg, null, out _), out size);
+    }
+    public Gen<Dictionary<K, V>> this[Gen<int> length] => new GenLength(genK, genV, length);
+    public Gen<Dictionary<K, V>> this[int start, int finish] => new GenLength(genK, genV, Gen.Int[start, finish]);
+    sealed class FixedLength(Gen<K> genK, Gen<V> genV, int length) : Gen<Dictionary<K, V>>
+    {
+        public override Dictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
+            => GenDictionary<K, V>.Generate(genK, genV, pcg, min, length, out size);
+    }
+    public Gen<Dictionary<K, V>> this[int length] => new FixedLength(genK, genV, length);
+    sealed class GenNonempty(Gen<K> genK, Gen<V> genV) : Gen<Dictionary<K, V>>
+    {
+        public override Dictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
+            => GenDictionary<K, V>.Generate(genK, genV, pcg, min, (int)(pcg.Next() & 127U) + 1, out size);
+    }
+    public Gen<Dictionary<K, V>> Nonempty => new GenNonempty(genK, genV);
 }
 
 public sealed class GenSortedDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<SortedDictionary<K, V>>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    SortedDictionary<K, V> Generate(PCG pcg, Size? min, int length, out Size size)
+    static SortedDictionary<K, V> Generate(Gen<K> genK, Gen<V> genV, PCG pcg, Size? min, int length, out Size size)
     {
         var sizeI = (ulong)length << 32;
         var total = new Size(0);
@@ -2459,17 +2477,26 @@ public sealed class GenSortedDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<So
         return vs;
     }
     public override SortedDictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
-        => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<SortedDictionary<K, V>> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length.Generate(pcg, null, out _), out size)
-    );
-    public Gen<SortedDictionary<K, V>> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length, out size)
-    );
-    public Gen<SortedDictionary<K, V>> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<SortedDictionary<K, V>> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
-    );
+        => Generate(genK, genV, pcg, min, (int)(pcg.Next() & 127U), out size);
+    sealed class GenLength(Gen<K> genK, Gen<V> genV, Gen<int> length) : Gen<SortedDictionary<K, V>>
+    {
+        public override SortedDictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
+            => GenSortedDictionary<K, V>.Generate(genK, genV, pcg, min, length.Generate(pcg, null, out _), out size);
+    }
+    public Gen<SortedDictionary<K, V>> this[Gen<int> length] => new GenLength(genK, genV, length);
+    public Gen<SortedDictionary<K, V>> this[int start, int finish] => new GenLength(genK, genV, Gen.Int[start, finish]);
+    sealed class FixedLength(Gen<K> genK, Gen<V> genV, int length) : Gen<SortedDictionary<K, V>>
+    {
+        public override SortedDictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
+            => GenSortedDictionary<K, V>.Generate(genK, genV, pcg, min, length, out size);
+    }
+    public Gen<SortedDictionary<K, V>> this[int length] => new FixedLength(genK, genV, length);
+    sealed class GenNonempty(Gen<K> genK, Gen<V> genV) : Gen<SortedDictionary<K, V>>
+    {
+        public override SortedDictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
+            => GenSortedDictionary<K, V>.Generate(genK, genV, pcg, min, (int)(pcg.Next() & 127U) + 1, out size);
+    }
+    public Gen<SortedDictionary<K, V>> Nonempty => new GenNonempty(genK, genV);
 }
 
 public sealed class GenOperation<T> : Gen<(string, Action<T>)>
