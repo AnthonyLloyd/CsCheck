@@ -18,6 +18,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -1244,6 +1245,16 @@ public static partial class Check
         public Actual ActualState = actualState; public Model ModelState = modelState; public uint Stream = stream; public ulong Seed = seed; public (string, Action<Actual, Model>)[] Operations = operations; public Exception? Exception;
     }
 
+    sealed class GenInitial<Actual, Model>(Gen<(Actual, Model)> initial) : Gen<(Actual Actual, Model Model, uint Stream, ulong Seed)>
+    {
+        public override (Actual Actual, Model Model, uint Stream, ulong Seed) Generate(PCG pcg, Size? min, out Size size)
+        {
+            var stream = pcg.Stream;
+            var seed = pcg.Seed;
+            var (actual, model) = initial.Generate(pcg, null, out size);
+            return (actual, model, stream, seed);
+        }
+    }
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
@@ -1274,14 +1285,9 @@ public static partial class Check
             var opName = "Op" + i;
             opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2)) : op;
         }
-
-        Gen.Create((PCG pcg, Size? _, out Size size) =>
-        {
-            var stream = pcg.Stream;
-            var seed = pcg.Seed;
-            return (initial.Generate(pcg, null, out size), stream, seed);
-        })
-        .Select(Gen.OneOf(opNameActions).Array, (a, b) => new ModelBasedData<Actual, Model>(a.Item1.Item1, a.Item1.Item2, a.stream, a.seed, b))
+        
+        new GenInitial<Actual, Model>(initial)
+        .Select(Gen.OneOf(opNameActions).Array, (a, b) => new ModelBasedData<Actual, Model>(a.Actual, a.Model, a.Stream, a.Seed, b))
         .Sample(d =>
         {
             try

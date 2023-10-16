@@ -177,14 +177,18 @@ public static class Dbg
     /// <summary>Start a time measurement. Function name when parameter not set.</summary>
     public static TimeRegion Time([CallerMemberName] string name = "") => Time<string>(name);
 
-    /// <summary>Classify and count generated types debug info.</summary>
-    public static Gen<T> DbgClassify<T>(this Gen<T> gen, Func<T, string> name) =>
-        Gen.Create((PCG pcg, Size? min, out Size size) =>
+    sealed class GenDbgClassify<T>(Gen<T> gen, Func<T, string> name) : Gen<T>
     {
-        var t = gen.Generate(pcg, min, out size);
-        Count(name(t));
-        return t;
-    });
+        public override T Generate(PCG pcg, Size? min, out Size size)
+        {
+            var t = gen.Generate(pcg, min, out size);
+            Count(name(t));
+            return t;
+        }
+    }
+    /// <summary>Classify and count generated types debug info.</summary>
+    public static Gen<T> DbgClassify<T>(this Gen<T> gen, Func<T, string> name)
+        => new GenDbgClassify<T>(gen, name);
 
     /// <summary>Add debug info.</summary>
     public static void Info<T>(T t, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
