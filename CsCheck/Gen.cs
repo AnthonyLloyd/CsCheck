@@ -2197,7 +2197,7 @@ public sealed class GenArray<T>(Gen<T> gen) : Gen<T[]>
 public sealed class GenArrayUnique<T>(Gen<T> gen) : Gen<T[]>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    T[] Generate(PCG pcg, Size? min, int length, out Size size)
+    static T[] Generate(Gen<T> gen, PCG pcg, Size? min, int length, out Size size)
     {
         var sizeI = (ulong)length << 32;
         var total = new Size(0);
@@ -2224,23 +2224,35 @@ public sealed class GenArrayUnique<T>(Gen<T> gen) : Gen<T[]>
         return vs;
     }
     public override T[] Generate(PCG pcg, Size? min, out Size size)
-        => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<T[]> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length.Generate(pcg, min, out size), out size)
-    );
-    public Gen<T[]> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length, out size)
-    );
-    public Gen<T[]> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<T[]> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
-    );
+        => Generate(gen, pcg, min, (int)(pcg.Next() & 127U), out size);
+    sealed class GenLength(Gen<T> gen, Gen<int> length) : Gen<T[]>
+    {
+        public override T[] Generate(PCG pcg, Size? min, out Size size)
+            => GenArrayUnique<T>.Generate(gen, pcg, min, length.Generate(pcg, null, out _), out size);
+    }
+    public Gen<T[]> this[Gen<int> length] => new GenLength(gen, length);
+    public Gen<T[]> this[int start, int finish] => new GenLength(gen, Gen.Int[start, finish]);
+    sealed class FixedLength(Gen<T> gen, int length) : Gen<T[]>
+    {
+        public override T[] Generate(PCG pcg, Size? min, out Size size)
+            => GenArrayUnique<T>.Generate(gen, pcg, min, length, out size);
+    }
+    public Gen<T[]> this[int length] => new FixedLength(gen, length);
+    sealed class GenNonempty(Gen<T> gen) : Gen<T[]>
+    {
+        public override T[] Generate(PCG pcg, Size? min, out Size size)
+        {
+            var length = (int)(pcg.Next() & 127U) + 1;
+            return GenArrayUnique<T>.Generate(gen, pcg, min, length, out size);
+        }
+    }
+    public Gen<T[]> Nonempty => new GenNonempty(gen);
 }
 
 public sealed class GenArray2D<T>(Gen<T> gen) : Gen<T[,]>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    T[,] Generate(PCG pcg, Size? min, int length0, int length1, out Size size)
+    static T[,] Generate(Gen<T> gen, PCG pcg, Size? min, int length0, int length1, out Size size)
     {
         var sizeI = ((ulong)(length0 * length1)) << 32;
         var total = new Size(0);
@@ -2260,22 +2272,31 @@ public sealed class GenArray2D<T>(Gen<T> gen) : Gen<T[,]>
         return vs;
     }
     public override T[,] Generate(PCG pcg, Size? min, out Size size)
-        => Generate(pcg, min, (int)(pcg.Next() & 127U), (int)(pcg.Next() & 127U), out size);
-    public Gen<T[,]> this[int length0, int length1] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length0, length1, out size)
-    );
-    public Gen<T[,]> this[Gen<int> length0, Gen<int> length1] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length0.Generate(pcg, null, out _), length1.Generate(pcg, null, out _), out size)
-    );
-    public Gen<T[,]> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, (int)(pcg.Next() & 127U) + 1, out size)
-    );
+        => Generate(gen, pcg, min, (int)(pcg.Next() & 127U), (int)(pcg.Next() & 127U), out size);
+    sealed class FixedLength(Gen<T> gen, int length0, int length1) : Gen<T[,]>
+    {
+        public override T[,] Generate(PCG pcg, Size? min, out Size size)
+            => GenArray2D<T>.Generate(gen, pcg, min, length0, length1, out size);
+    }
+    public Gen<T[,]> this[int length0, int length1] => new FixedLength(gen, length0, length1);
+    sealed class GenLength(Gen<T> gen, Gen<int> length0, Gen<int> length1) : Gen<T[,]>
+    {
+        public override T[,] Generate(PCG pcg, Size? min, out Size size)
+            => GenArray2D<T>.Generate(gen, pcg, min, length0.Generate(pcg, null, out _), length1.Generate(pcg, null, out _), out size);
+    }
+    public Gen<T[,]> this[Gen<int> length0, Gen<int> length1] => new GenLength(gen, length0, length1);
+    sealed class GenNonempty(Gen<T> gen) : Gen<T[,]>
+    {
+        public override T[,] Generate(PCG pcg, Size? min, out Size size)
+            => GenArray2D<T>.Generate(gen, pcg, min, (int)(pcg.Next() & 127U) + 1, (int)(pcg.Next() & 127U) + 1, out size);
+    }
+    public Gen<T[,]> Nonempty => new GenNonempty(gen);
 }
 
 public sealed class GenList<T>(Gen<T> gen) : Gen<List<T>>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    List<T> Generate(PCG pcg, Size? min, int length, out Size size)
+    static List<T> Generate(Gen<T> gen, PCG pcg, Size? min, int length, out Size size)
     {
         var sizeI = (ulong)length << 32;
         var total = new Size(0);
@@ -2292,17 +2313,26 @@ public sealed class GenList<T>(Gen<T> gen) : Gen<List<T>>
         return vs;
     }
     public override List<T> Generate(PCG pcg, Size? min, out Size size)
-        => Generate(pcg, min, (int)(pcg.Next() & 127U), out size);
-    public Gen<List<T>> this[Gen<int> length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length.Generate(pcg, null, out _), out size)
-    );
-    public Gen<List<T>> this[int length] => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, length, out size)
-    );
-    public Gen<List<T>> this[int start, int finish] => this[Gen.Int[start, finish]];
-    public Gen<List<T>> Nonempty => Gen.Create((PCG pcg, Size? min, out Size size) =>
-        Generate(pcg, min, (int)(pcg.Next() & 127U) + 1, out size)
-    );
+        => Generate(gen, pcg, min, (int)(pcg.Next() & 127U), out size);
+    sealed class GenLength(Gen<T> gen, Gen<int> length) : Gen<List<T>>
+    {
+        public override List<T> Generate(PCG pcg, Size? min, out Size size)
+            => GenList<T>.Generate(gen, pcg, min, length.Generate(pcg, null, out _), out size);
+    }
+    public Gen<List<T>> this[Gen<int> length] => new GenLength(gen, length);
+    public Gen<List<T>> this[int start, int finish] => new GenLength(gen, Gen.Int[start, finish]);
+    sealed class FixedLength(Gen<T> gen, int length) : Gen<List<T>>
+    {
+        public override List<T> Generate(PCG pcg, Size? min, out Size size)
+            => GenList<T>.Generate(gen, pcg, min, length, out size);
+    }
+    public Gen<List<T>> this[int length] => new FixedLength(gen, length);
+    sealed class GenNonempty(Gen<T> gen) : Gen<List<T>>
+    {
+        public override List<T> Generate(PCG pcg, Size? min, out Size size)
+            => GenList<T>.Generate(gen, pcg, min, (int)(pcg.Next() & 127U) + 1, out size);
+    }
+    public Gen<List<T>> Nonempty => new GenNonempty(gen);
 }
 
 public sealed class GenHashSet<T>(Gen<T> gen) : Gen<HashSet<T>>
