@@ -72,7 +72,7 @@ public static partial class Check
             sb.Append(", ");
             sb.Append(Print(fields[i].GetValue(o)));
         }
-        sb.Append(")");
+        sb.Append(')');
         return sb.ToString();
     }
 
@@ -101,7 +101,7 @@ public static partial class Check
             sb.Append(", ");
             sb.Append(Print(fields[i].GetValue(o)));
         }
-        sb.Append(")");
+        sb.Append(')');
         return sb.ToString();
     }
 
@@ -242,7 +242,7 @@ public static partial class Check
         double d => Print(d),
         float f => Print(f),
         decimal d => Print((double)d),
-        _ => t.ToString(),
+        _ => t.ToString()!,
     };
 
     /// <summary>Default equal implementation. Handles most collections ordered for IList like or unordered for ICollection based.</summary>
@@ -268,7 +268,7 @@ public static partial class Check
             {
                 for (int j = 0; j < J; j++)
                 {
-                    if (!aa2.GetValue(i, j).Equals(ba2.GetValue(i, j)))
+                    if (!aa2.GetValue(i, j)!.Equals(ba2.GetValue(i, j)))
                         return false;
                 }
             }
@@ -280,7 +280,7 @@ public static partial class Check
             if (ail.Count != bil.Count) return false;
             for (int i = 0; i < ail.Count; i++)
             {
-                if (!ail[i].Equals(bil[i]))
+                if (!ail[i]!.Equals(bil[i]))
                     return false;
             }
 
@@ -321,7 +321,7 @@ public static partial class Check
             if (ail.Count != bil.Count) return false;
             for (int i = 0; i < ail.Count; i++)
             {
-                if (!ail[i].Equals(bil[i]))
+                if (!ail[i]!.Equals(bil[i]))
                     return false;
             }
 
@@ -364,7 +364,7 @@ public static partial class Check
         {
             runners[threads] = new Thread(threadId =>
             {
-                int i, tid = (int)threadId;
+                int i, tid = (int)threadId!;
                 while ((i = Interlocked.Increment(ref opId)) < operations.Length)
                 {
                     threadIds[i] = tid;
@@ -393,7 +393,7 @@ public static partial class Check
         {
             runners[threads] = new Thread(threadId =>
             {
-                int opId = -1, i = -1, tid = (int)threadId;
+                int opId = -1, i = -1, tid = (int)threadId!;
                 while ((i = Interlocked.Increment(ref opId)) < operations.Length)
                 {
                     if (threadIds[i] == tid)
@@ -806,7 +806,7 @@ public sealed class Classifier
         foreach (var kv in estimators)
         {
             var a = kv.Key.Split('/');
-            var l = (a.Length - 1) * 2 + a[a.Length - 1].Length;
+            var l = (a.Length - 1) * 2 + a[^1].Length;
             if (l > maxLength) maxLength = l;
         }
 
@@ -826,7 +826,7 @@ public sealed class Classifier
             var r = new int[a.Length];
             for (int i = 0; i < a.Length - 1; i++)
                 r[i] = estimators[string.Join("/", a.Take(i + 1))].N;
-            r[r.Length - 1] = kv.Value.N;
+            r[^1] = kv.Value.N;
             return r;
         }, Comparer<int[]>.Create((x, y) =>
         {
@@ -840,7 +840,7 @@ public sealed class Classifier
         })))
         {
             var a = kv.Key.Split('/');
-            var name = (new string((char)160, 2 * (a.Length - 1)) + a[a.Length - 1]).PadRight(maxLength);
+            var name = (new string((char)160, 2 * (a.Length - 1)) + a[^1]).PadRight(maxLength);
             var output = $"| {name} | {kv.Value.N.ToString("#,##0").PadLeft(nLength)} | {(float)kv.Value.N / total,7:0.00%} |";
             if (kv.Value.Q2 != 0)
             {

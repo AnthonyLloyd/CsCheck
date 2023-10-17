@@ -79,7 +79,7 @@ public abstract class Gen<T> : IGen<T>
         public override R Generate(PCG pcg, Size? min, out Size size)
         {
             var o = gen.Generate(pcg, min, out size);
-            return o is R r ? r : (R)System.Convert.ChangeType(o, typeof(R));
+            return o is R r ? r : (R)System.Convert.ChangeType(o, typeof(R))!;
         }
     }
     public Gen<R> Convert<R>() => new GenConvert<T, R>(this);
@@ -1101,9 +1101,11 @@ public static class Gen
     public static Gen<(T, T)> Clone<T>(this Gen<T> gen)
         => new GenClone<T>(gen);
 
-    public static GenDictionary<K, V> Dictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new(genK, genV);
+    public static GenDictionary<K, V> Dictionary<K, V>(this Gen<K> genK, Gen<V> genV) where K : notnull
+        => new(genK, genV);
 
-    public static GenSortedDictionary<K, V> SortedDictionary<K, V>(this Gen<K> genK, Gen<V> genV) => new(genK, genV);
+    public static GenSortedDictionary<K, V> SortedDictionary<K, V>(this Gen<K> genK, Gen<V> genV) where K : notnull
+        => new(genK, genV);
 
     static void ShuffleInPlace<T>(IList<T> a, PCG pcg, int lower)
     {
@@ -1741,7 +1743,7 @@ public sealed class GenDouble : Gen<double>
             return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * length + start;
         }
     }
-    private Gen<double> EvenlyDistributed(double start, double finish)
+    private static Gen<double> EvenlyDistributed(double start, double finish)
     {
         finish -= start;
         return new GenEvenlyDistributed(start - finish, finish);
@@ -2377,7 +2379,7 @@ public sealed class GenHashSet<T>(Gen<T> gen) : Gen<HashSet<T>>
     public Gen<HashSet<T>> Nonempty => new GenNonempty(gen);
 }
 
-public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictionary<K, V>>
+public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictionary<K, V>> where K : notnull
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static Dictionary<K, V> Generate(Gen<K> genK, Gen<V> genV, PCG pcg, Size? min, int length, out Size size)
@@ -2434,7 +2436,7 @@ public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictiona
     public Gen<Dictionary<K, V>> Nonempty => new GenNonempty(genK, genV);
 }
 
-public sealed class GenSortedDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<SortedDictionary<K, V>>
+public sealed class GenSortedDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<SortedDictionary<K, V>> where K : notnull
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static SortedDictionary<K, V> Generate(Gen<K> genK, Gen<V> genV, PCG pcg, Size? min, int length, out Size size)
