@@ -18,7 +18,7 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="BenchmarkDotNet" Version="0.13.8" />
+        <PackageReference Include="Meziantou.Xunit.ParallelTestFramework" Version="2.1.0" />
         <ProjectReference Include="..\CsCheck\CsCheck.csproj" />
     </ItemGroup>
 </Project>

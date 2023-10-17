@@ -65,7 +65,7 @@ public sealed class Size
     public static bool IsLessThan(Size? s1, Size? s2) => s1 is not null && s2 is not null && (s1.I < s2.I || (s1.I == s2.I && IsLessThan(s1.Next, s2.Next)));
 }
 
-public interface IGen<T>
+public interface IGen<out T>
 {
     T Generate(PCG pcg, Size? min, out Size size);
 }
@@ -74,15 +74,6 @@ public interface IGen<T>
 public abstract class Gen<T> : IGen<T>
 {
     public abstract T Generate(PCG pcg, Size? min, out Size size);
-    sealed class GenConvert<T1, R>(Gen<T1> gen) : Gen<R>
-    {
-        public override R Generate(PCG pcg, Size? min, out Size size)
-        {
-            var o = gen.Generate(pcg, min, out size);
-            return o is R r ? r : (R)System.Convert.ChangeType(o, typeof(R))!;
-        }
-    }
-    public Gen<R> Convert<R>() => new GenConvert<T, R>(this);
 
     public GenOperation<S> Operation<S>(Func<T, string> name, Action<S, T> action) => new((PCG pcg, Size? min, out Size size) =>
     {
@@ -1757,7 +1748,7 @@ public sealed class GenDouble : Gen<double>
             {
                 var integer = start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
                     : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue), (int)Math.Min(Math.Floor(finish), int.MaxValue)];
-                myGens[0] = (1, integer.Convert<double>());
+                myGens[0] = (1, integer.Select(i => (double)i));
             }
             if (Math.Ceiling(start * denominator) <= Math.Floor(finish * denominator))
             {

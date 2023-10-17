@@ -74,7 +74,7 @@ public class ModelTests
                                                     (n, co, cu, e) => new Equity(n, co, cu, e));
         public readonly static Gen<Bond> Bond = Gen.Select(Name, Country, Currency, Gen.SortedDictionary(Date, Coupon),
                                                     (n, co, cu, c) => new Bond(n, co, cu, c));
-        public readonly static Gen<Instrument> Instrument = Gen.OneOf(Equity.Convert<Instrument>(), Bond.Convert<Instrument>());
+        public readonly static Gen<Instrument> Instrument = Gen.OneOf<Instrument>(Equity, Bond);
         public readonly static Gen<Trade> Trade = Gen.Select(Date, Quantity, Price, (dt, q, p) => new Trade(dt, q, q * p));
         public readonly static Gen<Position> Position = Gen.Select(Instrument, Trade.List, Price, (i, t, p) => new Position(i, t, p));
         public readonly static Gen<Portfolio> Portfolio = Gen.Select(Name, Currency, Position.Array, (n, c, p) => new Portfolio(n, c, p));
