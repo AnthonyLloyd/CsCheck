@@ -129,20 +129,12 @@ public abstract class Gen<T> : IGen<T>
     public GenArrayUnique<T> ArrayUnique => new(this);
 }
 
-public delegate T GenDelegate<out T>(PCG pcg, Size? min, out Size size);
+delegate T GenDelegate<out T>(PCG pcg, Size? min, out Size size);
 public delegate T GenMap<T>(T v, ref Size size);
 
 /// <summary>Provides a set of static methods for composing generators.</summary>
 public static class Gen
 {
-    sealed class GenCreate<T>(GenDelegate<T> generate) : Gen<T>
-    {
-        public override T Generate(PCG pcg, Size? min, out Size size) => generate(pcg, min, out size);
-    }
-
-    /// <summary>Create a generator from a function.</summary>
-    public static Gen<T> Create<T>(GenDelegate<T> gen) => new GenCreate<T>(gen);
-
     sealed class GenConst<T>(T value) : Gen<T>
     {
         public override T Generate(PCG pcg, Size? min, out Size size)

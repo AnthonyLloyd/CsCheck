@@ -1448,6 +1448,17 @@ public static partial class Check
         public T State1 = state1; public T State2 = state2; public uint Stream = stream; public ulong Seed = seed; public Exception? Exception;
     }
 
+    sealed class GenMetamorphicData<T>(Gen<T> initial) : Gen<MetamorphicData<T>>
+    {
+        public override MetamorphicData<T> Generate(PCG pcg, Size? min, out Size size)
+        {
+            var stream = pcg.Stream;
+            var seed = pcg.Seed;
+            var i1 = initial.Generate(pcg, null, out _);
+            var i2 = initial.Generate(new PCG(stream, seed), null, out size);
+            return new MetamorphicData<T>(i1, i2, stream, seed);
+        }
+    }
     /// <summary>Sample metamorphic (two path) operations on a random initial state checking that both paths are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
@@ -1469,14 +1480,7 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         print ??= Print;
 
-        Gen.Create((PCG pcg, Size? _, out Size size) =>
-        {
-            var stream = pcg.Stream;
-            var seed = pcg.Seed;
-            var i1 = initial.Generate(pcg, null, out size);
-            var i2 = initial.Generate(new PCG(stream, seed), null, out size);
-            return new MetamorphicData<T>(i1, i2, stream, seed);
-        })
+        new GenMetamorphicData<T>(initial)
         .Select(operations)
         .Sample(d =>
         {
@@ -1518,6 +1522,16 @@ public static partial class Check
     }
 
     internal const int MAX_CONCURRENT_OPERATIONS = 10;
+
+    sealed class GenConcurrent<T>(Gen<T> initial) : Gen<(T Value, uint Stream, ulong Seed)>
+    {
+        public override (T, uint, ulong) Generate(PCG pcg, Size? min, out Size size)
+        {
+            var stream = pcg.Stream;
+            var seed = pcg.Seed;
+            return (initial.Generate(pcg, null, out size), stream, seed);
+        }
+    }
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1561,15 +1575,10 @@ public static partial class Check
 
         bool firstIteration = true;
 
-        Gen.Create((PCG pcg, Size? _, out Size size) =>
-        {
-            var stream = pcg.Stream;
-            var seed = pcg.Seed;
-            return (initial.Generate(pcg, null, out size), stream, seed);
-        })
+        new GenConcurrent<T>(initial)
         .Select(Gen.OneOf(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS]
         .SelectMany(ops => Gen.Int[1, Math.Min(threads, ops.Length)].Select(i => (ops, i))), (a, b) =>
-            new ConcurrentData<T>(a.Item1, a.stream, a.seed, b.ops, b.i)
+            new ConcurrentData<T>(a.Value, a.Stream, a.Seed, b.ops, b.i)
         )
         .Sample(cd =>
         {
