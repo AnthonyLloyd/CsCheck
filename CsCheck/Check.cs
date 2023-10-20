@@ -1980,9 +1980,10 @@ public static partial class Check
         sigma *= sigma;
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
+        if (timeout == -1) timeout = Timeout;
         faster = Repeat(faster, repeat);
         slower = Repeat(slower, repeat);
-        var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout == -1 ? Timeout : timeout);
+        var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
         var result = new FasterResult();
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
@@ -2017,7 +2018,7 @@ public static partial class Check
                                 return;
                             }
                         }
-                        if (DateTime.UtcNow >= endTime)
+                        if (Stopwatch.GetTimestamp() > endTimestamp)
                         {
                             lock (tcs)
                             {
@@ -2064,10 +2065,11 @@ public static partial class Check
         sigma *= sigma;
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
+        if (timeout == -1) timeout = Timeout;
         equal ??= Equal;
         faster = Repeat(faster, repeat);
         slower = Repeat(slower, repeat);
-        var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout == -1 ? Timeout : timeout);
+        var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
         var result = new FasterResult();
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
@@ -2116,7 +2118,7 @@ public static partial class Check
                                 return;
                             }
                         }
-                        if (DateTime.UtcNow >= endTime)
+                        if (Stopwatch.GetTimestamp() > endTimestamp)
                         {
                             lock (tcs)
                             {
@@ -2334,9 +2336,10 @@ public static partial class Check
         seed ??= Seed;
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
+        if (timeout == -1) timeout = Timeout;
         faster = Repeat(faster, repeat);
         slower = Repeat(slower, repeat);
-        var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout == -1 ? Timeout : timeout);
+        var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
         var result = new FasterResult();
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
@@ -2377,7 +2380,7 @@ public static partial class Check
                                 return;
                             }
                         }
-                        if (DateTime.UtcNow >= endTime)
+                        if (Stopwatch.GetTimestamp() > endTimestamp)
                         {
                             lock (tcs)
                             {
@@ -2715,10 +2718,11 @@ public static partial class Check
         seed ??= Seed;
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
+        if (timeout == -1) timeout = Timeout;
         equal ??= Equal;
         faster = Repeat(faster, repeat);
         slower = Repeat(slower, repeat);
-        var endTime = DateTime.UtcNow + TimeSpan.FromSeconds(timeout == -1 ? Timeout : timeout);
+        var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
         var result = new FasterResult();
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
@@ -2773,7 +2777,7 @@ public static partial class Check
                                 return;
                             }
                         }
-                        if (DateTime.UtcNow >= endTime)
+                        if (Stopwatch.GetTimestamp() > timeout)
                         {
                             lock (tcs)
                             {
@@ -3085,11 +3089,14 @@ public sealed class FasterResult
     }
     public override string ToString()
     {
-        var result = $"{Median.Median * 100.0:#0.0}%[{Median.Q1 * 100.0:#0.0}%..{Median.Q3 * 100.0:#0.0}%] ";
-        result += Median.Median >= 0.0 ? "faster" : "slower";
-        if (double.IsNaN(Median.Median)) result = "Time resolution too small try using repeat.\n" + result;
-        else if ((Median.Median >= 0.0) != (Faster > Slower)) result = "Inconsistent result try using repeat or increasing sigma.\n" + result;
-        return result + $", sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
+        bool lockTaken = false;
+        spinlock.Enter(ref lockTaken);
+        var result = $"{Median.Median * 100.0:#0.0}%[{Median.Q1 * 100.0:#0.0}%..{Median.Q3 * 100.0:#0.0}%] {(Median.Median >= 0.0 ? "faster" : "slower")}";
+        if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
+        else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
+        result = $"{result}, sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
+        if (lockTaken) spinlock.Exit();
+        return result;
     }
     public void Output(Action<string> output) => output(ToString());
 }
