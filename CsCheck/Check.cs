@@ -18,7 +18,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -128,16 +127,28 @@ public static partial class Check
             Size? size = null;
             T? t = default;
             long skippedLocal = 0, totalLocal = 0;
-            while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
+            ulong state = 0;
+            while (true)
             {
-                ulong state = pcg.State;
                 try
                 {
-                    t = gen.Generate(pcg, minSize, out size);
-                    if (minSize is null || Size.IsLessThan(size, minSize))
-                        assert(t);
-                    else
-                        skippedLocal++;
+                    while (true)
+                    {
+                        if ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) < 0)
+                        {
+                            Interlocked.Add(ref skipped, skippedLocal);
+                            Interlocked.Add(ref total, totalLocal);
+                            cde.Signal();
+                            return;
+                        }
+                        totalLocal++;
+                        state = pcg.State;
+                        t = gen.Generate(pcg, minSize, out size);
+                        if (minSize is null || Size.IsLessThan(size, minSize))
+                            assert(t);
+                        else
+                            skippedLocal++;
+                    }
                 }
                 catch (Exception e)
                 {
@@ -154,11 +165,7 @@ public static partial class Check
                         }
                     }
                 }
-                totalLocal++;
             }
-            Interlocked.Add(ref skipped, skippedLocal);
-            Interlocked.Add(ref total, totalLocal);
-            cde.Signal();
         }
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
@@ -508,16 +515,27 @@ public static partial class Check
                 Size? size = null;
                 T? t = default;
                 long skippedLocal = 0, totalLocal = 0;
-                while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
+                ulong state = 0;
+                while (true)
                 {
-                    ulong state = pcg.State;
                     try
                     {
-                        t = gen.Generate(pcg, minSize, out size);
-                        if (minSize is null || Size.IsLessThan(size, minSize))
-                            await assert(t);
-                        else
-                            skippedLocal++;
+                        while (true)
+                        {
+                            if ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) < 0)
+                            {
+                                Interlocked.Add(ref skipped, skippedLocal);
+                                Interlocked.Add(ref total, totalLocal);
+                                return;
+                            }
+                            totalLocal++;
+                            state = pcg.State;
+                            t = gen.Generate(pcg, minSize, out size);
+                            if (minSize is null || Size.IsLessThan(size, minSize))
+                                await assert(t);
+                            else
+                                skippedLocal++;
+                        }
                     }
                     catch (Exception e)
                     {
@@ -534,10 +552,7 @@ public static partial class Check
                             }
                         }
                     }
-                    totalLocal++;
                 }
-                Interlocked.Add(ref skipped, skippedLocal);
-                Interlocked.Add(ref total, totalLocal);
             });
         }
 
@@ -892,33 +907,45 @@ public static partial class Check
             Size? size = null;
             T? t = default;
             long skippedLocal = 0, totalLocal = 0;
-            while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
+            ulong state = 0;
+            while (true)
             {
-                ulong state = pcg.State;
                 try
                 {
-                    t = gen.Generate(pcg, minSize, out size);
-                    if (minSize is null || Size.IsLessThan(size, minSize))
+                    while (true)
                     {
-                        if (!predicate(t))
+                        if ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) < 0)
                         {
-                            lock (cde)
+                            Interlocked.Add(ref skipped, skippedLocal);
+                            Interlocked.Add(ref total, totalLocal);
+                            cde.Signal();
+                            return;
+                        }
+                        totalLocal++;
+                        state = pcg.State;
+                        t = gen.Generate(pcg, minSize, out size);
+                        if (minSize is null || Size.IsLessThan(size, minSize))
+                        {
+                            if (!predicate(t))
                             {
-                                if (minSize is null || Size.IsLessThan(size, minSize))
+                                lock (cde)
                                 {
-                                    minSize = size;
-                                    minPCG = pcg;
-                                    minState = state;
-                                    minT = t;
-                                    minException = null;
-                                    shrinks++;
+                                    if (minSize is null || Size.IsLessThan(size, minSize))
+                                    {
+                                        minSize = size;
+                                        minPCG = pcg;
+                                        minState = state;
+                                        minT = t;
+                                        minException = null;
+                                        shrinks++;
+                                    }
                                 }
                             }
                         }
-                    }
-                    else
-                    {
-                        skippedLocal++;
+                        else
+                        {
+                            skippedLocal++;
+                        }
                     }
                 }
                 catch (Exception e)
@@ -936,11 +963,7 @@ public static partial class Check
                         }
                     }
                 }
-                totalLocal++;
             }
-            Interlocked.Add(ref skipped, skippedLocal);
-            Interlocked.Add(ref total, totalLocal);
-            cde.Signal();
         }
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
@@ -1106,33 +1129,44 @@ public static partial class Check
                 Size? size = null;
                 T? t = default;
                 long skippedLocal = 0, totalLocal = 0;
-                while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
+                ulong state = 0;
+                while (true)
                 {
-                    ulong state = pcg.State;
                     try
                     {
-                        t = gen.Generate(pcg, minSize, out size);
-                        if (minSize is null || Size.IsLessThan(size, minSize))
+                        while (true)
                         {
-                            if (!await predicate(t))
+                            if ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) < 0)
                             {
-                                lock (tasks)
+                                Interlocked.Add(ref skipped, skippedLocal);
+                                Interlocked.Add(ref total, totalLocal);
+                                return;
+                            }
+                            totalLocal++;
+                            state = pcg.State;
+                            t = gen.Generate(pcg, minSize, out size);
+                            if (minSize is null || Size.IsLessThan(size, minSize))
+                            {
+                                if (!await predicate(t))
                                 {
-                                    if (minSize is null || Size.IsLessThan(size, minSize))
+                                    lock (tasks)
                                     {
-                                        minSize = size;
-                                        minPCG = pcg;
-                                        minState = state;
-                                        minT = t;
-                                        minException = null;
-                                        shrinks++;
+                                        if (minSize is null || Size.IsLessThan(size, minSize))
+                                        {
+                                            minSize = size;
+                                            minPCG = pcg;
+                                            minState = state;
+                                            minT = t;
+                                            minException = null;
+                                            shrinks++;
+                                        }
                                     }
                                 }
                             }
-                        }
-                        else
-                        {
-                            skippedLocal++;
+                            else
+                            {
+                                skippedLocal++;
+                            }
                         }
                     }
                     catch (Exception e)
@@ -1150,10 +1184,7 @@ public static partial class Check
                             }
                         }
                     }
-                    totalLocal++;
                 }
-                Interlocked.Add(ref skipped, skippedLocal);
-                Interlocked.Add(ref total, totalLocal);
             });
         }
 
