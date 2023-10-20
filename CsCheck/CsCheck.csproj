@@ -22,9 +22,9 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>2.14.1</Version>
+        <Version>3.0.0-rc1</Version>
         <PackageReleaseNotes>
-Fixed classify table bug, more precision for times, and added minimum and maximum.
+
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>12.0</LangVersion>

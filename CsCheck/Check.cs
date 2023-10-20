@@ -144,12 +144,12 @@ public static partial class Check
                     {
                         if (minSize is null || Size.IsLessThan(size, minSize))
                         {
-                            shrinks++;
+                            minSize = size;
                             minPCG = pcg;
                             minState = state;
-                            minSize = size;
                             minT = t;
                             minException = e;
+                            shrinks++;
                         }
                     }
                 }
@@ -483,12 +483,12 @@ public static partial class Check
             }
             catch (Exception e)
             {
-                shrinks++;
+                minSize = size;
                 minPCG = pcg;
                 minState = state;
-                minSize = size;
                 minT = t;
                 minException = e;
+                shrinks++;
             }
         }
         long skipped = 0;
@@ -521,12 +521,12 @@ public static partial class Check
                         {
                             if (minSize is null || Size.IsLessThan(size, minSize))
                             {
-                                shrinks++;
+                                minSize = size;
                                 minPCG = pcg;
                                 minState = state;
-                                minSize = size;
                                 minT = t;
                                 minException = e;
+                                shrinks++;
                             }
                         }
                     }
@@ -857,21 +857,21 @@ public static partial class Check
                 t = gen.Generate(pcg, null, out size);
                 if (!predicate(t))
                 {
-                    shrinks++;
+                    minSize = size;
                     minPCG = pcg;
                     minState = state;
-                    minSize = size;
                     minT = t;
+                    shrinks++;
                 }
             }
             catch (Exception e)
             {
-                shrinks++;
+                minSize = size;
                 minPCG = pcg;
                 minState = state;
-                minSize = size;
                 minT = t;
                 minException = e;
+                shrinks++;
             }
         }
         long skipped = 0;
@@ -899,12 +899,12 @@ public static partial class Check
                             {
                                 if (minSize is null || Size.IsLessThan(size, minSize))
                                 {
-                                    shrinks++;
+                                    minSize = size;
                                     minPCG = pcg;
                                     minState = state;
-                                    minSize = size;
                                     minT = t;
                                     minException = null;
+                                    shrinks++;
                                 }
                             }
                         }
@@ -920,12 +920,12 @@ public static partial class Check
                     {
                         if (minSize is null || Size.IsLessThan(size, minSize))
                         {
-                            shrinks++;
+                            minSize = size;
                             minPCG = pcg;
                             minState = state;
-                            minSize = size;
                             minT = t;
                             minException = e;
+                            shrinks++;
                         }
                     }
                 }
@@ -1066,21 +1066,21 @@ public static partial class Check
                 t = gen.Generate(pcg, null, out size);
                 if (!await predicate(t))
                 {
-                    shrinks++;
+                    minSize = size;
                     minPCG = pcg;
                     minState = state;
-                    minSize = size;
                     minT = t;
+                    shrinks++;
                 }
             }
             catch (Exception e)
             {
-                shrinks++;
+                minSize = size;
                 minPCG = pcg;
                 minState = state;
-                minSize = size;
                 minT = t;
                 minException = e;
+                shrinks++;
             }
         }
         long skipped = 0;
@@ -1110,12 +1110,12 @@ public static partial class Check
                                 {
                                     if (minSize is null || Size.IsLessThan(size, minSize))
                                     {
-                                        shrinks++;
+                                        minSize = size;
                                         minPCG = pcg;
                                         minState = state;
-                                        minSize = size;
                                         minT = t;
                                         minException = null;
+                                        shrinks++;
                                     }
                                 }
                             }
@@ -1131,12 +1131,12 @@ public static partial class Check
                         {
                             if (minSize is null || Size.IsLessThan(size, minSize))
                             {
-                                shrinks++;
+                                minSize = size;
                                 minPCG = pcg;
                                 minState = state;
-                                minSize = size;
                                 minT = t;
                                 minException = e;
+                                shrinks++;
                             }
                         }
                     }
