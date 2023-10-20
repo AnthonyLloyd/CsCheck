@@ -25,6 +25,7 @@ using System.Runtime.CompilerServices;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 public static partial class Check
 {
@@ -244,6 +245,10 @@ public static partial class Check
         decimal d => Print((double)d),
         _ => t.ToString(),
     };
+
+    public static void DontCheckEqual<T>(T a, T b)
+    {
+    }
 
     /// <summary>Default equal implementation. Handles most collections ordered for IList like or unordered for ICollection based.</summary>
     public static bool Equal<T>(T a, T b)
@@ -504,6 +509,94 @@ public static partial class Check
         var al = BitConverter.DoubleToInt64Bits(a);
         var bl = BitConverter.DoubleToInt64Bits(b);
         return Math.Abs((int)(bl - al));
+    }
+
+    public static Action Repeat(Action call, int count)
+    {
+        if (count == 1) return call;
+        return () =>
+        {
+            for (int i = 0; i < count; i++)
+                call();
+        };
+    }
+
+    public static Func<T> Repeat<T>(Func<T> call, int count)
+    {
+        if (count == 1) return call;
+        return () =>
+        {
+            T t = default!;
+            for (int i = 0; i < count; i++)
+                t = call();
+            return t;
+        };
+    }
+
+    public static Func<Task> Repeat(Func<Task> call, int count)
+    {
+        if(count == 1) return call;
+        return async () =>
+        {
+            for (int i = 0; i < count; i++)
+                await call();
+        };
+    }
+
+    public static Func<Task<T>> Repeat<T>(Func<Task<T>> call, int count)
+    {
+        if (count == 1) return call;
+        return async () =>
+        {
+            T t = default!;
+            for (int i = 0; i < count; i++)
+                t = await call();
+            return t;
+        };
+    }
+
+    public static Action<T> Repeat<T>(Action<T> call, int count)
+    {
+        if (count == 1) return call;
+        return t =>
+        {
+            for (int i = 0; i < count; i++)
+                call(t);
+        };
+    }
+
+    public static Func<T, Task> Repeat<T>(Func<T, Task> call, int count)
+    {
+        if (count == 1) return call;
+        return async t =>
+        {
+            for (int i = 0; i < count; i++)
+                await call(t);
+        };
+    }
+
+    public static Func<T, R> Repeat<T, R>(Func<T, R> call, int count)
+    {
+        if (count == 1) return call;
+        return t =>
+        {
+            R r = default!;
+            for (int i = 0; i < count; i++)
+                r = call(t);
+            return r;
+        };
+    }
+
+    public static Func<T, Task<R>> Repeat<T, R>(Func<T, Task<R>> call, int count)
+    {
+        if (count == 1) return call;
+        return async t =>
+        {
+            R r = default!;
+            for (int i = 0; i < count; i++)
+                r = await call(t);
+            return r;
+        };
     }
 }
 
