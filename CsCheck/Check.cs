@@ -108,12 +108,12 @@ public static partial class Check
             }
             catch (Exception e)
             {
-                shrinks++;
+                minSize = size;
                 minPCG = pcg;
                 minState = state;
-                minSize = size;
                 minT = t;
                 minException = e;
+                shrinks++;
             }
         }
         long skipped = 0;
@@ -127,6 +127,7 @@ public static partial class Check
             var pcg = PCG.ThreadPCG;
             Size? size = null;
             T? t = default;
+            long skippedLocal = 0, totalLocal = 0;
             while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
             {
                 ulong state = pcg.State;
@@ -136,7 +137,7 @@ public static partial class Check
                     if (minSize is null || Size.IsLessThan(size, minSize))
                         assert(t);
                     else
-                        Interlocked.Increment(ref skipped);
+                        skippedLocal++;
                 }
                 catch (Exception e)
                 {
@@ -153,8 +154,10 @@ public static partial class Check
                         }
                     }
                 }
-                Interlocked.Increment(ref total);
+                totalLocal++;
             }
+            Interlocked.Add(ref skipped, skippedLocal);
+            Interlocked.Add(ref total, totalLocal);
             cde.Signal();
         }
         while (--threads > 0)
@@ -504,6 +507,7 @@ public static partial class Check
                 var pcg = PCG.ThreadPCG;
                 Size? size = null;
                 T? t = default;
+                long skippedLocal = 0, totalLocal = 0;
                 while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
                 {
                     ulong state = pcg.State;
@@ -513,7 +517,7 @@ public static partial class Check
                         if (minSize is null || Size.IsLessThan(size, minSize))
                             await assert(t);
                         else
-                            Interlocked.Increment(ref skipped);
+                            skippedLocal++;
                     }
                     catch (Exception e)
                     {
@@ -530,8 +534,10 @@ public static partial class Check
                             }
                         }
                     }
-                    Interlocked.Increment(ref total);
+                    totalLocal++;
                 }
+                Interlocked.Add(ref skipped, skippedLocal);
+                Interlocked.Add(ref total, totalLocal);
             });
         }
 
@@ -885,6 +891,7 @@ public static partial class Check
             var pcg = PCG.ThreadPCG;
             Size? size = null;
             T? t = default;
+            long skippedLocal = 0, totalLocal = 0;
             while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
             {
                 ulong state = pcg.State;
@@ -911,7 +918,7 @@ public static partial class Check
                     }
                     else
                     {
-                        Interlocked.Increment(ref skipped);
+                        skippedLocal++;
                     }
                 }
                 catch (Exception e)
@@ -929,8 +936,10 @@ public static partial class Check
                         }
                     }
                 }
-                Interlocked.Increment(ref total);
+                totalLocal++;
             }
+            Interlocked.Add(ref skipped, skippedLocal);
+            Interlocked.Add(ref total, totalLocal);
             cde.Signal();
         }
         while (--threads > 0)
@@ -1096,6 +1105,7 @@ public static partial class Check
                 var pcg = PCG.ThreadPCG;
                 Size? size = null;
                 T? t = default;
+                long skippedLocal = 0, totalLocal = 0;
                 while ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) >= 0)
                 {
                     ulong state = pcg.State;
@@ -1122,7 +1132,7 @@ public static partial class Check
                         }
                         else
                         {
-                            Interlocked.Increment(ref skipped);
+                            skippedLocal++;
                         }
                     }
                     catch (Exception e)
@@ -1140,8 +1150,10 @@ public static partial class Check
                             }
                         }
                     }
-                    Interlocked.Increment(ref total);
+                    totalLocal++;
                 }
+                Interlocked.Add(ref skipped, skippedLocal);
+                Interlocked.Add(ref total, totalLocal);
             });
         }
 
