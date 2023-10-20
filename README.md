@@ -304,21 +304,21 @@ static int[] Rnds(int i, int j, ref int seed)
 ## Regression testing
 
 ### Portfolio Calculation
-**Example** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
+**Single** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
 **Hash** is used to find and check a hash for a number of results.
 It saves a cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
-Together Example and Hash eliminate the need to commit data files in regression testing while also giving detailed information of any change.
+Together Single and Hash eliminate the need to commit data files in regression testing while also giving detailed information of any change.
 ```csharp
 [Fact]
 public void Portfolio_Small_Mixed_Example()
 {
-    var portfolio = ModelGen.Portfolio.Example(p =>
+    var portfolio = ModelGen.Portfolio.Single(p =>
            p.Positions.Count == 5
         && p.Positions.Any(p => p.Instrument is Bond)
         && p.Positions.Any(p => p.Instrument is Equity)
     , "0N0XIzNsQ0O2");
     var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
-    var fxRates = ModelGen.Price.Array[currencies.Length].Example(a =>
+    var fxRates = ModelGen.Price.Array[currencies.Length].Single(a =>
         a.All(p => pp is > 0.75 and < 1.5)
     , "ftXKwKhS6ec4");
     double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];

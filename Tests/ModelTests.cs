@@ -83,13 +83,13 @@ public class ModelTests
     [Fact]
     public void Portfolio_Small_Mixed_Example()
     {
-        var portfolio = ModelGen.Portfolio.Example(p =>
+        var portfolio = ModelGen.Portfolio.Single(p =>
                p.Positions.Count == 5
             && p.Positions.Any(p => p.Instrument is Bond)
             && p.Positions.Any(p => p.Instrument is Equity)
         , "e2v0jI554Uya");
         var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
-        var fxRates = ModelGen.Price.Array[currencies.Length].Example(a =>
+        var fxRates = ModelGen.Price.Array[currencies.Length].Single(a =>
             a.All(p => p is > 0.75 and < 1.5)
         , "ftXKwKhS6ec4");
         double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];

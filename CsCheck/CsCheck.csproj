@@ -24,7 +24,9 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
         <Version>3.0.0-rc1</Version>
         <PackageReleaseNotes>
+Added Gen&lt;T&gt;.Single() that generates a single random value.
 
+BREAKING CHANGE: Example(predicate) renamed to Sample(predicate)
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>12.0</LangVersion>

@@ -91,7 +91,7 @@ public static partial class Check
         PCG? minPCG = null;
         ulong minState = 0UL;
         Size? minSize = null;
-        T? minT = default;
+        T minT = default!;
         Exception? minException = null;
 
         int shrinks = -1;
@@ -100,7 +100,7 @@ public static partial class Check
             var pcg = PCG.Parse(seed);
             ulong state = pcg.State;
             Size? size = null;
-            T? t = default;
+            T t = default!;
             try
             {
                 assert(t = gen.Generate(pcg, null, out size));
@@ -125,7 +125,7 @@ public static partial class Check
         {
             var pcg = PCG.ThreadPCG;
             Size? size = null;
-            T? t = default;
+            T t = default!;
             long skippedLocal = 0, totalLocal = 0;
             ulong state = 0;
             while (true)
@@ -477,7 +477,7 @@ public static partial class Check
         PCG? minPCG = null;
         ulong minState = 0UL;
         Size? minSize = null;
-        T? minT = default;
+        T minT = default!;
         Exception? minException = null;
 
         int shrinks = -1;
@@ -486,7 +486,7 @@ public static partial class Check
             var pcg = PCG.Parse(seed);
             ulong state = pcg.State;
             Size? size = null;
-            T? t = default;
+            T t = default!;
             try
             {
                 await assert(t = gen.Generate(pcg, null, out size));
@@ -513,7 +513,7 @@ public static partial class Check
             {
                 var pcg = PCG.ThreadPCG;
                 Size? size = null;
-                T? t = default;
+                T t = default!;
                 long skippedLocal = 0, totalLocal = 0;
                 ulong state = 0;
                 while (true)
@@ -863,7 +863,7 @@ public static partial class Check
         PCG? minPCG = null;
         ulong minState = 0UL;
         Size? minSize = null;
-        T? minT = default;
+        T minT = default!;
         Exception? minException = null;
 
         int shrinks = -1;
@@ -872,7 +872,7 @@ public static partial class Check
             var pcg = PCG.Parse(seed);
             ulong state = pcg.State;
             Size? size = null;
-            T? t = default;
+            T t = default!;
             try
             {
                 t = gen.Generate(pcg, null, out size);
@@ -905,7 +905,7 @@ public static partial class Check
         {
             var pcg = PCG.ThreadPCG;
             Size? size = null;
-            T? t = default;
+            T t = default!;
             long skippedLocal = 0, totalLocal = 0;
             ulong state = 0;
             while (true)
@@ -1083,7 +1083,7 @@ public static partial class Check
         PCG? minPCG = null;
         ulong minState = 0UL;
         Size? minSize = null;
-        T? minT = default;
+        T minT = default!;
         Exception? minException = null;
 
         int shrinks = -1;
@@ -1092,7 +1092,7 @@ public static partial class Check
             var pcg = PCG.Parse(seed);
             ulong state = pcg.State;
             Size? size = null;
-            T? t = default;
+            T t = default!;
             try
             {
                 t = gen.Generate(pcg, null, out size);
@@ -1127,7 +1127,7 @@ public static partial class Check
             {
                 var pcg = PCG.ThreadPCG;
                 Size? size = null;
-                T? t = default;
+                T t = default!;
                 long skippedLocal = 0, totalLocal = 0;
                 ulong state = 0;
                 while (true)
@@ -1921,28 +1921,21 @@ public static partial class Check
             {
                 try
                 {
+                    T vf = default!, vs = default!;
                     while (true)
                     {
                         long tf = 0L, ts = 0L, st = 0L;
-                        for (int i = 1; i < repeat; i++)
+                        for (int i = 0; i < repeat; i++)
                         {
                             if (mre.IsSet) return;
                             st = Stopwatch.GetTimestamp();
-                            faster();
+                            vf = faster();
                             tf += Stopwatch.GetTimestamp() - st;
                             if (mre.IsSet) return;
                             st = Stopwatch.GetTimestamp();
-                            slower();
+                            vs = slower();
                             ts += Stopwatch.GetTimestamp() - st;
                         }
-                        if (mre.IsSet) return;
-                        st = Stopwatch.GetTimestamp();
-                        var vf = faster();
-                        tf += Stopwatch.GetTimestamp() - st;
-                        if (mre.IsSet) return;
-                        st = Stopwatch.GetTimestamp();
-                        var vs = slower();
-                        ts += Stopwatch.GetTimestamp() - st;
                         if (mre.IsSet) return;
                         r.Add(tf, ts);
                         if (assertEqual is null)
@@ -2103,28 +2096,21 @@ public static partial class Check
             {
                 try
                 {
+                    T vf = default!, vs = default!;
                     while (true)
                     {
                         long tf = 0L, ts = 0L, st = 0L;
-                        for (int i = 1; i < repeat; i++)
+                        for (int i = 0; i < repeat; i++)
                         {
                             if (isSet) return;
                             st = Stopwatch.GetTimestamp();
-                            await faster();
+                            vf = await faster();
                             tf += Stopwatch.GetTimestamp() - st;
                             if (isSet) return;
                             st = Stopwatch.GetTimestamp();
-                            await slower();
+                            vs = await slower();
                             ts += Stopwatch.GetTimestamp() - st;
                         }
-                        if (isSet) return;
-                        st = Stopwatch.GetTimestamp();
-                        var vf = await faster();
-                        tf += Stopwatch.GetTimestamp() - st;
-                        if (isSet) return;
-                        st = Stopwatch.GetTimestamp();
-                        var vs = await slower();
-                        ts += Stopwatch.GetTimestamp() - st;
                         if (isSet) return;
                         r.Add(tf, ts);
                         if (assertEqual is null)
@@ -2233,7 +2219,7 @@ public static partial class Check
             {
                 var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
                 ulong state = 0;
-                T? t = default;
+                T t = default!;
                 try
                 {
                     while (true)
@@ -2404,7 +2390,7 @@ public static partial class Check
             {
                 var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
                 ulong state = 0;
-                T? t = default;
+                T t = default!;
                 try
                 {
                     while (true)
@@ -2599,7 +2585,8 @@ public static partial class Check
             {
                 var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
                 ulong state = 0;
-                T? t = default;
+                T t = default!;
+                R vf = default!, vs = default!;
                 try
                 {
                     while (true)
@@ -2608,25 +2595,17 @@ public static partial class Check
                         state = pcg.State;
                         t = gen.Generate(pcg, null, out _);
                         long tf = 0L, ts = 0L, st = 0L;
-                        for (int i = 1; i < repeat; i++)
+                        for (int i = 0; i < repeat; i++)
                         {
                             if (mre.IsSet) return;
                             st = Stopwatch.GetTimestamp();
-                            faster(t);
+                            vf = faster(t);
                             tf += Stopwatch.GetTimestamp() - st;
                             if (mre.IsSet) return;
                             st = Stopwatch.GetTimestamp();
-                            slower(t);
+                            vs = slower(t);
                             ts += Stopwatch.GetTimestamp() - st;
                         }
-                        if (mre.IsSet) return;
-                        st = Stopwatch.GetTimestamp();
-                        var vf = faster(t);
-                        tf += Stopwatch.GetTimestamp() - st;
-                        if (mre.IsSet) return;
-                        st = Stopwatch.GetTimestamp();
-                        var vs = slower(t);
-                        ts += Stopwatch.GetTimestamp() - st;
                         if (mre.IsSet) return;
                         r.Add(tf, ts);
                         if (assertEqual is null)
@@ -2812,7 +2791,8 @@ public static partial class Check
             {
                 var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
                 ulong state = 0;
-                T? t = default;
+                T t = default!;
+                R vf = default!, vs = default!;
                 try
                 {
                     while (true)
@@ -2821,25 +2801,17 @@ public static partial class Check
                         state = pcg.State;
                         t = gen.Generate(pcg, null, out _);
                         long tf = 0L, ts = 0L, st = 0L;
-                        for (int i = 1; i < repeat; i++)
+                        for (int i = 0; i < repeat; i++)
                         {
                             if (isSet) return;
                             st = Stopwatch.GetTimestamp();
-                            await faster(t);
+                            vf = await faster(t);
                             tf += Stopwatch.GetTimestamp() - st;
                             if (isSet) return;
                             st = Stopwatch.GetTimestamp();
-                            await slower(t);
+                            vs = await slower(t);
                             ts += Stopwatch.GetTimestamp() - st;
                         }
-                        if (isSet) return;
-                        st = Stopwatch.GetTimestamp();
-                        var vf = await faster(t);
-                        tf += Stopwatch.GetTimestamp() - st;
-                        if (isSet) return;
-                        st = Stopwatch.GetTimestamp();
-                        var vs = await slower(t);
-                        ts += Stopwatch.GetTimestamp() - st;
                         if (isSet) return;
                         r.Add(tf, ts);
                         if (assertEqual is null)
@@ -3027,52 +2999,44 @@ public static partial class Check
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), assertEqual, sigma, threads, repeat, timeout, seed, raiseexception);
 
-    /// <summary>Generate an example that satisfies the predicate.</summary>
+    /// <summary>Generate a single random example.</summary>
+    /// <param name="gen">The data generator.</param>
+    public static T Single<T>(this Gen<T> gen)
+        => gen.Generate(PCG.ThreadPCG, null, out _);
+
+    /// <summary>Generate a single random example that satisfies the predicate. Throws giving the seed to use.</summary>
+    /// <param name="gen">The data generator.</param>
+    /// <param name="predicate">The predicate the data has to satisfy.</param>
+    public static T Single<T>(this Gen<T> gen, Func<T, bool> predicate)
+    {
+        string? message = null;
+        var threads = Environment.ProcessorCount;
+        void Worker(object? _)
+        {
+            var pcg = PCG.ThreadPCG;
+            while (message is null)
+            {
+                var state = pcg.State;
+                var t = gen.Generate(pcg, null, out var _);
+                if (predicate(t))
+                    message = "Example " + typeof(T).Name + " seed = \"" + pcg.ToString(state) + "\"";
+            }
+        }
+        while (--threads > 0)
+            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
+        Worker(null);
+        throw new CsCheckException(message!);
+    }
+
+    /// <summary>Generate a single example using the seed and checking that it still satisfies the predicate.</summary>
     /// <param name="gen">The data generator.</param>
     /// <param name="predicate">The predicate the data has to satisfy.</param>
     /// <param name="seed">The initial seed to use to pin the example once found.</param>
-    public static T Example<T>(this Gen<T> gen, Func<T, bool> predicate, string? seed = null)
+    public static T Single<T>(this Gen<T> gen, Func<T, bool> predicate, string seed)
     {
-        if (seed is null)
-        {
-            var mre = new ManualResetEventSlim();
-            T? ret = default;
-            string? message = null;
-            var threads = Environment.ProcessorCount;
-            void Worker(object? _)
-            {
-                var pcg = PCG.ThreadPCG;
-                while (!mre.IsSet)
-                {
-                    var state = pcg.State;
-                    var t = gen.Generate(pcg, null, out var _);
-                    if (predicate(t))
-                    {
-                        lock (mre)
-                        {
-                            if (message is null)
-                            {
-                                message = "Example " + typeof(T).Name + " seed = \"" + pcg.ToString(state) + "\"";
-                                ret = t;
-                                mre.Set();
-                            }
-                        }
-                    }
-                }
-            }
-            while (--threads > 0)
-                ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
-            Worker(null);
-            mre.Wait();
-            throw new CsCheckException(message!);
-        }
-        else
-        {
-            var pcg = PCG.Parse(seed);
-            var t = gen.Generate(pcg, null, out _);
-            if (!predicate(t)) throw new CsCheckException("where clause no longer satisfied");
-            return t;
-        }
+        var t = gen.Generate(PCG.Parse(seed), null, out _);
+        if (predicate(t)) return t;
+        throw new CsCheckException("where clause no longer satisfied");
     }
 
     /// <summary>Check Equals, <see cref="IEquatable{T}"/> and GetHashCode are consistent.</summary>
