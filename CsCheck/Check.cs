@@ -3165,6 +3165,7 @@ public sealed class FasterResult
 {
     public int Faster, Slower;
     public MedianEstimator Median = new();
+    SpinLock spinlock = new();
     public float SigmaSquared
     {
         // Binomial distribution: Mean = n p, Variance = n p q
@@ -3179,31 +3180,32 @@ public sealed class FasterResult
     }
     public void Add(long faster, long slower)
     {
-        if (faster < slower)
+        if (slower > faster)
         {
-            var x = (double)(slower - faster) / slower;
-            lock (Median)
-            {
-                Faster++;
-                Median.Add(x);
-            }
+            var ratio = ((double)(slower - faster)) / slower;
+            bool lockTaken = false;
+            spinlock.Enter(ref lockTaken);
+            Median.Add(ratio);
+            Faster++;
+            if (lockTaken) spinlock.Exit();
         }
         else if (slower < faster)
         {
-            var x = (double)(slower - faster) / faster;
-            lock (Median)
-            {
-                Slower++;
-                Median.Add(x);
-            }
+            var ratio = ((double)(slower - faster)) / faster;
+            bool lockTaken = false;
+            spinlock.Enter(ref lockTaken);
+            Median.Add(ratio);
+            Slower++;
+            if (lockTaken) spinlock.Exit();
         }
         else
         {
-            lock (Median)
-            {
-                Median.Add(0.0);
-            }
+            bool lockTaken = false;
+            spinlock.Enter(ref lockTaken);
+            Median.Add(0d);
+            if (lockTaken) spinlock.Exit();
         }
+        
     }
     public override string ToString()
     {
