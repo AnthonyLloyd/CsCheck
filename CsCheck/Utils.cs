@@ -246,10 +246,6 @@ public static partial class Check
         _ => t.ToString(),
     };
 
-    public static void DontCheckEqual<T>(T a, T b)
-    {
-    }
-
     /// <summary>Default equal implementation. Handles most collections ordered for IList like or unordered for ICollection based.</summary>
     public static bool Equal<T>(T a, T b)
     {
@@ -315,6 +311,9 @@ public static partial class Check
         }
         return a.Equals(b);
     }
+
+    /// <summary>Don't check equality just return true.</summary>
+    public static bool EqualSkip<T>(T a, T b) => true;
 
     /// <summary>Default model equal implementation. Handles most collections ordered when actual is IList like or unordered when actual is ICollection based.</summary>
     public static bool ModelEqual<T, M>(T actual, M model)

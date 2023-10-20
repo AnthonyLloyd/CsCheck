@@ -128,8 +128,7 @@ public class CheckTests
 
         Check.Faster(
             () => MulIKJ(a, b),
-            () => MulIJK(a, b),
-            Assert.Equal
+            () => MulIJK(a, b)
         )
         .Output(writeLine);
     }
