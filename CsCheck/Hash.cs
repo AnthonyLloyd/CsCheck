@@ -100,18 +100,18 @@ public sealed class Hash : IRegression
             return;
         }
         rwLock.EnterWriteLock();
-        threadId = Environment.CurrentManagedThreadId.ToString();
+        threadId = Thread.CurrentThread.ManagedThreadId.ToString();
         var tempfile = filename + threadId;
         if (File.Exists(tempfile)) File.Delete(tempfile);
-        Directory.CreateDirectory(Path.GetDirectoryName(tempfile)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(tempfile));
         stream = File.Create(tempfile);
         writing = true;
     }
 
     internal static string Filename(long expectedHashCode, string memberName, string filePath)
     {
-        filePath = filePath[Path.GetPathRoot(filePath)!.Length..];
-        return Path.Combine(CacheDir, Path.GetDirectoryName(filePath)!,
+        filePath = filePath.Substring(Path.GetPathRoot(filePath).Length);
+        return Path.Combine(CacheDir, Path.GetDirectoryName(filePath),
             Path.GetFileNameWithoutExtension(filePath) + "." + memberName + "=" + expectedHashCode + ".has");
     }
 
@@ -133,8 +133,8 @@ public sealed class Hash : IRegression
     {
         if (roundingFractions is null || roundingFractions.Count == 0) return null;
         roundingFractions.Sort();
-        var maxDiff = OFFSET_SIZE - roundingFractions[^1] + roundingFractions[0];
-        var maxMid = roundingFractions[^1] + maxDiff / 2;
+        var maxDiff = OFFSET_SIZE - roundingFractions[roundingFractions.Count - 1] + roundingFractions[0];
+        var maxMid = roundingFractions[roundingFractions.Count - 1] + maxDiff / 2;
         if (maxMid >= OFFSET_SIZE) maxMid -= OFFSET_SIZE;
         for (int i = 1; i < roundingFractions.Count; i++)
         {
@@ -160,7 +160,7 @@ public sealed class Hash : IRegression
                 if (actualHash == ExpectedHash)
                 {
                     if (File.Exists(filename)) File.Delete(filename);
-                    File.Move(filename + threadId, filename!);
+                    File.Move(filename + threadId, filename);
                 }
                 else
                 {

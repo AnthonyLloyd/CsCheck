@@ -302,7 +302,7 @@ public static class Dbg
     sealed class CachedEnumerable<T>(IEnumerable<T> enumerable) : IEnumerable<T>, IDisposable
     {
         IEnumerator<T>? _enumerator = enumerable.GetEnumerator();
-        readonly List<T> _cache = [];
+        readonly List<T> _cache = new();
         public IEnumerator<T> GetEnumerator()
         {
             int index = 0;
@@ -352,7 +352,7 @@ public static class Dbg
             }
             else
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(filename)!);
+                Directory.CreateDirectory(Path.GetDirectoryName(filename));
                 stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 reading = false;
             }

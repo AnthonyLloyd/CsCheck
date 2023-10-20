@@ -31,7 +31,7 @@ public static class Causal
     static string? delayName;
     static int delayTime, delayCount;
     static long onSince, totalDelay;
-    static readonly List<(string, long)> times = [];
+    static readonly List<(string, long)> times = new();
     public struct Region { public string Name; public long Start; public long TotalDelay; public long OnSince; }
 
     /// <summary>Marks the start of causal profiling region.</summary>

@@ -18,6 +18,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -164,7 +165,7 @@ public static partial class Check
         {
             var seedString = minPCG.ToString(minState);
             var tString = print(minT!);
-            if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
+            if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
             var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
             throw new CsCheckException(summary + tString, minException);
         }
@@ -539,7 +540,7 @@ public static partial class Check
         {
             var seedString = minPCG.ToString(minState);
             var tString = print(minT!);
-            if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
+            if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
             var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
             throw new CsCheckException(summary + tString, minException);
         }
@@ -940,7 +941,7 @@ public static partial class Check
         {
             var seedString = minPCG.ToString(minState);
             var tString = print(minT!);
-            if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
+            if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
             var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
             throw new CsCheckException(summary + tString, minException);
         }
@@ -1149,7 +1150,7 @@ public static partial class Check
         {
             var seedString = minPCG.ToString(minState);
             var tString = print(minT!);
-            if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
+            if (tString.Length > MAX_LENGTH) tString = tString.Substring(0, MAX_LENGTH) + " ...";
             var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
             throw new CsCheckException(summary + tString, minException);
         }
@@ -1556,12 +1557,12 @@ public static partial class Check
         print ??= Print;
         if (replay == -1) replay = Replay;
         int[]? replayThreads = null;
-        if (seed?.Contains('[') == true)
+        if (seed?.Contains("[") == true)
         {
             int i = seed.IndexOf('[');
             int j = seed.IndexOf(']', i + 1);
             replayThreads = seed.Substring(i + 1, j - i - 1).Split(',').Select(int.Parse).ToArray();
-            seed = seed[..i];
+            seed = seed.Substring(0, i);
         }
 
         var opNameActions = new Gen<(string, Action<T>)>[operations.Length];
@@ -2217,7 +2218,7 @@ public static partial class Check
                 catch (Exception e)
                 {
                     var tString = Print(t);
-                    if (tString.Length > 100) tString = tString[..100];
+                    if (tString.Length > 100) tString = tString.Substring(0, 100);
                     exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
                     mre.Set();
                 }
@@ -2417,7 +2418,7 @@ public static partial class Check
                         if (isSet) return;
                         isSet = true;
                         var tString = Print(t);
-                        if (tString.Length > 100) tString = tString[..100];
+                        if (tString.Length > 100) tString = tString.Substring(0, 100);
                         tcs.SetException(new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e));
                         return;
                     }
@@ -2617,7 +2618,7 @@ public static partial class Check
                 catch (Exception e)
                 {
                     var tString = Print(t);
-                    if (tString.Length > 100) tString = tString[..100];
+                    if (tString.Length > 100) tString = tString.Substring(0, 100);
                     exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
                     mre.Set();
                 }
@@ -2867,7 +2868,7 @@ public static partial class Check
                         if (isSet) return;
                         isSet = true;
                         var tString = Print(t);
-                        if (tString.Length > 100) tString = tString[..100];
+                        if (tString.Length > 100) tString = tString.Substring(0, 100);
                         tcs.SetException(new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e));
                         return;
                     }
