@@ -833,16 +833,22 @@ public sealed class Classifier
             for (int i = 0; i < a.Length - 1; i++)
                 r[i] = estimators[string.Join("/", a.Take(i + 1))].N;
             r[r.Length - 1] = kv.Value.N;
-            return r;
-        }, Comparer<int[]>.Create((x, y) =>
+            return (r,kv.Key);
+        }, Comparer<(int[], string)>.Create((xb, yb) =>
         {
+            var (x, xs) = xb;
+            var (y, ys) = yb;
+            int c;
             for (int i = 0; i < Math.Min(x.Length, y.Length); i++)
             {
-                var c = x[i].CompareTo(y[i]);
+                c = x[i].CompareTo(y[i]);
                 if (c != 0)
                     return c;
             }
-            return -x.Length.CompareTo(y.Length);
+            c = -x.Length.CompareTo(y.Length);
+            if(c != 0)
+                return c;
+            return xs.CompareTo(ys);
         })))
         {
             var a = kv.Key.Split('/');
