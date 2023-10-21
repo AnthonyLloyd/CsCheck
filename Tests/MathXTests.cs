@@ -85,7 +85,7 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
         Assert.Equal(1, MathX.NSum([.23, .19, .17, .13, .11, .07, .05, .03, .02]));
         Assert.Equal(2, MathX.NSum([1, 1e100, 1, -1e100]));
         Assert.Equal(20000, MathX.NSum([10000, 1e104, 10000, -1e104]));
-        Assert.NotEqual(1e-100, MathX.KSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50])); // reached it's accuracy tracking limit
+        Assert.NotEqual(1e-100, MathX.NSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50])); // reached it's accuracy tracking limit
     }
 
     [Fact]

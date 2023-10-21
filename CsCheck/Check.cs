@@ -1849,8 +1849,8 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
         if (timeout == -1) timeout = Timeout;
-        faster = Repeat(faster, repeat);
-        slower = Repeat(slower, repeat);
+        var fasterTimer = Timer.Create(faster, repeat);
+        var slowerTimer = Timer.Create(slower, repeat);
         var result = new FasterResult();
         var mre = new ManualResetEventSlim();
         Exception? exception = null;
@@ -1863,15 +1863,7 @@ public static partial class Check
                     while (true)
                     {
                         if (mre.IsSet) return;
-                        var fasterStart = Stopwatch.GetTimestamp();
-                        faster();
-                        var fasterFinish = Stopwatch.GetTimestamp();
-                        if (mre.IsSet) return;
-                        var slowerStart = Stopwatch.GetTimestamp();
-                        slower();
-                        var slowerFinish = Stopwatch.GetTimestamp();
-                        if (mre.IsSet) return;
-                        result.Add(fasterFinish - fasterStart, slowerFinish - slowerStart);
+                        result.Add(fasterTimer.Time(), slowerTimer.Time());
                         if (result.SigmaSquared >= sigma) mre.Set();
                     }
                 }
@@ -1911,8 +1903,8 @@ public static partial class Check
         if (threads == -1) threads = Environment.ProcessorCount;
         if (timeout == -1) timeout = Timeout;
         equal ??= Equal;
-        faster = Repeat(faster, repeat);
-        slower = Repeat(slower, repeat);
+        var fasterTimer = Timer.Create(faster, repeat);
+        var slowerTimer = Timer.Create(slower, repeat);
         var result = new FasterResult();
         var mre = new ManualResetEventSlim();
         Exception? exception = null;
@@ -1925,15 +1917,7 @@ public static partial class Check
                     while (true)
                     {
                         if (mre.IsSet) return;
-                        var fasterStart = Stopwatch.GetTimestamp();
-                        var fasterValue = faster();
-                        var fasterFinish = Stopwatch.GetTimestamp();
-                        if (mre.IsSet) return;
-                        var slowerStart = Stopwatch.GetTimestamp();
-                        var slowerValue = slower();
-                        var slowerFinish = Stopwatch.GetTimestamp();
-                        if (mre.IsSet) return;
-                        result.Add(fasterFinish - fasterStart, slowerFinish - slowerStart);
+                        result.Add(fasterTimer.Time(out var fasterValue), slowerTimer.Time(out var slowerValue));
                         if (!equal(fasterValue, slowerValue))
                         {
                             var vfs = Print(fasterValue);
@@ -1981,8 +1965,8 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
         if (timeout == -1) timeout = Timeout;
-        faster = Repeat(faster, repeat);
-        slower = Repeat(slower, repeat);
+        var fasterTimer = Timer.Create(faster, repeat);
+        var slowerTimer = Timer.Create(slower, repeat);
         var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
         var result = new FasterResult();
         var tcs = new TaskCompletionSource<FasterResult>();
@@ -1996,15 +1980,7 @@ public static partial class Check
                     while (true)
                     {
                         if (isSet) return;
-                        var fasterStart = Stopwatch.GetTimestamp();
-                        await faster();
-                        var fasterFinish = Stopwatch.GetTimestamp();
-                        if (isSet) return;
-                        var slowerStart = Stopwatch.GetTimestamp();
-                        await slower();
-                        var slowerFinish = Stopwatch.GetTimestamp();
-                        if (isSet) return;
-                        result.Add(fasterFinish - fasterStart, slowerFinish - slowerStart);
+                        result.Add(await fasterTimer.Time(), await slowerTimer.Time());
                         if (result.SigmaSquared >= sigma)
                         {
                             lock (tcs)
@@ -2067,8 +2043,8 @@ public static partial class Check
         if (threads == -1) threads = Environment.ProcessorCount;
         if (timeout == -1) timeout = Timeout;
         equal ??= Equal;
-        faster = Repeat(faster, repeat);
-        slower = Repeat(slower, repeat);
+        var fasterTimer = Timer.Create(faster, repeat);
+        var slowerTimer = Timer.Create(slower, repeat);
         var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
         var result = new FasterResult();
         var tcs = new TaskCompletionSource<FasterResult>();
@@ -2082,15 +2058,9 @@ public static partial class Check
                     while (true)
                     {
                         if (isSet) return;
-                        var fasterStart = Stopwatch.GetTimestamp();
-                        var fasterValue = await faster();
-                        var fasterFinish = Stopwatch.GetTimestamp();
-                        if (isSet) return;
-                        var slowerStart = Stopwatch.GetTimestamp();
-                        var slowerValue = await slower();
-                        var slowerFinish = Stopwatch.GetTimestamp();
-                        if (isSet) return;
-                        result.Add(fasterFinish - fasterStart, slowerFinish - slowerStart);
+                        var (fasterTime, fasterValue) = await fasterTimer.Time();
+                        var (slowerTime, slowerValue) = await slowerTimer.Time();
+                        result.Add(fasterTime, slowerTime);
                         if (!equal(fasterValue, slowerValue))
                         {
                             lock (tcs)
@@ -2168,8 +2138,8 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
         if (timeout == -1) timeout = Timeout;
-        faster = Repeat(faster, repeat);
-        slower = Repeat(slower, repeat);
+        var fasterTimer = Timer.Create(faster, repeat);
+        var slowerTimer = Timer.Create(slower, repeat);
         var result = new FasterResult();
         var mre = new ManualResetEventSlim();
         Exception? exception = null;
@@ -2188,15 +2158,7 @@ public static partial class Check
                         state = pcg.State;
                         t = gen.Generate(pcg, null, out _);
                         if (mre.IsSet) return;
-                        var fasterStart = Stopwatch.GetTimestamp();
-                        faster(t);
-                        var fasterFinish = Stopwatch.GetTimestamp();
-                        if (mre.IsSet) return;
-                        var slowerStart = Stopwatch.GetTimestamp();
-                        slower(t);
-                        var slowerFinish = Stopwatch.GetTimestamp();
-                        if (mre.IsSet) return;
-                        result.Add(fasterFinish - fasterStart, slowerFinish - slowerStart);
+                        result.Add(fasterTimer.Time(t), slowerTimer.Time(t));
                         if (result.SigmaSquared >= sigma) mre.Set();
                     }
                 }
@@ -2337,8 +2299,8 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         if (threads == -1) threads = Environment.ProcessorCount;
         if (timeout == -1) timeout = Timeout;
-        faster = Repeat(faster, repeat);
-        slower = Repeat(slower, repeat);
+        var fasterTimer = Timer.Create(faster, repeat);
+        var slowerTimer = Timer.Create(slower, repeat);
         var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
         var result = new FasterResult();
         var tcs = new TaskCompletionSource<FasterResult>();
@@ -2358,15 +2320,7 @@ public static partial class Check
                         state = pcg.State;
                         t = gen.Generate(pcg, null, out _);
                         if (isSet) return;
-                        var fasterStart = Stopwatch.GetTimestamp();
-                        await faster(t);
-                        var fasterFinish = Stopwatch.GetTimestamp();
-                        if (isSet) return;
-                        var slowerStart = Stopwatch.GetTimestamp();
-                        await slower(t);
-                        var slowerFinish = Stopwatch.GetTimestamp();
-                        if (isSet) return;
-                        result.Add(fasterFinish - fasterStart, slowerFinish - slowerStart);
+                        result.Add(await fasterTimer.Time(t), await slowerTimer.Time(t));
                         if (result.SigmaSquared >= sigma)
                         {
                             lock (tcs)
@@ -2532,8 +2486,8 @@ public static partial class Check
         if (threads == -1) threads = Environment.ProcessorCount;
         if (timeout == -1) timeout = Timeout;
         equal ??= Equal;
-        faster = Repeat(faster, repeat);
-        slower = Repeat(slower, repeat);
+        var fasterTimer = Timer.Create(faster, repeat);
+        var slowerTimer = Timer.Create(slower, repeat);
         var result = new FasterResult();
         var mre = new ManualResetEventSlim();
         Exception? exception = null;
@@ -2552,15 +2506,7 @@ public static partial class Check
                         state = pcg.State;
                         t = gen.Generate(pcg, null, out _);
                         if (mre.IsSet) return;
-                        var fasterStart = Stopwatch.GetTimestamp();
-                        var fasterValue = faster(t);
-                        var fasterFinish = Stopwatch.GetTimestamp();
-                        if (mre.IsSet) return;
-                        var slowerStart = Stopwatch.GetTimestamp();
-                        var slowerValue = slower(t);
-                        var slowerFinish = Stopwatch.GetTimestamp();
-                        if (mre.IsSet) return;
-                        result.Add(fasterFinish - fasterStart, slowerFinish - slowerStart);
+                        result.Add(fasterTimer.Time(t, out var fasterValue), slowerTimer.Time(t, out var slowerValue));
                         if (!equal(fasterValue, slowerValue))
                         {
                             var vfs = Print(fasterValue);
@@ -2720,8 +2666,8 @@ public static partial class Check
         if (threads == -1) threads = Environment.ProcessorCount;
         if (timeout == -1) timeout = Timeout;
         equal ??= Equal;
-        faster = Repeat(faster, repeat);
-        slower = Repeat(slower, repeat);
+        var fasterTimer = Timer.Create(faster, repeat);
+        var slowerTimer = Timer.Create(slower, repeat);
         var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
         var result = new FasterResult();
         var tcs = new TaskCompletionSource<FasterResult>();
@@ -2741,15 +2687,9 @@ public static partial class Check
                         state = pcg.State;
                         t = gen.Generate(pcg, null, out _);
                         if (isSet) return;
-                        var fasterStart = Stopwatch.GetTimestamp();
-                        var fasterValue = await faster(t);
-                        var fasterFinish = Stopwatch.GetTimestamp();
-                        if (isSet) return;
-                        var slowerStart = Stopwatch.GetTimestamp();
-                        var slowerValue = await slower(t);
-                        var slowerFinish = Stopwatch.GetTimestamp();
-                        if (isSet) return;
-                        result.Add(fasterFinish - fasterStart, slowerFinish - slowerStart);
+                        var (fasterTime, fasterValue) = await fasterTimer.Time(t);
+                        var (slowerTime, slowerValue) = await slowerTimer.Time(t);
+                        result.Add(fasterTime, slowerTime);
                         if (!equal(fasterValue, slowerValue))
                         {
                             lock (tcs)
@@ -3045,7 +2985,6 @@ public sealed class FasterResult
 {
     public int Faster, Slower;
     public MedianEstimator Median = new();
-    SpinLock spinlock = new();
     public float SigmaSquared
     {
         // Binomial distribution: Mean = n p, Variance = n p q
@@ -3063,40 +3002,40 @@ public sealed class FasterResult
         if (slower > faster)
         {
             var ratio = ((double)(slower - faster)) / slower;
-            bool lockTaken = false;
-            spinlock.Enter(ref lockTaken);
-            Median.Add(ratio);
-            Faster++;
-            if (lockTaken) spinlock.Exit();
+            lock (Median)
+            {
+                Median.Add(ratio);
+                Faster++;
+            }
         }
         else if (slower < faster)
         {
             var ratio = ((double)(slower - faster)) / faster;
-            bool lockTaken = false;
-            spinlock.Enter(ref lockTaken);
-            Median.Add(ratio);
-            Slower++;
-            if (lockTaken) spinlock.Exit();
+            lock (Median)
+            {
+                Median.Add(ratio);
+                Slower++;
+            }
         }
         else
         {
-            bool lockTaken = false;
-            spinlock.Enter(ref lockTaken);
-            Median.Add(0d);
-            if (lockTaken) spinlock.Exit();
+            lock (Median)
+            {
+                Median.Add(0d);
+            }
         }
         
     }
     public override string ToString()
     {
-        bool lockTaken = false;
-        spinlock.Enter(ref lockTaken);
-        var result = $"{Median.Median * 100.0:#0.0}%[{Median.Q1 * 100.0:#0.0}%..{Median.Q3 * 100.0:#0.0}%] {(Median.Median >= 0.0 ? "faster" : "slower")}";
-        if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
-        else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
-        result = $"{result}, sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
-        if (lockTaken) spinlock.Exit();
-        return result;
+        lock (Median)
+        {
+            var result = $"{Median.Median * 100.0:#0.0}%[{Median.Q1 * 100.0:#0.0}%..{Median.Q3 * 100.0:#0.0}%] {(Median.Median >= 0.0 ? "faster" : "slower")}";
+            if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
+            else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
+            result = $"{result}, sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
+            return result;
+        }
     }
     public void Output(Action<string> output) => output(ToString());
 }
