@@ -2551,6 +2551,82 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
+    public static FasterResult Faster<I1, I2, T, R>(this Gen<T> gen, I1 faster, I2 slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
+            where I1 : IInvoke<T, R> where I2 : IInvoke<T, R>
+    {
+        if (sigma == -1.0) sigma = Sigma;
+        sigma *= sigma; // using sigma as sigma squared now
+        seed ??= Seed;
+        if (threads == -1) threads = Threads;
+        if (threads == -1) threads = Environment.ProcessorCount;
+        if (timeout == -1) timeout = Timeout;
+        equal ??= Equal;
+        var fasterTimer = Timer.Create<I1, T, R>(faster, repeat);
+        var slowerTimer = Timer.Create<I2, T, R>(slower, repeat);
+        var result = new FasterResult();
+        var mre = new ManualResetEventSlim();
+        Exception? exception = null;
+        while (threads-- > 0)
+        {
+            ThreadPool.UnsafeQueueUserWorkItem(__ =>
+            {
+                var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
+                ulong state = 0;
+                T t = default!;
+                try
+                {
+                    while (true)
+                    {
+                        if (mre.IsSet) return;
+                        state = pcg.State;
+                        t = gen.Generate(pcg, null, out _);
+                        if (mre.IsSet) return;
+                        result.Add(fasterTimer.Time(t, out var fasterValue), slowerTimer.Time(t, out var slowerValue));
+                        if (!equal(fasterValue, slowerValue))
+                        {
+                            var vfs = Print(fasterValue);
+                            vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
+                            var vss = Print(slowerValue);
+                            vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
+                            exception = new CsCheckException("Return values differ: CsCheck_Seed = \"" + pcg.ToString(state) + "\"" + vfs + vss);
+                            mre.Set();
+                            return;
+                        }
+                        if (result.SigmaSquared >= sigma) mre.Set();
+                    }
+                }
+                catch (Exception e)
+                {
+                    var tString = Print(t);
+                    if (tString.Length > 100) tString = tString.Substring(0, 100);
+                    exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
+                    mre.Set();
+                }
+            }, null);
+        }
+
+        var completed = mre.Wait(timeout * 1000);
+        if (exception is not null) throw exception;
+        if (raiseexception)
+        {
+            if (!completed) throw new CsCheckException("Timeout! " + result.ToString());
+            if (result.Slower > result.Faster || result.Median.Median < 0.0) throw new CsCheckException(result.ToString());
+        }
+        return result;
+    }
+
+    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
+    /// <param name="gen">The input data generator.</param>
+    /// <param name="faster">The presumed faster code to test.</param>
+    /// <param name="slower">The presumed slower code to test.</param>
+    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
+    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
+    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
+    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     public static FasterResult Faster<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> faster, Func<T1, T2, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception);

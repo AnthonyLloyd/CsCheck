@@ -292,7 +292,44 @@ public class HashTests
         double[] powCache = [ 1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18,
             1e19, 1e20, 1e21, 1e22, 1e23, 1e24, 1e25, 1e26, 1e27, 1e28, 1e29, 1e30, 1e31 ];
         double Pow3(int n) => powCache[n];
-        Gen.Int[0, 31].Faster(Pow1, Pow2, Check.EqualSkip, repeat: 100).Output(writeLine);
-        Gen.Int[0, 31].Faster(Pow3, Pow1, Check.EqualSkip, repeat: 100).Output(writeLine);
+        Gen.Int[0, 31].Faster(Pow1, Pow2, Check.EqualSkip, repeat: 10_000).Output(writeLine);
+        Gen.Int[0, 31].Faster(Pow3, Pow1, Check.EqualSkip, repeat: 10_000).Output(writeLine);
+        Gen.Int[0, 31].Faster<Pow1Struct, Pow2Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 10_000).Output(writeLine);
+        Gen.Int[0, 31].Faster<Pow3Struct, Pow1Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 10_000).Output(writeLine);
+    }
+
+    public readonly struct Pow1Struct : IInvoke<int, double>
+    {
+        static double Sqr(double x) => x * x;
+        public double Invoke(int n) => n switch
+        {
+            0 => 1.0,
+            1 => 10.0,
+            2 => 100.0,
+            3 => 1000.0,
+            4 => 10000.0,
+            _ => n % 2 == 0 ? Sqr(Invoke(n / 2)) : Sqr(Invoke(n / 2)) * 10.0,
+        };
+    }
+
+    public readonly struct Pow2Struct : IInvoke<int, double>
+    {
+        public double Invoke(int n)
+        {
+            double result = 1.0, baseVal = 10.0;
+            while (n > 0)
+            {
+                if ((n & 1) != 0) result *= baseVal;
+                n >>= 1;
+                baseVal *= baseVal;
+            }
+            return result;
+        }
+    }
+    public readonly struct Pow3Struct() : IInvoke<int, double>
+    {
+        readonly double[] powCache = [1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18,
+            1e19, 1e20, 1e21, 1e22, 1e23, 1e24, 1e25, 1e26, 1e27, 1e28, 1e29, 1e30, 1e31];
+        public double Invoke(int n) => powCache[n];
     }
 }
