@@ -3158,9 +3158,9 @@ public sealed class FasterResult
         }
         if (myState == STATE_PROCESSING)
         {
-            Median.Add(ratio);
             while (true)
             {
+                Median.Add(ratio);
                 bool lockTaken = false;
                 spinLock.Enter(ref lockTaken);
                 if (queue.Count == 0)
@@ -3171,7 +3171,6 @@ public sealed class FasterResult
                 }
                 ratio = queue.Dequeue();
                 if (lockTaken) spinLock.Exit();
-                Median.Add(ratio);
             }
         }
         else if (myState == STATE_BLOCKED)
