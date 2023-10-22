@@ -25,6 +25,7 @@ using System.Runtime.CompilerServices;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Net;
 
 public static partial class Check
 {
@@ -108,12 +109,14 @@ public static partial class Check
     /// <summary>Small double string representation.</summary>
     public static string Print(double d)
     {
-        static bool TryFraction(double d, out int num, out int den)
+        static bool TryFraction(double d, out long num, out int den)
         {
             den = 1;
             while (++den < 1000)
             {
-                num = (int)Math.Round(d * den);
+                if (d * den > long.MaxValue || d * den < long.MinValue)
+                    continue;
+                num = (long)Math.Round(d * den);
                 if (num != 0 && AreClose(Ulps, (double)num / den, d))
                     return true;
             }
@@ -121,13 +124,13 @@ public static partial class Check
             den = 0;
             return false;
         }
-        static bool TryExponential(double d, out int num, out int exp)
+        static bool TryExponential(double d, out long num, out int exp)
         {
             var isNeg = d < 0;
             d = Math.Abs(d);
             exp = (int)Math.Floor(Math.Log10(d)) - 3;
             var p10 = Math.Pow(10, exp);
-            num = (int)Math.Round(d / p10);
+            num = (long)Math.Round(d / p10);
             if (AreClose(Ulps, num * p10, d))
             {
                 if (isNeg)
@@ -144,9 +147,9 @@ public static partial class Check
             return false;
         }
         var s = d.ToString();
-        if (AreClose(Ulps, Math.Round(d), d))
+        if (AreClose(Ulps, Math.Round(d), d) && d <= long.MaxValue && d >= long.MinValue)
         {
-            var r = ((int)Math.Round(d)).ToString();
+            var r = ((long)Math.Round(d)).ToString();
             if (r.Length < s.Length)
                 s = r;
         }
@@ -158,7 +161,7 @@ public static partial class Check
         }
         if (TryExponential(d, out num, out var exp))
         {
-            var es = exp == 0 ? num.ToString() : $"{num}e{exp}";
+            var es = exp == 0 ? num.ToString() : $"{num}E{exp}";
             if (es.Length < s.Length)
                 s = es;
         }
@@ -168,12 +171,14 @@ public static partial class Check
     /// <summary>Small float string representation.</summary>
     public static string Print(float f)
     {
-        static bool TryFraction(float f, out int num, out int den)
+        static bool TryFraction(float f, out long num, out int den)
         {
             den = 1;
             while (++den < 1000)
             {
-                num = (int)Math.Round(f * den);
+                if (f * den > long.MaxValue || f * den < long.MinValue)
+                    continue;
+                num = (long)Math.Round(f * den);
                 if (num != 0 && AreClose(Ulps, (float)num / den, f))
                     return true;
             }
@@ -181,13 +186,13 @@ public static partial class Check
             den = 0;
             return false;
         }
-        static bool TryExponential(float f, out int num, out int exp)
+        static bool TryExponential(float f, out long num, out int exp)
         {
             var isNeg = f < 0;
             f = Math.Abs(f);
             exp = (int)Math.Floor(Math.Log10(f)) - 3;
             var p10 = (float)Math.Pow(10, exp);
-            num = (int)Math.Round(f / p10);
+            num = (long)Math.Round(f / p10);
             if (AreClose(Ulps, num * p10, f))
             {
                 if (isNeg)
@@ -204,24 +209,110 @@ public static partial class Check
             return false;
         }
         var s = f.ToString();
-        if (AreClose(Ulps, (float)Math.Round(f), f))
+        try
         {
-            var r = ((int)Math.Round(f)).ToString();
-            if (r.Length < s.Length)
-                s = r;
+            if (AreClose(Ulps, (float)Math.Round(f), f) && f <= long.MaxValue && f >= long.MinValue)
+            {
+                var r = ((long)Math.Round(f)).ToString();
+                if (r.Length < s.Length)
+                    s = r;
+            }
         }
-        if (TryFraction(f, out var num, out var den))
+        catch { }
+        try
         {
-            var fra = $"{num}d/{den}";
-            if (fra.Length < s.Length)
-                s = fra;
+            if (TryFraction(f, out var num, out var den))
+            {
+                var fra = $"{num}f/{den}";
+                if (fra.Length < s.Length)
+                    s = fra;
+            }
         }
-        if (TryExponential(f, out num, out var exp))
+        catch { }
+        try
         {
-            var es = exp == 0 ? num.ToString() : $"{num}e{exp}";
-            if (es.Length < s.Length)
-                s = es;
+            if (TryExponential(f, out var num, out var exp))
+            {
+                var es = exp == 0 ? num.ToString() : $"{num}E{exp}";
+                if (es.Length < s.Length)
+                    s = es;
+            }
         }
+        catch { }
+        return s;
+    }
+
+    /// <summary>Small decimal string representation.</summary>
+    public static string Print(decimal d)
+    {
+        static bool TryFraction(decimal d, out long num, out int den)
+        {
+            den = 1;
+            while (++den < 1000)
+            {
+                if (d * den > long.MaxValue || d * den < long.MinValue)
+                    continue;
+                num = (long)Math.Round(d * den);
+                if (num != 0 && AreClose(Ulps, (double)num / den, (double)d))
+                    return true;
+            }
+            num = 0;
+            den = 0;
+            return false;
+        }
+        static bool TryExponential(decimal d, out long num, out int exp)
+        {
+            var isNeg = d < 0;
+            d = Math.Abs(d);
+            exp = (int)Math.Floor(Math.Log10((double)d)) - 3;
+            var p10 = (double)Math.Pow(10, exp);
+            num = (long)Math.Round((double)d / p10);
+            if (AreClose(Ulps, num * p10, (double)d))
+            {
+                if (isNeg)
+                    num = -num;
+                while (num % 10 == 0)
+                {
+                    num /= 10;
+                    exp++;
+                }
+                return true;
+            }
+            num = 0;
+            exp = 0;
+            return false;
+        }
+        var s = d.ToString();
+        try
+        {
+            if (AreClose(Ulps, (double)Math.Round(d), (double)d) && d <= long.MaxValue && d >= long.MinValue)
+            {
+                var r = ((long)Math.Round(d)).ToString();
+                if (r.Length < s.Length)
+                    s = r;
+            }
+        }
+        catch { }
+        try
+        {
+            if (TryFraction(d, out var num, out var den))
+            {
+                var fra = $"{num}m/{den}";
+                if (fra.Length < s.Length)
+                    s = fra;
+            }
+        }
+        catch { }
+        try
+        {
+            if (TryExponential(d, out var num, out var exp))
+            {
+                var es = exp == 0 ? num.ToString() : $"{num}E{exp}";
+                if (es.Length < s.Length)
+                    s = es;
+            }
+        }
+        catch { }
         return s;
     }
 
@@ -241,7 +332,7 @@ public static partial class Check
         T ft when IsFieldType(ft) => PrintFields(ft),
         double d => Print(d),
         float f => Print(f),
-        decimal d => Print((double)d),
+        decimal d => Print(d),
         _ => t.ToString(),
     };
 
@@ -483,6 +574,14 @@ public static partial class Check
         return Math.Abs(bl - al) <= ulps;
     }
 
+    /// <summary>Absolute difference between two doubles in ulps.</summary>
+    public static int UlpsBetween(double a, double b)
+    {
+        var al = BitConverter.DoubleToInt64Bits(a);
+        var bl = BitConverter.DoubleToInt64Bits(b);
+        return Math.Abs((int)(bl - al));
+    }
+
     [StructLayout(LayoutKind.Explicit)]
     struct FloatConverter
     {
@@ -499,14 +598,6 @@ public static partial class Check
         var ai = new FloatConverter { F = a }.I;
         var bi = new FloatConverter { F = b }.I;
         return Math.Abs(bi - ai) <= ulps;
-    }
-
-    /// <summary>Absolute difference between two doubles in ulps.</summary>
-    public static int UlpsBetween(double a, double b)
-    {
-        var al = BitConverter.DoubleToInt64Bits(a);
-        var bl = BitConverter.DoubleToInt64Bits(b);
-        return Math.Abs((int)(bl - al));
     }
 }
 

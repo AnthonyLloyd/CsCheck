@@ -32,6 +32,41 @@ public class UtilsTests
         Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new Tuple<int, int>[] { new(1, 2), new(3, 4) }));
         Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new[] { (1, 2), (3, 4) }));
     }
+
+    [Fact]
+    public void PrintDouble()
+    {
+        Assert.Equal("0", Check.Print(0d));
+        Assert.Equal("1", Check.Print(1d));
+        Assert.Equal("1d/3", Check.Print(1d / 3));
+        Assert.Equal("4d/3", Check.Print(4d / 3));
+        Assert.Equal("17d/13", Check.Print(17d / 13));
+        Assert.Equal("1E-20", Check.Print(1E-20));
+        Assert.Equal("1234E20", Check.Print(1234E20));
+    }
+
+    [Fact]
+    public void PrintFloat()
+    {
+        Assert.Equal("0", Check.Print(0f));
+        Assert.Equal("1", Check.Print(1f));
+        Assert.Equal("1f/3", Check.Print(1f / 3));
+        Assert.Equal("4f/3", Check.Print(4f / 3));
+        Assert.Equal("17f/13", Check.Print(17f / 13));
+        Assert.Equal("1234E20", Check.Print(1234E20f));
+    }
+
+    [Fact]
+    public void PrintDecimal()
+    {
+        Assert.Equal("0", Check.Print(0m));
+        Assert.Equal("1", Check.Print(1m));
+        Assert.Equal("1m/3", Check.Print(1m / 3));
+        Assert.Equal("4m/3", Check.Print(4m / 3));
+        Assert.Equal("17m/13", Check.Print(17m / 13));
+        Assert.Equal("1E-20", Check.Print(1E-20m));
+        Assert.Equal("1234E20", Check.Print(1234E20m));
+    }
 }
 
 public class ThreadStatsTests
