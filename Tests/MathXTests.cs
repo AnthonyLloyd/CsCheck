@@ -138,7 +138,7 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
         {
             var originalSum = MathX.KSum(original);
             var shuffledSum = MathX.KSum(shuffled);
-            return Check.UlpsBetween(originalSum, shuffledSum).ToString();
+            return Check.UlpsBetween(originalSum, shuffledSum).ToString().PadLeft(5);
         }, writeLine: output.WriteLine/*, time: 10*/);
     }
 
@@ -151,7 +151,7 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
         {
             var originalSum = MathX.NSum(original);
             var shuffledSum = MathX.NSum(shuffled);
-            return Check.UlpsBetween(originalSum, shuffledSum).ToString();
+            return Check.UlpsBetween(originalSum, shuffledSum).ToString().PadLeft(5);
         }, writeLine: output.WriteLine/*, time: 10*/);
     }
 
@@ -164,7 +164,7 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
         {
             var originalSum = MathX.FSum(original);
             var shuffledSum = MathX.FSum(shuffled);
-            return Check.UlpsBetween(originalSum, shuffledSum).ToString();
+            return Check.UlpsBetween(originalSum, shuffledSum).ToString().PadLeft(5);
         }, writeLine: output.WriteLine/*, time: 10*/);
     }
 
@@ -176,7 +176,7 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
         {
             var fsumSum = MathX.FSum(values);
             var nsumSum = MathX.NSum(values);
-            return Check.UlpsBetween(fsumSum, nsumSum).ToString();
+            return Check.UlpsBetween(fsumSum, nsumSum).ToString().PadLeft(5);
         }, writeLine: output.WriteLine/*, time: 10*/);
     }
 
