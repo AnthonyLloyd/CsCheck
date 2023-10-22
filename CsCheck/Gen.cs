@@ -1549,13 +1549,12 @@ public sealed class GenFloat : Gen<float>
         [FieldOffset(0)] public uint I;
         [FieldOffset(0)] public float F;
     }
+
+    readonly static Gen<float> DefaultFloat = Gen.Float[-1e25f, 1e25f];
     public override float Generate(PCG pcg, Size? min, out Size size)
-    {
-        uint i = pcg.Next();
-        size = new Size(i);
-        return new FloatConverter { I = i }.F;
-    }
-    sealed class Range(float start, float length) : Gen<float>
+        => DefaultFloat.Generate(pcg, min, out size);
+
+    sealed class GenEvenlyDistributed(float start, float length) : Gen<float>
     {
         public override float Generate(PCG pcg, Size? min, out Size size)
         {
@@ -1564,12 +1563,61 @@ public sealed class GenFloat : Gen<float>
             return new FloatConverter { I = i | 0x3F800000 }.F * length + start;
         }
     }
-    public Gen<float> this[float start, float finish]
+    private Gen<float> EvenlyDistributed(float start, float finish)
+    {
+        finish -= start;
+        return new GenEvenlyDistributed(start - finish, finish);
+    }
+    public Gen<float> this[float start, float finish, int denominator = 100, int minExp = -100, int maxMan = 9999]
     {
         get
         {
-            finish -= start;
-            return new Range(start - finish, finish);
+            var myGens = new (int, IGen<float>)[4];
+            if (Math.Ceiling(start) <= Math.Floor(start))
+            {
+                var integer = start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
+                    : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue), (int)Math.Min(Math.Floor(finish), int.MaxValue)];
+                myGens[0] = (1, integer.Select(i => (float)i));
+            }
+            if (Math.Ceiling(start * denominator) <= Math.Floor(finish * denominator))
+            {
+                var lower = denominator - 1;
+                while (Math.Ceiling(start * lower) <= Math.Floor(finish * lower) && lower > 1)
+                    lower--;
+                var rational = Gen.Int[lower + 1, denominator]
+                    .Where(den => Math.Floor(finish * den) >= Math.Ceiling(start * den))
+                    .SelectMany(den => Gen.Int[(int)Math.Max(Math.Ceiling(start * den), int.MinValue + 1),
+                                                (int)Math.Min(Math.Floor(finish * den), int.MaxValue - 1)].Select(num => (float)num / den));
+                myGens[1] = (1, rational);
+            }
+            Gen<float>? exponential = null;
+            if (start <= 0 && finish >= 0)
+            {
+                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start)));
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish)));
+                var genMantissa = Gen.Int[1, maxMan];
+                exponential = Gen.OneOf(
+                    Gen.Int[minExp, finishExp].Select(genMantissa, (e, m) => (float)Math.Pow(10, e - 3) * m),
+                    Gen.Int[minExp, startExp].Select(genMantissa, (e, m) => -(float)Math.Pow(10, e - 3) * m));
+            }
+            else if (start >= 0 && finish >= 0)
+            {
+                var startExp = (int)Math.Floor(Math.Log10(Math.Abs(start)));
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish)));
+                if (finishExp > startExp + 2)
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int[1, maxMan], (e, m) => (float)Math.Pow(10, e - 3) * m);
+            }
+            else
+            {
+                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start)));
+                var finishExp = (int)Math.Floor(Math.Log10(Math.Abs(finish)));
+                if (startExp > finishExp + 2)
+                    exponential = Gen.Int[finishExp, startExp].Select(Gen.Int[1, maxMan], (e, m) => -(float)Math.Pow(10, e - 3) * m);
+            }
+            if (exponential is not null)
+                myGens[2] = (1, exponential.Where(r => r >= start && r <= finish));
+            myGens[3] = (1, EvenlyDistributed(start, finish));
+            return Gen.Frequency(myGens);
         }
     }
 
@@ -1717,12 +1765,9 @@ public sealed class GenFloat : Gen<float>
 
 public sealed class GenDouble : Gen<double>
 {
+    readonly static Gen<double> DefaultDouble = Gen.Double[-1e50, 1e50];
     public override double Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next64();
-        size = new Size(i >> 12);
-        return BitConverter.Int64BitsToDouble((long)i);
-    }
+        => DefaultDouble.Generate(pcg, min, out size);
     sealed class GenEvenlyDistributed(double start, double length) : Gen<double>
     {
         public override double Generate(PCG pcg, Size? min, out Size size)
@@ -1755,7 +1800,8 @@ public sealed class GenDouble : Gen<double>
                     lower--;
                 var rational = Gen.Int[lower + 1, denominator]
                     .Where(den => Math.Floor(finish * den) >= Math.Ceiling(start * den))
-                    .SelectMany(den => Gen.Int[(int)Math.Ceiling(start * den), (int)Math.Floor(finish * den)].Select(num => (double)num / den));
+                    .SelectMany(den => Gen.Int[(int)Math.Max(Math.Ceiling(start * den), int.MinValue + 1),
+                                               (int)Math.Min(Math.Floor(finish * den), int.MaxValue - 1)].Select(num => (double)num / den));
                 myGens[1] = (1, rational);
             }
             Gen<double>? exponential = null;
@@ -1942,14 +1988,10 @@ public sealed class GenDouble : Gen<double>
 
 public sealed class GenDecimal : Gen<decimal>
 {
+    readonly static Gen<decimal> DefaultDecimal = Gen.Decimal[-1e25m, 1e25m];
     public override decimal Generate(PCG pcg, Size? min, out Size size)
-    {
-        var scaleAndSign = (int)pcg.Next(58);
-        var hi = pcg.Next();
-        size = new Size(((ulong)scaleAndSign << 32) + hi);
-        return new decimal((int)pcg.Next(), (int)pcg.Next(), (int)hi, (scaleAndSign & 1) == 1, (byte)(scaleAndSign >> 1));
-    }
-    sealed class Range(decimal start, decimal length) : Gen<decimal>
+        => DefaultDecimal.Generate(pcg, min, out size);
+    sealed class GenEvenlyDistributed(decimal start, decimal length) : Gen<decimal>
     {
         public override decimal Generate(PCG pcg, Size? min, out Size size)
         {
@@ -1958,14 +2000,64 @@ public sealed class GenDecimal : Gen<decimal>
             return (decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * length + start;
         }
     }
-    public Gen<decimal> this[decimal start, decimal finish]
+    private Gen<decimal> EvenlyDistributed(decimal start, decimal finish)
+    {
+        finish -= start;
+        return new GenEvenlyDistributed(start - finish, finish);
+    }
+    public Gen<decimal> this[decimal start, decimal finish, int denominator = 100, int minExp = -100, int maxMan = 9999]
     {
         get
         {
-            finish -= start;
-            return new Range(start - finish, finish);
+            var myGens = new (int, IGen<decimal>)[4];
+            if (Math.Ceiling(start) <= Math.Floor(start))
+            {
+                var integer = start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
+                    : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue), (int)Math.Min(Math.Floor(finish), int.MaxValue)];
+                myGens[0] = (1, integer.Select(i => (decimal)i));
+            }
+            if (Math.Ceiling(start * denominator) <= Math.Floor(finish * denominator))
+            {
+                var lower = denominator - 1;
+                while (Math.Ceiling(start * lower) <= Math.Floor(finish * lower) && lower > 1)
+                    lower--;
+                var rational = Gen.Int[lower + 1, denominator]
+                    .Where(den => Math.Floor(finish * den) >= Math.Ceiling(start * den))
+                    .SelectMany(den => Gen.Int[(int)Math.Max(Math.Ceiling(start * den), int.MinValue + 1),
+                                               (int)Math.Min(Math.Floor(finish * den), int.MaxValue - 1)].Select(num => (decimal)num / den));
+                myGens[1] = (1, rational);
+            }
+            Gen<decimal>? exponential = null;
+            if (start <= 0 && finish >= 0)
+            {
+                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)start)));
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)finish)));
+                var genMantissa = Gen.Int[1, maxMan];
+                exponential = Gen.OneOf(
+                    Gen.Int[minExp, finishExp].Select(genMantissa, (e, m) => (decimal)Math.Pow(10, e - 3) * m),
+                    Gen.Int[minExp, startExp].Select(genMantissa, (e, m) => -(decimal)Math.Pow(10, e - 3) * m));
+            }
+            else if (start >= 0 && finish >= 0)
+            {
+                var startExp = (int)Math.Floor(Math.Log10(Math.Abs((double)start)));
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)finish)));
+                if (finishExp > startExp + 2)
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int[1, maxMan], (e, m) => (decimal)Math.Pow(10, e - 3) * m);
+            }
+            else
+            {
+                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)start)));
+                var finishExp = (int)Math.Floor(Math.Log10(Math.Abs((double)finish)));
+                if (startExp > finishExp + 2)
+                    exponential = Gen.Int[finishExp, startExp].Select(Gen.Int[1, maxMan], (e, m) => -(decimal)Math.Pow(10, e - 3) * m);
+            }
+            if (exponential is not null)
+                myGens[2] = (1, exponential.Where(r => r >= start && r <= finish));
+            myGens[3] = (1, EvenlyDistributed(start, finish));
+            return Gen.Frequency(myGens);
         }
     }
+
     sealed class GenNonNegative : Gen<decimal>
     {
         public override decimal Generate(PCG pcg, Size? min, out Size size)
