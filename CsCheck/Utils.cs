@@ -845,7 +845,7 @@ public sealed class Classifier
             c = -x.Length.CompareTo(y.Length);
             if(c != 0)
                 return c;
-            return xs.CompareTo(ys);
+            return -xs.CompareTo(ys);
         })))
         {
             var a = kv.Key.Split('/');
