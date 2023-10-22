@@ -302,7 +302,7 @@ public static class Dbg
     sealed class CachedEnumerable<T>(IEnumerable<T> enumerable) : IEnumerable<T>, IDisposable
     {
         IEnumerator<T>? _enumerator = enumerable.GetEnumerator();
-        readonly List<T> _cache = new();
+        readonly List<T> _cache = [];
         public IEnumerator<T> GetEnumerator()
         {
             int index = 0;

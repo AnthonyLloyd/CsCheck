@@ -4,14 +4,12 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using CsCheck;
 using Xunit;
 
-public class CheckTests
+public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
 {
-    readonly Action<string> writeLine;
-    public CheckTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
-
     static void Assert_Commutative<T, R>(Gen<T> gen, Func<T, T, R> operation)
     {
         Gen.Select(gen, gen)
@@ -130,7 +128,7 @@ public class CheckTests
             () => MulIKJ(a, b),
             () => MulIJK(a, b)
         )
-        .Output(writeLine);
+        .Output(output.WriteLine);
     }
 
     [Fact]
@@ -143,7 +141,7 @@ public class CheckTests
             MulIKJ,
             MulIJK
         )
-        .Output(writeLine);
+        .Output(output.WriteLine);
     }
 
     [Fact]
@@ -159,7 +157,7 @@ public class CheckTests
             },
             data => data.Aggregate(0.0, (t, b) => t + b)
         )
-        .Output(writeLine);
+        .Output(output.WriteLine);
     }
 
     [Fact]
@@ -296,5 +294,21 @@ public class CheckTests
         Check.Equality(Gen.Int);
         Check.Equality(Gen.Double);
         Check.Equality(Gen.String);
+    }
+
+    [Fact]
+    public void Enqueue_Faster_Than_Median()
+    {
+        Gen.Double.OneTwo.Array[10].Select(Gen.Double.OneTwo, (a, s) =>
+        {
+            var median = new MedianEstimator();
+            foreach (var d in a) median.Add(d);
+            var queue = new Queue<double>(Environment.ProcessorCount);
+            return (median, queue, s);
+        })
+        .Faster(
+            (m, q, s) => q.Enqueue(s),
+            (m, q, s) => m.Add(s)
+        , repeat: 10).Output(output.WriteLine);
     }
 }

@@ -15,6 +15,7 @@
 namespace CsCheck;
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -3059,14 +3060,18 @@ public static partial class Check
 
 public sealed class FasterResult
 {
+    const byte STATE_PROCESSING = 0, STATE_QUEUED = 1, STATE_BLOCKED = 2;
+    static readonly int capacity = Environment.ProcessorCount;
     public int Faster, Slower;
     public MedianEstimator Median = new();
+    readonly Queue<double> queue = new(capacity);
+    SpinLock spinLock = new();
+    bool processing = false;
+
     public float SigmaSquared
     {
-        // Binomial distribution: Mean = n p, Variance = n p q
-        // in this case H0 has n = Faster + Slower, p = 0.5, and q = 0.5
-        // sigmas = Abs(Faster - Mean) / Sqrt(Variance)
-        //        = Sqrt((Faster - Slower)^2/(Faster + Slower))
+        // Binomial distribution: Mean = n p, Variance = n p q in this case H0 has n = Faster + Slower, p = 0.5, and q = 0.5
+        // sigmas = Abs(Faster - Mean) / Sqrt(Variance) = Sqrt((Faster - Slower)^2/(Faster + Slower))
         get
         {
             float d = Faster - Slower;
@@ -3075,42 +3080,132 @@ public sealed class FasterResult
     }
     public void Add(long faster, long slower)
     {
+        double ratio;
+        byte myState;
         if (slower > faster)
         {
-            var ratio = ((double)(slower - faster)) / slower;
-            lock (Median)
+            ratio = ((double)(slower - faster)) / slower;
+            bool lockTaken = false;
+            spinLock.Enter(ref lockTaken);
+            if (processing)
             {
-                Median.Add(ratio);
-                Faster++;
+                if (queue.Count == capacity)
+                {
+                    myState = STATE_BLOCKED;
+                }
+                else
+                {
+                    queue.Enqueue(ratio);
+                    myState = STATE_QUEUED;
+                }
             }
+            else
+            {
+                processing = true;
+                myState = STATE_PROCESSING;
+            }
+            Faster++;
+            if (lockTaken) spinLock.Exit();
         }
         else if (slower < faster)
         {
-            var ratio = ((double)(slower - faster)) / faster;
-            lock (Median)
+            ratio = ((double)(slower - faster)) / faster;
+            bool lockTaken = false;
+            spinLock.Enter(ref lockTaken);
+            if (processing)
             {
-                Median.Add(ratio);
-                Slower++;
+                if (queue.Count == capacity)
+                {
+                    myState = STATE_BLOCKED;
+                }
+                else
+                {
+                    queue.Enqueue(ratio);
+                    myState = STATE_QUEUED;
+                }
             }
+            else
+            {
+                processing = true;
+                myState = STATE_PROCESSING;
+            }
+            Slower++;
+            if (lockTaken) spinLock.Exit();
         }
         else
         {
-            lock (Median)
+            ratio = 0d;
+            bool lockTaken = false;
+            spinLock.Enter(ref lockTaken);
+            if (processing)
             {
-                Median.Add(0d);
+                if (queue.Count == capacity)
+                {
+                    myState = STATE_BLOCKED;
+                }
+                else
+                {
+                    queue.Enqueue(ratio);
+                    myState = STATE_QUEUED;
+                }
+            }
+            else
+            {
+                processing = true;
+                myState = STATE_PROCESSING;
+            }
+            if (lockTaken) spinLock.Exit();
+        }
+        if (myState == STATE_PROCESSING)
+        {
+            Median.Add(ratio);
+            while (true)
+            {
+                bool lockTaken = false;
+                spinLock.Enter(ref lockTaken);
+                if (queue.Count == 0)
+                {
+                    processing = false;
+                    if (lockTaken) spinLock.Exit();
+                    return;
+                }
+                ratio = queue.Dequeue();
+                if (lockTaken) spinLock.Exit();
+                Median.Add(ratio);
             }
         }
-        
+        else if (myState == STATE_BLOCKED)
+        {
+            while (true)
+            {
+                bool lockTaken = false;
+                spinLock.Enter(ref lockTaken);
+                if (queue.Count != capacity)
+                {
+                    queue.Enqueue(ratio);
+                    if (lockTaken) spinLock.Exit();
+                    return;
+                }
+                if (lockTaken) spinLock.Exit();
+            }
+        }
     }
     public override string ToString()
     {
-        lock (Median)
+        while (true)
         {
-            var result = $"{Median.Median * 100.0:#0.0}%[{Median.Q1 * 100.0:#0.0}%..{Median.Q3 * 100.0:#0.0}%] {(Median.Median >= 0.0 ? "faster" : "slower")}";
-            if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
-            else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
-            result = $"{result}, sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
-            return result;
+            bool lockTaken = false;
+            spinLock.Enter(ref lockTaken);
+            if (!processing)
+            {
+                var result = $"{Median.Median * 100.0:#0.0}%[{Median.Q1 * 100.0:#0.0}%..{Median.Q3 * 100.0:#0.0}%] {(Median.Median >= 0.0 ? "faster" : "slower")}";
+                if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
+                else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
+                result = $"{result}, sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
+                if (lockTaken) spinLock.Exit();
+                return result;
+            }
+            if (lockTaken) spinLock.Exit();
         }
     }
     public void Output(Action<string> output) => output(ToString());
