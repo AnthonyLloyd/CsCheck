@@ -24,9 +24,19 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
         <Version>3.0.0-rc1</Version>
         <PackageReleaseNotes>
+Improved generation for double, float and decimal. Mix of integer, fraction, exponential and evenly distributed.
+Improved Print for double, float and decimal. Displays small rounded fraction and exponential representation.
+Improved min size passing and shrinking.
+Added optimised Timer functionality and funcless IInvoke.
+Performance improvements for Sample and Faster.
 Added Gen&lt;T&gt;.Single() that generates a single random value.
 
-BREAKING CHANGE: Example(predicate) renamed to Sample(predicate)
+BREAKING CHANGES:
+- Example(predicate) renamed to Sample(predicate).
+- Removed SampleOne, use Sample(..., iter: 1, time: -2) instead.
+- Removed Cast, use Select instead (better performance).
+- Removed Create, create a : Gen&lt;T&gt; class instead.
+- Added max count to Where.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>12.0</LangVersion>
