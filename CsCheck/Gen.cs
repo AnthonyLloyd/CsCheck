@@ -1572,22 +1572,20 @@ public sealed class GenFloat : Gen<float>
     {
         get
         {
+            static Gen<int> GenInt(float start, float finish)
+                => start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
+                 : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue + 1), (int)Math.Min(Math.Floor(finish), int.MaxValue - 1)];
             var myGens = new (int, IGen<float>)[4];
             if (Math.Ceiling(start) <= Math.Floor(start))
-            {
-                var integer = start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
-                    : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue), (int)Math.Min(Math.Floor(finish), int.MaxValue)];
-                myGens[0] = (1, integer.Select(i => (float)i));
-            }
+                myGens[0] = (1, GenInt(start, finish).Select(i => (float)i));
             if (Math.Ceiling(start * denominator) <= Math.Floor(finish * denominator))
             {
                 var lower = denominator - 1;
                 while (Math.Ceiling(start * lower) <= Math.Floor(finish * lower) && lower > 1)
                     lower--;
                 var rational = Gen.Int[lower + 1, denominator]
-                    .Where(den => Math.Floor(finish * den) >= Math.Ceiling(start * den))
-                    .SelectMany(den => Gen.Int[(int)Math.Max(Math.Ceiling(start * den), int.MinValue + 1),
-                                                (int)Math.Min(Math.Floor(finish * den), int.MaxValue - 1)].Select(num => (float)num / den));
+                    .SelectMany(den => GenInt(start * den, finish * den)
+                    .Select(num => (float)num / den));
                 myGens[1] = (1, rational);
             }
             Gen<float>? exponential = null;
@@ -1786,22 +1784,20 @@ public sealed class GenDouble : Gen<double>
     {
         get
         {
+            static Gen<int> GenInt(double start, double finish)
+                => start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
+                 : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue + 1), (int)Math.Min(Math.Floor(finish), int.MaxValue - 1)];
             var myGens = new (int, IGen<double>)[4];
             if (Math.Ceiling(start) <= Math.Floor(start))
-            {
-                var integer = start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
-                    : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue), (int)Math.Min(Math.Floor(finish), int.MaxValue)];
-                myGens[0] = (1, integer.Select(i => (double)i));
-            }
+                myGens[0] = (1, GenInt(start, finish).Select(i => (double)i));
             if (Math.Ceiling(start * denominator) <= Math.Floor(finish * denominator))
             {
                 var lower = denominator - 1;
                 while (Math.Ceiling(start * lower) <= Math.Floor(finish * lower) && lower > 1)
                     lower--;
                 var rational = Gen.Int[lower + 1, denominator]
-                    .Where(den => Math.Floor(finish * den) >= Math.Ceiling(start * den))
-                    .SelectMany(den => Gen.Int[(int)Math.Max(Math.Ceiling(start * den), int.MinValue + 1),
-                                               (int)Math.Min(Math.Floor(finish * den), int.MaxValue - 1)].Select(num => (double)num / den));
+                    .SelectMany(den => GenInt(start * den, finish * den)
+                    .Select(num => (double)num / den));
                 myGens[1] = (1, rational);
             }
             Gen<double>? exponential = null;
@@ -2009,22 +2005,20 @@ public sealed class GenDecimal : Gen<decimal>
     {
         get
         {
+            static Gen<int> GenInt(decimal start, decimal finish)
+                => start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
+                 : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue + 1), (int)Math.Min(Math.Floor(finish), int.MaxValue - 1)];
             var myGens = new (int, IGen<decimal>)[4];
             if (Math.Ceiling(start) <= Math.Floor(start))
-            {
-                var integer = start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
-                    : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue), (int)Math.Min(Math.Floor(finish), int.MaxValue)];
-                myGens[0] = (1, integer.Select(i => (decimal)i));
-            }
+                myGens[0] = (1, GenInt(start, finish).Select(i => (decimal)i));
             if (Math.Ceiling(start * denominator) <= Math.Floor(finish * denominator))
             {
                 var lower = denominator - 1;
                 while (Math.Ceiling(start * lower) <= Math.Floor(finish * lower) && lower > 1)
                     lower--;
                 var rational = Gen.Int[lower + 1, denominator]
-                    .Where(den => Math.Floor(finish * den) >= Math.Ceiling(start * den))
-                    .SelectMany(den => Gen.Int[(int)Math.Max(Math.Ceiling(start * den), int.MinValue + 1),
-                                               (int)Math.Min(Math.Floor(finish * den), int.MaxValue - 1)].Select(num => (decimal)num / den));
+                    .SelectMany(den => GenInt(start * den, finish * den)
+                    .Select(num => (decimal)num / den));
                 myGens[1] = (1, rational);
             }
             Gen<decimal>? exponential = null;
@@ -2180,12 +2174,9 @@ public sealed class GenGuid : Gen<Guid>
 
 public sealed class GenChar : Gen<char>
 {
+    static readonly Gen<char> StandardChar = Gen.Char[' ', '~'];
     public override char Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 127u;
-        size = new Size(i);
-        return (char)i;
-    }
+        => StandardChar.Generate(pcg, min, out size);
     sealed class Range(uint start, uint length) : Gen<char>
     {
         public override char Generate(PCG pcg, Size? min, out Size size)
@@ -2207,6 +2198,7 @@ public sealed class GenChar : Gen<char>
         }
     }
     public Gen<char> this[string chars] => new GenChars(chars);
+    public readonly Gen<char> AlphaNumeric = new GenChars("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
 }
 
 public sealed class GenString : Gen<string>
@@ -2222,6 +2214,7 @@ public sealed class GenString : Gen<string>
         gen.Array.Select(i => new string(i));
     public Gen<string> this[string chars] =>
         Gen.Char[chars].Array.Select(i => new string(i));
+    public readonly Gen<string> AlphaNumeric = Gen.Char.AlphaNumeric.Array.Select(i => new string(i));
 }
 
 public sealed class GenArray<T>(Gen<T> gen) : Gen<T[]>

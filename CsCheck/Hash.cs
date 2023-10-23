@@ -60,7 +60,7 @@ public sealed class Hash : IRegression
     readonly bool writing;
     readonly List<int>? roundingFractions;
     string lastString = "null";
-
+    string LastString => lastString == "null" ? "null" : $"'{lastString}'";
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void Stream<T>(Action<Stream, T> serialize, Func<Stream, T> deserialize, T val) where T : notnull
     {
@@ -74,7 +74,7 @@ public sealed class Hash : IRegression
             {
                 var val2 = deserialize(stream);
                 if (!val.Equals(val2))
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {lastString})");
+                    throw new CsCheckException($"Actual '{val}' but Expected '{val2}'. (last string was {LastString})");
             }
         }
     }

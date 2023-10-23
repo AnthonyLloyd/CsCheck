@@ -139,7 +139,7 @@ public class HashTests(Xunit.Abstractions.ITestOutputHelper output)
                 hash.Add(Gen.Char.Generate(pcg, null, out _));
                 hash.Add(Gen.String.Generate(pcg, null, out _));
             }
-        }, 5091152770);
+        }, 6043935433);
     }
 
     [Fact]
