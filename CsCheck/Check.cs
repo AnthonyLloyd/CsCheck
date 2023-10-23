@@ -51,6 +51,8 @@ public static partial class Check
     public static int Timeout = 60;
     /// <summary>The number of ulps to approximate to when printing doubles and floats.</summary>
     public static int Ulps = 4;
+    /// <summary>The number of Where Gne iterations before throwing an exception.</summary>
+    public static int WhereLimit = 100;
 
     static Check()
     {
@@ -70,6 +72,8 @@ public static partial class Check
         if (!string.IsNullOrWhiteSpace(timeout)) Timeout = int.Parse(timeout);
         var ulps = Environment.GetEnvironmentVariable("CsCheck_Ulps");
         if (!string.IsNullOrWhiteSpace(ulps)) Ulps = int.Parse(ulps);
+        var whereLimit = Environment.GetEnvironmentVariable("CsCheck_WhereLimit");
+        if (!string.IsNullOrWhiteSpace(whereLimit)) WhereLimit = int.Parse(whereLimit);
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
