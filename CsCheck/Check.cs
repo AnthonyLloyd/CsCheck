@@ -16,9 +16,12 @@ namespace CsCheck;
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -1846,47 +1849,47 @@ public static partial class Check
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster(Action faster, Action slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
+    public static FasterResult Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
     {
-        if (sigma == -1.0) sigma = Sigma;
-        sigma *= sigma;
-        if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var result = new FasterResult();
-        var mre = new ManualResetEventSlim();
-        Exception? exception = null;
-        while (threads-- > 0)
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
+        var running = true;
+        void Worker(object? _)
         {
-            ThreadPool.UnsafeQueueUserWorkItem(_ =>
+            try
             {
-                try
+                while (running)
                 {
-                    while (true)
+                    if (result.Add(fasterTimer.Time(), slowerTimer.Time()))
                     {
-                        if (mre.IsSet) return;
-                        result.Add(fasterTimer.Time(), slowerTimer.Time());
-                        if (result.SigmaSquared >= sigma) mre.Set();
+                        running = false;
+                        return;
+                    }
+                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
+                    {
+                        if (raiseexception)
+                            result.Exception ??= new CsCheckException("Timeout! " + result.ToString());
+                        running = false;
+                        return;
                     }
                 }
-                catch (Exception e)
-                {
-                    exception = e;
-                    mre.Set();
-                }
-            }, null);
+            }
+            catch (Exception e)
+            {
+                result.Exception = e;
+                running = false;
+            }
         }
-
-        bool completed = mre.Wait(timeout * 1000);
-        if (exception is not null) throw exception;
-        if (raiseexception)
-        {
-            if (!completed) throw new CsCheckException("Timeout! " + result.ToString());
-            if (result.Slower > result.Faster || result.Median.Median < 0.0) throw new CsCheckException(result.ToString());
-        }
+        if (threads == -1) threads = Threads;
+        if (threads == -1) threads = Environment.ProcessorCount;
+        while (--threads > 0)
+            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
+        Worker(result);
+        if (result.Exception is not null) throw result.Exception;
+        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+            throw new CsCheckException(result.ToString());
         return result;
     }
 
@@ -1902,55 +1905,56 @@ public static partial class Check
     public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Func<T, T, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
     {
-        if (sigma == -1.0) sigma = Sigma;
-        sigma *= sigma;
-        if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
         equal ??= Equal;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var result = new FasterResult();
-        var mre = new ManualResetEventSlim();
-        Exception? exception = null;
-        while (threads-- > 0)
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
+        var running = true;
+        void Worker(object? _)
         {
-            ThreadPool.UnsafeQueueUserWorkItem(_ =>
+            try
             {
-                try
+                while (running)
                 {
-                    while (true)
+                    if (result.Add(fasterTimer.Time(out var fasterValue), slowerTimer.Time(out var slowerValue)))
                     {
-                        if (mre.IsSet) return;
-                        result.Add(fasterTimer.Time(out var fasterValue), slowerTimer.Time(out var slowerValue));
-                        if (!equal(fasterValue, slowerValue))
-                        {
-                            var vfs = Print(fasterValue);
-                            vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
-                            var vss = Print(slowerValue);
-                            vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
-                            exception = new CsCheckException("Return values differ:" + vfs + vss);
-                            mre.Set();
-                            return;
-                        }
-                        if (result.SigmaSquared >= sigma) mre.Set();
+                        running = false;
+                        return;
+                    }
+                    if (running && !equal(fasterValue, slowerValue))
+                    {
+                        var vfs = Print(fasterValue);
+                        vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
+                        var vss = Print(slowerValue);
+                        vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
+                        result.Exception = new CsCheckException("Return values differ:" + vfs + vss);
+                        running = false;
+                        return;
+                    }
+                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
+                    {
+                        if (raiseexception)
+                            result.Exception ??= new CsCheckException("Timeout! " + result.ToString());
+                        running = false;
+                        return;
                     }
                 }
-                catch (Exception e)
-                {
-                    exception = e;
-                    mre.Set();
-                }
-            }, null);
+            }
+            catch (Exception e)
+            {
+                result.Exception = e;
+                running = false;
+            }
         }
-
-        bool completed = mre.Wait(timeout * 1000);
-        if (exception is not null) throw exception;
-        if (raiseexception)
-        {
-            if (!completed) throw new CsCheckException("Timeout! " + result.ToString());
-            if (result.Slower > result.Faster || result.Median.Median < 0.0) throw new CsCheckException(result.ToString());
-        }
+        if (threads == -1) threads = Threads;
+        if (threads == -1) threads = Environment.ProcessorCount;
+        while (--threads > 0)
+            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
+        Worker(null);
+        if (result.Exception is not null) throw result.Exception;
+        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+            throw new CsCheckException(result.ToString());
         return result;
     }
 
@@ -1965,17 +1969,14 @@ public static partial class Check
     public static Task<FasterResult> FasterAsync(Func<Task> faster, Func<Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
     {
-        if (sigma == -1.0) sigma = Sigma;
-        sigma *= sigma;
-        if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
-        var result = new FasterResult();
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
+        if (threads == -1) threads = Threads;
+        if (threads == -1) threads = Environment.ProcessorCount;
         while (threads-- > 0)
         {
             Task.Run(async () =>
@@ -1985,8 +1986,7 @@ public static partial class Check
                     while (true)
                     {
                         if (isSet) return;
-                        result.Add(await fasterTimer.Time(), await slowerTimer.Time());
-                        if (result.SigmaSquared >= sigma)
+                        if (result.Add(await fasterTimer.Time(), await slowerTimer.Time()))
                         {
                             lock (tcs)
                             {
@@ -2021,12 +2021,10 @@ public static partial class Check
                         if (isSet) return;
                         isSet = true;
                         tcs.SetException(e);
-                        return;
                     }
                 }
             });
         }
-
         return tcs.Task;
     }
 
@@ -2042,18 +2040,15 @@ public static partial class Check
     public static Task<FasterResult> FasterAsync<T>(Func<Task<T>> faster, Func<Task<T>> slower, Func<T, T, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
     {
-        if (sigma == -1.0) sigma = Sigma;
-        sigma *= sigma;
-        if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
         equal ??= Equal;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
-        var result = new FasterResult();
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
+        if (threads == -1) threads = Threads;
+        if (threads == -1) threads = Environment.ProcessorCount;
         while (threads-- > 0)
         {
             Task.Run(async () =>
@@ -2065,7 +2060,19 @@ public static partial class Check
                         if (isSet) return;
                         var (fasterTime, fasterValue) = await fasterTimer.Time();
                         var (slowerTime, slowerValue) = await slowerTimer.Time();
-                        result.Add(fasterTime, slowerTime);
+                        if (result.Add(fasterTime, slowerTime))
+                        {
+                            lock (tcs)
+                            {
+                                if (isSet) return;
+                                isSet = true;
+                                if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+                                    tcs.SetException(new CsCheckException(result.ToString()));
+                                else
+                                    tcs.SetResult(result);
+                                return;
+                            }
+                        }
                         if (!equal(fasterValue, slowerValue))
                         {
                             lock (tcs)
@@ -2077,19 +2084,6 @@ public static partial class Check
                                 var vss = Print(slowerValue);
                                 vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
                                 tcs.SetException(new CsCheckException("Return values differ:" + vfs + vss));
-                                return;
-                            }
-                        }
-                        if (result.SigmaSquared >= sigma)
-                        {
-                            lock (tcs)
-                            {
-                                if (isSet) return;
-                                isSet = true;
-                                if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
-                                    tcs.SetException(new CsCheckException(result.ToString()));
-                                else
-                                    tcs.SetResult(result);
                                 return;
                             }
                         }
@@ -2120,7 +2114,6 @@ public static partial class Check
                 }
             });
         }
-
         return tcs.Task;
     }
 
@@ -2137,53 +2130,53 @@ public static partial class Check
     public static FasterResult Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
     {
-        if (sigma == -1.0) sigma = Sigma;
-        sigma *= sigma; // using sigma as sigma squared now
         seed ??= Seed;
-        if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var result = new FasterResult();
-        var mre = new ManualResetEventSlim();
-        Exception? exception = null;
-        while (threads-- > 0)
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
+        var running = true;
+        void Worker(object? __)
         {
-            ThreadPool.UnsafeQueueUserWorkItem(__ =>
+            var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
+            ulong state = 0;
+            T t = default!;
+            try
             {
-                var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
-                ulong state = 0;
-                T t = default!;
-                try
+                while (running)
                 {
-                    while (true)
+                    state = pcg.State;
+                    t = gen.Generate(pcg, null, out _);
+                    if (running && result.Add(fasterTimer.Time(t), slowerTimer.Time(t)))
                     {
-                        if (mre.IsSet) return;
-                        state = pcg.State;
-                        t = gen.Generate(pcg, null, out _);
-                        if (mre.IsSet) return;
-                        result.Add(fasterTimer.Time(t), slowerTimer.Time(t));
-                        if (result.SigmaSquared >= sigma) mre.Set();
+                        running = false;
+                        return;
+                    }
+                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
+                    {
+                        if (raiseexception)
+                            result.Exception ??= new CsCheckException("Timeout! " + result.ToString());
+                        running = false;
+                        return;
                     }
                 }
-                catch (Exception e)
-                {
-                    var tString = Print(t);
-                    if (tString.Length > 100) tString = tString.Substring(0, 100);
-                    exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
-                    mre.Set();
-                }
-            }, null);
+            }
+            catch (Exception e)
+            {
+                var tString = Print(t);
+                if (tString.Length > 100) tString = tString.Substring(0, 100);
+                result.Exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
+                running = false;
+            }
         }
-
-        var completed = mre.Wait(timeout * 1000);
-        if (exception is not null) throw exception;
-        if (raiseexception)
-        {
-            if (!completed) throw new CsCheckException("Timeout! " + result.ToString());
-            if (result.Slower > result.Faster || result.Median.Median < 0.0) throw new CsCheckException(result.ToString());
-        }
+        if (threads == -1) threads = Threads;
+        if (threads == -1) threads = Environment.ProcessorCount;
+        while (--threads > 0)
+            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
+        Worker(null);
+        if (result.Exception is not null) throw result.Exception;
+        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+            throw new CsCheckException(result.ToString());
         return result;
     }
 
@@ -2298,18 +2291,15 @@ public static partial class Check
     public static Task<FasterResult> FasterAsync<T>(this Gen<T> gen, Func<T, Task> faster, Func<T, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
     {
-        if (sigma == -1.0) sigma = Sigma;
-        sigma *= sigma; // using sigma as sigma squared now
         seed ??= Seed;
-        if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
-        var result = new FasterResult();
+        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
+        if (threads == -1) threads = Threads;
+        if (threads == -1) threads = Environment.ProcessorCount;
         while (threads-- > 0)
         {
             Task.Run(async () =>
@@ -2325,8 +2315,7 @@ public static partial class Check
                         state = pcg.State;
                         t = gen.Generate(pcg, null, out _);
                         if (isSet) return;
-                        result.Add(await fasterTimer.Time(t), await slowerTimer.Time(t));
-                        if (result.SigmaSquared >= sigma)
+                        if (result.Add(await fasterTimer.Time(t), await slowerTimer.Time(t)))
                         {
                             lock (tcs)
                             {
@@ -2368,7 +2357,6 @@ public static partial class Check
                 }
             });
         }
-
         return tcs.Task;
     }
 
@@ -2484,64 +2472,64 @@ public static partial class Check
     public static FasterResult Faster<T, R>(this Gen<T> gen, Func<T, R> faster, Func<T, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
     {
-        if (sigma == -1.0) sigma = Sigma;
-        sigma *= sigma; // using sigma as sigma squared now
         seed ??= Seed;
-        if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
         equal ??= Equal;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var result = new FasterResult();
-        var mre = new ManualResetEventSlim();
-        Exception? exception = null;
-        while (threads-- > 0)
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
+        var running = true;
+        void Worker(object? __)
         {
-            ThreadPool.UnsafeQueueUserWorkItem(__ =>
+            var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
+            ulong state = 0;
+            T t = default!;
+            try
             {
-                var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
-                ulong state = 0;
-                T t = default!;
-                try
+                while (running)
                 {
-                    while (true)
+                    state = pcg.State;
+                    t = gen.Generate(pcg, null, out _);
+                    if (result.Add(fasterTimer.Time(t, out var fasterValue), slowerTimer.Time(t, out var slowerValue)))
                     {
-                        if (mre.IsSet) return;
-                        state = pcg.State;
-                        t = gen.Generate(pcg, null, out _);
-                        if (mre.IsSet) return;
-                        result.Add(fasterTimer.Time(t, out var fasterValue), slowerTimer.Time(t, out var slowerValue));
-                        if (!equal(fasterValue, slowerValue))
-                        {
-                            var vfs = Print(fasterValue);
-                            vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
-                            var vss = Print(slowerValue);
-                            vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
-                            exception = new CsCheckException("Return values differ: CsCheck_Seed = \"" + pcg.ToString(state) + "\"" + vfs + vss);
-                            mre.Set();
-                            return;
-                        }
-                        if (result.SigmaSquared >= sigma) mre.Set();
+                        running = false;
+                        return;
+                    }
+                    if (running && !equal(fasterValue, slowerValue))
+                    {
+                        var vfs = Print(fasterValue);
+                        vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
+                        var vss = Print(slowerValue);
+                        vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
+                        result.Exception = new CsCheckException("Return values differ: CsCheck_Seed = \"" + pcg.ToString(state) + "\"" + vfs + vss);
+                        running = false;
+                        return;
+                    }
+                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
+                    {
+                        if (raiseexception)
+                            result.Exception ??= new CsCheckException("Timeout! " + result.ToString());
+                        running = false;
+                        return;
                     }
                 }
-                catch (Exception e)
-                {
-                    var tString = Print(t);
-                    if (tString.Length > 100) tString = tString.Substring(0, 100);
-                    exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
-                    mre.Set();
-                }
-            }, null);
+            }
+            catch (Exception e)
+            {
+                var tString = Print(t);
+                if (tString.Length > 100) tString = tString.Substring(0, 100);
+                result.Exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
+                running = false;
+            }
         }
-
-        var completed = mre.Wait(timeout * 1000);
-        if (exception is not null) throw exception;
-        if (raiseexception)
-        {
-            if (!completed) throw new CsCheckException("Timeout! " + result.ToString());
-            if (result.Slower > result.Faster || result.Median.Median < 0.0) throw new CsCheckException(result.ToString());
-        }
+        if (threads == -1) threads = Threads;
+        if (threads == -1) threads = Environment.ProcessorCount;
+        while (--threads > 0)
+            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
+        Worker(null);
+        if (result.Exception is not null) throw result.Exception;
+        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+            throw new CsCheckException(result.ToString());
         return result;
     }
 
@@ -2560,64 +2548,65 @@ public static partial class Check
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
             where I1 : IInvoke<T, R> where I2 : IInvoke<T, R>
     {
-        if (sigma == -1.0) sigma = Sigma;
-        sigma *= sigma; // using sigma as sigma squared now
         seed ??= Seed;
-        if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
         equal ??= Equal;
         var fasterTimer = Timer.Create<I1, T, R>(faster, repeat);
         var slowerTimer = Timer.Create<I2, T, R>(slower, repeat);
-        var result = new FasterResult();
-        var mre = new ManualResetEventSlim();
-        Exception? exception = null;
-        while (threads-- > 0)
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
+        var running = true;
+        void Worker(object? __)
         {
-            ThreadPool.UnsafeQueueUserWorkItem(__ =>
+            var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
+            ulong state = 0;
+            T t = default!;
+            try
             {
-                var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
-                ulong state = 0;
-                T t = default!;
-                try
+                while (running)
                 {
-                    while (true)
+                    state = pcg.State;
+                    t = gen.Generate(pcg, null, out _);
+                    if (!running) return;
+                    if (result.Add(fasterTimer.Time(t, out var fasterValue), slowerTimer.Time(t, out var slowerValue)))
                     {
-                        if (mre.IsSet) return;
-                        state = pcg.State;
-                        t = gen.Generate(pcg, null, out _);
-                        if (mre.IsSet) return;
-                        result.Add(fasterTimer.Time(t, out var fasterValue), slowerTimer.Time(t, out var slowerValue));
-                        if (!equal(fasterValue, slowerValue))
-                        {
-                            var vfs = Print(fasterValue);
-                            vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
-                            var vss = Print(slowerValue);
-                            vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
-                            exception = new CsCheckException("Return values differ: CsCheck_Seed = \"" + pcg.ToString(state) + "\"" + vfs + vss);
-                            mre.Set();
-                            return;
-                        }
-                        if (result.SigmaSquared >= sigma) mre.Set();
+                        running = false;
+                        return;
+                    }
+                    if (running && !equal(fasterValue, slowerValue))
+                    {
+                        var vfs = Print(fasterValue);
+                        vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
+                        var vss = Print(slowerValue);
+                        vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
+                        result.Exception = new CsCheckException("Return values differ: CsCheck_Seed = \"" + pcg.ToString(state) + "\"" + vfs + vss);
+                        running = false;
+                        return;
+                    }
+                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
+                    {
+                        if (raiseexception)
+                            result.Exception ??= new CsCheckException("Timeout! " + result.ToString());
+                        running = false;
+                        return;
                     }
                 }
-                catch (Exception e)
-                {
-                    var tString = Print(t);
-                    if (tString.Length > 100) tString = tString.Substring(0, 100);
-                    exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
-                    mre.Set();
-                }
-            }, null);
+            }
+            catch (Exception e)
+            {
+                var tString = Print(t);
+                if (tString.Length > 100) tString = tString.Substring(0, 100);
+                result.Exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
+                running = false;
+            }
         }
-
-        var completed = mre.Wait(timeout * 1000);
-        if (exception is not null) throw exception;
-        if (raiseexception)
-        {
-            if (!completed) throw new CsCheckException("Timeout! " + result.ToString());
-            if (result.Slower > result.Faster || result.Median.Median < 0.0) throw new CsCheckException(result.ToString());
-        }
+        if (threads == -1) threads = Threads;
+        if (threads == -1) threads = Environment.ProcessorCount;
+        while (--threads > 0)
+            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
+        Worker(null);
+        if (result.Exception is not null) throw result.Exception;
+        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+            throw new CsCheckException(result.ToString());
         return result;
     }
 
@@ -2740,19 +2729,16 @@ public static partial class Check
     public static Task<FasterResult> FasterAsync<T, R>(this Gen<T> gen, Func<T, Task<R>> faster, Func<T, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
     {
-        if (sigma == -1.0) sigma = Sigma;
-        sigma *= sigma; // using sigma as sigma squared now
         seed ??= Seed;
-        if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
-        if (timeout == -1) timeout = Timeout;
         equal ??= Equal;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
-        var result = new FasterResult();
+        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
         var tcs = new TaskCompletionSource<FasterResult>();
         var isSet = false;
+        if (threads == -1) threads = Threads;
+        if (threads == -1) threads = Environment.ProcessorCount;
         while (threads-- > 0)
         {
             Task.Run(async () =>
@@ -2770,7 +2756,19 @@ public static partial class Check
                         if (isSet) return;
                         var (fasterTime, fasterValue) = await fasterTimer.Time(t);
                         var (slowerTime, slowerValue) = await slowerTimer.Time(t);
-                        result.Add(fasterTime, slowerTime);
+                        if (result.Add(fasterTime, slowerTime))
+                        {
+                            lock (tcs)
+                            {
+                                if (isSet) return;
+                                isSet = true;
+                                if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+                                    tcs.SetException(new CsCheckException(result.ToString()));
+                                else
+                                    tcs.SetResult(result);
+                                return;
+                            }
+                        }
                         if (!equal(fasterValue, slowerValue))
                         {
                             lock (tcs)
@@ -2782,19 +2780,6 @@ public static partial class Check
                                 var vss = Print(slowerValue);
                                 vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
                                 tcs.SetException(new CsCheckException("Return values differ:" + vfs + vss));
-                                return;
-                            }
-                        }
-                        if (result.SigmaSquared >= sigma)
-                        {
-                            lock (tcs)
-                            {
-                                if (isSet) return;
-                                isSet = true;
-                                if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
-                                    tcs.SetException(new CsCheckException(result.ToString()));
-                                else
-                                    tcs.SetResult(result);
                                 return;
                             }
                         }
@@ -2827,7 +2812,6 @@ public static partial class Check
                 }
             });
         }
-
         return tcs.Task;
     }
 
@@ -3062,10 +3046,12 @@ public static partial class Check
     }
 }
 
-public sealed class FasterResult
+public sealed class FasterResult(double sigma)
 {
     const byte STATE_PROCESSING = 0, STATE_QUEUED = 1, STATE_BLOCKED = 2;
     static readonly int capacity = Environment.ProcessorCount;
+    readonly double Limit = sigma * sigma;
+    public Exception? Exception;
     public int Faster, Slower;
     public MedianEstimator Median = new();
     readonly Queue<double> queue = new(capacity);
@@ -3082,7 +3068,7 @@ public sealed class FasterResult
             return d * d / (Faster + Slower);
         }
     }
-    public void Add(long faster, long slower)
+    public bool Add(long faster, long slower)
     {
         double ratio;
         byte myState;
@@ -3171,7 +3157,7 @@ public sealed class FasterResult
                 {
                     processing = false;
                     if (lockTaken) spinLock.Exit();
-                    return;
+                    break;
                 }
                 ratio = queue.Dequeue();
                 if (lockTaken) spinLock.Exit();
@@ -3187,11 +3173,12 @@ public sealed class FasterResult
                 {
                     queue.Enqueue(ratio);
                     if (lockTaken) spinLock.Exit();
-                    return;
+                    break;
                 }
                 if (lockTaken) spinLock.Exit();
             }
         }
+        return SigmaSquared >= Limit;
     }
     public override string ToString()
     {
