@@ -32,7 +32,7 @@ Performance improvements for Sample and Faster.
 Added Gen&lt;T&gt;.Single() that generates a single random value.
 
 BREAKING CHANGES:
-- Example(predicate) renamed to Sample(predicate).
+- Example(predicate) renamed to Single(predicate).
 - Removed SampleOne, use Sample(..., iter: 1, time: -2) instead.
 - Removed Cast, use Select instead (better performance).
 - Removed Create, create a : Gen&lt;T&gt; class instead.
