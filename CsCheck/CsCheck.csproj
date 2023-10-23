@@ -36,6 +36,8 @@ BREAKING CHANGES:
 - Removed SampleOne, use Sample(..., iter: 1, time: -2) instead.
 - Removed Cast, use Select instead (better performance).
 - Removed Create, create a : Gen&lt;T&gt; class instead.
+- Removed SelectTuple.
+- Removed Gen.Enumerable.
 - Added max count to Where.
         </PackageReleaseNotes>
         <TargetFramework>netstandard2.0</TargetFramework>
