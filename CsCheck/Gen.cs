@@ -1613,7 +1613,9 @@ public sealed class GenInt : Gen<int>
     /// <summary>Skew the distribution towards either end.
     /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
     /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
+#pragma warning disable CA1822 // Mark members as static
     public IntSkew Skew => new();
+#pragma warning restore CA1822 // Mark members as static
 }
 
 public sealed class GenUInt : Gen<uint>
@@ -1651,7 +1653,9 @@ public sealed class GenUInt : Gen<uint>
     /// <summary>Skew the distribution towards either end.
     /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
     /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
+#pragma warning disable CA1822 // Mark members as static
     public UIntSkew Skew => new();
+#pragma warning restore CA1822 // Mark members as static
 }
 
 public sealed class GenLong : Gen<long>
@@ -2142,7 +2146,9 @@ public sealed class GenDouble : Gen<double>
     /// <summary>Skew the distribution towards either end.
     /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
     /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
+#pragma warning disable CA1822 // Mark members as static
     public DoubleSkew Skew => new();
+#pragma warning restore CA1822 // Mark members as static
 }
 
 public sealed class GenDecimal : Gen<decimal>

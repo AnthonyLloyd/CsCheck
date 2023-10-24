@@ -39,6 +39,7 @@ BREAKING CHANGES:
 - Removed SelectTuple.
 - Removed Gen.Enumerable.
 - Added max count to Where.
+- Now targets net6.0, 2.14.1 was the last to target netrstandard2.0
         </PackageReleaseNotes>
         <TargetFramework>net6.0</TargetFramework>
         <LangVersion>preview</LangVersion>

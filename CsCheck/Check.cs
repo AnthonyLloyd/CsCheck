@@ -34,6 +34,7 @@ public sealed class CsCheckException : Exception
 /// <summary>Main random testing Check functions.</summary>
 public static partial class Check
 {
+#pragma warning disable CA2211 // Non-constant fields should not be visible
     const int MAX_LENGTH = 5000;
     /// <summary>The number of iterations to run in the sample (default 100).</summary>
     public static long Iter = 100;
@@ -53,6 +54,7 @@ public static partial class Check
     public static int Ulps = 4;
     /// <summary>The number of Where Gne iterations before throwing an exception.</summary>
     public static int WhereLimit = 100;
+#pragma warning restore CA2211 // Non-constant fields should not be visible
 
     static Check()
     {
