@@ -1840,22 +1840,10 @@ public static partial class Check
         if (sigmaSquared > 36.0) throw new CsCheckException("Chi-squared standard deviation = " + Math.Sqrt(sigmaSquared).ToString("0.0"));
     }
 
-    /// <summary>Assert the first function is faster than the second to a given sigma.</summary>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
+    sealed class FasterActionWorker(ITimerAction fasterTimer, ITimerAction slowerTimer, FasterResult result, long endTimestamp, bool raiseexception) : IThreadPoolWorkItem
     {
-        var fasterTimer = Timer.Create(faster, repeat);
-        var slowerTimer = Timer.Create(slower, repeat);
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
-        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
-        var running = true;
-        void Worker(object? _)
+        volatile bool running = true;
+        public void Execute()
         {
             try
             {
@@ -1881,13 +1869,30 @@ public static partial class Check
                 running = false;
             }
         }
+    }
+    /// <summary>Assert the first function is faster than the second to a given sigma.</summary>
+    /// <param name="faster">The presumed faster code to test.</param>
+    /// <param name="slower">The presumed slower code to test.</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
+    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
+    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
+    /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
+    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
+    public static FasterResult Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
+    {
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var worker = new FasterActionWorker(
+            Timer.Create(faster, repeat),
+            Timer.Create(slower, repeat),
+            result,
+            Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
+            raiseexception);
         if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
-        Worker(result);
+            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+        worker.Execute();
         if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+        if (raiseexception && result.NotFaster)
             throw new CsCheckException(result.ToString());
         return result;
     }
@@ -1947,12 +1952,11 @@ public static partial class Check
             }
         }
         if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
         Worker(null);
         if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+        if (raiseexception && result.NotFaster)
             throw new CsCheckException(result.ToString());
         return result;
     }
@@ -2000,12 +2004,11 @@ public static partial class Check
             }
         }
         if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker();
         if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+        if (raiseexception && result.NotFaster)
             throw new CsCheckException(result.ToString());
         return result;
     }
@@ -2067,12 +2070,11 @@ public static partial class Check
             }
         }
         if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker();
         if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+        if (raiseexception && result.NotFaster)
             throw new CsCheckException(result.ToString());
         return result;
     }
@@ -2130,12 +2132,11 @@ public static partial class Check
             }
         }
         if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
         Worker(null);
         if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+        if (raiseexception && result.NotFaster)
             throw new CsCheckException(result.ToString());
         return result;
     }
@@ -2292,12 +2293,11 @@ public static partial class Check
             }
         }
         if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker();
         if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+        if (raiseexception && result.NotFaster)
             throw new CsCheckException(result.ToString());
         return result;
     }
@@ -2465,12 +2465,11 @@ public static partial class Check
             }
         }
         if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
         Worker(null);
         if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+        if (raiseexception && result.NotFaster)
             throw new CsCheckException(result.ToString());
         return result;
     }
@@ -2542,12 +2541,11 @@ public static partial class Check
             }
         }
         if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
         Worker(null);
         if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+        if (raiseexception && result.NotFaster)
             throw new CsCheckException(result.ToString());
         return result;
     }
@@ -2725,12 +2723,11 @@ public static partial class Check
             }
         }
         if (threads == -1) threads = Threads;
-        if (threads == -1) threads = Environment.ProcessorCount;
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker();
         if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && (result.Slower > result.Faster || result.Median.Median < 0.0))
+        if (raiseexception && result.NotFaster)
             throw new CsCheckException(result.ToString());
         return result;
     }
@@ -2845,14 +2842,10 @@ public static partial class Check
     public static T Single<T>(this Gen<T> gen)
         => gen.Generate(PCG.ThreadPCG, null, out _);
 
-    /// <summary>Generate a single random example that satisfies the predicate. Throws giving the seed to use.</summary>
-    /// <param name="gen">The data generator.</param>
-    /// <param name="predicate">The predicate the data has to satisfy.</param>
-    public static T Single<T>(this Gen<T> gen, Func<T, bool> predicate)
+    sealed class SingleWorker<T>(Gen<T> gen, Func<T, bool> predicate) : IThreadPoolWorkItem
     {
-        string? message = null;
-        var threads = Environment.ProcessorCount;
-        void Worker(object? _)
+        public volatile string? message = null;
+        public void Execute()
         {
             var pcg = PCG.ThreadPCG;
             while (message is null)
@@ -2863,10 +2856,18 @@ public static partial class Check
                     message = "Example " + typeof(T).Name + " seed = \"" + pcg.ToString(state) + "\"";
             }
         }
+    }
+    /// <summary>Generate a single random example that satisfies the predicate. Throws giving the seed to use.</summary>
+    /// <param name="gen">The data generator.</param>
+    /// <param name="predicate">The predicate the data has to satisfy.</param>
+    public static T Single<T>(this Gen<T> gen, Func<T, bool> predicate)
+    {
+        var worker = new SingleWorker<T>(gen, predicate);
+        var threads = Environment.ProcessorCount;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
-        Worker(null);
-        throw new CsCheckException(message!);
+            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+        worker.Execute();
+        throw new CsCheckException(worker.message!);
     }
 
     /// <summary>Generate a single example using the seed and checking that it still satisfies the predicate.</summary>
@@ -2877,7 +2878,7 @@ public static partial class Check
     {
         var t = gen.Generate(PCG.Parse(seed), null, out _);
         if (predicate(t)) return t;
-        throw new CsCheckException("where clause no longer satisfied");
+        throw new CsCheckException("predicate no longer satisfied");
     }
 
     /// <summary>Check Equals, <see cref="IEquatable{T}"/> and GetHashCode are consistent.</summary>
@@ -2988,6 +2989,9 @@ public sealed class FasterResult(double sigma)
             return d * d / (Faster + Slower);
         }
     }
+
+    public bool NotFaster => Slower > Faster || Median.Median < 0.0;
+
     public bool Add(long faster, long slower)
     {
         double ratio;

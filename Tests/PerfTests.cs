@@ -3,9 +3,9 @@
 using CsCheck;
 using Xunit;
 
-public class PerfTests
+public class PerfTests(Xunit.Abstractions.ITestOutputHelper output)
 {
-    [Fact(Skip = "They are equal")]
+    [Fact]
     public void ValueTuple_Vs_Out()
     {
         static (double sum, double err) TwoSum_T(double a, double b)
@@ -24,7 +24,8 @@ public class PerfTests
         Check.Faster(
             () => { var sum = TwoSum_O(2, 1e50, out var err); },
             () => { var (sum, err) = TwoSum_T(2, 1e50); }
-        , sigma: 200);
+        , repeat: 100)
+        .Output(output.WriteLine);
     }
     [Fact(Skip = "They are equal")]
     public void TryChecked_Vs_If()
@@ -52,7 +53,7 @@ public class PerfTests
         .Faster(
             TryChecked,
             If
-        , sigma: 200);
+        , repeat: 100);
     }
     [Fact(Skip = "If is a lot faster")]
     public void TryChecked_Vs_If_Overflow()
