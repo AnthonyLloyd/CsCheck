@@ -1851,13 +1851,15 @@ public static partial class Check
                 {
                     if (result.Add(fasterTimer.Time(), slowerTimer.Time()))
                     {
+                        if (raiseexception && result.NotFaster)
+                            result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
                     }
                     if (running && Stopwatch.GetTimestamp() > endTimestamp)
                     {
                         if (raiseexception)
-                            result.Exception ??= new CsCheckException("Timeout! " + result.ToString());
+                            result.Exception ??= new CsCheckException($"Timeout! {result}");
                         running = false;
                         return;
                     }
@@ -1891,12 +1893,51 @@ public static partial class Check
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
-        if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && result.NotFaster)
-            throw new CsCheckException(result.ToString());
-        return result;
+        return result.Exception is null ? result : throw result.Exception;
     }
 
+    sealed class FasterFuncWorker<T>(ITimerFunc<T> fasterTimer, ITimerFunc<T> slowerTimer, FasterResult result, Func<T, T, bool> equal, long endTimestamp, bool raiseexception) : IThreadPoolWorkItem
+    {
+        volatile bool running = true;
+        public void Execute()
+        {
+            try
+            {
+                while (running)
+                {
+                    if (result.Add(fasterTimer.Time(out var fasterValue), slowerTimer.Time(out var slowerValue)))
+                    {
+                        if (raiseexception && result.NotFaster)
+                            result.Exception ??= new CsCheckException(result.ToString());
+                        running = false;
+                        return;
+                    }
+                    if (running && !equal(fasterValue, slowerValue))
+                    {
+                        var vfs = Print(fasterValue);
+                        vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
+                        var vss = Print(slowerValue);
+                        vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
+                        result.Exception ??= new CsCheckException($"Return values differ:{vfs}{vss}");
+                        running = false;
+                        return;
+                    }
+                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
+                    {
+                        if (raiseexception)
+                            result.Exception ??= new CsCheckException($"Timeout! {result}");
+                        running = false;
+                        return;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                result.Exception = e;
+                running = false;
+            }
+        }
+    }
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma.</summary>
     /// <param name="faster">The presumed faster code to test.</param>
     /// <param name="slower">The presumed slower code to test.</param>
@@ -1909,56 +1950,21 @@ public static partial class Check
     public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Func<T, T, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
     {
-        equal ??= Equal;
-        var fasterTimer = Timer.Create(faster, repeat);
-        var slowerTimer = Timer.Create(slower, repeat);
         var result = new FasterResult(sigma == -1 ? Sigma : sigma);
-        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
-        var running = true;
-        void Worker(object? _)
-        {
-            try
-            {
-                while (running)
-                {
-                    if (result.Add(fasterTimer.Time(out var fasterValue), slowerTimer.Time(out var slowerValue)))
-                    {
-                        running = false;
-                        return;
-                    }
-                    if (running && !equal(fasterValue, slowerValue))
-                    {
-                        var vfs = Print(fasterValue);
-                        vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
-                        var vss = Print(slowerValue);
-                        vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
-                        result.Exception = new CsCheckException("Return values differ:" + vfs + vss);
-                        running = false;
-                        return;
-                    }
-                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
-                    {
-                        if (raiseexception)
-                            result.Exception ??= new CsCheckException("Timeout! " + result.ToString());
-                        running = false;
-                        return;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                result.Exception = e;
-                running = false;
-            }
-        }
+        var worker = new FasterFuncWorker<T>(
+            Timer.Create(faster, repeat),
+            Timer.Create(slower, repeat),
+            result,
+            equal ?? Equal,
+            Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
+            raiseexception);
         if (threads == -1) threads = Threads;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
-        Worker(null);
-        if (result.Exception is not null) throw result.Exception;
+            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+        worker.Execute();
         if (raiseexception && result.NotFaster)
             throw new CsCheckException(result.ToString());
-        return result;
+        return result.Exception is null ? result : throw result.Exception;
     }
 
     /// <summary>Assert the first function is faster than the second to a given sigma.</summary>
@@ -1985,13 +1991,15 @@ public static partial class Check
                 {
                     if (result.Add(await fasterTimer.Time(), await slowerTimer.Time()))
                     {
+                        if (raiseexception && result.NotFaster)
+                            result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
                     }
                     if (running && Stopwatch.GetTimestamp() > endTimestamp)
                     {
                         if (raiseexception)
-                            result.Exception = new CsCheckException("Timeout! " + result.ToString());
+                            result.Exception ??= new CsCheckException($"Timeout! {result}");
                         running = false;
                         return;
                     }
@@ -2007,10 +2015,7 @@ public static partial class Check
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker();
-        if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && result.NotFaster)
-            throw new CsCheckException(result.ToString());
-        return result;
+        return result.Exception is null ? result : throw result.Exception;
     }
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma.</summary>
@@ -2041,6 +2046,8 @@ public static partial class Check
                     var (slowerTime, slowerValue) = await slowerTimer.Time();
                     if (result.Add(fasterTime, slowerTime))
                     {
+                        if (raiseexception && result.NotFaster)
+                            result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
                     }
@@ -2050,14 +2057,14 @@ public static partial class Check
                         vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
                         var vss = Print(slowerValue);
                         vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
-                        result.Exception = new CsCheckException("Return values differ:" + vfs + vss);
+                        result.Exception ??= new CsCheckException($"Return values differ:{vfs}{vss}");
                         running = false;
                         return;
                     }
                     if (running && Stopwatch.GetTimestamp() > endTimestamp)
                     {
                         if (raiseexception)
-                            result.Exception = new CsCheckException("Timeout! " + result.ToString());
+                            result.Exception ??= new CsCheckException($"Timeout! {result}");
                         running = false;
                         return;
                     }
@@ -2073,12 +2080,48 @@ public static partial class Check
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker();
-        if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && result.NotFaster)
-            throw new CsCheckException(result.ToString());
-        return result;
+        return result.Exception is null ? result : throw result.Exception;
     }
 
+    sealed class FasterActionWorker<T>(Gen<T> gen, ITimerAction<T> fasterTimer, ITimerAction<T> slowerTimer, FasterResult result, long endTimestamp, string? seed, bool raiseexception) : IThreadPoolWorkItem
+    {
+        volatile bool running = true;
+        public void Execute()
+        {
+            var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
+            ulong state = 0;
+            T t = default!;
+            try
+            {
+                while (running)
+                {
+                    state = pcg.State;
+                    t = gen.Generate(pcg, null, out _);
+                    if (running && result.Add(fasterTimer.Time(t), slowerTimer.Time(t)))
+                    {
+                        if (raiseexception && result.NotFaster)
+                            result.Exception ??= new CsCheckException(result.ToString());
+                        running = false;
+                        return;
+                    }
+                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
+                    {
+                        if (raiseexception)
+                            result.Exception ??= new CsCheckException($"Timeout! {result}");
+                        running = false;
+                        return;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                var tString = Print(t);
+                if (tString.Length > 100) tString = tString[..100];
+                result.Exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tString}", e);
+                running = false;
+            }
+        }
+    }
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
@@ -2092,53 +2135,20 @@ public static partial class Check
     public static FasterResult Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
     {
-        seed ??= Seed;
-        var fasterTimer = Timer.Create(faster, repeat);
-        var slowerTimer = Timer.Create(slower, repeat);
         var result = new FasterResult(sigma == -1 ? Sigma : sigma);
-        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
-        var running = true;
-        void Worker(object? __)
-        {
-            var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
-            ulong state = 0;
-            T t = default!;
-            try
-            {
-                while (running)
-                {
-                    state = pcg.State;
-                    t = gen.Generate(pcg, null, out _);
-                    if (running && result.Add(fasterTimer.Time(t), slowerTimer.Time(t)))
-                    {
-                        running = false;
-                        return;
-                    }
-                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
-                    {
-                        if (raiseexception)
-                            result.Exception ??= new CsCheckException("Timeout! " + result.ToString());
-                        running = false;
-                        return;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                var tString = Print(t);
-                if (tString.Length > 100) tString = tString[..100];
-                result.Exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
-                running = false;
-            }
-        }
+        var worker = new FasterActionWorker<T>(
+            gen,
+            Timer.Create(faster, repeat),
+            Timer.Create(slower, repeat),
+            result,
+            Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
+            seed ?? Seed,
+            raiseexception);
         if (threads == -1) threads = Threads;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
-        Worker(null);
-        if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && result.NotFaster)
-            throw new CsCheckException(result.ToString());
-        return result;
+            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+        worker.Execute();
+        return result.Exception is null ? result : throw result.Exception;
     }
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2272,13 +2282,15 @@ public static partial class Check
                     if (!running) return;
                     if (result.Add(await fasterTimer.Time(t), await slowerTimer.Time(t)))
                     {
+                        if (raiseexception && result.NotFaster)
+                            result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
                     }
                     if (running && Stopwatch.GetTimestamp() > endTimestamp)
                     {
                         if (raiseexception)
-                            result.Exception = new CsCheckException("Timeout! " + result.ToString());
+                            result.Exception ??= new CsCheckException($"Timeout! {result}");
                         running = false;
                         return;
                     }
@@ -2288,7 +2300,7 @@ public static partial class Check
             {
                 var tString = Print(t);
                 if (tString.Length > 100) tString = tString[..100];
-                result.Exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
+                result.Exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tString}", e);
                 running = false;
             }
         }
@@ -2296,10 +2308,7 @@ public static partial class Check
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker();
-        if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && result.NotFaster)
-            throw new CsCheckException(result.ToString());
-        return result;
+        return result.Exception is null ? result : throw result.Exception;
     }
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2400,6 +2409,55 @@ public static partial class Check
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), sigma, threads, repeat, timeout, seed, raiseexception);
 
+    sealed class FasterFuncWorker<T, R>(Gen<T> gen, ITimerFunc<T,R> fasterTimer, ITimerFunc<T, R> slowerTimer, FasterResult result, long endTimestamp, Func<R, R, bool> equal, string? seed, bool raiseexception) : IThreadPoolWorkItem
+    {
+        volatile bool running = true;
+        public void Execute()
+        {
+            var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
+            ulong state = 0;
+            T t = default!;
+            try
+            {
+                while (running)
+                {
+                    state = pcg.State;
+                    t = gen.Generate(pcg, null, out _);
+                    if (result.Add(fasterTimer.Time(t, out var fasterValue), slowerTimer.Time(t, out var slowerValue)))
+                    {
+                        if (raiseexception && result.NotFaster)
+                            result.Exception ??= new CsCheckException(result.ToString());
+                        running = false;
+                        return;
+                    }
+                    if (running && !equal(fasterValue, slowerValue))
+                    {
+                        var vfs = Print(fasterValue);
+                        vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
+                        var vss = Print(slowerValue);
+                        vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
+                        result.Exception ??= new CsCheckException($"Return values differ: CsCheck_Seed = \"{pcg.ToString(state)}\"{vfs}{vss}");
+                        running = false;
+                        return;
+                    }
+                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
+                    {
+                        if (raiseexception)
+                            result.Exception ??= new CsCheckException($"Timeout! {result}");
+                        running = false;
+                        return;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                var tString = Print(t);
+                if (tString.Length > 100) tString = tString[..100];
+                result.Exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tString}", e);
+                running = false;
+            }
+        }
+    }
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
     /// <param name="faster">The presumed faster code to test.</param>
@@ -2414,64 +2472,21 @@ public static partial class Check
     public static FasterResult Faster<T, R>(this Gen<T> gen, Func<T, R> faster, Func<T, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
     {
-        seed ??= Seed;
-        equal ??= Equal;
-        var fasterTimer = Timer.Create(faster, repeat);
-        var slowerTimer = Timer.Create(slower, repeat);
         var result = new FasterResult(sigma == -1 ? Sigma : sigma);
-        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
-        var running = true;
-        void Worker(object? __)
-        {
-            var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
-            ulong state = 0;
-            T t = default!;
-            try
-            {
-                while (running)
-                {
-                    state = pcg.State;
-                    t = gen.Generate(pcg, null, out _);
-                    if (result.Add(fasterTimer.Time(t, out var fasterValue), slowerTimer.Time(t, out var slowerValue)))
-                    {
-                        running = false;
-                        return;
-                    }
-                    if (running && !equal(fasterValue, slowerValue))
-                    {
-                        var vfs = Print(fasterValue);
-                        vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
-                        var vss = Print(slowerValue);
-                        vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
-                        result.Exception = new CsCheckException("Return values differ: CsCheck_Seed = \"" + pcg.ToString(state) + "\"" + vfs + vss);
-                        running = false;
-                        return;
-                    }
-                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
-                    {
-                        if (raiseexception)
-                            result.Exception ??= new CsCheckException("Timeout! " + result.ToString());
-                        running = false;
-                        return;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                var tString = Print(t);
-                if (tString.Length > 100) tString = tString[..100];
-                result.Exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
-                running = false;
-            }
-        }
+        var worker = new FasterFuncWorker<T, R>(
+            gen,
+            Timer.Create(faster, repeat),
+            Timer.Create(slower, repeat),
+            result,
+            Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
+            equal ?? Equal,
+            seed ?? Seed,
+            raiseexception);
         if (threads == -1) threads = Threads;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
-        Worker(null);
-        if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && result.NotFaster)
-            throw new CsCheckException(result.ToString());
-        return result;
+            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+        worker.Execute();
+        return result.Exception is null ? result : throw result.Exception;
     }
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2489,65 +2504,21 @@ public static partial class Check
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
             where I1 : IInvoke<T, R> where I2 : IInvoke<T, R>
     {
-        seed ??= Seed;
-        equal ??= Equal;
-        var fasterTimer = Timer.Create<I1, T, R>(faster, repeat);
-        var slowerTimer = Timer.Create<I2, T, R>(slower, repeat);
         var result = new FasterResult(sigma == -1 ? Sigma : sigma);
-        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
-        var running = true;
-        void Worker(object? __)
-        {
-            var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
-            ulong state = 0;
-            T t = default!;
-            try
-            {
-                while (running)
-                {
-                    state = pcg.State;
-                    t = gen.Generate(pcg, null, out _);
-                    if (!running) return;
-                    if (result.Add(fasterTimer.Time(t, out var fasterValue), slowerTimer.Time(t, out var slowerValue)))
-                    {
-                        running = false;
-                        return;
-                    }
-                    if (running && !equal(fasterValue, slowerValue))
-                    {
-                        var vfs = Print(fasterValue);
-                        vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
-                        var vss = Print(slowerValue);
-                        vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
-                        result.Exception = new CsCheckException("Return values differ: CsCheck_Seed = \"" + pcg.ToString(state) + "\"" + vfs + vss);
-                        running = false;
-                        return;
-                    }
-                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
-                    {
-                        if (raiseexception)
-                            result.Exception ??= new CsCheckException("Timeout! " + result.ToString());
-                        running = false;
-                        return;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                var tString = Print(t);
-                if (tString.Length > 100) tString = tString[..100];
-                result.Exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
-                running = false;
-            }
-        }
+        var worker = new FasterFuncWorker<T, R>(
+            gen,
+            Timer.Create<I1, T, R>(faster, repeat),
+            Timer.Create<I2, T, R>(slower, repeat),
+            result,
+            Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
+            equal ?? Equal,
+            seed ?? Seed,
+            raiseexception);
         if (threads == -1) threads = Threads;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
-        Worker(null);
-        if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && result.NotFaster)
-            throw new CsCheckException(result.ToString());
-        return result;
+            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+        worker.Execute();
+        return result.Exception is null ? result : throw result.Exception;
     }
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2692,6 +2663,8 @@ public static partial class Check
                     var (slowerTime, slowerValue) = await slowerTimer.Time(t);
                     if (result.Add(fasterTime, slowerTime))
                     {
+                        if (raiseexception && result.NotFaster)
+                            result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
                     }
@@ -2701,14 +2674,14 @@ public static partial class Check
                         vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
                         var vss = Print(slowerValue);
                         vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
-                        result.Exception = new CsCheckException("Return values differ:" + vfs + vss);
+                        result.Exception ??= new CsCheckException($"Return values differ:{vfs}{vss}");
                         running = false;
                         return;
                     }
                     if (running && Stopwatch.GetTimestamp() > timeout)
                     {
                         if (raiseexception)
-                            result.Exception ??= new CsCheckException("Timeout! " + result.ToString());
+                            result.Exception ??= new CsCheckException($"Timeout! {result}");
                         running = false;
                         return;
                     }
@@ -2718,7 +2691,7 @@ public static partial class Check
             {
                 var tString = Print(t);
                 if (tString.Length > 100) tString = tString[..100];
-                result.Exception = new CsCheckException("CsCheck_Seed = \"" + pcg.ToString(state) + "\" T=" + tString, e);
+                result.Exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tString}", e);
                 running = false;
             }
         }
@@ -2726,10 +2699,7 @@ public static partial class Check
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker();
-        if (result.Exception is not null) throw result.Exception;
-        if (raiseexception && result.NotFaster)
-            throw new CsCheckException(result.ToString());
-        return result;
+        return result.Exception is null ? result : throw result.Exception;
     }
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2853,7 +2823,7 @@ public static partial class Check
                 var state = pcg.State;
                 var t = gen.Generate(pcg, null, out var _);
                 if (predicate(t))
-                    message = "Example " + typeof(T).Name + " seed = \"" + pcg.ToString(state) + "\"";
+                    message = $"Example {typeof(T).Name} seed = \"{pcg.ToString(state)}\"";
             }
         }
     }
@@ -2930,7 +2900,7 @@ public static partial class Check
             hash = new Hash(null, offset, decimalPlaces, significantFigures);
             action(hash);
             var fullHashCode = CsCheck.Hash.FullHash(offset, hash.GetHashCode());
-            throw new CsCheckException("Hash is " + fullHashCode);
+            throw new CsCheckException($"Hash is {fullHashCode}");
         }
         else
         {
@@ -2961,7 +2931,7 @@ public static partial class Check
                     actualHashCode = hash.GetHashCode();
                 }
                 var actualFullHash = CsCheck.Hash.FullHash(offset, actualHashCode);
-                throw new CsCheckException("Actual " + actualFullHash + " but expected " + expected);
+                throw new CsCheckException($"Actual {actualFullHash} but expected {expected}");
             }
         }
     }
