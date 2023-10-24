@@ -40,7 +40,7 @@ public static class AllocatorMany
             throw new Exception($"rowTotal.Sum()!=colTotal.Sum() {rowTotal.Sum()}!={colTotal.Sum()}");
 
         if (rowPrice.Length == 1)
-            return new Result(new[] { (int[])colTotal.Clone() }, new int[colTotal.Length], 0, true, SolutionType.SingleRow);
+            return new Result([(int[])colTotal.Clone()], new int[colTotal.Length], 0, true, SolutionType.SingleRow);
 
         if (colTotal.Count(i => i != 0) == 1) // One columnTotal non zero return simple solution
         {
@@ -97,7 +97,7 @@ public static class AllocatorMany
             // One row return
             if (rowGroup?.Count == 1)
             {
-                result = new Result(new[] { (int[])colTotal.Clone() }, new int[colTotal.Length], 0, true, SolutionType.SingleGroupRow);
+                result = new Result([(int[])colTotal.Clone()], new int[colTotal.Length], 0, true, SolutionType.SingleGroupRow);
             }
             else
             {
@@ -105,7 +105,7 @@ public static class AllocatorMany
                 var zeroColCount = colTotal.Count(i => i == 0);
                 if (zeroColCount > 0)
                 {
-                    zeroColumns = new HashSet<int>();
+                    zeroColumns = [];
                     var nonZero = new int[colTotal.Length - zeroColCount];
                     int inz = 0;
                     for (int i = 0; i < colTotal.Length; i++)

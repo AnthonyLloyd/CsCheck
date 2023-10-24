@@ -40,8 +40,7 @@ BREAKING CHANGES:
 - Removed Gen.Enumerable.
 - Added max count to Where.
         </PackageReleaseNotes>
-        <TargetFramework>netstandard2.0</TargetFramework>
-        <LangVersion>12.0</LangVersion>
+        <TargetFramework>net6.0</TargetFramework>
         <LangVersion>preview</LangVersion>
         <WarningLevel>999</WarningLevel>
         <Nullable>enable</Nullable>

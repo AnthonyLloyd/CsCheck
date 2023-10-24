@@ -125,7 +125,7 @@ public static class Dbg
     public static void Count<T>(T t)
     {
         var s = Check.Print(t);
-        lock (counts) counts.GetValueOrNullRef(s)++;
+        lock (counts) counts.GetValueOrNullRef(s!)++;
     }
 
     /// <summary>Increment debug info counter. Function name when parameter not set.</summary>
@@ -170,8 +170,8 @@ public static class Dbg
     public static TimeRegion Time<T>(T t)
     {
         var name = Check.Print(t);
-        lock (times) times.GetValueOrNullRef(name).Item2++;
-        return new() { Name = name, Start = Stopwatch.GetTimestamp() };
+        lock (times) times.GetValueOrNullRef(name!).Item2++;
+        return new() { Name = name!, Start = Stopwatch.GetTimestamp() };
     }
 
     /// <summary>Start a time measurement. Function name when parameter not set.</summary>
@@ -352,7 +352,7 @@ public static class Dbg
             }
             else
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(filename));
+                Directory.CreateDirectory(Path.GetDirectoryName(filename)!);
                 stream = File.Open(filename, FileMode.Append, FileAccess.Write, FileShare.None);
                 reading = false;
             }

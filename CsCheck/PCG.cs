@@ -17,6 +17,7 @@ namespace CsCheck;
 using System;
 using System.Threading;
 using System.Diagnostics;
+using System.Numerics;
 
 /// <summary><see href="https://www.pcg-random.org/">PCG</see> is a family of simple fast space-efficient statistically good algorithms for random number generation.</summary>
 public sealed class PCG
@@ -44,9 +45,9 @@ public sealed class PCG
     {
         ulong state = State * 6364136223846793005UL + Inc;
         State = state;
-        int rot = (int)(state >> 59);
-        uint xorshifted = (uint)((state ^ (state >> 18)) >> 27);
-        return (xorshifted >> rot) | (xorshifted << (32 - rot));
+        return BitOperations.RotateRight(
+            (uint)((state ^ (state >> 18)) >> 27),
+            (int)(state >> 59));
     }
     public ulong Next64() => ((ulong)Next() << 32) + Next();
     public uint Next(uint maxExclusive)
