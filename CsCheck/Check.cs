@@ -14,11 +14,13 @@
 
 namespace CsCheck;
 
+using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -78,57 +80,17 @@ public static partial class Check
         if (!string.IsNullOrWhiteSpace(whereLimit)) WhereLimit = int.Parse(whereLimit);
     }
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T>(this Gen<T> gen, Action<T> assert,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
+    sealed class SampleActionWorker<T>(Gen<T> gen, Action<T> assert, CountdownEvent cde, string? seed, long target, bool isIter) : IThreadPoolWorkItem
     {
-        seed ??= Seed;
-        if (iter == -1) iter = Iter;
-        if (time == -1) time = Time;
-        if (threads == -1) threads = Threads;
-        print ??= Print;
-
-        PCG? minPCG = null;
-        ulong minState = 0UL;
-        Size? minSize = null;
-        T minT = default!;
-        Exception? minException = null;
-
-        int shrinks = -1;
-        if (seed is not null)
-        {
-            var pcg = PCG.Parse(seed);
-            ulong state = pcg.State;
-            Size? size = null;
-            T t = default!;
-            try
-            {
-                assert(t = gen.Generate(pcg, null, out size));
-            }
-            catch (Exception e)
-            {
-                minSize = size;
-                minPCG = pcg;
-                minState = state;
-                minT = t;
-                minException = e;
-                shrinks++;
-            }
-        }
-        long skipped = 0;
-        bool isIter = time < 0;
-        long target = isIter ? seed is null ? iter : iter - 1
-                    : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
-        long total = seed is null ? 0 : 1;
-        var cde = new CountdownEvent(threads);
-        void Worker(object? _)
+        public PCG? MinPCG = null;
+        public ulong MinState = 0UL;
+        public Size? MinSize = null;
+        public T MinT = default!;
+        public Exception? MinException = null;
+        public int Shrinks = -1;
+        public long Total = seed is null ? 0 : 1;
+        public long Skipped = 0;
+        public void Execute()
         {
             var pcg = PCG.ThreadPCG;
             Size? size = null;
@@ -143,15 +105,15 @@ public static partial class Check
                     {
                         if ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) < 0)
                         {
-                            Interlocked.Add(ref skipped, skippedLocal);
-                            Interlocked.Add(ref total, totalLocal);
+                            Interlocked.Add(ref Skipped, skippedLocal);
+                            Interlocked.Add(ref Total, totalLocal);
                             cde.Signal();
                             return;
                         }
                         totalLocal++;
                         state = pcg.State;
-                        t = gen.Generate(pcg, minSize, out size);
-                        if (minSize is null || Size.IsLessThan(size, minSize))
+                        t = gen.Generate(pcg, MinSize, out size);
+                        if (MinSize is null || Size.IsLessThan(size, MinSize))
                             assert(t);
                         else
                             skippedLocal++;
@@ -161,31 +123,77 @@ public static partial class Check
                 {
                     lock (cde)
                     {
-                        if (minSize is null || Size.IsLessThan(size, minSize))
+                        if (MinSize is null || Size.IsLessThan(size, MinSize))
                         {
-                            minSize = size;
-                            minPCG = pcg;
-                            minState = state;
-                            minT = t;
-                            minException = e;
-                            shrinks++;
+                            MinSize = size;
+                            MinPCG = pcg;
+                            MinState = state;
+                            MinT = t;
+                            MinException = e;
+                            Shrinks++;
                         }
                     }
                 }
             }
         }
-        while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
-        Worker(null);
-        cde.Wait();
-        if (minPCG is not null)
+        public CsCheckException Exception(Func<T, string> print)
         {
-            var seedString = minPCG.ToString(minState);
-            var tString = print(minT!);
+            var seedString = MinPCG!.ToString(MinState);
+            var tString = print(MinT!);
             if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
-            var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
-            throw new CsCheckException(summary + tString, minException);
+            throw new CsCheckException(
+                $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({Shrinks:#,0} shrinks, {Skipped:#,0} skipped, {Total:#,0} total).\n{tString}",
+                MinException);
         }
+    }
+    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    public static void Sample<T>(this Gen<T> gen, Action<T> assert, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
+    {
+        seed ??= Seed;
+        if (iter == -1) iter = Iter;
+        if (time == -1) time = Time;
+        if (threads == -1) threads = Threads;
+        bool isIter = time < 0;
+        var cde = new CountdownEvent(threads);
+        var worker = new SampleActionWorker<T>(
+            gen,
+            assert,
+            cde,
+            seed,
+            isIter ? seed is null ? iter : iter - 1 : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency,
+            isIter);
+        if (seed is not null)
+        {
+            var pcg = PCG.Parse(seed);
+            ulong state = pcg.State;
+            Size? size = null;
+            T t = default!;
+            try
+            {
+                assert(t = gen.Generate(pcg, null, out size));
+            }
+            catch (Exception e)
+            {
+                worker.MinSize = size;
+                worker.MinPCG = pcg;
+                worker.MinState = state;
+                worker.MinT = t;
+                worker.MinException = e;
+                worker.Shrinks++;
+            }
+        }
+        while (--threads > 0)
+            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+        worker.Execute();
+        cde.Wait();
+        if (worker.MinPCG is not null) throw worker.Exception(print ?? Print);
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -286,13 +294,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        void action(T t)
+        Sample(gen, (T t) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        Sample(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -310,13 +317,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        void action(T1 t1, T2 t2)
+        Sample(gen, (t1, t2) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        Sample(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -334,13 +340,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        void action(T1 t1, T2 t2, T3 t3)
+        Sample(gen, (t1, t2, t3) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        Sample(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -358,13 +363,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        void action(T1 t1, T2 t2, T3 t3, T4 t4)
+        Sample(gen, (t1, t2, t3, t4) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        Sample(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -382,13 +386,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        void action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5)
+        Sample(gen, (t1, t2, t3, t4, t5) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        Sample(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -406,13 +409,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        void action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6)
+        Sample(gen, (t1, t2, t3, t4, t5, t6) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5, t6);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        Sample(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -430,13 +432,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        void action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7)
+        Sample(gen, (t1, t2, t3, t4, t5, t6, t7) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5, t6, t7);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        Sample(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -454,13 +455,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        void action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8)
+        Sample(gen, (t1, t2, t3, t4, t5, t6, t7, t8) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5, t6, t7, t8);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        Sample(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -479,7 +479,6 @@ public static partial class Check
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
-        print ??= Print;
 
         PCG? minPCG = null;
         ulong minState = 0UL;
@@ -514,60 +513,58 @@ public static partial class Check
                     : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
         long total = seed is null ? 0 : 1;
         var tasks = new Task[threads];
-        while (threads-- > 0)
+        var worker = async () =>
         {
-            tasks[threads] = Task.Run(async () =>
+            var pcg = PCG.ThreadPCG;
+            Size? size = null;
+            T t = default!;
+            long skippedLocal = 0, totalLocal = 0;
+            ulong state = 0;
+            while (true)
             {
-                var pcg = PCG.ThreadPCG;
-                Size? size = null;
-                T t = default!;
-                long skippedLocal = 0, totalLocal = 0;
-                ulong state = 0;
-                while (true)
+                try
                 {
-                    try
+                    while (true)
                     {
-                        while (true)
+                        if ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) < 0)
                         {
-                            if ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) < 0)
-                            {
-                                Interlocked.Add(ref skipped, skippedLocal);
-                                Interlocked.Add(ref total, totalLocal);
-                                return;
-                            }
-                            totalLocal++;
-                            state = pcg.State;
-                            t = gen.Generate(pcg, minSize, out size);
-                            if (minSize is null || Size.IsLessThan(size, minSize))
-                                await assert(t);
-                            else
-                                skippedLocal++;
+                            Interlocked.Add(ref skipped, skippedLocal);
+                            Interlocked.Add(ref total, totalLocal);
+                            return;
                         }
+                        totalLocal++;
+                        state = pcg.State;
+                        t = gen.Generate(pcg, minSize, out size);
+                        if (minSize is null || Size.IsLessThan(size, minSize))
+                            await assert(t);
+                        else
+                            skippedLocal++;
                     }
-                    catch (Exception e)
+                }
+                catch (Exception e)
+                {
+                    lock (tasks)
                     {
-                        lock (tasks)
+                        if (minSize is null || Size.IsLessThan(size, minSize))
                         {
-                            if (minSize is null || Size.IsLessThan(size, minSize))
-                            {
-                                minSize = size;
-                                minPCG = pcg;
-                                minState = state;
-                                minT = t;
-                                minException = e;
-                                shrinks++;
-                            }
+                            minSize = size;
+                            minPCG = pcg;
+                            minState = state;
+                            minT = t;
+                            minException = e;
+                            shrinks++;
                         }
                     }
                 }
-            });
-        }
-
+            }
+        };
+        while (threads-- > 0)
+            tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks);
         if (minPCG is not null)
         {
             var seedString = minPCG.ToString(minState);
-            var tString = print(minT!);
+            var tString = (print ?? Print)(minT!);
             if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
             var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
             throw new CsCheckException(summary + tString, minException);
@@ -672,13 +669,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        async Task action(T t)
+        await SampleAsync(gen, async t =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -696,13 +692,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        async Task action(T1 t1, T2 t2)
+        await SampleAsync(gen, async (t1, t2) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -720,13 +715,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        async Task action(T1 t1, T2 t2, T3 t3)
+        await SampleAsync(gen, async (t1, t2, t3) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -744,13 +738,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        async Task action(T1 t1, T2 t2, T3 t3, T4 t4)
+        await SampleAsync(gen, async (t1, t2, t3, t4) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -768,13 +761,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        async Task action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5)
+        await SampleAsync(gen, async (t1, t2, t3, t4, t5) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -792,13 +784,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        async Task action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6)
+        await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5, t6);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -816,13 +807,12 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        async Task action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7)
+        await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5, t6, t7);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -840,16 +830,99 @@ public static partial class Check
         Action<string>? writeLine = null)
     {
         var classifier = new Classifier();
-        async Task action(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8)
+        await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7, t8) =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5, t6, t7, t8);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }
-        await SampleAsync(gen, action, seed, iter, time, threads, print);
+        }, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
+    sealed class SampleFuncWorker<T>(Gen<T> gen, Func<T, bool> predicate, CountdownEvent cde, string? seed, long target, bool isIter) : IThreadPoolWorkItem
+    {
+        public PCG? MinPCG = null;
+        public ulong MinState = 0UL;
+        public Size? MinSize = null;
+        public T MinT = default!;
+        public Exception? MinException = null;
+        public int Shrinks = -1;
+        public long Total = seed is null ? 0 : 1;
+        public long Skipped = 0;
+        public void Execute()
+        {
+            var pcg = PCG.ThreadPCG;
+            Size? size = null;
+            T t = default!;
+            long skippedLocal = 0, totalLocal = 0;
+            ulong state = 0;
+            while (true)
+            {
+                try
+                {
+                    while (true)
+                    {
+                        if ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) < 0)
+                        {
+                            Interlocked.Add(ref Skipped, skippedLocal);
+                            Interlocked.Add(ref Total, totalLocal);
+                            cde.Signal();
+                            return;
+                        }
+                        totalLocal++;
+                        state = pcg.State;
+                        t = gen.Generate(pcg, MinSize, out size);
+                        if (MinSize is null || Size.IsLessThan(size, MinSize))
+                        {
+                            if (!predicate(t))
+                            {
+                                lock (cde)
+                                {
+                                    if (MinSize is null || Size.IsLessThan(size, MinSize))
+                                    {
+                                        MinSize = size;
+                                        MinPCG = pcg;
+                                        MinState = state;
+                                        MinT = t;
+                                        MinException = null;
+                                        Shrinks++;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            skippedLocal++;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    lock (cde)
+                    {
+                        if (MinSize is null || Size.IsLessThan(size, MinSize))
+                        {
+                            MinSize = size;
+                            MinPCG = pcg;
+                            MinState = state;
+                            MinT = t;
+                            MinException = e;
+                            Shrinks++;
+                        }
+                    }
+                }
+            }
+        }
+        public CsCheckException Exception(Func<T, string> print)
+        {
+            var seedString = MinPCG!.ToString(MinState);
+            var tString = print(MinT!);
+            if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
+            throw new CsCheckException(
+                $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({Shrinks:#,0} shrinks, {Skipped:#,0} skipped, {Total:#,0} total).\n{tString}",
+                MinException);
+        }
+    }
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
@@ -865,15 +938,15 @@ public static partial class Check
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
-        print ??= Print;
-
-        PCG? minPCG = null;
-        ulong minState = 0UL;
-        Size? minSize = null;
-        T minT = default!;
-        Exception? minException = null;
-
-        int shrinks = -1;
+        bool isIter = time < 0;
+        var cde = new CountdownEvent(threads);
+        var worker = new SampleFuncWorker<T>(
+            gen,
+            predicate,
+            cde,
+            seed,
+            isIter ? seed is null ? iter : iter - 1 : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency,
+            isIter);
         if (seed is not null)
         {
             var pcg = PCG.Parse(seed);
@@ -885,105 +958,28 @@ public static partial class Check
                 t = gen.Generate(pcg, null, out size);
                 if (!predicate(t))
                 {
-                    minSize = size;
-                    minPCG = pcg;
-                    minState = state;
-                    minT = t;
-                    shrinks++;
+                    worker.MinSize = size;
+                    worker.MinPCG = pcg;
+                    worker.MinState = state;
+                    worker.MinT = t;
+                    worker.Shrinks++;
                 }
             }
             catch (Exception e)
             {
-                minSize = size;
-                minPCG = pcg;
-                minState = state;
-                minT = t;
-                minException = e;
-                shrinks++;
-            }
-        }
-        long skipped = 0;
-        bool isIter = time < 0;
-        long target = isIter ? seed is null ? iter : iter - 1
-                    : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
-        long total = seed is null ? 0 : 1;
-        var cde = new CountdownEvent(threads);
-        void Worker(object? _)
-        {
-            var pcg = PCG.ThreadPCG;
-            Size? size = null;
-            T t = default!;
-            long skippedLocal = 0, totalLocal = 0;
-            ulong state = 0;
-            while (true)
-            {
-                try
-                {
-                    while (true)
-                    {
-                        if ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) < 0)
-                        {
-                            Interlocked.Add(ref skipped, skippedLocal);
-                            Interlocked.Add(ref total, totalLocal);
-                            cde.Signal();
-                            return;
-                        }
-                        totalLocal++;
-                        state = pcg.State;
-                        t = gen.Generate(pcg, minSize, out size);
-                        if (minSize is null || Size.IsLessThan(size, minSize))
-                        {
-                            if (!predicate(t))
-                            {
-                                lock (cde)
-                                {
-                                    if (minSize is null || Size.IsLessThan(size, minSize))
-                                    {
-                                        minSize = size;
-                                        minPCG = pcg;
-                                        minState = state;
-                                        minT = t;
-                                        minException = null;
-                                        shrinks++;
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            skippedLocal++;
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    lock (cde)
-                    {
-                        if (minSize is null || Size.IsLessThan(size, minSize))
-                        {
-                            minSize = size;
-                            minPCG = pcg;
-                            minState = state;
-                            minT = t;
-                            minException = e;
-                            shrinks++;
-                        }
-                    }
-                }
+                worker.MinSize = size;
+                worker.MinPCG = pcg;
+                worker.MinState = state;
+                worker.MinT = t;
+                worker.MinException = e;
+                worker.Shrinks++;
             }
         }
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(Worker, null);
-        Worker(null);
+            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+        worker.Execute();
         cde.Wait();
-        if (minPCG is not null)
-        {
-            var seedString = minPCG.ToString(minState);
-            var tString = print(minT!);
-            if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
-            var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
-            throw new CsCheckException(summary + tString, minException);
-        }
+        if (worker.MinPCG is not null) throw worker.Exception(print ?? Print);
     }
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1085,7 +1081,6 @@ public static partial class Check
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
-        print ??= Print;
 
         PCG? minPCG = null;
         ulong minState = 0UL;
@@ -1128,81 +1123,80 @@ public static partial class Check
                     : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
         long total = seed is null ? 0 : 1;
         var tasks = new Task[threads];
-        while (threads-- > 0)
+        var worker = async () =>
         {
-            tasks[threads] = Task.Run(async () =>
+            var pcg = PCG.ThreadPCG;
+            Size? size = null;
+            T t = default!;
+            long skippedLocal = 0, totalLocal = 0;
+            ulong state = 0;
+            while (true)
             {
-                var pcg = PCG.ThreadPCG;
-                Size? size = null;
-                T t = default!;
-                long skippedLocal = 0, totalLocal = 0;
-                ulong state = 0;
-                while (true)
+                try
                 {
-                    try
+                    while (true)
                     {
-                        while (true)
+                        if ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) < 0)
                         {
-                            if ((isIter ? Interlocked.Decrement(ref target) : target - Stopwatch.GetTimestamp()) < 0)
+                            Interlocked.Add(ref skipped, skippedLocal);
+                            Interlocked.Add(ref total, totalLocal);
+                            return;
+                        }
+                        totalLocal++;
+                        state = pcg.State;
+                        t = gen.Generate(pcg, minSize, out size);
+                        if (minSize is null || Size.IsLessThan(size, minSize))
+                        {
+                            if (!await predicate(t))
                             {
-                                Interlocked.Add(ref skipped, skippedLocal);
-                                Interlocked.Add(ref total, totalLocal);
-                                return;
-                            }
-                            totalLocal++;
-                            state = pcg.State;
-                            t = gen.Generate(pcg, minSize, out size);
-                            if (minSize is null || Size.IsLessThan(size, minSize))
-                            {
-                                if (!await predicate(t))
+                                lock (tasks)
                                 {
-                                    lock (tasks)
+                                    if (minSize is null || Size.IsLessThan(size, minSize))
                                     {
-                                        if (minSize is null || Size.IsLessThan(size, minSize))
-                                        {
-                                            minSize = size;
-                                            minPCG = pcg;
-                                            minState = state;
-                                            minT = t;
-                                            minException = null;
-                                            shrinks++;
-                                        }
+                                        minSize = size;
+                                        minPCG = pcg;
+                                        minState = state;
+                                        minT = t;
+                                        minException = null;
+                                        shrinks++;
                                     }
                                 }
                             }
-                            else
-                            {
-                                skippedLocal++;
-                            }
                         }
-                    }
-                    catch (Exception e)
-                    {
-                        lock (tasks)
+                        else
                         {
-                            if (minSize is null || Size.IsLessThan(size, minSize))
-                            {
-                                minSize = size;
-                                minPCG = pcg;
-                                minState = state;
-                                minT = t;
-                                minException = e;
-                                shrinks++;
-                            }
+                            skippedLocal++;
                         }
                     }
                 }
-            });
-        }
-
+                catch (Exception e)
+                {
+                    lock (tasks)
+                    {
+                        if (minSize is null || Size.IsLessThan(size, minSize))
+                        {
+                            minSize = size;
+                            minPCG = pcg;
+                            minState = state;
+                            minT = t;
+                            minException = e;
+                            shrinks++;
+                        }
+                    }
+                }
+            }
+        };
+        while (threads-- > 0)
+            tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks);
         if (minPCG is not null)
         {
             var seedString = minPCG.ToString(minState);
-            var tString = print(minT!);
+            var tString = (print ?? Print)(minT!);
             if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
-            var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
-            throw new CsCheckException(summary + tString, minException);
+            throw new CsCheckException(
+                $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{tString}",
+                minException);
         }
     }
 
@@ -1528,7 +1522,6 @@ public static partial class Check
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
-        print ??= Print;
 
         new GenMetamorphicData<T>(initial)
         .Select(operations)
@@ -1548,6 +1541,7 @@ public static partial class Check
         }, seed, iter, time, threads,
         p =>
         {
+            print ??= Print;
             if (p.Item1 is null) return "";
             var sb = new StringBuilder();
             var initialState = initial.Generate(new PCG(p.Item1.Stream, p.Item1.Seed), null, out _);
@@ -1604,7 +1598,6 @@ public static partial class Check
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
-        print ??= Print;
         if (replay == -1) replay = Replay;
         int[]? replayThreads = null;
         if (seed?.Contains('[') == true)
@@ -1667,6 +1660,7 @@ public static partial class Check
         }, seed, iter, time, threads: 1,
         p =>
         {
+            print ??= Print;
             if (p == null) return "";
             var sb = new StringBuilder();
             sb.Append("\n   Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));

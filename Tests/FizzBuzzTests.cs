@@ -25,7 +25,7 @@ public class FizzBuzzTests
     [Fact]
     public void Induction_Random()
     {
-        Gen.Int.Uniform.Sample(i => FizzBuzz(i) switch
+        Gen.Int[0, 1_000_000].Sample(i => FizzBuzz(i) switch
         {
             "FizzBuzz" => FizzBuzz(i + 15).Equals("FizzBuzz"),
             "Fizz" => FizzBuzz(i + 3).StartsWith("Fizz"),
