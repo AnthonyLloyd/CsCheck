@@ -176,10 +176,11 @@ public class PCGTests
     public void SeedString_RoundTrip()
     {
         Gen.Select(Gen.ULong, Gen.UInt)
-        .Sample((i0, i1) =>
+        .Sample((state, stream) =>
         {
-            var seed = PCG.ToSeedString(i0, i1);
-            Assert.Equal((i0, i1), PCG.ParseSeedString(seed));
+            var seed = PCG.ToSeedString(state, stream);
+            var state2 = PCG.ParseSeedString(seed, out var stream2);
+            Assert.Equal((state, stream), (state2, stream2));
         });
     }
 
