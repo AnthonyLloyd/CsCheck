@@ -708,6 +708,18 @@ public class GenTests
             return Depth(i) <= maxDepth;
         });
     }
+
+    [Fact]
+    public void FastMod()
+    {
+        Gen.Select(Gen.UInt[0, int.MaxValue], Gen.UInt[1, 2_000_000_000])
+        .Sample((value ,divisor) =>
+        {
+            var multiplier = HashHelper.GetFastModMultiplier(divisor);
+            var fastMod = HashHelper.FastMod(value, divisor, multiplier);
+            return fastMod == value % divisor;
+        });
+    }
 }
 
 [StructLayout(LayoutKind.Explicit)]
