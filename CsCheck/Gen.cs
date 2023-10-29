@@ -24,7 +24,7 @@ public sealed class Size
 {
     public ulong I;
     public Size? Next;
-
+        
     public Size(ulong i) => I = i;
 
     public Size(ulong i, Size next)
@@ -1949,61 +1949,6 @@ public sealed class GenFloat : Gen<float>
     }
     /// <summary>In the range -inf &lt;= x &lt; 0.0 without nan.</summary>
     public Gen<float> Negative = new GenNegative();
-    sealed class GenNormal : Gen<float>
-    {
-        public override float Generate(PCG pcg, Size? min, out Size size)
-        {
-            uint i = pcg.Next();
-            size = new Size(i);
-            return (i & 0x7F800000U) == 0x7F800000U ? (8f - (i & 0xFU)) : new FloatConverter { I = i }.F;
-        }
-    }
-    /// <summary>Without special values nan and inf.</summary>
-    public Gen<float> Normal = new GenNormal();
-    sealed class GenNormalPositive : Gen<float>
-    {
-        public override float Generate(PCG pcg, Size? min, out Size size)
-        {
-            uint i = pcg.Next() >> 1;
-            size = new Size(i);
-            return (i & 0x7F800000U) == 0x7F800000U || i == 0U ? (i & 0xFU) + 1U : new FloatConverter { I = i }.F;
-        }
-    }
-    /// <summary>In the range 0.0 &lt; x &lt;= max without special values nan and inf.</summary>
-    public Gen<float> NormalPositive = new GenNormalPositive();
-    sealed class GenNormalNegative : Gen<float>
-    {
-        public override float Generate(PCG pcg, Size? min, out Size size)
-        {
-            uint i = pcg.Next() >> 1;
-            size = new Size(i);
-            return (i & 0x7F800000U) == 0x7F800000U || i == 0U ? -((i & 0xFU) + 1U) : new FloatConverter { I = i | 0x80000000U }.F;
-        }
-    }
-    /// <summary>In the range min &lt;= x &lt; 0.0 without special values nan and inf.</summary>
-    public Gen<float> NormalNegative = new GenNormalNegative();
-    sealed class GenNormalNonNegative : Gen<float>
-    {
-        public override float Generate(PCG pcg, Size? min, out Size size)
-        {
-            uint i = pcg.Next() >> 1;
-            size = new Size(i);
-            return (i & 0x7F800000U) == 0x7F800000U ? i & 0xFU : new FloatConverter { I = i }.F;
-        }
-    }
-    /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
-    public Gen<float> NormalNonNegative = new GenNormalNonNegative();
-    sealed class GenNormalNonPositive : Gen<float>
-    {
-        public override float Generate(PCG pcg, Size? min, out Size size)
-        {
-            uint i = pcg.Next() >> 1;
-            size = new Size(i);
-            return (i & 0x7F800000U) == 0x7F800000U ? -(i & 0xFU) : new FloatConverter { I = i | 0x80000000U }.F;
-        }
-    }
-    /// <summary>In the range min &lt;= x &lt;= 0.0 without special values nan and inf.</summary>
-    public Gen<float> NormalNonPositive = new GenNormalNonPositive();
     static float MakeSpecial(uint i) => (i & 0xFU) switch
     {
         0x0U => float.NaN,
@@ -2160,61 +2105,6 @@ public sealed class GenDouble : Gen<double>
     }
     /// <summary>In the range -inf &lt;= x &lt; 0.0 without nan.</summary>
     public Gen<double> Negative = new GenNegative();
-    sealed class GenNormal : Gen<double>
-    {
-        public override double Generate(PCG pcg, Size? min, out Size size)
-        {
-            var i = pcg.Next64();
-            size = new Size(i >> 12);
-            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? (8.0 - (i & 0xFUL)) : BitConverter.Int64BitsToDouble((long)i);
-        }
-    }
-    /// <summary>Without special values nan and inf.</summary>
-    public Gen<double> Normal = new GenNormal();
-    sealed class GenNormalPositive : Gen<double>
-    {
-        public override double Generate(PCG pcg, Size? min, out Size size)
-        {
-            var i = pcg.Next64() >> 1;
-            size = new Size(i >> 11);
-            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U || i == 0L ? ((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)i);
-        }
-    }
-    /// <summary>In the range 0.0 &lt; x &lt;= max without special values nan and inf.</summary>
-    public Gen<double> NormalPositive = new GenNormalPositive();
-    sealed class GenNormalNegative : Gen<double>
-    {
-        public override double Generate(PCG pcg, Size? min, out Size size)
-        {
-            var i = pcg.Next64() >> 1;
-            size = new Size(i >> 11);
-            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U || i == 0L ? -(double)((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)(i | 0x8000000000000000U));
-        }
-    }
-    /// <summary>In the range min &lt;= x &lt; 0.0 without special values nan and inf.</summary>
-    public Gen<double> NormalNegative = new GenNormalNegative();
-    sealed class GenNormalNonNegative : Gen<double>
-    {
-        public override double Generate(PCG pcg, Size? min, out Size size)
-        {
-            var i = pcg.Next64() >> 1;
-            size = new Size(i >> 11);
-            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? i & 0xFUL : BitConverter.Int64BitsToDouble((long)i);
-        }
-    }
-    /// <summary>In the range 0.0 &lt;= x &lt;= max without special values nan and inf.</summary>
-    public Gen<double> NormalNonNegative = new GenNormalNonNegative();
-    sealed class GenNormalNonPositive : Gen<double>
-    {
-        public override double Generate(PCG pcg, Size? min, out Size size)
-        {
-            var i = pcg.Next64() >> 1;
-            size = new Size(i >> 11);
-            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? -(double)(i & 0xFUL) : BitConverter.Int64BitsToDouble((long)(i | 0x8000000000000000U));
-        }
-    }
-    /// <summary>In the range min &lt;= x &lt;= 0.0 without special values nan and inf.</summary>
-    public Gen<double> NormalNonPositive = new GenNormalNonPositive();
     static double MakeSpecial(ulong i) => (i & 0xFUL) switch
     {
         0x0UL => double.NaN,

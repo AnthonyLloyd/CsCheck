@@ -384,41 +384,6 @@ public class GenTests
     }
 
     [Fact]
-    public void Single_Normal()
-    {
-        Gen.Single.Normal
-        .Sample(f => !float.IsNaN(f) && !float.IsInfinity(f));
-    }
-
-    [Fact]
-    public void Single_NormalNegative()
-    {
-        Gen.Single.NormalNegative
-        .Sample(d => !float.IsNaN(d) && !float.IsInfinity(d) && d < 0.0f);
-    }
-
-    [Fact]
-    public void Single_NormalPositive()
-    {
-        Gen.Single.NormalPositive
-        .Sample(d => !float.IsNaN(d) && !float.IsInfinity(d) && d > 0.0f);
-    }
-
-    [Fact]
-    public void Single_NormalNonNegative()
-    {
-        Gen.Single.NormalNonNegative
-        .Sample(f => !float.IsNaN(f) && !float.IsInfinity(f) && f >= 0.0f);
-    }
-
-    [Fact]
-    public void Single_NormalNonPositive()
-    {
-        Gen.Single.NormalNonPositive
-        .Sample(f => !float.IsNaN(f) && !float.IsInfinity(f) && f <= 0.0f);
-    }
-
-    [Fact]
     public void Double_Unit_Range()
     {
         Gen.Double.Unit.Sample(f => f is >= 0.0 and <= 0.99999999999999978);
@@ -471,41 +436,6 @@ public class GenTests
     {
         Gen.Double.Positive
         .Sample(d => !double.IsNaN(d) && d > 0.0);
-    }
-
-    [Fact]
-    public void Double_Normal()
-    {
-        Gen.Double.Normal
-        .Sample(d => !double.IsNaN(d) && !double.IsInfinity(d));
-    }
-
-    [Fact]
-    public void Double_NormalNegative()
-    {
-        Gen.Double.NormalNegative
-        .Sample(d => !double.IsNaN(d) && !double.IsInfinity(d) && d < 0.0);
-    }
-
-    [Fact]
-    public void Double_NormalPositive()
-    {
-        Gen.Double.NormalPositive
-        .Sample(d => !double.IsNaN(d) && !double.IsInfinity(d) && d > 0.0);
-    }
-
-    [Fact]
-    public void Double_NormalNonNegative()
-    {
-        Gen.Double.NormalNonNegative
-        .Sample(d => !double.IsNaN(d) && !double.IsInfinity(d) && d >= 0.0);
-    }
-
-    [Fact]
-    public void Double_NormalNonPositive()
-    {
-        Gen.Double.NormalNonPositive
-        .Sample(d => !double.IsNaN(d) && !double.IsInfinity(d) && d <= 0.0);
     }
 
     [Fact]
