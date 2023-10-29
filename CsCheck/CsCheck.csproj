@@ -38,6 +38,7 @@ BREAKING CHANGES:
 - Removed Create, create a : Gen&lt;T&gt; class instead.
 - Removed SelectTuple.
 - Removed Gen.Enumerable.
+- Removed Gen.Double.Positive, Gen.Double.Normal etc
 - Added max count to Where.
 - Now targets net6.0, 2.14.1 was the last to target netrstandard2.0
         </PackageReleaseNotes>
