@@ -987,4 +987,10 @@ public static class HashHelper
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint FastMod(uint value, uint divisor, ulong multiplier)
         => (uint)(((((multiplier * value) >> 32) + 1) * divisor) >> 32);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsPow2(uint value) => (value & (value - 1)) == 0;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsPow2(int value) => (value & (value - 1)) == 0;
 }

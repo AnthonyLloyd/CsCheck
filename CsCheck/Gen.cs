@@ -1119,7 +1119,7 @@ public static class Gen
     }
     /// <summary>Create a generator where the element is one of the constants.</summary>
     public static Gen<T> OneOfConst<T>(params T[] constants)
-        => BitOperations.IsPow2(constants.Length) ? new GenOneOfConstPow2<T>(constants) : new GenOneOfConst<T>(constants);
+        => HashHelper.IsPow2(constants.Length) ? new GenOneOfConstPow2<T>(constants) : new GenOneOfConst<T>(constants);
 
     sealed class GenOneOf<T>(params IGen<T>[] gens) : Gen<T>
     {
@@ -1145,7 +1145,7 @@ public static class Gen
     }
     /// <summary>Create a generator where the element is generated from one of the generators.</summary>
     public static Gen<T> OneOf<T>(params IGen<T>[] gens)
-        => BitOperations.IsPow2(gens.Length) ? new GenOneOfPow2<T>(gens) : new GenOneOf<T>(gens);
+        => HashHelper.IsPow2(gens.Length) ? new GenOneOfPow2<T>(gens) : new GenOneOf<T>(gens);
 
     /// <summary>Create a generator for an enum.</summary>
     public static Gen<T> Enum<T>() where T : Enum
@@ -1186,7 +1186,7 @@ public static class Gen
     {
         uint total = 0;
         foreach (var (i, _) in constants) total += (uint)i;
-        return BitOperations.IsPow2(total) ? new GenFrequencyConstPow2<T>(total, constants) : new GenFrequencyConst<T>(total, constants);
+        return HashHelper.IsPow2(total) ? new GenFrequencyConstPow2<T>(total, constants) : new GenFrequencyConst<T>(total, constants);
     }
 
     sealed class GenFrequency<T>(uint total, params (int Frequency, IGen<T> Generator)[] gens) : Gen<T>
@@ -1236,7 +1236,7 @@ public static class Gen
     {
         uint total = 0;
         foreach (var (i, _) in gens) total += (uint)i;
-        return BitOperations.IsPow2(total) ? new GenFrequencyPow2<T>(total, gens) : new GenFrequency<T>(total, gens);
+        return HashHelper.IsPow2(total) ? new GenFrequencyPow2<T>(total, gens) : new GenFrequency<T>(total, gens);
     }
 
     sealed class GenRecursive<T>(Func<Gen<T>> gen) : Gen<T>
