@@ -65,16 +65,27 @@ public sealed class PCG
         while (n < threshold) n = Next64();
         return n % maxExclusive;
     }
-    public override string ToString() => ToSeedString(State, Stream);
-    public string ToString(ulong state) => ToSeedString(state, Stream);
+    public uint Next(uint maxExclusive, ulong multiplier)
+    {
+        if (maxExclusive == 1U) return 0U;
+        var threshold = HashHelper.FastMod((uint)-(int)maxExclusive, maxExclusive, multiplier);
+        var n = Next();
+        while (n < threshold) n = Next();
+        return HashHelper.FastMod(n, maxExclusive, multiplier);
+    }
+    public override string ToString() => SeedString.ToString(State, Stream);
+    public string ToString(ulong state) => SeedString.ToString(state, Stream);
     public static PCG Parse(string seed)
     {
-        var state = ParseSeedString(seed, out var stream);
+        var state = SeedString.Parse(seed, out var stream);
         return new PCG((stream << 1) | 1UL, state);
     }
+}
 
-    static readonly char[] Chars64 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-".ToCharArray();
-    internal static string ToSeedString(ulong state, uint stream)
+internal static class SeedString
+{
+    static ReadOnlySpan<char> Chars64 => "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-";
+    internal static string ToString(ulong state, uint stream)
     {
         return string.Create(
               stream < 64 ? 12
@@ -83,10 +94,10 @@ public sealed class PCG
             : stream < 64 * 64 * 64 * 64 ? 15
             : stream < 64 * 64 * 64 * 64 * 64 ? 16
             : 17,
-            (state, stream, Chars64),
+            (state, stream),
             (chars, value) =>
             {
-                var (state, stream, Chars64) = value;
+                var (state, stream) = value;
                 chars[0] = Chars64[(int)((state >> 60) & 63)];
                 chars[1] = Chars64[(int)((state >> 54) & 63)];
                 chars[2] = Chars64[(int)((state >> 48) & 63)];
@@ -113,10 +124,10 @@ public sealed class PCG
     }
     static int Index(char c)
     {
-        int i = Array.IndexOf(Chars64, c);
-        return i != -1 ? i : throw new Exception("Invalid seed");
+        int i = Chars64.IndexOf(c);
+        return i != -1 ? i : throw new Exception($"Invalid seed char: {c}");
     }
-    internal static ulong ParseSeedString(string seed, out uint stream)
+    internal static ulong Parse(string seed, out uint stream)
     {
         stream = (uint)(seed.Length == 12 ? Index(seed[11])
             : seed.Length == 13 ? Index(seed[11]) + (Index(seed[12]) << 6)

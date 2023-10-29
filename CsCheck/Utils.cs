@@ -977,3 +977,19 @@ public sealed class Classifier
             _ => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("#,##0.0000"), "μs"),
         };
 }
+
+public static class HashHelper
+{
+    public static ulong GetFastModMultiplier(uint divisor) => ulong.MaxValue / divisor + 1;
+
+    /// <summary>Performs a mod operation using the multiplier pre-computed with <see cref="GetFastModMultiplier"/>.</summary>
+    /// <remarks>This should only be used on 64-bit.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint FastMod(uint value, uint divisor, ulong multiplier)
+    {
+        Debug.Assert(divisor <= int.MaxValue);
+        uint highbits = (uint)(((((multiplier * value) >> 32) + 1) * divisor) >> 32);
+        Debug.Assert(highbits == value % divisor);
+        return highbits;
+    }
+}

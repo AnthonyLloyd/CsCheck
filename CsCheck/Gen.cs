@@ -1592,18 +1592,27 @@ public sealed class GenInt : Gen<int>
             return i;
         }
     }
-    sealed class RangePositive(int start, uint length) : Gen<int>
+    sealed class RangeFastMod(int start, uint length) : Gen<int>
     {
+        readonly ulong multiplier = HashHelper.GetFastModMultiplier(length);
         public override int Generate(PCG pcg, Size? min, out Size size)
         {
-            int i = (int)(start + pcg.Next(length));
-            size = new Size((uint)i);
+            int i = (int)(start + pcg.Next(length, multiplier));
+            size = new Size(Zigzag(i));
             return i;
         }
     }
     public Gen<int> this[int start, int finish]
-        => start >= 0 ? new RangePositive(start, (uint)(finish - start + 1))
-                      : new Range(start, (uint)(finish - start + 1));
+    {
+        get
+        {
+            uint length = (uint)(finish - start + 1);
+            if (Environment.Is64BitProcess)
+                return length <= int.MaxValue ? new RangeFastMod(start, length) : new Range(start, length);
+            else
+                return new Range(start, length);
+        }
+    }
     public readonly struct IntSkew
     {
         public Gen<int> this[int start, int finish, double a] =>

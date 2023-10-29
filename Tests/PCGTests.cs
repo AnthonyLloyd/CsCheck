@@ -178,8 +178,8 @@ public class PCGTests
         Gen.Select(Gen.ULong, Gen.UInt)
         .Sample((state, stream) =>
         {
-            var seed = PCG.ToSeedString(state, stream);
-            var state2 = PCG.ParseSeedString(seed, out var stream2);
+            var seed = SeedString.ToString(state, stream);
+            var state2 = SeedString.Parse(seed, out var stream2);
             Assert.Equal((state, stream), (state2, stream2));
         });
     }
