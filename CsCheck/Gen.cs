@@ -1893,18 +1893,6 @@ public sealed class GenFloat : Gen<float>
             return Gen.Frequency(myGens);
         }
     }
-
-    sealed class GenNonNegative : Gen<float>
-    {
-        public override float Generate(PCG pcg, Size? min, out Size size)
-        {
-            uint i = pcg.Next();
-            size = new Size(i);
-            return Math.Abs(new FloatConverter { I = i }.F);
-        }
-    }
-    /// <summary>In the range 0.0 &lt;= x &lt;= max including special values.</summary>
-    public Gen<float> NonNegative = new GenNonNegative();
     sealed class GenUnit : Gen<float>
     {
         public override float Generate(PCG pcg, Size? min, out Size size)
@@ -1927,28 +1915,6 @@ public sealed class GenFloat : Gen<float>
     }
     /// <summary>In the range 1.0f &lt;= x &lt; 2.0f.</summary>
     public Gen<float> OneTwo = new GenOneTwo();
-    sealed class GenPositive : Gen<float>
-    {
-        public override float Generate(PCG pcg, Size? min, out Size size)
-        {
-            uint i = pcg.Next() >> 1;
-            size = new Size(i);
-            return (i & 0x7F800000U) == 0x7F800000U ? (i & 0xFU) + 1U : new FloatConverter { I = i + 1U }.F;
-        }
-    }
-    /// <summary>In the range 0.0 &lt; x &lt;= inf without nan.</summary>
-    public Gen<float> Positive = new GenPositive();
-    sealed class GenNegative : Gen<float>
-    {
-        public override float Generate(PCG pcg, Size? min, out Size size)
-        {
-            uint i = pcg.Next() >> 1;
-            size = new Size(i);
-            return (i & 0x7F800000U) == 0x7F800000U ? -((i & 0xFU) + 1U) : new FloatConverter { I = (i + 1U) | 0x80000000U }.F;
-        }
-    }
-    /// <summary>In the range -inf &lt;= x &lt; 0.0 without nan.</summary>
-    public Gen<float> Negative = new GenNegative();
     static float MakeSpecial(uint i) => (i & 0xFU) switch
     {
         0x0U => float.NaN,
@@ -1978,7 +1944,7 @@ public sealed class GenFloat : Gen<float>
         }
     }
     /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
-    public Gen<float> Special = new GenSpecial();
+    public Gen<float> Special => new GenSpecial();
 }
 
 public sealed class GenDouble : Gen<double>
@@ -2050,17 +2016,6 @@ public sealed class GenDouble : Gen<double>
             return Gen.Frequency(myGens);
         }
     }
-    sealed class GenNonNegative : Gen<double>
-    {
-        public override double Generate(PCG pcg, Size? min, out Size size)
-        {
-            var i = pcg.Next64();
-            size = new Size(i >> 12);
-            return Math.Abs(BitConverter.Int64BitsToDouble((long)i));
-        }
-    }
-    /// <summary>In the range 0.0 &lt;= x &lt;= inf, can be nan.</summary>
-    public Gen<double> NonNegative = new GenNonNegative();
     sealed class GenUnit : Gen<double>
     {
         public override double Generate(PCG pcg, Size? min, out Size size)
@@ -2083,28 +2038,6 @@ public sealed class GenDouble : Gen<double>
     }
     /// <summary>In the range 1.0 &lt;= x &lt; 2.0.</summary>
     public Gen<double> OneTwo = new GenOneTwo();
-    sealed class GenPositive : Gen<double>
-    {
-        public override double Generate(PCG pcg, Size? min, out Size size)
-        {
-            var i = pcg.Next64() >> 1;
-            size = new Size(i >> 11);
-            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? ((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)(i + 1UL));
-        }
-    }
-    /// <summary>In the range 0.0 &lt; x &lt;= inf without nan.</summary>
-    public Gen<double> Positive = new GenPositive();
-    sealed class GenNegative : Gen<double>
-    {
-        public override double Generate(PCG pcg, Size? min, out Size size)
-        {
-            var i = pcg.Next64() >> 1;
-            size = new Size(i >> 11);
-            return (i & 0x7FF0000000000000U) == 0x7FF0000000000000U ? -(double)((i & 0xFUL) + 1UL) : BitConverter.Int64BitsToDouble((long)((i + 1UL) | 0x8000000000000000U));
-        }
-    }
-    /// <summary>In the range -inf &lt;= x &lt; 0.0 without nan.</summary>
-    public Gen<double> Negative = new GenNegative();
     static double MakeSpecial(ulong i) => (i & 0xFUL) switch
     {
         0x0UL => double.NaN,
@@ -2134,7 +2067,7 @@ public sealed class GenDouble : Gen<double>
         }
     }
     /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
-    public Gen<double> Special = new GenSpecial();
+    public Gen<double> Special => new GenSpecial();
     public readonly struct DoubleSkew
     {
         public Gen<double> this[double start, double finish, double a] =>
@@ -2218,18 +2151,6 @@ public sealed class GenDecimal : Gen<decimal>
             return Gen.Frequency(myGens);
         }
     }
-
-    sealed class GenNonNegative : Gen<decimal>
-    {
-        public override decimal Generate(PCG pcg, Size? min, out Size size)
-        {
-            var scale = (byte)pcg.Next(29);
-            var hi = (int)pcg.Next();
-            size = new Size((ulong)scale << 32 + hi);
-            return new decimal((int)pcg.Next(), (int)pcg.Next(), hi, false, scale);
-        }
-    }
-    public Gen<decimal> NonNegative = new GenNonNegative();
     sealed class GenUnit : Gen<decimal>
     {
         public override decimal Generate(PCG pcg, Size? min, out Size size)

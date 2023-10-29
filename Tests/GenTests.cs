@@ -370,20 +370,6 @@ public class GenTests
     }
 
     [Fact]
-    public void Single_Negative()
-    {
-        Gen.Single.Negative
-        .Sample(d => !float.IsNaN(d) && d < 0.0f);
-    }
-
-    [Fact]
-    public void Single_Positive()
-    {
-        Gen.Single.Positive
-        .Sample(d => !float.IsNaN(d) && d > 0.0f);
-    }
-
-    [Fact]
     public void Double_Unit_Range()
     {
         Gen.Double.Unit.Sample(f => f is >= 0.0 and <= 0.99999999999999978);
@@ -422,20 +408,6 @@ public class GenTests
          from value in Gen.Double.Skew[start, finish, t.Item3]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
-    }
-
-    [Fact]
-    public void Double_Negative()
-    {
-        Gen.Double.Negative
-        .Sample(d => !double.IsNaN(d) && d < 0.0);
-    }
-
-    [Fact]
-    public void Double_Positive()
-    {
-        Gen.Double.Positive
-        .Sample(d => !double.IsNaN(d) && d > 0.0);
     }
 
     [Fact]
