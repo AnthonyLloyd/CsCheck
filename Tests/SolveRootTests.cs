@@ -6,28 +6,27 @@ using System.Collections.Generic;
 using Xunit;
 using CsCheck;
 
-public class SolveRootTests
+public class SolveRootTests(Xunit.Abstractions.ITestOutputHelper output)
 {
-    readonly Action<string> writeLine;
-    public SolveRootTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
+    readonly Action<string> writeLine = output.WriteLine;
 
     public static bool BoundsZero(double a, double b) => (a < 0.0 && b > 0.0) || (b < 0.0 && a > 0.0);
 
     public static double LinearRoot(double a, double fa, double b, double fb)
     {
         var x = fa / (fa - fb);
-        return x < 0.5 ? (b - a) * x + a : (a - b) * (1 - x) + b;
+        return a - x * a + x * b;
     }
 
     public static double QuadraticRoot(double a, double fa, double b, double fb, double c, double fc)
     {
         var r = (fb - fa) / (b - a) - (fc - fb) / (c - b);
         var w = (fc - fa) / (c - a) + r;
-        r = w * w - 4.0 * fa * r / (a - c);
-        r = r <= 0.0 ? 0.0 : Math.Sqrt(r);
-        var x = a - 2.0 * fa / (w + r);
+        r = w * w - fa * 4 * r / (a - c);
+        r = r <= 0 ? 0 : Math.Sqrt(r);
+        var x = a - fa * 2 / (w + r);
         if (a < x && x < b) return x;
-        x = a - 2.0 * fa / (w - r);
+        x = a - fa * 2 / (w - r);
         if (a < x && x < b) return x;
         return LinearRoot(a, fa, b, fb);
     }
@@ -170,7 +169,25 @@ public class SolveRootTests
         Gen.Select(genD, genD, genD, genD, genD, genD)
         .Where((a, fa, b, fb, c, _) => a < b && (c < a || c > b) && BoundsZero(fa, fb))
         .Select((a, fa, b, fb, c, fc) => (a, fa, b, fb, c, fc, QuadraticRoot(a, fa, b, fb, c, fc)))
-        .Sample((a, _, b, _, _, _, x) => a <= x && x <= b);
+        .Sample((a, _, b, _, _, _, x) => a <= x && x <= b, time: 10);
+    }
+
+    [Fact]
+    public void QuadraticRoot_Correct()
+    {
+        static bool AreClose(double a, double b) => Check.AreClose(1e-7, 1e-7, a, b);
+        Gen.Select(Gen.Double[-10, -1], Gen.Double[1, 10])
+        .SelectMany((root1, root2) =>
+        {
+            double f(double x) => (x - root1) * (x - root2);
+            var genD = Gen.Double[root1 * 3, root2 * 3];
+            return Gen.Select(genD, genD, genD)
+                   .Where((a, b, c) => a < b && ((c < a && !AreClose(c, a)) || (c > b && !AreClose(c, b))))
+                   .Select((a, b, c) => (a, f(a), b, f(b), c, f(c)))
+                   .Where((a, fa, b, fb, c, fc) => BoundsZero(fa, fb))
+                   .Select((a, fa, b, fb, c, fc) => (root1, root2, a, b, c, QuadraticRoot(a, fa, b, fb, c, fc)));
+        })
+        .Sample((root1, root2, a, b, c, x) => AreClose(root1, x) || AreClose(root2, x));
     }
 
     static (int, int[]) TestSolver(double tol, Func<double, Func<double, double>, double, double, double> solver)
