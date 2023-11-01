@@ -1476,15 +1476,25 @@ public static class Gen
     public static readonly GenInt Int = new();
     internal static readonly Gen<int> Int9999 = Int[1, 9999];
     public static readonly GenUInt UInt = new();
+    /// <summary>Generates a uint in the range 0 to 3 inclusive.</summary>
     public static readonly GenUInt4 UInt4 = new();
+    /// <summary>Generates a uint in the range 0 to 7 inclusive.</summary>
     public static readonly GenUInt8 UInt8 = new();
+    /// <summary>Generates a uint in the range 0 to 15 inclusive.</summary>
     public static readonly GenUInt16 UInt16 = new();
+    /// <summary>Generates a uint in the range 0 to 31 inclusive.</summary>
     public static readonly GenUInt32 UInt32 = new();
+    /// <summary>Generates a uint in the range 0 to 63 inclusive.</summary>
     public static readonly GenUInt64 UInt64 = new();
+    /// <summary>Generates a uint in the range 0 to 127 inclusive.</summary>
     public static readonly GenUInt128 UInt128 = new();
+    /// <summary>Generates a uint in the range 0 to 255 inclusive.</summary>
     public static readonly GenUInt256 UInt256 = new();
+    /// <summary>Generates a uint in the range 0 to 511 inclusive.</summary>
     public static readonly GenUInt512 UInt512 = new();
+    /// <summary>Generates a uint in the range 0 to 1023 inclusive.</summary>
     public static readonly GenUInt1024 UInt1024 = new();
+    /// <summary>Generates a uint in the range 0 to 2047 inclusive.</summary>
     public static readonly GenUInt2048 UInt2048 = new();
     public static readonly GenLong Long = new();
     public static readonly GenULong ULong = new();

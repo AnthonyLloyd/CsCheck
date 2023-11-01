@@ -278,7 +278,7 @@ public class HashTests(Xunit.Abstractions.ITestOutputHelper output)
         };
         static double Pow2(int n)
         {
-            double result = 1.0, baseVal = 10.0;
+                double result = 1.0, baseVal = 10.0;
             while (n > 0)
             {
                 if ((n & 1) != 0) result *= baseVal;
@@ -290,10 +290,12 @@ public class HashTests(Xunit.Abstractions.ITestOutputHelper output)
         double[] powCache = [ 1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18,
             1e19, 1e20, 1e21, 1e22, 1e23, 1e24, 1e25, 1e26, 1e27, 1e28, 1e29, 1e30, 1e31 ];
         double Pow3(int n) => powCache[n];
-        Gen.Int[0, 31].Faster(Pow1, Pow2, Check.EqualSkip, repeat: 100).Output(output.WriteLine);
-        Gen.Int[0, 31].Faster(Pow3, Pow1, Check.EqualSkip, repeat: 100).Output(output.WriteLine);
-        Gen.Int[0, 31].Faster<Pow1Struct, Pow2Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 100).Output(output.WriteLine);
-        Gen.Int[0, 31].Faster<Pow3Struct, Pow1Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 100).Output(output.WriteLine);
+        var genInt = Gen.UInt32.Select(i => (int)i);
+        genInt.Faster(Pow1, Pow2, Check.EqualSkip, repeat: 100).Output(output.WriteLine);
+        genInt.Faster(Pow3, Pow1, Check.EqualSkip, repeat: 100).Output(output.WriteLine);
+        genInt.Faster(Pow3, i => Math.Pow(10, i), Check.EqualSkip, repeat: 100).Output(output.WriteLine);
+        genInt.Faster<Pow1Struct, Pow2Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 100).Output(output.WriteLine);
+        genInt.Faster<Pow3Struct, Pow1Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 100).Output(output.WriteLine);
     }
 
     public readonly struct Pow1Struct : IInvoke<int, double>
