@@ -84,7 +84,7 @@ public sealed class PCG
 
 internal static class SeedString
 {
-    static ReadOnlySpan<char> Chars64 => "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-";
+    static readonly char[] Chars64 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-".ToCharArray();
     internal static string ToString(ulong state, uint stream)
     {
         return string.Create(
@@ -124,7 +124,7 @@ internal static class SeedString
     }
     static int Index(char c)
     {
-        int i = Chars64.IndexOf(c);
+        int i = Array.IndexOf(Chars64, c);
         return i != -1 ? i : throw new Exception($"Invalid seed char: {c}");
     }
     internal static ulong Parse(string seed, out uint stream)
