@@ -194,4 +194,12 @@ public class PCGTests
                 && expected.State == actual.State;
         });
     }
+
+    [Fact]
+    public void Double_Exp_Bug()
+    {
+        var root2 = -6.3E-102;
+        var root3 = 6.6854976605820742;
+        Gen.Double[root2, root3 * 2.0].Sample(_ => true);
+    }
 }

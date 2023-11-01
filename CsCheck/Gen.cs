@@ -1474,6 +1474,7 @@ public static class Gen
     public static readonly GenShort Short = new();
     public static readonly GenUShort UShort = new();
     public static readonly GenInt Int = new();
+    internal static readonly Gen<int> Int9999 = Int[1, 9999];
     public static readonly GenUInt UInt = new();
     public static readonly GenUInt4 UInt4 = new();
     public static readonly GenUInt8 UInt8 = new();
@@ -1900,7 +1901,7 @@ public sealed class GenFloat : Gen<float>
         finish -= start;
         return new GenEvenlyDistributed(start - finish, finish);
     }
-    public Gen<float> this[float start, float finish, int denominator = 100, int minExp = -100, int maxMan = 9999]
+    public Gen<float> this[float start, float finish, int denominator = 100, int minExp = -100]
     {
         get
         {
@@ -1923,26 +1924,30 @@ public sealed class GenFloat : Gen<float>
             Gen<float>? exponential = null;
             if (start <= 0 && finish >= 0)
             {
-                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start)));
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish)));
-                var genMantissa = Gen.Int[1, maxMan];
-                exponential = Gen.OneOf(
-                    Gen.Int[minExp, finishExp].Select(genMantissa, (e, m) => (float)Math.Pow(10, e - 3) * m),
-                    Gen.Int[minExp, startExp].Select(genMantissa, (e, m) => -(float)Math.Pow(10, e - 3) * m));
+                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start))) - 3;
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish))) - 3;
+                if (startExp >= minExp && finishExp >= minExp)
+                    exponential = Gen.OneOf(
+                        Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => (float)Math.Pow(10, e) * m),
+                        Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -(float)Math.Pow(10, e) * m));
+                else if (startExp >= minExp)
+                    exponential = Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -(float)Math.Pow(10, e) * m);
+                else if (finishExp >= minExp)
+                    exponential = Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => (float)Math.Pow(10, e) * m);
             }
             else if (start >= 0 && finish >= 0)
             {
                 var startExp = (int)Math.Floor(Math.Log10(Math.Abs(start)));
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish)));
-                if (finishExp > startExp + 2)
-                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int[1, maxMan], (e, m) => (float)Math.Pow(10, e - 3) * m);
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish))) - 3;
+                if (finishExp > startExp + 3)
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => (float)Math.Pow(10, e) * m);
             }
             else
             {
-                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start)));
-                var finishExp = (int)Math.Floor(Math.Log10(Math.Abs(finish)));
-                if (startExp > finishExp + 2)
-                    exponential = Gen.Int[finishExp, startExp].Select(Gen.Int[1, maxMan], (e, m) => -(float)Math.Pow(10, e - 3) * m);
+                var startExp = (int)Math.Floor(Math.Log10(Math.Abs(finish)));
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start))) - 3;
+                if (finishExp > startExp + 3)
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => -(float)Math.Pow(10, e) * m);
             }
             if (exponential is not null)
                 myGens[2] = (1, exponential.Where(r => r >= start && r <= finish));
@@ -2023,7 +2028,7 @@ public sealed class GenDouble : Gen<double>
         finish -= start;
         return new GenEvenlyDistributed(start - finish, finish);
     }
-    public Gen<double> this[double start, double finish, int denominator = 100, int minExp = -100, int maxMan = 9999]
+    public Gen<double> this[double start, double finish, int denominator = 100, int minExp = -100]
     {
         get
         {
@@ -2046,26 +2051,30 @@ public sealed class GenDouble : Gen<double>
             Gen<double>? exponential = null;
             if (start <= 0 && finish >= 0)
             {
-                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start)));
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish)));
-                var genMantissa = Gen.Int[1, maxMan];
-                exponential = Gen.OneOf(
-                    Gen.Int[minExp, finishExp].Select(genMantissa, (e, m) => Math.Pow(10, e - 3) * m),
-                    Gen.Int[minExp, startExp].Select(genMantissa, (e, m) => -Math.Pow(10, e - 3) * m));
+                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start))) - 3;
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish))) - 3;
+                if (startExp >= minExp && finishExp >= minExp)
+                    exponential = Gen.OneOf(
+                        Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => Math.Pow(10, e) * m),
+                        Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -Math.Pow(10, e) * m));
+                else if (startExp >= minExp)
+                    exponential = Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -Math.Pow(10, e) * m);
+                else if (finishExp >= minExp)
+                    exponential = Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => Math.Pow(10, e) * m);
             }
             else if (start >= 0 && finish >= 0)
             {
                 var startExp = (int)Math.Floor(Math.Log10(Math.Abs(start)));
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish)));
-                if (finishExp > startExp + 2)
-                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int[1, maxMan], (e, m) => Math.Pow(10, e - 3) * m);
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish))) - 3;
+                if (finishExp > startExp + 3)
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => Math.Pow(10, e) * m);
             }
             else
             {
-                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start)));
-                var finishExp = (int)Math.Floor(Math.Log10(Math.Abs(finish)));
-                if (startExp > finishExp + 2)
-                    exponential = Gen.Int[finishExp, startExp].Select(Gen.Int[1, maxMan], (e, m) => -Math.Pow(10, e - 3) * m);
+                var startExp = (int)Math.Floor(Math.Log10(Math.Abs(finish)));
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start))) - 3;
+                if (finishExp > startExp + 3)
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => -Math.Pow(10, e) * m);
             }
             if (exponential is not null)
                 myGens[2] = (1, exponential.Where(r => r >= start && r <= finish));
@@ -2158,7 +2167,7 @@ public sealed class GenDecimal : Gen<decimal>
         finish -= start;
         return new GenEvenlyDistributed(start - finish, finish);
     }
-    public Gen<decimal> this[decimal start, decimal finish, int denominator = 100, int minExp = -100, int maxMan = 9999]
+    public Gen<decimal> this[decimal start, decimal finish, int denominator = 100, int minExp = -100]
     {
         get
         {
@@ -2181,26 +2190,30 @@ public sealed class GenDecimal : Gen<decimal>
             Gen<decimal>? exponential = null;
             if (start <= 0 && finish >= 0)
             {
-                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)start)));
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)finish)));
-                var genMantissa = Gen.Int[1, maxMan];
-                exponential = Gen.OneOf(
-                    Gen.Int[minExp, finishExp].Select(genMantissa, (e, m) => (decimal)Math.Pow(10, e - 3) * m),
-                    Gen.Int[minExp, startExp].Select(genMantissa, (e, m) => -(decimal)Math.Pow(10, e - 3) * m));
+                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)start))) - 3;
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)finish))) - 3;
+                if (startExp >= minExp && finishExp >= minExp)
+                    exponential = Gen.OneOf(
+                        Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => (decimal)Math.Pow(10, e) * m),
+                        Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -(decimal)Math.Pow(10, e) * m));
+                else if (startExp >= minExp)
+                    exponential = Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -(decimal)Math.Pow(10, e) * m);
+                else if (finishExp >= minExp)
+                    exponential = Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => (decimal)Math.Pow(10, e) * m);
             }
             else if (start >= 0 && finish >= 0)
             {
                 var startExp = (int)Math.Floor(Math.Log10(Math.Abs((double)start)));
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)finish)));
-                if (finishExp > startExp + 2)
-                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int[1, maxMan], (e, m) => (decimal)Math.Pow(10, e - 3) * m);
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)finish))) - 3;
+                if (finishExp > startExp + 3)
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => (decimal)Math.Pow(10, e) * m);
             }
             else
             {
-                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)start)));
-                var finishExp = (int)Math.Floor(Math.Log10(Math.Abs((double)finish)));
-                if (startExp > finishExp + 2)
-                    exponential = Gen.Int[finishExp, startExp].Select(Gen.Int[1, maxMan], (e, m) => -(decimal)Math.Pow(10, e - 3) * m);
+                var startExp = (int)Math.Floor(Math.Log10(Math.Abs((double)finish)));
+                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)start))) - 3;
+                if (finishExp > startExp + 3)
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => -(decimal)Math.Pow(10, e) * m);
             }
             if (exponential is not null)
                 myGens[2] = (1, exponential.Where(r => r >= start && r <= finish));
