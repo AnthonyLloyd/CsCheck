@@ -2672,7 +2672,7 @@ public static partial class Check
                         running = false;
                         return;
                     }
-                    if (running && Stopwatch.GetTimestamp() > timeout)
+                    if (running && Stopwatch.GetTimestamp() > endTimestamp)
                     {
                         if (raiseexception)
                             result.Exception ??= new CsCheckException($"Timeout! {result}");
