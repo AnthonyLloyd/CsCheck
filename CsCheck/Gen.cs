@@ -52,18 +52,28 @@ public sealed class Size
         final.Next = s;
     }
 
-    public Size? Below(Size? s)
+    public Size? Below(Size? s) // TODO: Always called after IsLessThan maybe combine them.
     {
         var r = this;
         while (s is not null && r is not null)
         {
+            if (s.I != r.I) return null;
             s = s.Next;
             r = r.Next;
         }
         return r;
     }
 
-    public static bool IsLessThan(Size? s1, Size? s2) => s1 is not null && s2 is not null && (s1.I < s2.I || (s1.I == s2.I && IsLessThan(s1.Next, s2.Next)));
+    public static bool IsLessThan(Size? s1, Size? s2)
+    {
+        while (true)
+        {
+            if (s1 is null || s2 is null || s1.I > s2.I) return false;
+            if (s1.I < s2.I) return true;
+            s1 = s1.Next;
+            s2 = s2.Next;
+        }
+    }
 }
 
 public interface IGen<out T>

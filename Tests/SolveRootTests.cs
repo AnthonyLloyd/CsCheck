@@ -169,7 +169,7 @@ public class SolveRootTests(Xunit.Abstractions.ITestOutputHelper output)
         Gen.Select(genD, genD, genD, genD, genD, genD)
         .Where((a, fa, b, fb, c, _) => a < b && (c < a || c > b) && BoundsZero(fa, fb))
         .Select((a, fa, b, fb, c, fc) => (a, fa, b, fb, c, fc, QuadraticRoot(a, fa, b, fb, c, fc)))
-        .Sample((a, _, b, _, _, _, x) => a <= x && x <= b, time: 10);
+        .Sample((a, _, b, _, _, _, x) => a <= x && x <= b);
     }
 
     [Fact]
