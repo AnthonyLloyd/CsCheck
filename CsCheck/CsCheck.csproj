@@ -52,6 +52,8 @@ BREAKING CHANGES:
         <AssemblyOriginatorKeyFile>../SigningKey.snk</AssemblyOriginatorKeyFile>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
         <NoWarn>CS1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>

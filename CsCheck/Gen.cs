@@ -18,7 +18,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
-using System.Numerics;
 
 /// <summary>Size representation of Gen generated data.</summary>
 public sealed class Size

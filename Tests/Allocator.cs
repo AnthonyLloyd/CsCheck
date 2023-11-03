@@ -10,9 +10,7 @@ public static class Allocator
     /// <summary>Pro-rata quantity by weights. Round to long using an error minimising algorithm. This guarantees a smaller weight never gets a larger allocation.</summary>
     public static long[] Allocate(long quantity, double[] weights)
     {
-        var sumWeights = 0.0;
-        for (int i = 0; i < weights.Length; i++)
-            sumWeights += weights[i];
+        var sumWeights = weights.SSum();
         var residual = quantity;
         var results = new long[weights.Length];
         for (int i = 0; i < weights.Length; i++)
@@ -56,9 +54,7 @@ public static class Allocator
     /// <summary>Pro-rata quantity by weights. Round to long using an error minimising algorithm. This guarantees a smaller weight never gets a larger allocation.</summary>
     public static int[] Allocate(int quantity, double[] weights)
     {
-        var sumWeights = 0.0;
-        for (int i = 0; i < weights.Length; i++)
-            sumWeights += weights[i];
+        var sumWeights = weights.SSum();
         var residual = quantity;
         var results = new int[weights.Length];
         for (int i = 0; i < weights.Length; i++)

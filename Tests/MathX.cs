@@ -89,6 +89,33 @@ public static class MathX
         return lo + hi;
     }
 
+    static void Compress(ref Span<double> e)
+    {
+        var Q = e[^1];
+        var bottom = e.Length - 1;
+        for (int i = e.Length - 2; i >= 0; i--)
+        {
+            (Q, var q) = FastTwoSum(Q, e[i]);
+            if (q != 0.0)
+            {
+                e[bottom--] = Q;
+                Q = q;
+            }
+        }
+        e[bottom] = Q;
+        var top = 0;
+        for (int i = bottom + 1; i <= e.Length - 1; i++)
+        {
+            (Q, var q) = FastTwoSum(e[i], Q);
+            if (q != 0.0)
+            {
+                e[top++] = Q;
+            }
+        }
+        e[top] = Q;
+        e = e[..(top + 1)];
+    }
+
     public static double SSum(this double[] values)
     {
         if (values.Length == 0)

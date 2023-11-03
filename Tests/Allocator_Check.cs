@@ -80,6 +80,16 @@ internal static class Allocator_Check
         });
     }
 
+    public static void GivesSameResultReorderedForReorderedWeights(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate)
+    {
+        gen.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s))).Sample((quantity, weights, shuffled) =>
+        {
+            var allocations = allocate(quantity, weights);
+            var shuffledAllocations = allocate(quantity, shuffled);
+            return weights.Zip(allocations).Order().Zip(shuffled.Zip(shuffledAllocations).Order()).All(i => i.First == i.Second);
+        }, seed: "76AO-6thdvi3", iter: 1);
+    }
+
     public static void SmallerWeightsDontGetLargerAllocation(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate)
     {
         gen.Sample((quantity, weights) =>
