@@ -1,6 +1,7 @@
 ﻿namespace Tests;
 
 using System;
+using System.Diagnostics;
 
 public static class MathX
 {
@@ -13,6 +14,7 @@ public static class MathX
 
     public static (double hi, double lo) FastTwoSum(double a, double b)
     {
+        //Debug.Assert(Math.Abs(a) >= Math.Abs(b));
         var hi = a + b;
         return (hi, a - hi + b);
     }
@@ -84,9 +86,20 @@ public static class MathX
             }
             count = c;
         }
-        while (--count >= 0)
-            lo += partials[count];
-        return lo + hi;
+
+        if (count == 0)
+            return lo + hi;
+
+        Span<double> x = [lo, ..partials[..count], hi];
+        Compress(ref x);
+        var sum = 0.0;
+        foreach (var v in x)
+            sum += v;
+        return sum;
+
+        //for (int i = 0; i < count; i++)
+        //    lo += partials[i];
+        //return lo + hi;
     }
 
     static void Compress(ref Span<double> e)
@@ -104,12 +117,12 @@ public static class MathX
         }
         e[bottom] = Q;
         var top = 0;
-        for (int i = bottom + 1; i <= e.Length - 1; i++)
+        for (int i = bottom + 1; i < e.Length; i++)
         {
             (Q, var q) = FastTwoSum(e[i], Q);
             if (q != 0.0)
             {
-                e[top++] = Q;
+                e[top++] = q;
             }
         }
         e[top] = Q;
