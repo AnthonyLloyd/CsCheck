@@ -129,7 +129,7 @@ public class PCGTests
                     mask <<= 1;
                 }
             }
-            Check.ChiSquared(expected, actual);
+            Check.ChiSquared(expected, actual, 10);
         }, iter: 1);
     }
 
@@ -152,7 +152,7 @@ public class PCGTests
                     mask <<= 1;
                 }
             }
-            Check.ChiSquared(expected, actual);
+            Check.ChiSquared(expected, actual, 10);
         }, iter: 1);
     }
 

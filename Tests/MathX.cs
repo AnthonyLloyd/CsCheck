@@ -1,5 +1,6 @@
 ﻿namespace Tests;
 
+using ImTools;
 using System;
 using System.Diagnostics;
 
@@ -93,46 +94,23 @@ public static class MathX
         if (count == 0)
             return lo + hi;
 
-        Span<double> x = [lo, .. partials[..count], hi];
-        Renormalise(ref x);
-        var sum = 0.0;
-        foreach (var v in x)
-            sum += v;
-        return sum;
+        partials = partials[..count];
 
-        //for (int i = 0; i < count; i++)
-        //    lo += partials[i];
-        //return lo + hi;
+        //Span<double> x = [lo, .. partials, hi];
+        ////Renormalise(ref x);
+        //Compress(ref x);
+        //var sum = 0.0;
+        //foreach (var v in x)
+        //    sum += v;
+        //return sum;
+
+        CompressLoHi(ref lo, ref partials, ref hi);
+        foreach (var p in partials)
+            lo += p;
+        return lo + hi;
     }
 
     static void Compress(ref Span<double> e)
-    {
-        var Q = e[^1];
-        var bottom = e.Length - 1;
-        for (int i = e.Length - 2; i >= 0; i--)
-        {
-            Q = FastTwoSum(Q, e[i], out var q);
-            if (q != 0.0)
-            {
-                e[bottom--] = Q;
-                Q = q;
-            }
-        }
-        e[bottom] = Q;
-        var top = 0;
-        for (int i = bottom + 1; i < e.Length; i++)
-        {
-            Q = FastTwoSum(e[i], Q, out var q);
-            if (q != 0.0)
-            {
-                e[top++] = q;
-            }
-        }
-        e[top] = Q;
-        e = e[..(top + 1)];
-    }
-
-    static void Renormalise(ref Span<double> e)
     {
         var Q = e[^1];
         var bottom = e.Length - 1;
@@ -147,11 +125,80 @@ public static class MathX
         }
         e[bottom] = Q;
         var top = 0;
+        for (int i = bottom + 1; i < e.Length; i++)
+        {
+            Q = TwoSum(e[i], Q, out var q);
+            if (q != 0.0)
+            {
+                e[top++] = q;
+            }
+        }
+        e[top] = Q;
+        e = e[..(top + 1)];
+    }
+
+    static void CompressLoHi(ref double lo, ref Span<double> e, ref double hi)
+    {
+        if (e.Length == 0) return;
+        double q;
+        hi = TwoSum(hi, e[^1], out var Q);
+        var bottom = e.Length;
+        for (int i = e.Length - 2; i >= 0; i--)
+        {
+            Q = TwoSum(Q, e[i], out q);
+            if (q != 0.0)
+            {
+                e[--bottom] = Q;
+                Q = q;
+            }
+        }
+        lo = TwoSum(Q, lo, out q);
+        if (q != 0.0)
+        {
+            e[--bottom] = lo;
+            lo = q;
+        }
+        if (bottom == e.Length)
+        {
+            e = [];
+            return;
+        }
+        var top = 0;
+        Q = TwoSum(e[bottom], lo, out lo);
+        for (int i = bottom + 1; i < e.Length; i++)
+        {
+            Q = TwoSum(e[i], Q, out q);
+            if (q != 0.0)
+                e[top++] = q;
+        }
+        hi = TwoSum(hi, Q, out q);
+        if (q != 0.0)
+        {
+            e[top++] = q;
+        }
+        e = e[..top];
+    }
+
+    static void Renormalise(ref Span<double> e)
+    {
+        var Q = e[^1];
+        var bottom = e.Length - 1;
+        for (int i = e.Length - 2; i >= 0; i--)
+        {
+            Q = FastTwoSum(Q, e[i], out var q);
+            if (q != 0.0)
+            {
+                e[bottom--] = Q;
+                Q = q;
+            }
+        }
+        e[bottom] = Q;
+        var top = 0;
         e[0] = Q;
         for (int i = bottom + 1; i < e.Length; i++)
         {
             Q = TwoSum(e[i], e[top], out var q);
-            e[top] = Q; // ?
+            e[top] = Q;
             if (q != 0.0)
             {
                 var l = top++ - 1;

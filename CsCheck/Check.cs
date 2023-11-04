@@ -1812,10 +1812,11 @@ public static partial class Check
         => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
             equal, seed, iter, time, threads, print, replay);
 
-    /// <summary>Assert actual is in line with expected using a chi-squared test to 6 sigma.</summary>
+    /// <summary>Assert actual is in line with expected using a chi-squared test to sigma.</summary>
     /// <param name="expected">The expected bin counts.</param>
     /// <param name="actual">The actual bin counts.</param>
-    public static void ChiSquared(int[] expected, int[] actual)
+    /// <param name="sigma">Sigma, default of 6.</param>
+    public static void ChiSquared(int[] expected, int[] actual, double sigma = 6.0)
     {
         if (expected.Length != actual.Length) throw new CsCheckException("Expected and actual lengths need to be the same.");
         if (Array.Exists(expected, e => e <= 5)) throw new CsCheckException("Expected frequency for all buckets needs to be above 5.");
@@ -1829,7 +1830,7 @@ public static partial class Check
         // chi-squared distribution has Mean = k and Variance = 2 k where k is the number of degrees of freedom.
         int k = expected.Length - 1;
         double sigmaSquared = (chi - k) * (chi - k) / k / 2.0;
-        if (sigmaSquared > 36.0) throw new CsCheckException("Chi-squared standard deviation = " + Math.Sqrt(sigmaSquared).ToString("0.0"));
+        if (sigmaSquared > sigma * sigma) throw new CsCheckException("Chi-squared standard deviation = " + Math.Sqrt(sigmaSquared).ToString("0.0"));
     }
 
     sealed class FasterActionWorker(ITimerAction fasterTimer, ITimerAction slowerTimer, FasterResult result, long endTimestamp, bool raiseexception) : IThreadPoolWorkItem

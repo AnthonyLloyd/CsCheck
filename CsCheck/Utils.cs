@@ -574,11 +574,11 @@ public static partial class Check
     }
 
     /// <summary>Absolute difference between two doubles in ulps.</summary>
-    public static int UlpsBetween(double a, double b)
+    public static long UlpsBetween(double a, double b)
     {
         var al = BitConverter.DoubleToInt64Bits(a);
         var bl = BitConverter.DoubleToInt64Bits(b);
-        return Math.Abs((int)(bl - al));
+        return Math.Abs(bl - al);
     }
 
     [StructLayout(LayoutKind.Explicit)]
