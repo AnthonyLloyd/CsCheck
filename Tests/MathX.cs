@@ -1,36 +1,38 @@
 ﻿namespace Tests;
 
 using System;
-using System.Diagnostics;
 
 public static class MathX
 {
-    public static (double hi, double lo) TwoSum(double a, double b)
+    public static double TwoSum(double a, double b, out double err)
     {
         var hi = a + b;
-        var a2 = hi - b;
-        return (hi, a2 - hi + b + (a - a2));
+        err = hi - b;
+        err = err - hi + b + (a - err);
+        return hi;
     }
 
-    public static (double hi, double lo) FastTwoSum(double a, double b)
+    public static double FastTwoSum(double a, double b, out double err)
     {
         //Debug.Assert(Math.Abs(a) >= Math.Abs(b));
         var hi = a + b;
-        return (hi, a - hi + b);
+        err = a - hi + b;
+        return hi;
     }
 
-    public static (double hi, double lo) TwoSub(double a, double b)
+    public static double TwoSub(double a, double b, out double err)
     {
         var hi = a - b;
-        var b2 = a - hi;
-        var a2 = hi + b2;
-        return (hi, a - a2 + (b2 - b));
+        err = a - hi;
+        err = a - (hi + err) + (err - b);
+        return hi;
     }
 
-    public static (double hi, double lo) TwoMul(double a, double b)
+    public static double TwoMul(double a, double b, out double err)
     {
         var prod = a * b;
-        return (prod, Math.FusedMultiplyAdd(a, b, -prod));
+        err = Math.FusedMultiplyAdd(a, b, -prod);
+        return prod;
     }
 
     /// <summary>Kahan summation</summary>
@@ -39,7 +41,7 @@ public static class MathX
         var sum = 0.0;
         var c = 0.0;
         foreach (var value in values)
-            (sum, c) = FastTwoSum(sum, value + c);
+            sum = FastTwoSum(sum, value + c, out c);
         return sum;
     }
 
@@ -50,7 +52,7 @@ public static class MathX
         var c = 0.0;
         for (int i = 0; i < values.Length; i++)
         {
-            (sum, var ci) = TwoSum(sum, values[i]);
+            sum = TwoSum(sum, values[i], out var ci);
             c += ci;
         }
         return sum + c;
@@ -65,15 +67,15 @@ public static class MathX
         var lo = 0.0;
         for (int i = 0; i < values.Length; i++)
         {
-            (var v, lo) = TwoSum(values[i], lo);
+            var v = TwoSum(values[i], lo, out lo);
             int c = 0;
             for (int j = 0; j < count; j++)
             {
-                (v, var partial) = TwoSum(v, partials[j]);
+                v = TwoSum(v, partials[j], out var partial);
                 if (partial != 0.0)
                     partials[c++] = partial;
             }
-            (hi, v) = TwoSum(hi, v);
+            hi = TwoSum(hi, v, out v);
             if (v != 0.0)
             {
                 if (c == partials.Length)
@@ -90,16 +92,16 @@ public static class MathX
         if (count == 0)
             return lo + hi;
 
-        Span<double> x = [lo, ..partials[..count], hi];
-        Compress(ref x);
-        var sum = 0.0;
-        foreach (var v in x)
-            sum += v;
-        return sum;
+        //Span<double> x = [lo, ..partials[..count], hi];
+        //Compress(ref x);
+        //var sum = 0.0;
+        //foreach (var v in x)
+        //    sum += v;
+        //return sum;
 
-        //for (int i = 0; i < count; i++)
-        //    lo += partials[i];
-        //return lo + hi;
+        for (int i = 0; i < count; i++)
+            lo += partials[i];
+        return lo + hi;
     }
 
     static void Compress(ref Span<double> e)
@@ -108,7 +110,7 @@ public static class MathX
         var bottom = e.Length - 1;
         for (int i = e.Length - 2; i >= 0; i--)
         {
-            (Q, var q) = FastTwoSum(Q, e[i]);
+            Q = FastTwoSum(Q, e[i], out var q);
             if (q != 0.0)
             {
                 e[bottom--] = Q;
@@ -119,7 +121,7 @@ public static class MathX
         var top = 0;
         for (int i = bottom + 1; i < e.Length; i++)
         {
-            (Q, var q) = FastTwoSum(e[i], Q);
+            Q = FastTwoSum(e[i], Q, out var q);
             if (q != 0.0)
             {
                 e[top++] = q;

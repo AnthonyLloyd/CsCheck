@@ -14,7 +14,7 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         Gen.Select(genDouble, genDouble)
         .Where((a, b) => Math.Abs(a) >= Math.Abs(b))
-        .Sample((a, b) => MathX.TwoSum(a, b) == MathX.FastTwoSum(a, b));
+        .Sample((a, b) => MathX.TwoSum(a, b, out var err1) == MathX.FastTwoSum(a, b, out var err2) && err1 == err2);
     }
 
     [Fact]
@@ -23,10 +23,10 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
         Gen.Select(genDouble, genDouble)
         .Sample((a, b) =>
         {
-            var (hi, lo) = MathX.TwoSum(a, b);
+            var hi = MathX.TwoSum(a, b, out var lo);
             return hi + lo == hi
-                && MathX.TwoSum(hi, lo) == (hi, lo)
-                && MathX.TwoSum(lo, hi) == (hi, lo);
+                && MathX.TwoSum(hi, lo, out var lo1) == hi && lo1 == lo
+                && MathX.TwoSum(lo, hi, out var lo2) == hi && lo2 == lo;
         });
     }
 
@@ -36,11 +36,11 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
         Gen.Select(genDouble, genDouble)
         .Sample((a, b) =>
         {
-            var (hi, lo) = MathX.TwoSub(a, b);
+            var hi = MathX.TwoSub(a, b, out var lo);
             return a - b == hi
                 && hi + lo == hi
-                && MathX.TwoSum(hi, lo) == (hi, lo)
-                && MathX.TwoSum(lo, hi) == (hi, lo);
+                && MathX.TwoSum(hi, lo, out var lo1) == hi && lo1 == lo
+                && MathX.TwoSum(lo, hi, out var lo2) == hi && lo2 == lo;
         });
     }
 
@@ -50,11 +50,11 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
         Gen.Select(genDouble, genDouble)
         .Sample((a, b) =>
         {
-            var (hi, lo) = MathX.TwoMul(a, b);
+            var hi = MathX.TwoMul(a, b, out var lo);
             return a * b == hi
                 && hi + lo == hi
-                && MathX.TwoSum(hi, lo) == (hi, lo)
-                && MathX.TwoSum(lo, hi) == (hi, lo);
+                && MathX.TwoSum(hi, lo, out var lo1) == hi && lo1 == lo
+                && MathX.TwoSum(lo, hi, out var lo2) == hi && lo2 == lo;
         });
     }
 

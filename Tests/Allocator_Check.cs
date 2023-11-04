@@ -87,7 +87,7 @@ internal static class Allocator_Check
             var allocations = allocate(quantity, weights);
             var shuffledAllocations = allocate(quantity, shuffled);
             return weights.Zip(allocations).Order().Zip(shuffled.Zip(shuffledAllocations).Order()).All(i => i.First == i.Second);
-        }, seed: "76AO-6thdvi3", iter: 1);
+        } /*seed: "aSZ6apP3XFF5", iter: 1*//*, seed: "76AO-6thdvi3", iter: 1*/);
     }
 
     public static void SmallerWeightsDontGetLargerAllocation(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate)
