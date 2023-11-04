@@ -1,37 +1,38 @@
 ﻿namespace Tests;
 
 using System;
+using System.Diagnostics;
 
 public static class MathX
 {
-    public static double TwoSum(double a, double b, out double err)
+    public static double TwoSum(double a, double b, out double lo)
     {
         var hi = a + b;
-        err = hi - b;
-        err = err - hi + b + (a - err);
+        lo = hi - b;
+        lo = lo - hi + b + (a - lo);
         return hi;
     }
 
-    public static double FastTwoSum(double a, double b, out double err)
+    public static double FastTwoSum(double a, double b, out double lo)
     {
-        //Debug.Assert(Math.Abs(a) >= Math.Abs(b));
+        Debug.Assert(Math.Abs(a) >= Math.Abs(b));
         var hi = a + b;
-        err = a - hi + b;
+        lo = a - hi + b;
         return hi;
     }
 
-    public static double TwoSub(double a, double b, out double err)
+    public static double TwoSub(double a, double b, out double lo)
     {
         var hi = a - b;
-        err = a - hi;
-        err = a - (hi + err) + (err - b);
+        lo = a - hi;
+        lo = a - (hi + lo) + (lo - b);
         return hi;
     }
 
-    public static double TwoMul(double a, double b, out double err)
+    public static double TwoMul(double a, double b, out double lo)
     {
         var prod = a * b;
-        err = Math.FusedMultiplyAdd(a, b, -prod);
+        lo = Math.FusedMultiplyAdd(a, b, -prod);
         return prod;
     }
 
@@ -92,16 +93,16 @@ public static class MathX
         if (count == 0)
             return lo + hi;
 
-        //Span<double> x = [lo, ..partials[..count], hi];
-        //Compress(ref x);
-        //var sum = 0.0;
-        //foreach (var v in x)
-        //    sum += v;
-        //return sum;
+        Span<double> x = [lo, .. partials[..count], hi];
+        Renormalise(ref x);
+        var sum = 0.0;
+        foreach (var v in x)
+            sum += v;
+        return sum;
 
-        for (int i = 0; i < count; i++)
-            lo += partials[i];
-        return lo + hi;
+        //for (int i = 0; i < count; i++)
+        //    lo += partials[i];
+        //return lo + hi;
     }
 
     static void Compress(ref Span<double> e)
@@ -128,6 +129,46 @@ public static class MathX
             }
         }
         e[top] = Q;
+        e = e[..(top + 1)];
+    }
+
+    static void Renormalise(ref Span<double> e)
+    {
+        var Q = e[^1];
+        var bottom = e.Length - 1;
+        for (int i = e.Length - 2; i >= 0; i--)
+        {
+            Q = TwoSum(Q, e[i], out var q);
+            if (q != 0.0)
+            {
+                e[bottom--] = Q;
+                Q = q;
+            }
+        }
+        e[bottom] = Q;
+        var top = 0;
+        e[0] = Q;
+        for (int i = bottom + 1; i < e.Length; i++)
+        {
+            Q = TwoSum(e[i], e[top], out var q);
+            e[top] = Q; // ?
+            if (q != 0.0)
+            {
+                var l = top++ - 1;
+                while (l >= 0)
+                {
+                    var c2 = TwoSum(e[l + 1], e[l], out var d2);
+                    if (d2 == 0.0)
+                    {
+                        e[l--] = c2;
+                        top--;
+                    }
+                    else
+                        break;
+                }
+                e[top] = q;
+            }
+        }
         e = e[..(top + 1)];
     }
 
