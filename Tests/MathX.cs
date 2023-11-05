@@ -140,46 +140,6 @@ public static class MathX
         partials = partials[..top];
     }
 
-    static void Renormalise(ref Span<double> e)
-    {
-        var Q = e[^1];
-        var bottom = e.Length - 1;
-        for (int i = e.Length - 2; i >= 0; i--)
-        {
-            Q = FastTwoSum(Q, e[i], out var q);
-            if (q != 0.0)
-            {
-                e[bottom--] = Q;
-                Q = q;
-            }
-        }
-        e[bottom] = Q;
-        var top = 0;
-        e[0] = Q;
-        for (int i = bottom + 1; i < e.Length; i++)
-        {
-            Q = TwoSum(e[i], e[top], out var q);
-            e[top] = Q;
-            if (q != 0.0)
-            {
-                var l = top++ - 1;
-                while (l >= 0)
-                {
-                    var c2 = TwoSum(e[l + 1], e[l], out var d2);
-                    if (d2 == 0.0)
-                    {
-                        e[l--] = c2;
-                        top--;
-                    }
-                    else
-                        break;
-                }
-                e[top] = q;
-            }
-        }
-        e = e[..(top + 1)];
-    }
-
     public static double SSum(this double[] values)
     {
         if (values.Length == 0)

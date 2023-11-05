@@ -178,7 +178,7 @@ public void AllocatorMany_Classify()
         if (!TotalsCorrectly(rowTotal, colTotal, allocation.Solution))
             throw new Exception("Does not total correctly");
         return $"{(allocation.KnownGlobal ? "Global" : "Local")}/{allocation.SolutionType}";
-    }, time: 900, writeLine: output.WriteLine);
+    }, output.WriteLine, time: 900);
 }
 ```
 
@@ -341,9 +341,9 @@ public void Faster_Linq_Random()
     Gen.Byte.Array[100, 1000]
     .Faster(
         data => data.Aggregate(0.0, (t, b) => t + b),
-        data => data.Select(i => (double)i).Sum()
-    )
-    .Output(writeLine);
+        data => data.Select(i => (double)i).Sum(),
+        writeLine: output.WriteLine
+    );
 }
 ```
 
@@ -396,8 +396,8 @@ public void MapSlim_Performance_Increment()
                 dict[b] = c + 1;
             }
         },
-        repeat: 100
-    ).Output(writeLine);
+        repeat: 100,
+        writeLine: output.WriteLine);
 }
 ```
 
@@ -418,8 +418,7 @@ public void ReverseComplement_Faster()
         ReverseComplementNew.RevComp.NotMain,
         ReverseComplementOld.RevComp.NotMain,
         threads: 1, timeout: 600_000, sigma: 6
-    )
-    .Output(writeLine);
+        writeLine: output.WriteLine);
 }
 ```
 
@@ -450,8 +449,7 @@ public void Varint_Faster()
             ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
             pos = 0;
             return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
-        }, sigma: 10, repeat: 200)
-    .Output(writeLine);
+        }, sigma: 10, repeat: 200, writeLine: output.WriteLine);
 }
 ```
 
