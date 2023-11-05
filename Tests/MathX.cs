@@ -1,6 +1,5 @@
 ﻿namespace Tests;
 
-using ImTools;
 using System;
 using System.Diagnostics;
 
@@ -64,18 +63,17 @@ public static class MathX
     public static double FSum(this double[] values)
     {
         Span<double> partials = stackalloc double[16];
+        var hi = TwoSum(values[0], values[1], out var lo);
         int count = 0;
-        var hi = 0.0;
-        var lo = 0.0;
-        for (int i = 0; i < values.Length; i++)
+        for (int i = 2; i < values.Length; i++)
         {
             var v = TwoSum(values[i], lo, out lo);
             int c = 0;
             for (int j = 0; j < count; j++)
             {
-                v = TwoSum(v, partials[j], out var partial);
-                if (partial != 0.0)
-                    partials[c++] = partial;
+                v = TwoSum(v, partials[j], out var p);
+                if (p != 0.0)
+                    partials[c++] = p;
             }
             hi = TwoSum(hi, v, out v);
             if (v != 0.0)
@@ -91,92 +89,54 @@ public static class MathX
             count = c;
         }
 
-        if (count == 0)
-            return lo + hi;
-
-        partials = partials[..count];
-
-        //Span<double> x = [lo, .. partials, hi];
-        ////Renormalise(ref x);
-        //Compress(ref x);
-        //var sum = 0.0;
-        //foreach (var v in x)
-        //    sum += v;
-        //return sum;
-
-        CompressLoHi(ref lo, ref partials, ref hi);
-        foreach (var p in partials)
-            lo += p;
+        if (count != 0)
+        {
+            if (lo == 0) // lo has a good chance of being zero
+            {
+                lo = partials[0];
+                if (count == 1) return lo + hi;
+                partials = partials[1..count];
+            }
+            else
+                partials = partials[..count];
+            Compress(ref lo, ref partials, ref hi);
+            foreach (var p in partials)
+                lo += p;
+        }
         return lo + hi;
     }
 
-    static void Compress(ref Span<double> e)
+    static void Compress(ref double lo, ref Span<double> partials, ref double hi)
     {
-        var Q = e[^1];
-        var bottom = e.Length - 1;
-        for (int i = e.Length - 2; i >= 0; i--)
-        {
-            Q = TwoSum(Q, e[i], out var q);
-            if (q != 0.0)
-            {
-                e[bottom--] = Q;
-                Q = q;
-            }
-        }
-        e[bottom] = Q;
-        var top = 0;
-        for (int i = bottom + 1; i < e.Length; i++)
-        {
-            Q = TwoSum(e[i], Q, out var q);
-            if (q != 0.0)
-            {
-                e[top++] = q;
-            }
-        }
-        e[top] = Q;
-        e = e[..(top + 1)];
-    }
-
-    static void CompressLoHi(ref double lo, ref Span<double> e, ref double hi)
-    {
-        if (e.Length == 0) return;
         double q;
-        hi = TwoSum(hi, e[^1], out var Q);
-        var bottom = e.Length;
-        for (int i = e.Length - 2; i >= 0; i--)
+        hi = TwoSum(hi, partials[^1], out var Q);
+        var bottom = partials.Length;
+        for (int i = partials.Length - 2; i >= 0; i--)
         {
-            Q = TwoSum(Q, e[i], out q);
+            Q = TwoSum(Q, partials[i], out q);
             if (q != 0.0)
             {
-                e[--bottom] = Q;
+                partials[--bottom] = Q;
                 Q = q;
             }
         }
         lo = TwoSum(Q, lo, out q);
         if (q != 0.0)
         {
-            e[--bottom] = lo;
+            partials[--bottom] = lo;
             lo = q;
         }
-        if (bottom == e.Length)
-        {
-            e = [];
-            return;
-        }
+        if (bottom == partials.Length) { partials = []; return; }
+        Q = TwoSum(partials[bottom], lo, out lo);
         var top = 0;
-        Q = TwoSum(e[bottom], lo, out lo);
-        for (int i = bottom + 1; i < e.Length; i++)
+        for (int i = bottom + 1; i < partials.Length; i++)
         {
-            Q = TwoSum(e[i], Q, out q);
-            if (q != 0.0)
-                e[top++] = q;
+            Q = TwoSum(partials[i], Q, out q);
+            if (q != 0.0) partials[top++] = q;
         }
         hi = TwoSum(hi, Q, out q);
-        if (q != 0.0)
-        {
-            e[top++] = q;
-        }
-        e = e[..top];
+        if (q != 0.0) partials[top++] = q;
+        partials = partials[..top];
     }
 
     static void Renormalise(ref Span<double> e)
