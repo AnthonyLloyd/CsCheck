@@ -408,7 +408,7 @@ public static partial class Check
     public static bool ModelEqual<T, M>(T actual, M model)
     {
         if (actual is null && model is null) return true;
-        else if(actual is null || model is null) return false;
+        else if (actual is null || model is null) return false;
         if (actual is IList ail && model is IList bil)
         {
             if (ail.Count != bil.Count) return false;
@@ -878,10 +878,10 @@ public sealed class Classifier
     {
         long total = estimators.Values.Sum(i => i.N);
         foreach (var (summary, s) in estimators.SelectMany(kv =>
-                                        {
-                                            var a = kv.Key.Split('/');
-                                            return Enumerable.Range(1, a.Length - 1).Select(i => string.Join("/", a.Take(i)));
-                                        }).Distinct()
+        {
+            var a = kv.Key.Split('/');
+            return Enumerable.Range(1, a.Length - 1).Select(i => string.Join("/", a.Take(i)));
+        }).Distinct()
                                         .Select(summary =>
                                         {
                                             var total = new MedianEstimator();
@@ -919,7 +919,7 @@ public sealed class Classifier
             for (int i = 0; i < a.Length - 1; i++)
                 r[i] = estimators[string.Join("/", a.Take(i + 1))].N;
             r[^1] = kv.Value.N;
-            return (r,kv.Key);
+            return (r, kv.Key);
         }, Comparer<(int[], string)>.Create((xb, yb) =>
         {
             var (x, xs) = xb;
@@ -932,7 +932,7 @@ public sealed class Classifier
                     return c;
             }
             c = -x.Length.CompareTo(y.Length);
-            if(c != 0)
+            if (c != 0)
                 return c;
             return -xs.CompareTo(ys);
         })))

@@ -4,11 +4,8 @@ using System;
 using System.Collections.Generic;
 using Xunit;
 
-public class DbgTests
+public class DbgTests(Xunit.Abstractions.ITestOutputHelper output)
 {
-    readonly Action<string> writeLine;
-    public DbgTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
-
     static IEnumerable<char> Enumerable(string s) => s;
     static int[] Calc1(double _) => new[] { 1, 2 };
     static double Calc2(int[] _) => 1.2;
@@ -28,8 +25,8 @@ public class DbgTests
 
         Dbg.Call("cache");
         const string x = "hello";
-        var y = Dbg.Info(s => Enumerable(s), x).DbgCache().DbgInfo();
+        var y = Dbg.Info(Enumerable, x).DbgCache().DbgInfo();
         Dbg.Regression.Delete();
-        Dbg.Output(writeLine);
+        Dbg.Output(output.WriteLine);
     }
 }

@@ -11,52 +11,36 @@ public class ModelTests
     public enum Currency { EUR, GBP, USD, CAD };
     public enum Country { DE, GB, US, CA };
     public enum Exchange { LMAX, EQTA, GLPS, XCNQ }
-    public class Instrument
+    public class Instrument(string name, Country country, Currency currency)
     {
-        public string Name { get; }
-        public Country Country { get; }
-        public Currency Currency { get; }
-        public Instrument(string name, Country country, Currency currency) { Name = name; Country = country; Currency = currency; }
+        public string Name { get; } = name;
+        public Country Country { get; } = country;
+        public Currency Currency { get; } = currency;
     }
-    public class Equity : Instrument
+    public class Equity(string name, Country country, Currency currency, IReadOnlyCollection<Exchange> exchanges) : Instrument(name, country, currency)
     {
-        public IReadOnlyCollection<Exchange> Exchanges { get; }
-        public Equity(string name, Country country, Currency currency, IReadOnlyCollection<Exchange> exchanges) : base(name, country, currency)
-        {
-            Exchanges = exchanges;
-        }
+        public IReadOnlyCollection<Exchange> Exchanges { get; } = exchanges;
     }
-    public class Bond : Instrument
+    public class Bond(string name, Country country, Currency currency, IReadOnlyDictionary<DateTime, double> coupons) : Instrument(name, country, currency)
     {
-        public IReadOnlyDictionary<DateTime, double> Coupons { get; }
-        public Bond(string name, Country country, Currency currency, IReadOnlyDictionary<DateTime, double> coupons) : base(name, country, currency)
-        {
-            Coupons = coupons;
-        }
+        public IReadOnlyDictionary<DateTime, double> Coupons { get; } = coupons;
     }
-    public class Trade
+    public class Trade(DateTime date, int quantity, double cost)
     {
-        public DateTime Date { get; }
-        public int Quantity { get; }
-        public double Cost { get; }
-        public Trade(DateTime date, int quantity, double cost) { Date = date; Quantity = quantity; Cost = cost; }
+        public DateTime Date { get; } = date;
+        public int Quantity { get; } = quantity;
+        public double Cost { get; } = cost;
     }
-    public class Position
+    public class Position(Instrument instrument, IReadOnlyList<Trade> trades, double price)
     {
-        public Instrument Instrument { get; }
-        public IReadOnlyList<Trade> Trades { get; }
-        public double Price { get; }
-        public Position(Instrument instrument, IReadOnlyList<Trade> trades, double price) { Instrument = instrument; Trades = trades; Price = price; }
+        public Instrument Instrument { get; } = instrument; public IReadOnlyList<Trade> Trades { get; } = trades; public double Price { get; } = price;
         public int Quantity => Trades.Sum(i => i.Quantity);
         public double Cost => Trades.Sum(i => i.Cost);
         public double Profit => Price * Quantity - Cost;
     }
-    public class Portfolio
+    public class Portfolio(string name, Currency currency, IReadOnlyCollection<Position> positions)
     {
-        public string Name { get; }
-        public Currency Currency { get; }
-        public IReadOnlyCollection<Position> Positions { get; }
-        public Portfolio(string name, Currency currency, IReadOnlyCollection<Position> positions) { Name = name; Currency = currency; Positions = positions; }
+        public string Name { get; } = name; public Currency Currency { get; } = currency; public IReadOnlyCollection<Position> Positions { get; } = positions;
         public double Profit(Func<Currency, double> fxRate) => Positions.Sum(i => i.Profit * fxRate(i.Instrument.Currency));
         public double[] RiskByPosition(Func<Currency, double> fxRate) => Positions.Select(i => i.Profit * fxRate(i.Instrument.Currency)).ToArray();
     }

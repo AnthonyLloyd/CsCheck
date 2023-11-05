@@ -24,7 +24,7 @@ public sealed class Size
 {
     public ulong I;
     public Size? Next;
-        
+
     public Size(ulong i) => I = i;
 
     public Size(ulong i, Size next)
@@ -99,17 +99,17 @@ public abstract class Gen<T> : IGen<T>
 
     public GenOperation<Actual, Model> Operation<Actual, Model>(Func<T, string> name, Action<Actual, Model, T> action)
         => new((PCG pcg, Size? min, out Size size) =>
-    {
-        var t = Generate(pcg, min, out size);
-        return (name(t), (a, m) => action(a, m, t));
-    });
+        {
+            var t = Generate(pcg, min, out size);
+            return (name(t), (a, m) => action(a, m, t));
+        });
 
     public GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, Model, T> action)
         => new((PCG pcg, Size? min, out Size size) =>
-    {
-        var t = Generate(pcg, min, out size);
-        return (" " + Check.Print(t), (a, m) => action(a, m, t));
-    }, true);
+        {
+            var t = Generate(pcg, min, out size);
+            return (" " + Check.Print(t), (a, m) => action(a, m, t));
+        }, true);
 
     public GenMetamorphic<S> Metamorphic<S>(Func<T, string> name, Action<S, T> action1, Action<S, T> action2) => new((PCG pcg, Size? min, out Size size) =>
     {
@@ -2402,7 +2402,7 @@ public sealed class GenArray<T>(Gen<T> gen) : Gen<T[]>
         var sizeI = (ulong)length << 32;
         var total = new Size(0);
         size = new Size(sizeI, total);
-        if(min?.I < sizeI) return default!;
+        if (min?.I < sizeI) return default!;
         var next = sizeI == min?.I ? min.Next : null;
         var vs = new T[length];
         for (int i = 0; i < vs.Length; i++)
@@ -2663,7 +2663,7 @@ public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictiona
             }
         }
         return vs;
-    }   
+    }
     public override Dictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
         => Generate(genK, genV, pcg, min, (int)(pcg.Next() & 127U), out size);
     sealed class GenLength(Gen<K> genK, Gen<V> genV, Gen<int> length) : Gen<Dictionary<K, V>>

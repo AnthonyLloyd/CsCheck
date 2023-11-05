@@ -26,7 +26,7 @@ using System.Threading.Tasks;
 
 public sealed class CsCheckException : Exception
 {
-    private CsCheckException() {}
+    private CsCheckException() { }
     public CsCheckException(string message) : base(message) { }
     public CsCheckException(string message, Exception? exception) : base(message, exception) { }
 }
@@ -430,7 +430,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, string> classify,
-        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3, t4, t5, t6, t7) =>
@@ -452,7 +452,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, string> classify,
-        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3, t4, t5, t6, t7, t8) =>
@@ -740,7 +740,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static async Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<string>> classify,
-        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4) =>
@@ -762,7 +762,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<string>> classify,
-        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4, t5) =>
@@ -784,7 +784,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<string>> classify,
-        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6) =>
@@ -806,7 +806,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<string>> classify,
-        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7) =>
@@ -828,7 +828,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<string>> classify,
-        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7, t8) =>
@@ -1349,7 +1349,7 @@ public static partial class Check
             var opName = "Op" + i;
             opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2)) : op;
         }
-        
+
         new GenInitial<Actual, Model>(initial)
         .Select(Gen.OneOf(opNameActions).Array, (a, b) => new ModelBasedData<Actual, Model>(a.Actual, a.Model, a.Stream, a.Seed, b))
         .Sample(d =>
@@ -2472,7 +2472,7 @@ public static partial class Check
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), sigma, threads, repeat, timeout, seed, raiseexception);
 
-    sealed class FasterFuncWorker<T, R>(Gen<T> gen, ITimerFunc<T,R> fasterTimer, ITimerFunc<T, R> slowerTimer, FasterResult result, long endTimestamp, Func<R, R, bool> equal, string? seed, bool raiseexception) : IThreadPoolWorkItem
+    sealed class FasterFuncWorker<T, R>(Gen<T> gen, ITimerFunc<T, R> fasterTimer, ITimerFunc<T, R> slowerTimer, FasterResult result, long endTimestamp, Func<R, R, bool> equal, string? seed, bool raiseexception) : IThreadPoolWorkItem
     {
         volatile bool running = true;
         public void Execute()

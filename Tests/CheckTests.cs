@@ -168,27 +168,15 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void Equal_List()
     {
-        Assert.True(Check.Equal(
-            new List<int> { 1, 2, 3, 4 },
-            new List<int> { 1, 2, 3, 4 }
-        ));
-        Assert.False(Check.Equal(
-            new List<int> { 1, 2, 3, 4 },
-            new List<int> { 1, 2, 4, 3 }
-        ));
+        Assert.True(Check.Equal<List<int>>([1, 2, 3, 4], [1, 2, 3, 4]));
+        Assert.False(Check.Equal<List<int>>([1, 2, 3, 4], [1, 2, 4, 3]));
     }
 
     [Fact]
     public void Equal_Array()
     {
-        Assert.True(Check.Equal(
-            new int[] { 1, 2, 3, 4 },
-            new int[] { 1, 2, 3, 4 }
-        ));
-        Assert.False(Check.Equal(
-            new int[] { 1, 2, 3, 4 },
-            new int[] { 1, 2, 4, 3 }
-        ));
+        Assert.True(Check.Equal<int[]>([1, 2, 3, 4], [1, 2, 3, 4]));
+        Assert.False(Check.Equal<int[]>([1, 2, 3, 4], [1, 2, 4, 3]));
     }
 
     [Fact]
