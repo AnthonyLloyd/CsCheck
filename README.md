@@ -498,29 +498,6 @@ public void Test()
 }
 ```
 
-### Classify
-```csharp
-[Fact]
-public void Test()
-{
-    Gen.Int.Array
-    .DbgClassify(a => a.Length switch
-    {
-        0 => "zero length",
-        1 => "single length",
-        < 10 => "less ten",
-        > 100 => "over 100",
-        _ => "10 - 100",
-    })
-    .Sample(a =>
-    {
-        // ...
-    });
-
-    Dbg.Output(writeLine);
-}
-```
-
 ### Regression
 ```csharp
 public double[] Calculation(InputData input)

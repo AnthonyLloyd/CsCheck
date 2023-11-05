@@ -37,39 +37,6 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
         );
     }
 
-    [Fact(Skip="very close")]
-    public void ListSlim_Performance_Add()
-    {
-        Gen.Int.Array
-        .DbgClassify(a => a.Length switch
-        {
-            0 => "zero length",
-            1 => "single length",
-            < 10 => "less ten",
-            > 100 => "over 100",
-            _ => "10 - 100",
-        })
-        .Faster(
-            array =>
-            {
-                var d = new ListSlim<int>();
-                for (int i = 0; i < array.Length; i++)
-                    d.Add(array[i]);
-                return d.Count;
-            },
-            array =>
-            {
-                var d = new List<int>();
-                for (int i = 0; i < array.Length; i++)
-                    d.Add(array[i]);
-                return d.Count;
-            },
-            sigma: 20, repeat: 500, raiseexception: false
-        ).Output(writeLine);
-
-        Dbg.Output(writeLine);
-    }
-
     [Fact]
     public void SetSlim_ModelBased()
     {
