@@ -5,11 +5,8 @@
     using CsCheck;
     using Xunit;
 
-    public class ReverseComplementTests
+    public class ReverseComplementTests(Xunit.Abstractions.ITestOutputHelper output)
     {
-        readonly Action<string> writeLine;
-        public ReverseComplementTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
-
         [Fact(Skip = "Long running test.")]
         public void ReverseComplement_Faster()
         {
@@ -17,9 +14,8 @@
 
             Check.Faster(
                 ReverseComplementNew.RevComp.NotMain,
-                ReverseComplementOld.RevComp.NotMain,
-                sigma: 6, threads: 1, timeout: 600_000)
-            .Output(writeLine);
+            ReverseComplementOld.RevComp.NotMain,
+                sigma: 6, threads: 1, timeout: 600_000, writeLine: output.WriteLine);
         }
     }
 

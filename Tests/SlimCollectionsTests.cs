@@ -10,8 +10,6 @@ using Xunit;
 
 public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
 {
-    readonly Action<string> writeLine = output.WriteLine;
-
     [Fact]
     public void ListSlim_ModelBased()
     {
@@ -77,8 +75,7 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
                 var s = new HashSet<int>();
                 foreach (var i in a) s.Add(i);
             },
-            repeat: 100, raiseexception: false
-        ).Output(writeLine);
+            repeat: 100, raiseexception: false, writeLine: output.WriteLine);
     }
 
     [Fact(Skip = "fails")]
@@ -94,8 +91,7 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
             {
                 foreach (var i in items) hashset.Contains(i);
             },
-            repeat: 1000
-        ).Output(writeLine);
+            repeat: 1000, writeLine: output.WriteLine);
     }
 
     [Fact]
@@ -151,8 +147,7 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
                 var m = new Dictionary<int, byte>();
                 foreach (var (k, v) in items) m[k] = v;
             },
-            repeat: 100, raiseexception: false
-        ).Output(writeLine);
+            repeat: 100, raiseexception: false, writeLine: output.WriteLine);
     }
 
     [Fact(Skip = "fails")]
@@ -169,8 +164,7 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
             {
                 foreach (var (k, _) in items) dict.ContainsKey(k);
             },
-            repeat: 100
-        ).Output(writeLine);
+            repeat: 100, writeLine: output.WriteLine);
     }
 
     [Fact(Skip = "fails")]
@@ -192,8 +186,7 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
                     dict[b] = c + 1;
                 }
             },
-            repeat: 1000, sigma: 10
-        ).Output(writeLine);
+            repeat: 1000, sigma: 10, writeLine: output.WriteLine);
     }
 }
 

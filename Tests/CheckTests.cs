@@ -125,9 +125,8 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
 
         Check.Faster(
             () => MulIKJ(a, b),
-            () => MulIJK(a, b)
-        )
-        .Output(output.WriteLine);
+            () => MulIJK(a, b),
+            writeLine: output.WriteLine);
     }
 
     [Fact]
@@ -138,9 +137,8 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
         Gen.SelectMany(genDim, genDim, genDim, (i, j, k) => Gen.Select(genArray[i, j], genArray[j, k]))
         .Faster(
             MulIKJ,
-            MulIJK
-        )
-        .Output(output.WriteLine);
+            MulIJK,
+            writeLine: output.WriteLine);
     }
 
     [Fact]
@@ -154,9 +152,8 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
                 foreach (var b in data) s += b;
                 return s;
             },
-            data => data.Aggregate(0.0, (t, b) => t + b)
-        )
-        .Output(output.WriteLine);
+            data => data.Aggregate(0.0, (t, b) => t + b),
+            writeLine: output.WriteLine);
     }
 
     [Fact]
@@ -307,7 +304,7 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
         })
         .Faster(
             (m, q, s) => q.Enqueue(s),
-            (m, q, s) => m.Add(s)
-        , repeat: 10).Output(output.WriteLine);
+            (m, q, s) => m.Add(s),
+            writeLine: output.WriteLine);
     }
 }

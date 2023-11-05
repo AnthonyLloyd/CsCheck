@@ -24,8 +24,7 @@ public class PerfTests(Xunit.Abstractions.ITestOutputHelper output)
         Check.Faster(
             () => { var sum = TwoSum_O(2, 1e50, out var err); },
             () => { var (sum, err) = TwoSum_T(2, 1e50); }
-        , repeat: 100)
-        .Output(output.WriteLine);
+        , repeat: 100, writeLine: output.WriteLine);
     }
     [Fact(Skip = "They are equal")]
     public void TryChecked_Vs_If()

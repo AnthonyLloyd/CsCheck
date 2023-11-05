@@ -1908,7 +1908,9 @@ public static partial class Check
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true,
+        Action<string>? writeLine = null)
     {
         var result = new FasterResult(sigma == -1 ? Sigma : sigma);
         var worker = new FasterActionWorker(
@@ -1921,7 +1923,8 @@ public static partial class Check
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
-        return result.Exception is null ? result : throw result.Exception;
+        if (result.Exception is not null) throw result.Exception;
+        if (writeLine is not null) result.Output(writeLine);
     }
 
     sealed class FasterFuncWorker<T>(ITimerFunc<T> fasterTimer, ITimerFunc<T> slowerTimer, FasterResult result, Func<T, T, bool> equal, long endTimestamp, bool raiseexception) : IThreadPoolWorkItem
@@ -1975,8 +1978,9 @@ public static partial class Check
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T>(Func<T> faster, Func<T> slower, Func<T, T, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T>(Func<T> faster, Func<T> slower, Func<T, T, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true, Action<string>? writeLine = null)
     {
         var result = new FasterResult(sigma == -1 ? Sigma : sigma);
         var worker = new FasterFuncWorker<T>(
@@ -1992,7 +1996,8 @@ public static partial class Check
         worker.Execute();
         if (raiseexception && result.NotFaster)
             throw new CsCheckException(result.ToString());
-        return result.Exception is null ? result : throw result.Exception;
+        if (result.Exception is not null) throw result.Exception;
+        if (writeLine is not null) result.Output(writeLine);
     }
 
     /// <summary>Assert the first function is faster than the second to a given sigma.</summary>
@@ -2003,8 +2008,9 @@ public static partial class Check
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static async Task<FasterResult> FasterAsync(Func<Task> faster, Func<Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static async Task FasterAsync(Func<Task> faster, Func<Task> slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1,
+        bool raiseexception = true, Action<string>? writeLine = null)
     {
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
@@ -2043,7 +2049,8 @@ public static partial class Check
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker();
-        return result.Exception is null ? result : throw result.Exception;
+        if (result.Exception is not null) throw result.Exception;
+        if (writeLine is not null) result.Output(writeLine);
     }
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma.</summary>
@@ -2055,8 +2062,9 @@ public static partial class Check
     /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static async Task<FasterResult> FasterAsync<T>(Func<Task<T>> faster, Func<Task<T>> slower, Func<T, T, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true)
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static async Task FasterAsync<T>(Func<Task<T>> faster, Func<Task<T>> slower, Func<T, T, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true, Action<string>? writeLine = null)
     {
         equal ??= Equal;
         var fasterTimer = Timer.Create(faster, repeat);
@@ -2108,7 +2116,8 @@ public static partial class Check
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker();
-        return result.Exception is null ? result : throw result.Exception;
+        if (result.Exception is not null) throw result.Exception;
+        if (writeLine is not null) result.Output(writeLine);
     }
 
     sealed class FasterActionWorker<T>(Gen<T> gen, ITimerAction<T> fasterTimer, ITimerAction<T> slowerTimer, FasterResult result, long endTimestamp, string? seed, bool raiseexception) : IThreadPoolWorkItem
@@ -2160,8 +2169,9 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1,
+        string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
     {
         var result = new FasterResult(sigma == -1 ? Sigma : sigma);
         var worker = new FasterActionWorker<T>(
@@ -2176,7 +2186,8 @@ public static partial class Check
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
-        return result.Exception is null ? result : throw result.Exception;
+        if (result.Exception is not null) throw result.Exception;
+        if (writeLine is not null) result.Output(writeLine);
     }
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2189,9 +2200,10 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> faster, Action<T1, T2> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> faster, Action<T1, T2> slower, double sigma = -1.0, int threads = -1, int repeat = 1,
+        int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2203,9 +2215,10 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> faster, Action<T1, T2, T3> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> faster, Action<T1, T2, T3> slower, double sigma = -1.0, int threads = -1,
+        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2217,9 +2230,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> faster, Action<T1, T2, T3, T4> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> faster, Action<T1, T2, T3, T4> slower,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2231,9 +2246,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> faster, Action<T1, T2, T3, T4, T5> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> faster, Action<T1, T2, T3, T4, T5> slower,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2245,9 +2262,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> faster, Action<T1, T2, T3, T4, T5, T6> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> faster, Action<T1, T2, T3, T4, T5, T6> slower,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2259,9 +2278,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> faster, Action<T1, T2, T3, T4, T5, T6, T7> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> faster, Action<T1, T2, T3, T4, T5, T6, T7> slower,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2273,9 +2294,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> faster, Action<T1, T2, T3, T4, T5, T6, T7, T8> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> faster, Action<T1, T2, T3, T4, T5, T6, T7, T8> slower,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2287,8 +2310,9 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static async Task<FasterResult> FasterAsync<T>(this Gen<T> gen, Func<T, Task> faster, Func<T, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static async Task FasterAsync<T>(this Gen<T> gen, Func<T, Task> faster, Func<T, Task> slower, double sigma = -1.0, int threads = -1,
+        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
     {
         seed ??= Seed;
         var fasterTimer = Timer.Create(faster, repeat);
@@ -2336,7 +2360,8 @@ public static partial class Check
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker();
-        return result.Exception is null ? result : throw result.Exception;
+        if (result.Exception is not null) throw result.Exception;
+        if (writeLine is not null) result.Output(writeLine);
     }
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2349,9 +2374,10 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> faster, Func<T1, T2, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> faster, Func<T1, T2, Task> slower, double sigma = -1.0, int threads = -1,
+        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2363,9 +2389,10 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> faster, Func<T1, T2, T3, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> faster, Func<T1, T2, T3, Task> slower, double sigma = -1.0, int threads = -1,
+        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2377,9 +2404,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> faster, Func<T1, T2, T3, T4, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> faster, Func<T1, T2, T3, T4, Task> slower,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2391,9 +2420,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> faster, Func<T1, T2, T3, T4, T5, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> faster, Func<T1, T2, T3, T4, T5, Task> slower,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2405,9 +2436,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> faster, Func<T1, T2, T3, T4, T5, T6, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> faster, Func<T1, T2, T3, T4, T5, T6, Task> slower,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2419,9 +2452,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task> slower,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2433,7 +2468,7 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> slower,
+    public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), sigma, threads, repeat, timeout, seed, raiseexception);
 
@@ -2497,8 +2532,9 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T, R>(this Gen<T> gen, Func<T, R> faster, Func<T, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T, R>(this Gen<T> gen, Func<T, R> faster, Func<T, R> slower, Func<R, R, bool>? equal = null, double sigma = -1.0, int threads = -1,
+        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
     {
         var result = new FasterResult(sigma == -1 ? Sigma : sigma);
         var worker = new FasterFuncWorker<T, R>(
@@ -2514,7 +2550,8 @@ public static partial class Check
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
-        return result.Exception is null ? result : throw result.Exception;
+        if (result.Exception is not null) throw result.Exception;
+        if (writeLine is not null) result.Output(writeLine);
     }
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2528,8 +2565,9 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<I1, I2, T, R>(this Gen<T> gen, I1 faster, I2 slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<I1, I2, T, R>(this Gen<T> gen, I1 faster, I2 slower, Func<R, R, bool>? equal = null, double sigma = -1.0, int threads = -1, int repeat = 1,
+        int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
             where I1 : IInvoke<T, R> where I2 : IInvoke<T, R>
     {
         var result = new FasterResult(sigma == -1 ? Sigma : sigma);
@@ -2546,7 +2584,8 @@ public static partial class Check
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
-        return result.Exception is null ? result : throw result.Exception;
+        if (result.Exception is not null) throw result.Exception;
+        if (writeLine is not null) result.Output(writeLine);
     }
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2560,9 +2599,10 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> faster, Func<T1, T2, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> faster, Func<T1, T2, R> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2575,9 +2615,10 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> faster, Func<T1, T2, T3, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> faster, Func<T1, T2, T3, R> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2590,9 +2631,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> faster, Func<T1, T2, T3, T4, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> faster, Func<T1, T2, T3, T4, R> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), equal, sigma, threads, repeat, timeout, seed,
+            raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2605,9 +2648,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> faster, Func<T1, T2, T3, T4, T5, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> faster, Func<T1, T2, T3, T4, T5, R> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), equal, sigma, threads, repeat,
+            timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2620,9 +2665,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> faster, Func<T1, T2, T3, T4, T5, T6, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> faster, Func<T1, T2, T3, T4, T5, T6, R> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), equal, sigma,
+            threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2635,9 +2682,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, R> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2650,9 +2699,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static FasterResult Faster<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2665,8 +2716,9 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static async Task<FasterResult> FasterAsync<T, R>(this Gen<T> gen, Func<T, Task<R>> faster, Func<T, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static async Task FasterAsync<T, R>(this Gen<T> gen, Func<T, Task<R>> faster, Func<T, Task<R>> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
     {
         seed ??= Seed;
         equal ??= Equal;
@@ -2727,7 +2779,8 @@ public static partial class Check
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker();
-        return result.Exception is null ? result : throw result.Exception;
+        if (result.Exception is not null) throw result.Exception;
+        if (writeLine is not null) result.Output(writeLine);
     }
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2741,9 +2794,10 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<R>> faster, Func<T1, T2, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<R>> faster, Func<T1, T2, Task<R>> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2756,9 +2810,10 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<R>> faster, Func<T1, T2, T3, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<R>> faster, Func<T1, T2, T3, Task<R>> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2771,9 +2826,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<R>> faster, Func<T1, T2, T3, T4, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<R>> faster, Func<T1, T2, T3, T4, Task<R>> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2786,9 +2843,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<R>> faster, Func<T1, T2, T3, T4, T5, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<R>> faster, Func<T1, T2, T3, T4, T5, Task<R>> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2801,9 +2860,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, Task<R>> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2816,9 +2877,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2831,9 +2894,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    public static Task<FasterResult> FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), equal, sigma, threads, repeat, timeout, seed, raiseexception);
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> slower, Func<R, R, bool>? equal = null,
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
     /// <summary>Generate a single random example.</summary>
     /// <param name="gen">The data generator.</param>
@@ -2965,7 +3030,7 @@ public static partial class Check
     }
 }
 
-public sealed class FasterResult(double sigma)
+internal sealed class FasterResult(double sigma)
 {
     const byte STATE_PROCESSING = 0, STATE_QUEUED = 1, STATE_BLOCKED = 2;
     static readonly int capacity = Environment.ProcessorCount;

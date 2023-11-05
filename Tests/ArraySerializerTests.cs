@@ -1,16 +1,12 @@
 ﻿namespace Tests;
 
-using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using CsCheck;
 using Xunit;
 
-public class ArraySerializerTests
+public class ArraySerializerTests(Xunit.Abstractions.ITestOutputHelper output)
 {
-    readonly Action<string> writeLine;
-    public ArraySerializerTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
-
     [Fact]
     public void Varint()
     {
@@ -55,8 +51,7 @@ public class ArraySerializerTests
                 ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
                 pos = 0;
                 return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
-            }, sigma: 10, repeat: 500, raiseexception: false)
-        .Output(writeLine);
+            }, sigma: 10, repeat: 500, raiseexception: false, writeLine: output.WriteLine);
     }
 }
 
