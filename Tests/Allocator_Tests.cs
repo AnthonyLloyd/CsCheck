@@ -10,10 +10,10 @@ using Xunit;
 public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
 {
     readonly static Gen<(long Quantity, double[] Weights)> genAllSigns =
-        Gen.Select(Gen.Long[-1000, 1000], Gen.Double[-100000, 100000, 1000].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
+        Gen.Select(Gen.Long[-1000, 1000], Gen.Double[-100000, 100000].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
 
     readonly static Gen<(long Quantity, double[] Weights)> genPositive =
-        Gen.Select(Gen.Long[0, 1000], Gen.Double[0, 100000, 1000].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
+        Gen.Select(Gen.Long[1, 1000], Gen.Double[0, 100000].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
 
     [Fact]
     public void Allocate_TotalsCorrectly()

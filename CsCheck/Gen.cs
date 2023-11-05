@@ -1920,10 +1920,12 @@ public sealed class GenFloat : Gen<float>
         finish -= start;
         return new GenEvenlyDistributed(start - finish, finish);
     }
-    public Gen<float> this[float start, float finish, int denominator = 100, int minExp = -100]
+    public Gen<float> this[float start, float finish]
     {
         get
         {
+            const int denominator = 99;
+            const int minExp = -99;
             static Gen<int> GenInt(float start, float finish)
                 => start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
                  : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue + 1), (int)Math.Min(Math.Floor(finish), int.MaxValue - 1)];
@@ -2047,10 +2049,12 @@ public sealed class GenDouble : Gen<double>
         finish -= start;
         return new GenEvenlyDistributed(start - finish, finish);
     }
-    public Gen<double> this[double start, double finish, int denominator = 100, int minExp = -100]
+    public Gen<double> this[double start, double finish]
     {
         get
         {
+            const int denominator = 99;
+            const int minExp = -99;
             static Gen<int> GenInt(double start, double finish)
                 => start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
                  : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue + 1), (int)Math.Min(Math.Floor(finish), int.MaxValue - 1)];
@@ -2186,10 +2190,12 @@ public sealed class GenDecimal : Gen<decimal>
         finish -= start;
         return new GenEvenlyDistributed(start - finish, finish);
     }
-    public Gen<decimal> this[decimal start, decimal finish, int denominator = 100, int minExp = -100]
+    public Gen<decimal> this[decimal start, decimal finish]
     {
         get
         {
+            const int denominator = 99;
+            const int minExp = -99;
             static Gen<int> GenInt(decimal start, decimal finish)
                 => start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
                  : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue + 1), (int)Math.Min(Math.Floor(finish), int.MaxValue - 1)];

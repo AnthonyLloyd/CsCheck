@@ -238,6 +238,18 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
+    public void FSum_Vs_SSum_Perf()
+    {
+        genDouble.Array[2, 100]
+        .Faster(
+            values => values.FSum(),
+            values => values.SSum2(),
+            Check.EqualSkip,
+            writeLine: output.WriteLine
+        );
+    }
+
+    [Fact]
     public void Mantissa()
     {
         genDouble.Sample(d =>

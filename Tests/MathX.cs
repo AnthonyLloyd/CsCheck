@@ -100,7 +100,7 @@ public static class MathX
             }
             else
                 partials = partials[..count];
-            Compress(ref lo, ref partials, ref hi);
+            //Compress(ref lo, ref partials, ref hi);
             foreach (var p in partials)
                 lo += p;
         }
@@ -162,6 +162,16 @@ public static class MathX
             }
         }
         return values.FSum();
+    }
+
+    public static double SSum2(this double[] values)
+    {
+        values = (double[])values.Clone();
+        Array.Sort(values);
+        var sum = 0.0;
+        foreach (var v in values)
+            sum += v;
+        return sum;
     }
 
     public static long Mantissa(double d, out int exponent)
