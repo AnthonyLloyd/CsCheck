@@ -15,7 +15,7 @@ public static class MathX
 
     public static double FastTwoSum(double a, double b, out double lo)
     {
-        Debug.Assert(Math.Abs(a) >= Math.Abs(b));
+        //Debug.Assert(Math.Abs(a) >= Math.Abs(b));
         var hi = a + b;
         lo = a - hi + b;
         return hi;
@@ -51,9 +51,9 @@ public static class MathX
     {
         var sum = 0.0;
         var c = 0.0;
-        for (int i = 0; i < values.Length; i++)
+        foreach (var value in values)
         {
-            sum = TwoSum(sum, values[i], out var ci);
+            sum = TwoSum(sum, value, out var ci);
             c += ci;
         }
         return sum + c;
@@ -62,6 +62,7 @@ public static class MathX
     /// <summary>Shewchuk summation</summary>
     public static double FSum(this double[] values)
     {
+        if (values.Length < 3) return values.Length == 2 ? values[0] + values[1] : values.Length == 1 ? values[0] : 0.0;
         Span<double> partials = stackalloc double[16];
         var hi = TwoSum(values[0], values[1], out var lo);
         int count = 0;

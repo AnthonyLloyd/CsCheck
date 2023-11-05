@@ -147,12 +147,14 @@ public static partial class Check
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T>(this Gen<T> gen, Action<T> assert, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
+    public static void Sample<T>(this Gen<T> gen, Action<T> assert, Action<string>? writeLine = null,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
     {
         seed ??= Seed;
         if (iter == -1) iter = Iter;
@@ -192,104 +194,111 @@ public static partial class Check
         worker.Execute();
         cde.Wait();
         if (worker.MinPCG is not null) throw worker.Exception(print ?? Print);
+        if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> assert,
+    public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2), seed, iter, time, threads, print);
+        => Sample(gen, t => assert(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> assert,
+    public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3), seed, iter, time, threads, print);
+        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> assert,
+    public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), seed, iter, time, threads, print);
+        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> assert,
+    public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), seed, iter, time, threads, print);
+        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> assert,
+    public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), seed, iter, time, threads, print);
+        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> assert,
+    public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), seed, iter, time, threads, print);
+        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> assert,
+    public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), seed, iter, time, threads, print);
+        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    public static void Sample<T>(this Gen<T> gen, Func<T, string> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
-        Action<string>? writeLine = null)
+    public static void Sample<T>(this Gen<T> gen, Func<T, string> classify, Action<string> writeLine,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
     {
         var classifier = new Classifier();
         Sample(gen, (T t) =>
@@ -297,22 +306,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, string> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null,
-        Action<string>? writeLine = null)
+    public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, string> classify, Action<string> writeLine,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2) =>
@@ -320,22 +328,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, string> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null,
-        Action<string>? writeLine = null)
+    public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, string> classify, Action<string> writeLine,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3) =>
@@ -343,22 +350,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, string> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null,
-        Action<string>? writeLine = null)
+    public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, string> classify, Action<string> writeLine,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3, t4) =>
@@ -366,22 +372,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, string> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null,
-        Action<string>? writeLine = null)
+    public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, string> classify, Action<string> writeLine,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3, t4, t5) =>
@@ -389,22 +394,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, string> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
-        Action<string>? writeLine = null)
+    public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, string> classify, Action<string> writeLine,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3, t4, t5, t6) =>
@@ -412,22 +416,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5, t6);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, string> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
-        Action<string>? writeLine = null)
+        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3, t4, t5, t6, t7) =>
@@ -435,22 +438,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5, t6, t7);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, string> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
-        Action<string>? writeLine = null)
+        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3, t4, t5, t6, t7, t8) =>
@@ -458,19 +460,20 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5, t6, t7, t8);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task> assert,
+    public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
     {
         seed ??= Seed;
@@ -567,104 +570,111 @@ public static partial class Check
             var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
             throw new CsCheckException(summary + tString, minException);
         }
+        if (writeLine is not null) writeLine($"Passed {total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> assert,
+    public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2), seed, iter, time, threads, print);
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> assert,
+    public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3), seed, iter, time, threads, print);
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> assert,
+    public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), seed, iter, time, threads, print);
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> assert,
+    public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), seed, iter, time, threads, print);
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> assert,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), seed, iter, time, threads, print);
+         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> assert,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), seed, iter, time, threads, print);
+         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> assert,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), seed, iter, time, threads, print);
+         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task<string>> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
-        Action<string>? writeLine = null)
+    public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task<string>> classify, Action<string> writeLine,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async t =>
@@ -672,22 +682,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    public static async Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<string>> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null,
-        Action<string>? writeLine = null)
+    public static async Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<string>> classify, Action<string> writeLine,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2) =>
@@ -695,22 +704,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    public static async Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<string>> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null,
-        Action<string>? writeLine = null)
+    public static async Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<string>> classify, Action<string> writeLine,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3) =>
@@ -718,22 +726,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     public static async Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<string>> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null,
-        Action<string>? writeLine = null)
+        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4) =>
@@ -741,22 +748,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<string>> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null,
-        Action<string>? writeLine = null)
+        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4, t5) =>
@@ -764,22 +770,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<string>> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
-        Action<string>? writeLine = null)
+        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6) =>
@@ -787,22 +792,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5, t6);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<string>> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
-        Action<string>? writeLine = null)
+        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7) =>
@@ -810,22 +814,21 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5, t6, t7);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
+    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<string>> classify,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
-        Action<string>? writeLine = null)
+        Action<string> writeLine, string ? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7, t8) =>
@@ -833,7 +836,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5, t6, t7, t8);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
         classifier.Print(writeLine);
     }
 
@@ -924,12 +927,13 @@ public static partial class Check
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate,
+    public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
     {
         seed ??= Seed;
@@ -978,101 +982,110 @@ public static partial class Check
         worker.Execute();
         cde.Wait();
         if (worker.MinPCG is not null) throw worker.Exception(print ?? Print);
+        if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate,
+    public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2), seed, iter, time, threads, print);
+        => Sample(gen, t => predicate(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate,
+    public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3), seed, iter, time, threads, print);
+        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate,
+    public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), seed, iter, time, threads, print);
+        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate,
+    public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), seed, iter, time, threads, print);
+        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate,
+    public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), seed, iter, time, threads, print);
+        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), seed, iter, time, threads, print);
+        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
+        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), seed, iter, time, threads, print);
+        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
+        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task<bool>> predicate,
+    public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
     {
         seed ??= Seed;
@@ -1196,91 +1209,99 @@ public static partial class Check
                 $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{tString}",
                 minException);
         }
+        if (writeLine is not null) writeLine($"Passed {total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<bool>> predicate,
+    public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2), seed, iter, time, threads, print);
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<bool>> predicate,
+    public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3), seed, iter, time, threads, print);
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<bool>> predicate,
+    public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), seed, iter, time, threads, print);
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<bool>> predicate,
+    public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), seed, iter, time, threads, print);
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<bool>> predicate,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), seed, iter, time, threads, print);
+        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<bool>> predicate,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), seed, iter, time, threads, print);
+        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<bool>> predicate,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), seed, iter, time, threads, print);
+        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
 
     sealed class ModelBasedData<Actual, Model>(Actual actualState, Model modelState, uint stream, ulong seed, (string, Action<Actual, Model>)[] operations)
     {
@@ -1308,9 +1329,10 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model>[] operations,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
     {
         equal ??= ModelEqual;
         seed ??= Seed;
@@ -1343,7 +1365,7 @@ public static partial class Check
                 d.Exception = e;
                 return false;
             }
-        }, seed, iter, time, threads,
+        }, writeLine, seed, iter, time, threads,
         p =>
         {
             if (p == null) return "";
@@ -1376,10 +1398,11 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
-        => SampleModelBased(initial, new[] { operation }, equal, seed, iter, time, threads, printActual, printModel);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
+        => SampleModelBased(initial, new[] { operation }, equal, seed, iter, time, threads, printActual, printModel, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1393,11 +1416,12 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
-        => SampleModelBased(initial, new[] { operation1, operation2 }, equal, seed, iter, time, threads, printActual, printModel);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
+        => SampleModelBased(initial, new[] { operation1, operation2 }, equal, seed, iter, time, threads, printActual, printModel, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1412,11 +1436,12 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
-        => SampleModelBased(initial, new[] { operation1, operation2, operation3 }, equal, seed, iter, time, threads, printActual, printModel);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
+        => SampleModelBased(initial, new[] { operation1, operation2, operation3 }, equal, seed, iter, time, threads, printActual, printModel, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1432,11 +1457,12 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
-        => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, iter, time, threads, printActual, printModel);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
+        => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, iter, time, threads, printActual, printModel, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1453,13 +1479,14 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         GenOperation<Actual, Model> operation5,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
         => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5 },
-            equal, seed, iter, time, threads, printActual, printModel);
+            equal, seed, iter, time, threads, printActual, printModel, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1477,13 +1504,14 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         GenOperation<Actual, Model> operation5, GenOperation<Actual, Model> operation6,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null)
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
         => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
-            equal, seed, iter, time, threads, printActual, printModel);
+            equal, seed, iter, time, threads, printActual, printModel, writeLine);
 
     sealed class MetamorphicData<T>(T state1, T state2, uint stream, ulong seed)
     {
@@ -1511,9 +1539,10 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleMetamorphic<T>(this Gen<T> initial, GenMetamorphic<T> operations,
         Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<T, string>? print = null)
+        Func<T, string>? print = null, Action<string>? writeLine = null)
     {
         equal ??= ModelEqual;
         seed ??= Seed;
@@ -1536,7 +1565,7 @@ public static partial class Check
                 d.Item1.Exception = e;
                 return false;
             }
-        }, seed, iter, time, threads,
+        }, writeLine, seed, iter, time, threads,
         p =>
         {
             print ??= Print;
@@ -1588,8 +1617,9 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T>[] operations,
-        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T>[] operations, Func<T, T, bool>? equal = null, string? seed = null,
+        long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
     {
         equal ??= Equal;
         seed ??= Seed;
@@ -1655,7 +1685,7 @@ public static partial class Check
             } while (linearizable && firstIteration && seed is not null && --replay > 0);
             firstIteration = false;
             return linearizable;
-        }, seed, iter, time, threads: 1,
+        }, writeLine, seed, iter, time, threads: 1,
         p =>
         {
             print ??= Print;
@@ -1702,9 +1732,10 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation,
-        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
-        => SampleConcurrent(initial, new[] { operation }, equal, seed, iter, time, threads, print, replay);
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation, Func<T, T, bool>? equal = null, string? seed = null,
+        long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleConcurrent(initial, new[] { operation }, equal, seed, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1720,9 +1751,10 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
-        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
-        => SampleConcurrent(initial, new[] { operation1, operation2 }, equal, seed, iter, time, threads, print, replay);
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, Func<T, T, bool>? equal = null,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleConcurrent(initial, new[] { operation1, operation2 }, equal, seed, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1739,10 +1771,10 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
-        GenOperation<T> operation3,
-        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
-        => SampleConcurrent(initial, new[] { operation1, operation2, operation3 }, equal, seed, iter, time, threads, print, replay);
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, Func<T, T, bool>? equal = null,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleConcurrent(initial, new[] { operation1, operation2, operation3 }, equal, seed, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1760,10 +1792,11 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
-        GenOperation<T> operation3, GenOperation<T> operation4,
-        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
-        => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, iter, time, threads, print, replay);
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4,
+        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1,
+         Action<string>? writeLine = null)
+        => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1782,11 +1815,12 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
-        GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5,
-        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4,
+        GenOperation<T> operation5, Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
+        int replay = -1, Action<string>? writeLine = null)
         => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5 },
-            equal, seed, iter, time, threads, print, replay);
+            equal, seed, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1806,11 +1840,12 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2,
-        GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5, GenOperation<T> operation6,
-        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1)
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4,
+        GenOperation<T> operation5, GenOperation<T> operation6, Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
-            equal, seed, iter, time, threads, print, replay);
+            equal, seed, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Assert actual is in line with expected using a chi-squared test to sigma.</summary>
     /// <param name="expected">The expected bin counts.</param>
@@ -2861,7 +2896,7 @@ public static partial class Check
         gen.Clone().Sample((t1, t2) =>
             t1!.Equals(t2) && t2!.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()
             && (t1 is not IEquatable<T> e || (e.Equals(t2) && ((IEquatable<T>)t2).Equals(t1)))
-        , seed, iter, time, threads, print);
+        , null, seed, iter, time, threads, print);
 
         gen.Select(gen).Sample((t1, t2) =>
         {
@@ -2872,7 +2907,7 @@ public static partial class Check
             ||
             (equal && t2!.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()
              && (t1 is not IEquatable<T> e || (e.Equals(t2) && ((IEquatable<T>)t2).Equals(t1))));
-        }, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print);
     }
 
     /// <summary>Check a hash of a series of values. Cache values on a correct run and fail with stack trace at first difference.</summary>

@@ -874,9 +874,8 @@ public sealed class Classifier
         else
             Interlocked.Increment(ref nullCount);
     }
-    public void Print(Action<string>? writeLine)
+    public void Print(Action<string> writeLine)
     {
-        writeLine ??= Console.WriteLine;
         long total = estimators.Values.Sum(i => i.N);
         foreach (var (summary, s) in estimators.SelectMany(kv =>
                                         {

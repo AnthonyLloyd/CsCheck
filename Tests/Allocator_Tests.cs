@@ -42,7 +42,9 @@ public class Allocator_Tests
 
     [Fact]
     public void Allocate_GivesSameResultReorderedForReorderedWeights()
-        => Allocator_Check.GivesSameResultReorderedForReorderedWeights(genAllSigns, Allocator.Allocate);
+    {
+        Allocator_Check.GivesSameResultReorderedForReorderedWeights(genAllSigns, Allocator.Allocate);
+    }
 
     [Fact]
     public void Allocate_HasSmallestAllocationError()
