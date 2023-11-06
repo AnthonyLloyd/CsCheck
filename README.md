@@ -38,7 +38,7 @@ No Reflection was used in the making of this product.
 ## Generator Creation Example
 
 Use **Gen** and its Linq methods to compose generators for any type. Here we create a **Gen** for json documents.
-Forget about shrinking as it's automatic and the best in the business.
+Don't worry about shrinking as it's automatic and the best in the business.
 
 ```csharp
 static readonly Gen<string> genString = Gen.String[Gen.Char.AlphaNumeric, 2, 5];
@@ -71,7 +71,7 @@ static readonly Gen<JsonNode> genJsonNode = Gen.Recursive<JsonNode>((depth, genJ
 
 ## Random testing
 
-**Sample** is used to perform tests with a generator. Either return false or throw an exception for failure. **Sample** will shrink any failures down to the simplest example.
+**Sample** is used to perform tests with a generator. Either return false or throw an exception for failure. **Sample** will aggressively shrink any failure down to the simplest example.
 The default is a sample size of 100 iterations. Set iter: to change this or time: to run for a number of seconds.
 Setting these from the command line can be a good way to run your tests in different ways and in Release mode.
 
