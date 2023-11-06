@@ -67,6 +67,9 @@ static readonly Gen<JsonNode> genJsonNode = Gen.Recursive<JsonNode>((depth, genJ
 
 ## Random testing
 
+**Sample** is used to perform tests with a generator. Either return false or throw an exception for failure.
+The default is a sample size of 100 iterations. Set iter: to change this or time: to run for a number of seconds.
+
 ### Unit Single
 ```csharp
 [Fact]
@@ -172,6 +175,10 @@ public void RecursiveDepth()
 ```
 
 ### Classify
+
+Change the return in **Sample** to a string to produce a summary classification table.
+All other optional parameters work the same but writeLine: is now mandatory.
+
 ```csharp
 [Fact]
 public void AllocatorMany_Classify()

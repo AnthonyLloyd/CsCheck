@@ -1,7 +1,6 @@
 ﻿namespace Tests;
 
 using System;
-using System.Diagnostics;
 
 public static class MathX
 {
@@ -15,7 +14,7 @@ public static class MathX
 
     public static double FastTwoSum(double a, double b, out double lo)
     {
-        //Debug.Assert(Math.Abs(a) >= Math.Abs(b));
+        //System.Diagnostics.Debug.Assert(Math.Abs(a) >= Math.Abs(b));
         var hi = a + b;
         lo = a - hi + b;
         return hi;
