@@ -22,7 +22,7 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>3.0.0-rc3</Version>
+        <Version>3.0.0-rc4</Version>
         <PackageReleaseNotes>
 Improved generation for double, float and decimal. Mix of integer, fraction, exponential and evenly distributed.
 Improved Print for double, float and decimal. Displays small rounded fraction and exponential representation.
@@ -38,9 +38,10 @@ BREAKING CHANGES:
 - Removed Create, create a : Gen&lt;T&gt; class instead.
 - Removed SelectTuple.
 - Removed Gen.Enumerable.
-- Removed Gen.Double.Positive, Gen.Double.Normal etc
+- Removed Gen.Double.Positive, Gen.Double.Normal etc.
 - Added max count to Where.
-- Now targets net6.0, 2.14.1 was the last to target netstandard2.0
+- WriteLine parameter consist across Sample and Faster.
+- Now targets net6.0, 2.14.1 was the last to target netstandard2.0.
         </PackageReleaseNotes>
         <TargetFramework>net6.0</TargetFramework>
         <LangVersion>preview</LangVersion>
