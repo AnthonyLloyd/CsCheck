@@ -243,7 +243,7 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
         genDouble.Array[2, 100]
         .Faster(
             values => values.FSum(),
-            values => values.SSum2(),
+            values => values.SSum(),
             Check.EqualSkip,
             writeLine: output.WriteLine
         );
