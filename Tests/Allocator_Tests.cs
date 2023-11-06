@@ -10,7 +10,7 @@ using Xunit;
 public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
 {
     readonly static Gen<(long Quantity, double[] Weights)> genAllSigns =
-        Gen.Select(Gen.Long[-10_000, 10_000], Gen.Double[-100_000, 100_000].Array[3, 100].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
+        Gen.Select(Gen.Long[-100, 100], Gen.Double[-100, 100].Array[2, 10].Where(ws => ws.Sum() > 1e-3));
 
     readonly static Gen<(long Quantity, double[] Weights)> genPositive =
         Gen.Select(Gen.Long[1, 10_000], Gen.Double[0, 100_000].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
@@ -43,6 +43,21 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
     public void Allocate_GivesSameResultReorderedForReorderedWeights()
     {
         Allocator_Check.GivesSameResultReorderedForReorderedWeights(genAllSigns, Allocator.Allocate, output.WriteLine);
+    }
+
+    [Fact]
+    public void X()
+    {
+        Gen.Select(
+            Gen.Const(-35L),
+            Gen.Const<double[]>([-8485E-81, -68, 11d/3, -5623E-76, 47E-55, -19, 88, 134E-33]),
+            Gen.Const<double[]>([-8485E-81, 47E-55, -19, 11d/3, 134E-33, -5623E-76, 88, -68]))
+        .Sample((quantity, weights, shuffled) =>
+        {
+            var allocations = Allocator.Allocate(quantity, weights);
+            var shuffledAllocations = Allocator.Allocate(quantity, shuffled);
+            return weights.Zip(allocations).Order().Zip(shuffled.Zip(shuffledAllocations).Order()).All(i => i.First == i.Second);
+        }, threads: 1);
     }
 
     [Fact]

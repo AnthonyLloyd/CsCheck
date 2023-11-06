@@ -37,19 +37,32 @@ No Reflection was used in the making of this product.
 
 ## Generator Creation Example
 ```csharp
-public abstract record ValueOrRange();
-public sealed record ValueOrRange_Value(double Value) : ValueOrRange;
-public sealed record ValueOrRange_Range(double Lower, double? Upper) : ValueOrRange;
-public enum ParameterType { Price, Spread, Yield, Discount }
-
-// Generators
-static readonly Gen<ValueOrRange> genValueOrRange =
-   Gen.OneOf<ValueOrRange>(
-     Gen.Double.Select(i => new ValueOrRange_Value(i)),
-     Gen.Double.SelectMany(l => Gen.Double[l, l + 100].Nullable().Select(u => new ValueOrRange_Range(l, u)))
-   );
-static readonly Gen<Dictionary<DateTime, List<(ParameterType Type, ValueOrRange Value)>>> genExample =
-   Gen.Dictionary(Gen.DateTime, Gen.Select(Gen.Enum<ParameterType>(), genValueOrRange).List);
+static readonly Gen<string> genString = Gen.String[Gen.Char.AlphaNumeric, 2, 5];
+static readonly Gen<JsonNode> genJsonValue = Gen.OneOf<JsonNode>(
+    Gen.Bool.Select(x => JsonValue.Create(x)),
+    Gen.Byte.Select(x => JsonValue.Create(x)),
+    Gen.Char.AlphaNumeric.Select(x => JsonValue.Create(x)),
+    Gen.DateTime.Select(x => JsonValue.Create(x)),
+    Gen.DateTimeOffset.Select(x => JsonValue.Create(x)),
+    Gen.Decimal.Select(x => JsonValue.Create(x)),
+    Gen.Double.Select(x => JsonValue.Create(x)),
+    Gen.Float.Select(x => JsonValue.Create(x)),
+    Gen.Guid.Select(x => JsonValue.Create(x)),
+    Gen.Int.Select(x => JsonValue.Create(x)),
+    Gen.Long.Select(x => JsonValue.Create(x)),
+    Gen.SByte.Select(x => JsonValue.Create(x)),
+    Gen.Short.Select(x => JsonValue.Create(x)),
+    genString.Select(x => JsonValue.Create(x)),
+    Gen.UInt.Select(x => JsonValue.Create(x)),
+    Gen.ULong.Select(x => JsonValue.Create(x)),
+    Gen.UShort.Select(x => JsonValue.Create(x)));
+static readonly Gen<JsonNode> genJsonNode = Gen.Recursive<JsonNode>((depth, genJsonNode) =>
+{
+    if (depth == 5) return genJsonValue;
+    var genJsonObject = Gen.Dictionary(genString, genJsonNode.Null())[0, 5].Select(d => new JsonObject(d));
+    var genJsonArray = genJsonNode.Null().Array[0, 5].Select(i => new JsonArray(i));
+    return Gen.OneOf(genJsonObject, genJsonArray, genJsonValue);
+});
 ```
 
 ## Random testing

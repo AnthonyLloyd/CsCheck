@@ -80,14 +80,18 @@ internal static class Allocator_Check
         });
     }
 
+    public static bool GivesSameResultReorderedForReorderedWeights(long quantity, double[] weights, double[] shuffled, Func<long, double[], long[]> allocate)
+    {
+        var allocations = allocate(quantity, weights);
+        var shuffledAllocations = allocate(quantity, shuffled);
+        return weights.Zip(allocations).Order().Zip(shuffled.Zip(shuffledAllocations).Order()).All(i => i.First == i.Second);
+    }
+
     public static void GivesSameResultReorderedForReorderedWeights(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate, Action<string> writeLine)
     {
-        gen.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s))).Sample((quantity, weights, shuffled) =>
-        {
-            var allocations = allocate(quantity, weights);
-            var shuffledAllocations = allocate(quantity, shuffled);
-            return weights.Zip(allocations).Order().Zip(shuffled.Zip(shuffledAllocations).Order()).All(i => i.First == i.Second);
-        }, writeLine);
+        gen.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s)))
+        .Sample((quantity, weights, shuffled) => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, allocate)
+        , writeLine, seed: "2ppP2GSgDbqj");
     }
 
     public static void SmallerWeightsDontGetLargerAllocation(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate)

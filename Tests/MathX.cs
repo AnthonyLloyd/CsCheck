@@ -89,9 +89,54 @@ public static class MathX
             }
             count = c;
         }
-        foreach (var p in partials[..count])
-            lo += p;
+        if (count != 0)
+        {
+            if (lo == 0) // lo has a good chance of being zero
+            {
+                lo = partials[0];
+                if (count == 1) return lo + hi;
+                partials = partials[1..count];
+            }
+            else
+                partials = partials[..count];
+            Compress(ref lo, ref partials, ref hi);
+            foreach (var p in partials)
+                lo += p;
+        }
         return lo + hi;
+    }
+
+    static void Compress(ref double lo, ref Span<double> partials, ref double hi)
+    {
+        double q;
+        hi = TwoSum(hi, partials[^1], out var Q);
+        var bottom = partials.Length;
+        for (int i = partials.Length - 2; i >= 0; i--)
+        {
+            Q = TwoSum(Q, partials[i], out q);
+            if (q != 0.0)
+            {
+                partials[--bottom] = Q;
+                Q = q;
+            }
+        }
+        lo = TwoSum(Q, lo, out q);
+        if (q != 0.0)
+        {
+            partials[--bottom] = lo;
+            lo = q;
+        }
+        if (bottom == partials.Length) { partials = []; return; }
+        Q = TwoSum(partials[bottom], lo, out lo);
+        var top = 0;
+        for (int i = bottom + 1; i < partials.Length; i++)
+        {
+            Q = TwoSum(partials[i], Q, out q);
+            if (q != 0.0) partials[top++] = q;
+        }
+        hi = TwoSum(hi, Q, out q);
+        if (q != 0.0) partials[top++] = q;
+        partials = partials[..top];
     }
 
     public static double SSum(this double[] values)
