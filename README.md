@@ -71,8 +71,9 @@ static readonly Gen<JsonNode> genJsonNode = Gen.Recursive<JsonNode>((depth, genJ
 
 ## Random testing
 
-**Sample** is used to perform tests with a generator. Either return false or throw an exception for failure. **Sample** will aggressively shrink any failure down to the simplest example.
-The default sample size is 100 iterations. Set iter: to change this or time: to run for a number of seconds.
+**Sample** is used to perform tests with a generator. Either return false or throw an exception for failure.
+**Sample** will aggressively shrink any failure down to the simplest example.  
+The default sample size is 100 iterations. Set iter: to change this or time: to run for a number of seconds.  
 Setting these from the command line can be a good way to run your tests in different ways and in Release mode.
 
 ### Unit Single
