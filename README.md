@@ -72,7 +72,7 @@ static readonly Gen<JsonNode> genJsonNode = Gen.Recursive<JsonNode>((depth, genJ
 ## Random testing
 
 **Sample** is used to perform tests with a generator. Either return false or throw an exception for failure. **Sample** will aggressively shrink any failure down to the simplest example.
-The default is a sample size of 100 iterations. Set iter: to change this or time: to run for a number of seconds.
+The default sample size is 100 iterations. Set iter: to change this or time: to run for a number of seconds.
 Setting these from the command line can be a good way to run your tests in different ways and in Release mode.
 
 ### Unit Single
@@ -330,9 +330,10 @@ static int[] Rnds(int i, int j, ref int seed)
 
 ### Portfolio Calculation
 **Single** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
-**Hash** is used to find and check a hash for a number of results.
-It saves a cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
-Together Single and Hash eliminate the need to commit data files in regression testing while also giving detailed information of any change.
+**Hash** is used to find and check a hash for a number of results.  
+It saves a temp cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
+Together **Single** and **Hash** eliminate the need to commit data files in regression testing while also giving detailed information of any change.
+
 ```csharp
 [Fact]
 public void Portfolio_Small_Mixed_Example()
@@ -358,8 +359,10 @@ public void Portfolio_Small_Mixed_Example()
 
 ## Performance testing
 
-**Faster** is used to statistically test that the first method is faster than the second and produces the same result.
-Since it's statistical and relative you can run it as a normal test anywhere e.g. across multiple platforms on a continuous integration server.
+**Faster** is used to statistically test that the first method is faster than the second and produces the same result.  
+Since it's statistical and relative you can run it as a normal test anywhere e.g. across multiple platforms on a continuous integration server.  
+It's fast because it runs in parallel and knows when to stop.
+It's just what you need to iteratively improve performance while making sure it still produces the correct results.
 
 ### Linq Sum
 ```csharp
