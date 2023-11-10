@@ -6,8 +6,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 
-#nullable enable
-
 public static class AllocatorMany
 {
     private const int _pricePrecisionFactor = 100;

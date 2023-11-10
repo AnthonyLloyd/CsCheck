@@ -122,15 +122,15 @@ public class ShrinkingChallengeTests
         .Sample((i0, i1) => i0 < 10 || Math.Abs(i0 - i1) != 1);
     }
 
-    class Heap { public int Head; public Heap Left; public Heap Right; }
+    class Heap { public int Head; public Heap? Left; public Heap? Right; }
 
     [Fact(Skip="fails")]
     public void No7_BinHeap()
     {
-        static uint Count(Heap h) => h is null ? 0 : 1 + Count(h.Left) + Count(h.Right);
+        static uint Count(Heap? h) => h is null ? 0 : 1 + Count(h.Left) + Count(h.Right);
 
-        static Heap MergeHeaps(Heap h1, Heap h2) =>
-            h1 is null ? h2
+        static Heap MergeHeaps(Heap? h1, Heap? h2) =>
+            h1 is null ? h2!
           : h2 is null ? h1
           : h1.Head <= h2.Head ? new Heap { Head = h1.Head, Left = MergeHeaps(h1.Right, h2), Right = h1.Left }
           : new Heap { Head = h2.Head, Left = MergeHeaps(h2.Right, h1), Right = h2.Left };
@@ -138,7 +138,7 @@ public class ShrinkingChallengeTests
         static List<int> ToList(Heap heap)
         {
             var r = new List<int>();
-            var s = new Stack<Heap>();
+            var s = new Stack<Heap?>();
             s.Push(heap);
             while (s.Count != 0)
             {
@@ -169,11 +169,11 @@ public class ShrinkingChallengeTests
             return l;
         }
 
-        static string Print(Heap h) => h is null ? "None" : $"({h.Head}, {Print(h.Left)}, {Print(h.Right)})";
+        static string Print(Heap? h) => h is null ? "None" : $"({h.Head}, {Print(h.Left)}, {Print(h.Right)})";
 
         Gen.Recursive(g =>
             Gen.Frequency(
-                (3, Gen.Const((Heap)null)),
+                (3, Gen.Const((Heap)null!)),
                 (1, Gen.Select(Gen.Int, g, g, (h, l, r) => new Heap { Head = h, Left = l, Right = r }))
             ),
             (Heap h, ref Size size) => { size = new Size(Count(h), size); return h; }

@@ -1,7 +1,7 @@
 ﻿namespace Tests;
 
-using CsCheck;
 using System.Linq;
+using CsCheck;
 using Xunit;
 
 public class PCGTests

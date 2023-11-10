@@ -5,9 +5,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using CsCheck;
 using Xunit;
-using System.Text.Json.Nodes;
-
-#nullable enable
 
 public class GenTests
 {
@@ -611,33 +608,6 @@ public class GenTests
             return Depth(i) <= maxDepth;
         });
     }
-
-    static readonly Gen<string> genString = Gen.String[Gen.Char.AlphaNumeric, 2, 5];
-    static readonly Gen<JsonNode> genJsonValue = Gen.OneOf<JsonNode>(
-        Gen.Bool.Select(x => JsonValue.Create(x)),
-        Gen.Byte.Select(x => JsonValue.Create(x)),
-        Gen.Char.AlphaNumeric.Select(x => JsonValue.Create(x)),
-        Gen.DateTime.Select(x => JsonValue.Create(x)),
-        Gen.DateTimeOffset.Select(x => JsonValue.Create(x)),
-        Gen.Decimal.Select(x => JsonValue.Create(x)),
-        Gen.Double.Select(x => JsonValue.Create(x)),
-        Gen.Float.Select(x => JsonValue.Create(x)),
-        Gen.Guid.Select(x => JsonValue.Create(x)),
-        Gen.Int.Select(x => JsonValue.Create(x)),
-        Gen.Long.Select(x => JsonValue.Create(x)),
-        Gen.SByte.Select(x => JsonValue.Create(x)),
-        Gen.Short.Select(x => JsonValue.Create(x)),
-        genString.Select(x => JsonValue.Create(x)),
-        Gen.UInt.Select(x => JsonValue.Create(x)),
-        Gen.ULong.Select(x => JsonValue.Create(x)),
-        Gen.UShort.Select(x => JsonValue.Create(x)));
-    static readonly Gen<JsonNode> genJsonNode = Gen.Recursive<JsonNode>((depth, genJsonNode) =>
-    {
-        if (depth == 5) return genJsonValue;
-        var genJsonObject = Gen.Dictionary(genString, genJsonNode.Null())[0, 5].Select(d => new JsonObject(d));
-        var genJsonArray = genJsonNode.Null().Array[0, 5].Select(i => new JsonArray(i));
-        return Gen.OneOf(genJsonObject, genJsonArray, genJsonValue);
-    });
 
     [Fact]
     public void FastMod()

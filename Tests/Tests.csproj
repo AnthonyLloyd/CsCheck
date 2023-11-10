@@ -3,6 +3,7 @@
         <TargetFramework>net8.0</TargetFramework>
 		<LangVersion>preview</LangVersion>
         <WarningLevel>999</WarningLevel>
+        <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <IsPackable>false</IsPackable>

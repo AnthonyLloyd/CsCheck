@@ -514,6 +514,7 @@ public static partial class Check
                     : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
         long total = seed is null ? 0 : 1;
         var tasks = new Task[threads];
+#pragma warning disable IDE0039 // Use local function - only want one delegate created
         var worker = async () =>
         {
             var pcg = PCG.ThreadPCG;
@@ -559,6 +560,7 @@ public static partial class Check
                 }
             }
         };
+#pragma warning restore IDE0039 // Use local function
         while (threads-- > 0)
             tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks);
@@ -1134,6 +1136,7 @@ public static partial class Check
                     : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
         long total = seed is null ? 0 : 1;
         var tasks = new Task[threads];
+#pragma warning disable IDE0039 // Use local function - only want one delegate created
         var worker = async () =>
         {
             var pcg = PCG.ThreadPCG;
@@ -1197,6 +1200,7 @@ public static partial class Check
                 }
             }
         };
+#pragma warning restore IDE0039 // Use local function
         while (threads-- > 0)
             tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks);

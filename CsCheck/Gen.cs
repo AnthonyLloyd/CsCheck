@@ -2068,7 +2068,7 @@ public sealed class GenFloat : Gen<float>
         }
     }
     /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
-    public Gen<float> Special => new GenSpecial();
+    public readonly Gen<float> Special = new GenSpecial();
 }
 
 public sealed class GenDouble : Gen<double>
@@ -2199,7 +2199,7 @@ public sealed class GenDouble : Gen<double>
         }
     }
     /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
-    public Gen<double> Special => new GenSpecial();
+    public readonly Gen<double> Special = new GenSpecial();
     public readonly struct DoubleSkew
     {
         public Gen<double> this[double start, double finish, double a] =>
@@ -2209,9 +2209,7 @@ public sealed class GenDouble : Gen<double>
     /// <summary>Skew the distribution towards either end.
     /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
     /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
-#pragma warning disable CA1822 // Mark members as static
-    public DoubleSkew Skew => new();
-#pragma warning restore CA1822 // Mark members as static
+    public readonly DoubleSkew Skew = new();
 }
 
 public sealed class GenDecimal : Gen<decimal>

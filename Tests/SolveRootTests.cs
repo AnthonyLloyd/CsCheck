@@ -3,8 +3,8 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using Xunit;
 using CsCheck;
+using Xunit;
 
 public class SolveRootTests(Xunit.Abstractions.ITestOutputHelper output)
 {

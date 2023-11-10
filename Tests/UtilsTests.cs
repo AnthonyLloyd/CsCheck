@@ -195,19 +195,19 @@ public class ThreadStatsTests
 public class IntArrayComparer : IEqualityComparer<int[]>, IComparer<int[]>
 {
     public readonly static IntArrayComparer Default = new();
-    public int Compare(int[] x, int[] y)
+    public int Compare(int[]? x, int[]? y)
     {
-        for (int i = 0; i < x.Length; i++)
+        for (int i = 0; i < x!.Length; i++)
         {
-            int c = x[i].CompareTo(y[i]);
+            int c = x[i].CompareTo(y![i]);
             if (c != 0) return c;
         }
         return 0;
     }
 
-    public bool Equals(int[] x, int[] y)
+    public bool Equals(int[]? x, int[]? y)
     {
-        if (x.Length != y.Length) return false;
+        if (x!.Length != y!.Length) return false;
         for (int i = 0; i < x.Length; i++)
             if (x[i] != y[i]) return false;
         return true;

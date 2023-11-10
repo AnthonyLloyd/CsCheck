@@ -1,8 +1,8 @@
 ﻿namespace Tests;
 
-using CsCheck;
 using System;
 using System.Linq;
+using CsCheck;
 using Xunit;
 
 public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
@@ -165,7 +165,7 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
             var originalSum = MathX.FSum(original);
             var shuffledSum = MathX.FSum(shuffled);
             return Check.UlpsBetween(originalSum, shuffledSum).ToString().PadLeft(5);
-        }, output.WriteLine);
+        }, output.WriteLine/*, time: 10*/);
     }
 
     [Fact]

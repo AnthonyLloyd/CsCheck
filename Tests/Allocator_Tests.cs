@@ -5,8 +5,6 @@ using System.Linq;
 using CsCheck;
 using Xunit;
 
-#nullable enable
-
 public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
 {
     readonly static Gen<(long Quantity, double[] Weights)> genAllSigns =

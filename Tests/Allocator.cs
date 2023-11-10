@@ -3,8 +3,6 @@
 using System;
 using System.Linq;
 
-#nullable enable
-
 public static class Allocator
 {
     /// <summary>Pro-rata quantity by weights. Round to long using an error minimising algorithm. This guarantees a smaller weight never gets a larger allocation.</summary>

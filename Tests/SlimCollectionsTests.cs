@@ -462,7 +462,7 @@ public class MapSlim<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : I
             var bucketIndex = hashCode & (ent.Length - 1);
             ent[i].Next = ent[bucketIndex].Bucket - 1;
             ent[i].Key = key;
-            ent[i].Value = default;
+            ent[i].Value = default!;
             ent[bucketIndex].Bucket = ++count;
             return ref ent[i].Value;
         }

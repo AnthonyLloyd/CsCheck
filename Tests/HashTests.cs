@@ -15,7 +15,7 @@ public class StreamSerializerTests
             using var ms = new MemoryStream();
             serialize(ms, t);
             ms.Position = 0;
-            return deserialize(ms).Equals(t);
+            return deserialize(ms)!.Equals(t);
         });
     }
     [Fact]
