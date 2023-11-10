@@ -91,7 +91,7 @@ internal static class Allocator_Check
     {
         gen.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s)))
         .Sample((quantity, weights, shuffled) => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, allocate)
-        , writeLine, seed: "2ppP2GSgDbqj");
+        , writeLine);
     }
 
     public static void SmallerWeightsDontGetLargerAllocation(Gen<(long, double[])> gen, Func<long, double[], long[]> allocate)

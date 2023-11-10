@@ -39,6 +39,7 @@ BREAKING CHANGES:
 - Removed SelectTuple.
 - Removed Gen.Enumerable.
 - Removed Gen.Double.Positive, Gen.Double.Normal etc.
+- Tuples now have normal Item1, Item2 etc instead of V0, V1.
 - Added max count to Where.
 - WriteLine parameter consist across Sample and Faster.
 - Now targets net6.0, 2.14.1 was the last to target netstandard2.0.

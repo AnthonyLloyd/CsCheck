@@ -123,10 +123,15 @@ public abstract class Gen<T> : IGen<T>
         return (Check.Print(t), m => action1(m, t), m => action2(m, t));
     });
 
+    /// <summary>Generator for an array of <typeparamref name="T"/></summary>
     public GenArray<T> Array => new(this);
+    /// <summary>Generator for a two dimensional array of <typeparamref name="T"/></summary>
     public GenArray2D<T> Array2D => new(this);
+    /// <summary>Generator for a List of <typeparamref name="T"/></summary>
     public GenList<T> List => new(this);
+    /// <summary>Generator for a HashSet of <typeparamref name="T"/></summary>
     public GenHashSet<T> HashSet => new(this);
+    /// <summary>Generator for a unique array of <typeparamref name="T"/></summary>
     public GenArrayUnique<T> ArrayUnique => new(this);
 }
 
@@ -1442,6 +1447,8 @@ public static class Gen
             return new T?(r);
         }
     }
+
+    /// <summary>Create a generator making the struct element nullable.</summary>
     public static Gen<T?> Nullable<T>(this Gen<T> gen, double nullFraction = 0.2) where T : struct
         => new GenNullable<T>(gen, (uint)(nullFraction * uint.MaxValue));
 
@@ -1460,6 +1467,8 @@ public static class Gen
             return r;
         }
     }
+
+    /// <summary>Create a generator making the class element nullable.</summary>
     public static Gen<T?> Null<T>(this Gen<T> gen, double nullFraction = 0.2) where T : class
     {
         return new GenNull<T>(gen, (uint)(nullFraction * uint.MaxValue));
@@ -1477,46 +1486,65 @@ public static class Gen
     public static GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, Model> action)
         => new((PCG _, Size? __, out Size size) => { size = new Size(0); return ("", action); }, true);
 
+    /// <summary>Generator for bool.</summary>
     public static readonly GenBool Bool = new();
+    /// <summary>Generator for sbyte.</summary>
     public static readonly GenSByte SByte = new();
+    /// <summary>Generator for byte.</summary>
     public static readonly GenByte Byte = new();
+    /// <summary>Generator for short.</summary>
     public static readonly GenShort Short = new();
+    /// <summary>Generator for ushort.</summary>
     public static readonly GenUShort UShort = new();
+    /// <summary>Generator for int.</summary>
     public static readonly GenInt Int = new();
     internal static readonly Gen<int> Int9999 = Int[1, 9999];
     public static readonly GenUInt UInt = new();
-    /// <summary>Generates a uint in the range 0 to 3 inclusive.</summary>
+    /// <summary>Generator for uint in the range 0 to 3 inclusive.</summary>
     public static readonly GenUInt4 UInt4 = new();
-    /// <summary>Generates a uint in the range 0 to 7 inclusive.</summary>
+    /// <summary>Generator for uint in the range 0 to 7 inclusive.</summary>
     public static readonly GenUInt8 UInt8 = new();
-    /// <summary>Generates a uint in the range 0 to 15 inclusive.</summary>
+    /// <summary>Generator for uint in the range 0 to 15 inclusive.</summary>
     public static readonly GenUInt16 UInt16 = new();
-    /// <summary>Generates a uint in the range 0 to 31 inclusive.</summary>
+    /// <summary>Generator for uint in the range 0 to 31 inclusive.</summary>
     public static readonly GenUInt32 UInt32 = new();
-    /// <summary>Generates a uint in the range 0 to 63 inclusive.</summary>
+    /// <summary>Generator for uint in the range 0 to 63 inclusive.</summary>
     public static readonly GenUInt64 UInt64 = new();
-    /// <summary>Generates a uint in the range 0 to 127 inclusive.</summary>
+    /// <summary>Generator for uint in the range 0 to 127 inclusive.</summary>
     public static readonly GenUInt128 UInt128 = new();
-    /// <summary>Generates a uint in the range 0 to 255 inclusive.</summary>
+    /// <summary>Generator for uint in the range 0 to 255 inclusive.</summary>
     public static readonly GenUInt256 UInt256 = new();
-    /// <summary>Generates a uint in the range 0 to 511 inclusive.</summary>
+    /// <summary>Generator for uint in the range 0 to 511 inclusive.</summary>
     public static readonly GenUInt512 UInt512 = new();
-    /// <summary>Generates a uint in the range 0 to 1023 inclusive.</summary>
+    /// <summary>Generator for uint in the range 0 to 1023 inclusive.</summary>
     public static readonly GenUInt1024 UInt1024 = new();
-    /// <summary>Generates a uint in the range 0 to 2047 inclusive.</summary>
+    /// <summary>Generator for uint in the range 0 to 2047 inclusive.</summary>
     public static readonly GenUInt2048 UInt2048 = new();
+    /// <summary>Generator for long.</summary>
     public static readonly GenLong Long = new();
+    /// <summary>Generator for ulong.</summary>
     public static readonly GenULong ULong = new();
+    /// <summary>Generator for float.</summary>
     public static readonly GenFloat Float = new();
+    /// <summary>Generator for float.</summary>
     public static readonly GenFloat Single = Float;
+    /// <summary>Generator for double.</summary>
     public static readonly GenDouble Double = new();
+    /// <summary>Generator for decimal.</summary>
     public static readonly GenDecimal Decimal = new();
+    /// <summary>Generator for date.</summary>
     public static readonly GenDate Date = new();
+    /// <summary>Generator for DateTime.</summary>
     public static readonly GenDateTime DateTime = new();
+    /// <summary>Generator for TimeSpan.</summary>
     public static readonly GenTimeSpan TimeSpan = new();
+    /// <summary>Generator for DateTimeOffset.</summary>
     public static readonly GenDateTimeOffset DateTimeOffset = new();
+    /// <summary>Generator for Guid.</summary>
     public static readonly GenGuid Guid = new();
+    /// <summary>Generator for char.</summary>
     public static readonly GenChar Char = new();
+    /// <summary>Generator for string.</summary>
     public static readonly GenString String = new();
 }
 
@@ -1549,6 +1577,8 @@ public sealed class GenSByte : Gen<sbyte>
             return i;
         }
     }
+
+    /// <summary>Generate sbyte uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<sbyte> this[sbyte start, sbyte finish]
         => new Range(start, (uint)(finish - start) + 1U);
 }
@@ -1570,6 +1600,8 @@ public sealed class GenByte : Gen<byte>
             return i;
         }
     }
+
+    /// <summary>Generate byte uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<byte> this[byte start, byte finish]
         => new Range(start, (uint)finish - start + 1U);
 }
@@ -1597,6 +1629,8 @@ public sealed class GenShort : Gen<short>
             return i;
         }
     }
+
+    /// <summary>Generate short uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<short> this[short start, short finish]
         => new Range(start, (uint)(finish - start + 1));
 }
@@ -1618,6 +1652,8 @@ public sealed class GenUShort : Gen<ushort>
             return i;
         }
     }
+
+    /// <summary>Generate ushort uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<ushort> this[ushort start, ushort finish]
         => new Range(start, (ushort)(finish - start + 1));
 }
@@ -1689,6 +1725,8 @@ public sealed class GenInt : Gen<int>
             return i;
         }
     }
+
+    /// <summary>Generate int uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<int> this[int start, int finish]
     {
         get
@@ -1733,6 +1771,7 @@ public sealed class GenUInt : Gen<uint>
             return i;
         }
     }
+    /// <summary>Generate uint uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<uint> this[uint start, uint finish]
         => new Range(start, finish - start + 1U);
     public readonly struct UIntSkew
@@ -1866,6 +1905,7 @@ public sealed class GenLong : Gen<long>
             return i;
         }
     }
+    /// <summary>Generate long uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<long> this[long start, long finish]
         => new Range(start, (ulong)(finish - start + 1));
 }
@@ -1920,6 +1960,7 @@ public sealed class GenFloat : Gen<float>
         finish -= start;
         return new GenEvenlyDistributed(start - finish, finish);
     }
+    /// <summary>Generate float in the range <paramref name="start"/> to <paramref name="finish"/>.</summary>
     public Gen<float> this[float start, float finish]
     {
         get
@@ -2049,6 +2090,8 @@ public sealed class GenDouble : Gen<double>
         finish -= start;
         return new GenEvenlyDistributed(start - finish, finish);
     }
+
+    /// <summary>Generate double in the range <paramref name="start"/> to <paramref name="finish"/>.</summary>
     public Gen<double> this[double start, double finish]
     {
         get
@@ -2190,6 +2233,7 @@ public sealed class GenDecimal : Gen<decimal>
         finish -= start;
         return new GenEvenlyDistributed(start - finish, finish);
     }
+    /// <summary>Generate decimal in the range <paramref name="start"/> to <paramref name="finish"/>.</summary>
     public Gen<decimal> this[decimal start, decimal finish]
     {
         get
@@ -2276,6 +2320,8 @@ public sealed class GenDateTime : Gen<DateTime>
             return new DateTime((long)i);
         }
     }
+
+    /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<DateTime> this[DateTime start, DateTime finish]
         => new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
 }
@@ -2298,6 +2344,8 @@ public sealed class GenDate : Gen<DateTime>
             return new DateTime(i * TimeSpan.TicksPerDay);
         }
     }
+
+    /// <summary>Generate Date uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<DateTime> this[DateTime start, DateTime finish]
         => new Range((uint)(start.Ticks / TimeSpan.TicksPerDay), (uint)((finish.Ticks - start.Ticks) / TimeSpan.TicksPerDay) + 1U);
 }
@@ -2319,6 +2367,7 @@ public sealed class GenTimeSpan : Gen<TimeSpan>
             return new TimeSpan((long)i);
         }
     }
+    /// <summary>Generate TimeSpan uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<TimeSpan> this[TimeSpan start, TimeSpan finish]
         => new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
 }
@@ -2369,6 +2418,8 @@ public sealed class GenChar : Gen<char>
             return (char)(start + i);
         }
     }
+
+    /// <summary>Generate char uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<char> this[char start, char finish]
         => new Range(start, finish + 1U - start);
     sealed class GenChars(string chars) : Gen<char>
@@ -2389,6 +2440,7 @@ public sealed class GenString : Gen<string>
     static readonly Gen<string> d = Gen.Char.Array.Select(i => new string(i));
     public override string Generate(PCG pcg, Size? min, out Size size)
         => d.Generate(pcg, min, out size);
+    /// <summary>Generate string with length in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<string> this[int start, int finish] =>
         Gen.Char.Array[start, finish].Select(i => new string(i));
     public Gen<string> this[Gen<char> gen, int start, int finish] =>
@@ -2427,6 +2479,7 @@ public sealed class GenArray<T>(Gen<T> gen) : Gen<T[]>
             => GenArray<T>.Generate(gen, pcg, min, length.Generate(pcg, null, out _), out size);
     }
     public Gen<T[]> this[Gen<int> length] => new GenLength(gen, length);
+    /// <summary>Generate an array with length in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<T[]> this[int start, int finish] => new GenLength(gen, Gen.Int[start, finish]);
     sealed class FixedLength(Gen<T> gen, int length) : Gen<T[]>
     {
@@ -2482,6 +2535,7 @@ public sealed class GenArrayUnique<T>(Gen<T> gen) : Gen<T[]>
             => GenArrayUnique<T>.Generate(gen, pcg, min, length.Generate(pcg, null, out _), out size);
     }
     public Gen<T[]> this[Gen<int> length] => new GenLength(gen, length);
+    /// <summary>Generate a unique array with length in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<T[]> this[int start, int finish] => new GenLength(gen, Gen.Int[start, finish]);
     sealed class FixedLength(Gen<T> gen, int length) : Gen<T[]>
     {
@@ -2571,6 +2625,7 @@ public sealed class GenList<T>(Gen<T> gen) : Gen<List<T>>
             => GenList<T>.Generate(gen, pcg, min, length.Generate(pcg, null, out _), out size);
     }
     public Gen<List<T>> this[Gen<int> length] => new GenLength(gen, length);
+    /// <summary>Generate a List with Count in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<List<T>> this[int start, int finish] => new GenLength(gen, Gen.Int[start, finish]);
     sealed class FixedLength(Gen<T> gen, int length) : Gen<List<T>>
     {
@@ -2621,6 +2676,7 @@ public sealed class GenHashSet<T>(Gen<T> gen) : Gen<HashSet<T>>
             => GenHashSet<T>.Generate(gen, pcg, min, length.Generate(pcg, null, out _), out size);
     }
     public Gen<HashSet<T>> this[Gen<int> length] => new GenLength(gen, length);
+    /// <summary>Generate a HashSet with Count in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<HashSet<T>> this[int start, int finish] => new GenLength(gen, Gen.Int[start, finish]);
     sealed class FixedLength(Gen<T> gen, int length) : Gen<HashSet<T>>
     {
@@ -2678,6 +2734,7 @@ public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictiona
             => GenDictionary<K, V>.Generate(genK, genV, pcg, min, length.Generate(pcg, null, out _), out size);
     }
     public Gen<Dictionary<K, V>> this[Gen<int> length] => new GenLength(genK, genV, length);
+    /// <summary>Generate a Dictionary with Count in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<Dictionary<K, V>> this[int start, int finish] => new GenLength(genK, genV, Gen.Int[start, finish]);
     sealed class FixedLength(Gen<K> genK, Gen<V> genV, int length) : Gen<Dictionary<K, V>>
     {
@@ -2735,6 +2792,7 @@ public sealed class GenSortedDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<So
             => GenSortedDictionary<K, V>.Generate(genK, genV, pcg, min, length.Generate(pcg, null, out _), out size);
     }
     public Gen<SortedDictionary<K, V>> this[Gen<int> length] => new GenLength(genK, genV, length);
+    /// <summary>Generate a SortedDictionary with Count in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<SortedDictionary<K, V>> this[int start, int finish] => new GenLength(genK, genV, Gen.Int[start, finish]);
     sealed class FixedLength(Gen<K> genK, Gen<V> genV, int length) : Gen<SortedDictionary<K, V>>
     {
