@@ -204,6 +204,7 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void ModelEqual_List()
     {
+#pragma warning disable CA1861 // Avoid constant arrays as arguments
         Assert.True(Check.ModelEqual(
             new List<int> { 1, 2, 3, 4 },
             new int[] { 1, 2, 3, 4 }
@@ -212,6 +213,7 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
             new List<int> { 1, 2, 3, 4 },
             new int[] { 1, 2, 4, 3 }
         ));
+#pragma warning restore CA1861 // Avoid constant arrays as arguments
     }
 
     [Fact]
