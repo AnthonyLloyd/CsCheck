@@ -289,12 +289,13 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
         {
             var median = new MedianEstimator();
             foreach (var d in a) median.Add(d);
-            var queue = new Queue<double>(Environment.ProcessorCount);
+            var queue = new Queue<double>(100);
             return (median, queue, s);
         })
         .Faster(
             (m, q, s) => q.Enqueue(s),
             (m, q, s) => m.Add(s),
+            repeat: 100,
             writeLine: output.WriteLine);
     }
 }

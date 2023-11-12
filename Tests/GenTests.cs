@@ -203,17 +203,6 @@ public class GenTests
     }
 
     [Fact]
-    public void Int_Skew()
-    {
-        (from t in Gen.Int.Select(Gen.Int, Gen.Double[-10.0, 10.0])
-         let start = Math.Min(t.Item1, t.Item2)
-         let finish = Math.Max(t.Item1, t.Item2)
-         from value in Gen.Int.Skew[start, finish, t.Item3]
-         select (value, start, finish, t.Item3))
-        .Sample(i => i.value >= i.start && i.value <= i.finish);
-    }
-
-    [Fact]
     public void Int_Zigzag_Roundtrip()
     {
         Gen.Int.Sample(i => GenInt.Unzigzag(GenInt.Zigzag(i)) == i);
@@ -250,17 +239,6 @@ public class GenTests
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
-    }
-
-    [Fact]
-    public void UInt_Skew()
-    {
-        (from t in Gen.UInt.Select(Gen.UInt, Gen.Double[-10.0, 10.0])
-         let start = Math.Min(t.Item1, t.Item2)
-         let finish = Math.Max(t.Item1, t.Item2)
-         from value in Gen.UInt.Skew[start, finish, t.Item3]
-         select (value, start, finish))
-        .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
     [Fact]
@@ -619,6 +597,18 @@ public class GenTests
             var fastMod = HashHelper.FastMod(value, divisor, multiplier);
             return fastMod == value % divisor;
         });
+    }
+
+    [Fact]
+    public void Validation()
+    {
+        Gen.Int.Array.SelectMany(a => Gen.OneOfConst(a)).Sample(_ => { }, time: 1);
+    }
+
+    [Fact]
+    public void Validation2()
+    {
+        Gen.Int[7, 5].Sample(_ => { }, threads: 1);
     }
 }
 

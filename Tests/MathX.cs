@@ -1,6 +1,7 @@
 ﻿namespace Tests;
 
 using System;
+using System.Collections.Generic;
 
 public static class MathX
 {
@@ -47,6 +48,19 @@ public static class MathX
 
     /// <summary>Neumaier summation</summary>
     public static double NSum(this double[] values)
+    {
+        var sum = 0.0;
+        var c = 0.0;
+        foreach (var value in values)
+        {
+            sum = TwoSum(sum, value, out var ci);
+            c += ci;
+        }
+        return sum + c;
+    }
+
+    /// <summary>Neumaier summation</summary>
+    public static double NSum(this IEnumerable<double> values)
     {
         var sum = 0.0;
         var c = 0.0;
