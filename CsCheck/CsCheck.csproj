@@ -27,6 +27,8 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
 Improved generation for double, float and decimal. Mix of integer, fraction, exponential and evenly distributed.
 Improved Print for double, float and decimal. Displays small rounded fraction and exponential representation.
 Improved min size passing and shrinking.
+Improved validation.
+Improved Xml documentation.
 Large performance improvements for Sample and Faster.
 Added optimised Timer functionality and funcless IInvoke.
 Added Gen&lt;T&gt;.Single() that generates a single random value.
