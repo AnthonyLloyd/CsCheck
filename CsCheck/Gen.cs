@@ -1544,10 +1544,14 @@ public static class Gen
     public static readonly GenDouble Double = new();
     /// <summary>Generator for decimal.</summary>
     public static readonly GenDecimal Decimal = new();
-    /// <summary>Generator for date.</summary>
+    /// <summary>Generator for Date.</summary>
     public static readonly GenDate Date = new();
+    /// <summary>Generator for DateOnly.</summary>
+    public static readonly GenDateOnly DateOnly = new();
     /// <summary>Generator for DateTime.</summary>
     public static readonly GenDateTime DateTime = new();
+    /// <summary>Generator for TimeOnly.</summary>
+    public static readonly GenTimeOnly TimeOnly = new();
     /// <summary>Generator for TimeSpan.</summary>
     public static readonly GenTimeSpan TimeSpan = new();
     /// <summary>Generator for DateTimeOffset.</summary>
@@ -2324,7 +2328,7 @@ public sealed class GenDateTime : Gen<DateTime>
 
 public sealed class GenDate : Gen<DateTime>
 {
-    const uint max = 3652058U; //(uint)(DateTime.MaxValue.Ticks / TimeSpan.TicksPerDay);
+    const uint max = 3652059U; //(uint)(DateTime.MaxValue.Ticks / TimeSpan.TicksPerDay);
     public override DateTime Generate(PCG pcg, Size? min, out Size size)
     {
         uint i = pcg.Next(max);
@@ -2345,6 +2349,56 @@ public sealed class GenDate : Gen<DateTime>
     public Gen<DateTime> this[DateTime start, DateTime finish]
         => finish < start ? throw new CsCheckException($"GenDate finish {finish} < start {start}")
          : new Range((uint)(start.Ticks / TimeSpan.TicksPerDay), (uint)((finish.Ticks - start.Ticks) / TimeSpan.TicksPerDay) + 1U);
+}
+
+public sealed class GenDateOnly : Gen<DateOnly>
+{
+    const uint max = 3652059U;
+    public override DateOnly Generate(PCG pcg, Size? min, out Size size)
+    {
+        uint i = pcg.Next(max);
+        size = new Size(i);
+        return DateOnly.FromDayNumber((int)i);
+    }
+    sealed class Range(uint s, uint l) : Gen<DateOnly>
+    {
+        public override DateOnly Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = s + pcg.Next(l);
+            size = new Size(i);
+            return DateOnly.FromDayNumber((int)i);
+        }
+    }
+
+    /// <summary>Generate DateOnly uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
+    public Gen<DateOnly> this[DateOnly start, DateOnly finish]
+        => finish < start ? throw new CsCheckException($"GenDateOnly finish {finish} < start {start}")
+         : new Range((uint)start.GetHashCode(), (uint)(finish.GetHashCode() - start.GetHashCode() + 1));
+}
+
+public sealed class GenTimeOnly : Gen<TimeOnly>
+{
+    const ulong max = 864_000_000_000;
+    public override TimeOnly Generate(PCG pcg, Size? min, out Size size)
+    {
+        var i = pcg.Next64(max);
+        size = new Size(i);
+        return new TimeOnly((long)i);
+    }
+    sealed class Range(ulong s, ulong l) : Gen<TimeOnly>
+    {
+        public override TimeOnly Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = s + pcg.Next64(l);
+            size = new Size(i);
+            return new TimeOnly((long)i);
+        }
+    }
+
+    /// <summary>Generate TimeOnly uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
+    public Gen<TimeOnly> this[TimeOnly start, TimeOnly finish]
+        => finish < start ? throw new CsCheckException($"GenTimeOnly finish {finish} < start {start}")
+         : new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
 }
 
 public sealed class GenTimeSpan : Gen<TimeSpan>

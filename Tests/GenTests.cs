@@ -437,12 +437,34 @@ public class GenTests
     }
 
     [Fact]
+    public void DateOnly_Range()
+    {
+        (from t in Gen.DateOnly.Select(Gen.DateOnly)
+         let start = t.Item1 < t.Item2 ? t.Item1 : t.Item2
+         let finish = t.Item1 < t.Item2 ? t.Item2 : t.Item1
+         from value in Gen.DateOnly[start, finish]
+         select (value, start, finish))
+        .Sample(i => i.value >= i.start && i.value <= i.finish);
+    }
+
+    [Fact]
     public void DateTime_Range()
     {
         (from t in Gen.DateTime.Select(Gen.DateTime)
          let start = t.Item1 < t.Item2 ? t.Item1 : t.Item2
          let finish = t.Item1 < t.Item2 ? t.Item2 : t.Item1
          from value in Gen.DateTime[start, finish]
+         select (value, start, finish))
+        .Sample(i => i.value >= i.start && i.value <= i.finish);
+    }
+
+    [Fact]
+    public void TimeOnly_Range()
+    {
+        (from t in Gen.TimeOnly.Select(Gen.TimeOnly)
+         let start = t.Item1 < t.Item2 ? t.Item1 : t.Item2
+         let finish = t.Item1 < t.Item2 ? t.Item2 : t.Item1
+         from value in Gen.TimeOnly[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
