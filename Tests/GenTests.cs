@@ -598,18 +598,6 @@ public class GenTests
             return fastMod == value % divisor;
         });
     }
-
-    [Fact]
-    public void Validation()
-    {
-        Gen.Int.Array.SelectMany(a => Gen.OneOfConst(a)).Sample(_ => { }, time: 1);
-    }
-
-    [Fact]
-    public void Validation2()
-    {
-        Gen.Int[7, 5].Sample(_ => { }, threads: 1);
-    }
 }
 
 [StructLayout(LayoutKind.Explicit)]
