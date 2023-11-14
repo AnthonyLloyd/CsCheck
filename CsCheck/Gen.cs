@@ -35,7 +35,6 @@ public sealed class Size
 
     public void Add(Size a)
     {
-
         var nI = I + a.I;
         I = nI >= I && nI >= a.I ? nI : ulong.MaxValue;
         if (a.Next is not null)
@@ -51,7 +50,7 @@ public sealed class Size
         final.Next = s;
     }
 
-    public Size? Below(Size? s) // TODO: Always called after IsLessThan maybe combine them.
+    public Size? Below(Size? s)
     {
         var r = this;
         while (s is not null && r is not null)
@@ -1633,7 +1632,7 @@ public sealed class GenShort : Gen<short>
         uint s = pcg.Next() & 15U;
         ushort i = (ushort)(1U << (int)s);
         i = (ushort)((pcg.Next() & (i - 1) | i) - 1);
-        size = new Size((s << 11 | i & 0x7FFUL));
+        size = new Size(s << 11 | i & 0x7FFUL);
         return (short)-Unzigzag(i);
     }
     sealed class Range(short start, uint length) : Gen<short>
@@ -1756,8 +1755,7 @@ public sealed class GenInt : Gen<int>
             uint length = (uint)(finish - start + 1);
             if (Environment.Is64BitProcess)
                 return length <= int.MaxValue ? new RangeFastMod(start, length) : new Range(start, length);
-            else
-                return new Range(start, length);
+            return new Range(start, length);
         }
     }
 }

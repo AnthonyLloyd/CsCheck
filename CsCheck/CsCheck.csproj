@@ -22,31 +22,8 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>3.0.0</Version>
+        <Version>3.0.1</Version>
         <PackageReleaseNotes>
-Improved generation for double, float and decimal. Mix of integer, fraction, exponential and evenly distributed.
-Improved Print for double, float and decimal. Displays small rounded fraction and exponential representation.
-Improved min size passing and shrinking.
-Improved validation.
-Improved Xml documentation.
-Large performance improvements for Sample and Faster.
-Added optimised Timer functionality and funcless IInvoke.
-Added Gen&lt;T&gt;.Single() that generates a single random value.
-Added Gen.DateOnly and Gen.TimeOnly.
-
-BREAKING CHANGES:
-- Example(predicate) renamed to Single(predicate).
-- Removed SampleOne, use Sample(..., iter: 1, time: -2) instead.
-- Removed Cast, use Select instead (better performance).
-- Removed Create, create a : Gen&lt;T&gt; class instead.
-- Removed SelectTuple.
-- Removed Gen.Enumerable.
-- Removed Gen.Int.Skew, Gen.UInt.Skew.
-- Removed Gen.Double.Positive, Gen.Double.Normal etc.
-- Tuples now have normal Item1, Item2 etc instead of V0, V1.
-- Added max count to Where.
-- WriteLine parameter consist across Sample and Faster.
-- Now targets net6.0, 2.14.1 was the last to target netstandard2.0.
         </PackageReleaseNotes>
         <TargetFramework>net6.0</TargetFramework>
         <LangVersion>preview</LangVersion>
@@ -67,6 +44,10 @@ BREAKING CHANGES:
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
+        <PackageReference Include="Meziantou.Analyzer" Version="2.0.109">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
         <None Include="../CsCheck.png" Pack="true" PackagePath="" Visible="False" />
         <None Include="../README.md" Pack="true" PackagePath="" Visible="False" />
     </ItemGroup>

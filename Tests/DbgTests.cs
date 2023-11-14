@@ -6,7 +6,7 @@ using Xunit;
 public class DbgTests(Xunit.Abstractions.ITestOutputHelper output)
 {
     static IEnumerable<char> Enumerable(string s) => s;
-    static int[] Calc1(double _) => new[] { 1, 2 };
+    static int[] Calc1(double _) => [1, 2];
     static double Calc2(int[] _) => 1.2;
 
     [Fact]

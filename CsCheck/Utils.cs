@@ -323,8 +323,8 @@ public static partial class Check
         Array { Rank: 2 } a => PrintArray2D(a),
         IList { Count: <= 12 } l => "[" + string.Join(", ", l.Cast<object>().Select(Print)) + "]",
         IList l => $"L={l.Count} [{Print(l[0])}, {Print(l[1])}, {Print(l[2])}, {Print(l[3])}, {Print(l[4])}, {Print(l[5])} ... {Print(l[l.Count - 6])}, {Print(l[l.Count - 5])}, {Print(l[l.Count - 4])}, {Print(l[l.Count - 3])}, {Print(l[l.Count - 2])}, {Print(l[l.Count - 1])}]",
-        IEnumerable<object> e when e.Take(12).Count() <= 12 => "{" + string.Join(", ", e.Select(Print)) + "}",
-        IEnumerable<object> e when e.Take(999).Count() <= 999 => "L=" + e.Count() + " {" + string.Join(", ", e.Select(Print)) + "}",
+        IEnumerable<object> e when !e.Skip(12).Any() => "{" + string.Join(", ", e.Select(Print)) + "}",
+        IEnumerable<object> e when !e.Skip(999).Any() => "L=" + e.Count() + " {" + string.Join(", ", e.Select(Print)) + "}",
         IEnumerable<object> e => "L>999 {" + string.Join(", ", e.Take(6).Select(Print)) + " ... }",
         IEnumerable e => Print(e.Cast<object>()),
         T pt when IsPropertyType(pt) => PrintProperties(pt),
@@ -339,18 +339,12 @@ public static partial class Check
     public static bool Equal<T>(T a, T b)
     {
         if (a is null && b is null)
-        {
             return true;
-        }
-        else if (a is null || b is null)
-        {
+        if (a is null || b is null)
             return false;
-        }
-        else if (a is IEquatable<T> aieq)
-        {
+        if (a is IEquatable<T> aieq)
             return aieq.Equals(b);
-        }
-        else if (a is Array aa2 && b is Array ba2 && aa2.Rank == 2)
+        if (a is Array aa2 && b is Array ba2 && aa2.Rank == 2)
         {
             int I = aa2.GetLength(0), J = aa2.GetLength(1);
             if (I != ba2.GetLength(0) || J != ba2.GetLength(1)) return false;
@@ -362,10 +356,9 @@ public static partial class Check
                         return false;
                 }
             }
-
             return true;
         }
-        else if (a is IList ail && b is IList bil)
+        if (a is IList ail && b is IList bil)
         {
             if (ail.Count != bil.Count) return false;
             for (int i = 0; i < ail.Count; i++)
@@ -373,10 +366,9 @@ public static partial class Check
                 if (!ail[i]!.Equals(bil[i]))
                     return false;
             }
-
             return true;
         }
-        else if (a.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null)
+        if (a.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null)
         {
             var e1 = ((IEnumerable)a).GetEnumerator();
             var e2 = ((IEnumerable)b).GetEnumerator();
@@ -388,11 +380,9 @@ public static partial class Check
                 if (!Equal(e1.Current, e2.Current)) return false;
             }
         }
-        else if (a is ICollection aic && b is ICollection bic)
-        {
+        if (a is ICollection aic && b is ICollection bic)
             return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
-        }
-        else if (a is IEnumerable aie && b is IEnumerable bie)
+        if (a is IEnumerable aie && b is IEnumerable bie)
         {
             var aieo = aie.Cast<object>().ToList();
             var bieo = bie.Cast<object>().ToList();
@@ -402,13 +392,13 @@ public static partial class Check
     }
 
     /// <summary>Don't check equality just return true.</summary>
-    public static bool EqualSkip<T>(T a, T b) => true;
+    public static bool EqualSkip<T>(T _, T __) => true;
 
     /// <summary>Default model equal implementation. Handles most collections ordered when actual is IList like or unordered when actual is ICollection based.</summary>
     public static bool ModelEqual<T, M>(T actual, M model)
     {
         if (actual is null && model is null) return true;
-        else if (actual is null || model is null) return false;
+        if (actual is null || model is null) return false;
         if (actual is IList ail && model is IList bil)
         {
             if (ail.Count != bil.Count) return false;
@@ -417,10 +407,9 @@ public static partial class Check
                 if (!ail[i]!.Equals(bil[i]))
                     return false;
             }
-
             return true;
         }
-        else if (actual.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null
+        if (actual.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null
               && model.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null)
         {
             var e1 = ((IEnumerable)actual).GetEnumerator();
@@ -433,11 +422,11 @@ public static partial class Check
                 if (!Equal(e1.Current, e2.Current)) return false;
             }
         }
-        else if (actual is ICollection aic && model is ICollection bic)
+        if (actual is ICollection aic && model is ICollection bic)
         {
             return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
         }
-        else if (actual is IEnumerable aie && model is IEnumerable bie)
+        if (actual is IEnumerable aie && model is IEnumerable bie)
         {
             var aieo = aie.Cast<object>().ToList();
             var bieo = bie.Cast<object>().ToList();
@@ -839,6 +828,7 @@ public sealed class MedianEstimator
 }
 
 /// <summary>Median estimate with error. Supports mathematical operators.</summary>
+[StructLayout(LayoutKind.Auto)]
 public struct MedianEstimate(MedianEstimator e)
 {
     public double Median = e.Median, Error = (e.Q3 - e.Q1) * 0.5;
@@ -848,7 +838,7 @@ public struct MedianEstimate(MedianEstimator e)
     public static MedianEstimate operator /(MedianEstimate a, MedianEstimate b) => new()
     {
         Median = a.Median / b.Median,
-        Error = Math.Sqrt(Sqr(a.Error / a.Median) * Sqr(b.Error / b.Median)) * Math.Abs(a.Median / b.Median)
+        Error = Math.Sqrt(Sqr(a.Error / a.Median) * Sqr(b.Error / b.Median)) * Math.Abs(a.Median / b.Median),
     };
     public override readonly string ToString() => Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0").PadLeft(5)
                                        + " ±" + Math.Min(Error, 99.9).ToString("0.0").PadLeft(4);
@@ -856,7 +846,7 @@ public struct MedianEstimate(MedianEstimator e)
 
 public sealed class Classifier
 {
-    readonly ConcurrentDictionary<string, MedianEstimator> estimators = new();
+    readonly ConcurrentDictionary<string, MedianEstimator> estimators = new(StringComparer.Ordinal);
     [ThreadStatic] static MedianEstimator? nextEstimator;
     int nullCount;
     public void Add(string name, long time)
@@ -878,16 +868,16 @@ public sealed class Classifier
     {
         long total = estimators.Values.Sum(i => i.N);
         foreach (var (summary, s) in estimators.SelectMany(kv =>
-        {
-            var a = kv.Key.Split('/');
-            return Enumerable.Range(1, a.Length - 1).Select(i => string.Join("/", a.Take(i)));
-        }).Distinct()
+                                        {
+                                            var a = kv.Key.Split('/');
+                                            return Enumerable.Range(1, a.Length - 1).Select(i => string.Join('/', a.Take(i)));
+                                        }).ToHashSet(StringComparer.Ordinal)
                                         .Select(summary =>
                                         {
                                             var total = new MedianEstimator();
                                             foreach (var kv in estimators)
                                             {
-                                                if (kv.Key.StartsWith(summary))
+                                                if (kv.Key.StartsWith(summary, StringComparison.Ordinal))
                                                     total.N += kv.Value.N;
                                             }
                                             return (summary, total);
@@ -917,7 +907,7 @@ public sealed class Classifier
             var a = kv.Key.Split('/');
             var r = new int[a.Length];
             for (int i = 0; i < a.Length - 1; i++)
-                r[i] = estimators[string.Join("/", a.Take(i + 1))].N;
+                r[i] = estimators[string.Join('/', a.Take(i + 1))].N;
             r[^1] = kv.Value.N;
             return (r, kv.Key);
         }, Comparer<(int[], string)>.Create((xb, yb) =>

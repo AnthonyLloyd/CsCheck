@@ -48,7 +48,7 @@ public interface IRegression
 /// <summary>Functionality for hash testing data with detailed information of any changes.</summary>
 public sealed class Hash : IRegression
 {
-    static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new();
+    static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new(StringComparer.Ordinal);
     internal static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
     public const int OFFSET_SIZE = 500_000_000;
     readonly int Offset;
@@ -60,7 +60,7 @@ public sealed class Hash : IRegression
     readonly bool writing;
     readonly List<int>? roundingFractions;
     string lastString = "null";
-    string LastString => lastString == "null" ? "null" : $"'{lastString}'";
+    string LastString => string.Equals(lastString, "null") ? "null" : $"'{lastString}'";
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void Stream<T>(Action<Stream, T> serialize, Func<Stream, T> deserialize, T val) where T : notnull
     {
@@ -567,7 +567,7 @@ public sealed class Hash : IRegression
                 flags = (uint)ReadUShort(stream) << 16,
                 hi = ReadUInt(stream),
                 mid = ReadUInt(stream),
-                lo = ReadUInt(stream)
+                lo = ReadUInt(stream),
             }.D;
         }
         public static void WriteDateTime(Stream stream, DateTime val)
@@ -806,7 +806,7 @@ public sealed class HashStream : Stream
     public override long Length => 0;
     public override long Position { get => 0; set { } }
     public override void Flush() { }
-    public override int Read(byte[] buffer, int offset, int count) => throw new NotImplementedException();
+    public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     public override long Seek(long offset, SeekOrigin origin) => 0;
     public override void SetLength(long value) { }
     readonly Hash hash = new(null);

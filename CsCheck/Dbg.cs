@@ -20,6 +20,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using CsCheck;
+using System.Runtime.InteropServices;
 
 #pragma warning disable CA1050 // Declare types in namespaces
 
@@ -572,7 +573,7 @@ public static class Dbg
             if (reading)
             {
                 var val2 = Hash.StreamSerializer.ReadString(stream);
-                if (val != val2)
+                if (!string.Equals(val, val2))
                     throw new CsCheckException($"Actual '{val}' but Expected '{val2}'. (last string was {LastString})");
             }
             else
@@ -624,7 +625,7 @@ public static class Dbg
             }
         }
 
-        string LastString => lastString == "null" ? "null" : $"'{lastString}'";
+        string LastString => string.Equals(lastString, "null") ? "null" : $"'{lastString}'";
     }
 
     sealed class ListSlim<T> : IReadOnlyList<T>
@@ -685,6 +686,7 @@ public static class Dbg
 
     internal sealed class MapSlim<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
     {
+        [StructLayout(LayoutKind.Auto)]
         struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
         static class Holder { internal static Entry[] Initial = new Entry[1]; }
         int count;
@@ -749,21 +751,15 @@ public static class Dbg
             var hashCode = key.GetHashCode();
             var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
             while (i >= 0 && !key.Equals(ent[i].Key)) i = ent[i].Next;
-            if (i >= 0)
-            {
-                return ref ent[i].Value;
-            }
-            else
-            {
-                i = count;
-                if (ent.Length == i || ent.Length == 1) ent = Resize();
-                var bucketIndex = hashCode & (ent.Length - 1);
-                ent[i].Next = ent[bucketIndex].Bucket - 1;
-                ent[i].Key = key;
-                ent[i].Value = default!;
-                ent[bucketIndex].Bucket = ++count;
-                return ref ent[i].Value;
-            }
+            if (i >= 0) return ref ent[i].Value;
+            i = count;
+            if (ent.Length == i || ent.Length == 1) ent = Resize();
+            var bucketIndex = hashCode & (ent.Length - 1);
+            ent[i].Next = ent[bucketIndex].Bucket - 1;
+            ent[i].Key = key;
+            ent[i].Value = default!;
+            ent[bucketIndex].Bucket = ++count;
+            return ref ent[i].Value;
         }
 
         public V Value(int i) => entries[i].Value;

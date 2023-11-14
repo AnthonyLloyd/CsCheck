@@ -496,7 +496,7 @@ public static partial class Check
             T t = default!;
             try
             {
-                await assert(t = gen.Generate(pcg, null, out size));
+                await assert(t = gen.Generate(pcg, null, out size)).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -538,7 +538,7 @@ public static partial class Check
                         state = pcg.State;
                         t = gen.Generate(pcg, minSize, out size);
                         if (minSize is null || Size.IsLessThan(size, minSize))
-                            await assert(t);
+                            await assert(t).ConfigureAwait(false);
                         else
                             skippedLocal++;
                     }
@@ -563,7 +563,7 @@ public static partial class Check
 #pragma warning restore IDE0039 // Use local function
         while (threads-- > 0)
             tasks[threads] = Task.Run(worker);
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
         {
             var seedString = minPCG.ToString(minState);
@@ -682,9 +682,9 @@ public static partial class Check
         await SampleAsync(gen, async t =>
         {
             var time = Stopwatch.GetTimestamp();
-            var name = await classify(t);
+            var name = await classify(t).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -704,9 +704,9 @@ public static partial class Check
         await SampleAsync(gen, async (t1, t2) =>
         {
             var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2);
+            var name = await classify(t1, t2).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -726,9 +726,9 @@ public static partial class Check
         await SampleAsync(gen, async (t1, t2, t3) =>
         {
             var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2, t3);
+            var name = await classify(t1, t2, t3).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -748,9 +748,9 @@ public static partial class Check
         await SampleAsync(gen, async (t1, t2, t3, t4) =>
         {
             var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2, t3, t4);
+            var name = await classify(t1, t2, t3, t4).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -770,9 +770,9 @@ public static partial class Check
         await SampleAsync(gen, async (t1, t2, t3, t4, t5) =>
         {
             var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2, t3, t4, t5);
+            var name = await classify(t1, t2, t3, t4, t5).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -792,9 +792,9 @@ public static partial class Check
         await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6) =>
         {
             var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2, t3, t4, t5, t6);
+            var name = await classify(t1, t2, t3, t4, t5, t6).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -814,9 +814,9 @@ public static partial class Check
         await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7) =>
         {
             var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2, t3, t4, t5, t6, t7);
+            var name = await classify(t1, t2, t3, t4, t5, t6, t7).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -836,9 +836,9 @@ public static partial class Check
         await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7, t8) =>
         {
             var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2, t3, t4, t5, t6, t7, t8);
+            var name = await classify(t1, t2, t3, t4, t5, t6, t7, t8).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -1111,7 +1111,7 @@ public static partial class Check
             try
             {
                 t = gen.Generate(pcg, null, out size);
-                if (!await predicate(t))
+                if (!await predicate(t).ConfigureAwait(false))
                 {
                     minSize = size;
                     minPCG = pcg;
@@ -1161,7 +1161,7 @@ public static partial class Check
                         t = gen.Generate(pcg, minSize, out size);
                         if (minSize is null || Size.IsLessThan(size, minSize))
                         {
-                            if (!await predicate(t))
+                            if (!await predicate(t).ConfigureAwait(false))
                             {
                                 lock (tasks)
                                 {
@@ -1203,7 +1203,7 @@ public static partial class Check
 #pragma warning restore IDE0039 // Use local function
         while (threads-- > 0)
             tasks[threads] = Task.Run(worker);
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
         {
             var seedString = minPCG.ToString(minState);
@@ -1385,7 +1385,7 @@ public static partial class Check
             }
             else
             {
-                sb.Append("\n     Exception: ").Append(p.Exception.ToString());
+                sb.Append("\n     Exception: ").Append(p.Exception);
             }
             return sb.ToString();
         });
@@ -1406,7 +1406,7 @@ public static partial class Check
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
-        => SampleModelBased(initial, new[] { operation }, equal, seed, iter, time, threads, printActual, printModel, writeLine);
+        => SampleModelBased(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1425,7 +1425,7 @@ public static partial class Check
         GenOperation<Actual, Model> operation2,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
-        => SampleModelBased(initial, new[] { operation1, operation2 }, equal, seed, iter, time, threads, printActual, printModel, writeLine);
+        => SampleModelBased(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1445,7 +1445,7 @@ public static partial class Check
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
-        => SampleModelBased(initial, new[] { operation1, operation2, operation3 }, equal, seed, iter, time, threads, printActual, printModel, writeLine);
+        => SampleModelBased(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1466,7 +1466,7 @@ public static partial class Check
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
-        => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, iter, time, threads, printActual, printModel, writeLine);
+        => SampleModelBased(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1489,7 +1489,7 @@ public static partial class Check
         GenOperation<Actual, Model> operation5,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
-        => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5 },
+        => SampleModelBased(initial, [operation1, operation2, operation3, operation4, operation5],
             equal, seed, iter, time, threads, printActual, printModel, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
@@ -1514,7 +1514,7 @@ public static partial class Check
         GenOperation<Actual, Model> operation5, GenOperation<Actual, Model> operation6,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
-        => SampleModelBased(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
+        => SampleModelBased(initial, [operation1, operation2, operation3, operation4, operation5, operation6],
             equal, seed, iter, time, threads, printActual, printModel, writeLine);
 
     sealed class MetamorphicData<T>(T state1, T state2, uint stream, ulong seed)
@@ -1585,7 +1585,7 @@ public static partial class Check
             }
             else
             {
-                sb.Append("\n    Exception: ").Append(p.Item1.Exception.ToString());
+                sb.Append("\n    Exception: ").Append(p.Item1.Exception);
             }
             return sb.ToString();
         });
@@ -1739,7 +1739,7 @@ public static partial class Check
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation, Func<T, T, bool>? equal = null, string? seed = null,
         long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
-        => SampleConcurrent(initial, new[] { operation }, equal, seed, iter, time, threads, print, replay, writeLine);
+        => SampleConcurrent(initial, [operation], equal, seed, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1758,7 +1758,7 @@ public static partial class Check
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, Func<T, T, bool>? equal = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
-        => SampleConcurrent(initial, new[] { operation1, operation2 }, equal, seed, iter, time, threads, print, replay, writeLine);
+        => SampleConcurrent(initial, [operation1, operation2], equal, seed, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1778,7 +1778,7 @@ public static partial class Check
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, Func<T, T, bool>? equal = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
-        => SampleConcurrent(initial, new[] { operation1, operation2, operation3 }, equal, seed, iter, time, threads, print, replay, writeLine);
+        => SampleConcurrent(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1800,7 +1800,7 @@ public static partial class Check
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4,
         Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1,
          Action<string>? writeLine = null)
-        => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4 }, equal, seed, iter, time, threads, print, replay, writeLine);
+        => SampleConcurrent(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1823,7 +1823,7 @@ public static partial class Check
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4,
         GenOperation<T> operation5, Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
         int replay = -1, Action<string>? writeLine = null)
-        => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5 },
+        => SampleConcurrent(initial, [operation1, operation2, operation3, operation4, operation5],
             equal, seed, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
@@ -1848,7 +1848,7 @@ public static partial class Check
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4,
         GenOperation<T> operation5, GenOperation<T> operation6, Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
-        => SampleConcurrent(initial, new[] { operation1, operation2, operation3, operation4, operation5, operation6 },
+        => SampleConcurrent(initial, [operation1, operation2, operation3, operation4, operation5, operation6],
             equal, seed, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Assert actual is in line with expected using a chi-squared test to sigma.</summary>
@@ -2027,7 +2027,7 @@ public static partial class Check
             {
                 while (running)
                 {
-                    if (result.Add(await fasterTimer.Time(), await slowerTimer.Time()))
+                    if (result.Add(await fasterTimer.Time().ConfigureAwait(false), await slowerTimer.Time().ConfigureAwait(false)))
                     {
                         if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
@@ -2052,7 +2052,7 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         while (--threads > 0)
             _ = Task.Run(Worker);
-        await Worker();
+        await Worker().ConfigureAwait(false);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null) result.Output(writeLine);
     }
@@ -2082,8 +2082,8 @@ public static partial class Check
             {
                 while (running)
                 {
-                    var (fasterTime, fasterValue) = await fasterTimer.Time();
-                    var (slowerTime, slowerValue) = await slowerTimer.Time();
+                    var (fasterTime, fasterValue) = await fasterTimer.Time().ConfigureAwait(false);
+                    var (slowerTime, slowerValue) = await slowerTimer.Time().ConfigureAwait(false);
                     if (result.Add(fasterTime, slowerTime))
                     {
                         if (raiseexception && result.NotFaster)
@@ -2119,7 +2119,7 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         while (--threads > 0)
             _ = Task.Run(Worker);
-        await Worker();
+        await Worker().ConfigureAwait(false);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null) result.Output(writeLine);
     }
@@ -2336,7 +2336,7 @@ public static partial class Check
                     state = pcg.State;
                     t = gen.Generate(pcg, null, out _);
                     if (!running) return;
-                    if (result.Add(await fasterTimer.Time(t), await slowerTimer.Time(t)))
+                    if (result.Add(await fasterTimer.Time(t).ConfigureAwait(false), await slowerTimer.Time(t).ConfigureAwait(false)))
                     {
                         if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
@@ -2363,7 +2363,7 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         while (--threads > 0)
             _ = Task.Run(Worker);
-        await Worker();
+        await Worker().ConfigureAwait(false);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null) result.Output(writeLine);
     }
@@ -2743,8 +2743,8 @@ public static partial class Check
                     state = pcg.State;
                     t = gen.Generate(pcg, null, out _);
                     if (!running) return;
-                    var (fasterTime, fasterValue) = await fasterTimer.Time(t);
-                    var (slowerTime, slowerValue) = await slowerTimer.Time(t);
+                    var (fasterTime, fasterValue) = await fasterTimer.Time(t).ConfigureAwait(false);
+                    var (slowerTime, slowerValue) = await slowerTimer.Time(t).ConfigureAwait(false);
                     if (result.Add(fasterTime, slowerTime))
                     {
                         if (raiseexception && result.NotFaster)
@@ -2782,7 +2782,7 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         while (--threads > 0)
             _ = Task.Run(Worker);
-        await Worker();
+        await Worker().ConfigureAwait(false);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null) result.Output(writeLine);
     }

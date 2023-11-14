@@ -42,7 +42,7 @@ public static class Causal
         var now = Stopwatch.GetTimestamp();
         var lockTaken = false;
         spinLock.Enter(ref lockTaken);
-        if (delayName == name && delayTime < 0 && delayCount++ == 0)
+        if (string.Equals(delayName, name) && delayTime < 0 && delayCount++ == 0)
             onSince = now;
         var localTotalDelay = totalDelay;
         var localOnSince = onSince;
@@ -67,7 +67,7 @@ public static class Causal
         {
             if (delayTime < 0)
             {
-                if (region.Name == delayName)
+                if (string.Equals(region.Name, delayName))
                 {
                     if (--delayCount == 0)
                     {
@@ -85,7 +85,7 @@ public static class Causal
                     while (Stopwatch.GetTimestamp() < wait) { }
                 }
             }
-            else if (delayTime > 0 && region.Name == delayName)
+            else if (delayTime > 0 && string.Equals(region.Name, delayName))
             {
                 if (lockTaken) spinLock.Exit(false);
                 var wait = now + ((now - region.Start) * delayTime / 100L);
@@ -119,7 +119,7 @@ public static class Causal
             return (int)(Stopwatch.GetTimestamp() - start - totalDelay);
         }
         Run(RunType.CollectTimes, null, 0);
-        var summary = times.Select(i => i.Item1).Distinct().Select(i => new Result.Row(i)).ToArray();
+        var summary = times.Select(i => i.Item1).ToHashSet(StringComparer.Ordinal).Select(i => new Result.Row(i)).ToArray();
         times.Clear();
         for (int j = 0; j < SUMMARY_STAT_COUNT; j++)
         {
@@ -128,7 +128,7 @@ public static class Causal
             {
                 foreach (var (s, t) in times)
                 {
-                    if (row.Region == s)
+                    if (string.Equals(row.Region, s))
                     {
                         row.Count++;
                         row.Time += t / totalTimePct;

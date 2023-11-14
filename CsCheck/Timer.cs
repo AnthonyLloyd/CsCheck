@@ -322,7 +322,7 @@ public static class Timer
         public async Task<long> Time()
         {
             var start = Stopwatch.GetTimestamp();
-            await call();
+            await call().ConfigureAwait(false);
             return Stopwatch.GetTimestamp() - start;
         }
     }
@@ -332,16 +332,16 @@ public static class Timer
         public async Task<long> Time()
         {
             var start = Stopwatch.GetTimestamp();
-            await call();
-            await call();
-            await call();
-            await call();
-            await call();
-            await call();
-            await call();
-            await call();
-            await call();
-            await call();
+            await call().ConfigureAwait(false);
+            await call().ConfigureAwait(false);
+            await call().ConfigureAwait(false);
+            await call().ConfigureAwait(false);
+            await call().ConfigureAwait(false);
+            await call().ConfigureAwait(false);
+            await call().ConfigureAwait(false);
+            await call().ConfigureAwait(false);
+            await call().ConfigureAwait(false);
+            await call().ConfigureAwait(false);
             return Stopwatch.GetTimestamp() - start;
         }
     }
@@ -353,16 +353,16 @@ public static class Timer
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < count; i++)
             {
-                await call();
-                await call();
-                await call();
-                await call();
-                await call();
-                await call();
-                await call();
-                await call();
-                await call();
-                await call();
+                await call().ConfigureAwait(false);
+                await call().ConfigureAwait(false);
+                await call().ConfigureAwait(false);
+                await call().ConfigureAwait(false);
+                await call().ConfigureAwait(false);
+                await call().ConfigureAwait(false);
+                await call().ConfigureAwait(false);
+                await call().ConfigureAwait(false);
+                await call().ConfigureAwait(false);
+                await call().ConfigureAwait(false);
             }
             return Stopwatch.GetTimestamp() - start;
         }
@@ -374,7 +374,7 @@ public static class Timer
         {
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < count; i++)
-                await call();
+                await call().ConfigureAwait(false);
             return Stopwatch.GetTimestamp() - start;
         }
     }
@@ -384,7 +384,7 @@ public static class Timer
         public async Task<long> Time(T t)
         {
             var start = Stopwatch.GetTimestamp();
-            await call(t);
+            await call(t).ConfigureAwait(false);
             return Stopwatch.GetTimestamp() - start;
         }
     }
@@ -394,16 +394,16 @@ public static class Timer
         public async Task<long> Time(T t)
         {
             var start = Stopwatch.GetTimestamp();
-            await call(t);
-            await call(t);
-            await call(t);
-            await call(t);
-            await call(t);
-            await call(t);
-            await call(t);
-            await call(t);
-            await call(t);
-            await call(t);
+            await call(t).ConfigureAwait(false);
+            await call(t).ConfigureAwait(false);
+            await call(t).ConfigureAwait(false);
+            await call(t).ConfigureAwait(false);
+            await call(t).ConfigureAwait(false);
+            await call(t).ConfigureAwait(false);
+            await call(t).ConfigureAwait(false);
+            await call(t).ConfigureAwait(false);
+            await call(t).ConfigureAwait(false);
+            await call(t).ConfigureAwait(false);
             return Stopwatch.GetTimestamp() - start;
         }
     }
@@ -415,16 +415,16 @@ public static class Timer
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < count; i++)
             {
-                await call(t);
-                await call(t);
-                await call(t);
-                await call(t);
-                await call(t);
-                await call(t);
-                await call(t);
-                await call(t);
-                await call(t);
-                await call(t);
+                await call(t).ConfigureAwait(false);
+                await call(t).ConfigureAwait(false);
+                await call(t).ConfigureAwait(false);
+                await call(t).ConfigureAwait(false);
+                await call(t).ConfigureAwait(false);
+                await call(t).ConfigureAwait(false);
+                await call(t).ConfigureAwait(false);
+                await call(t).ConfigureAwait(false);
+                await call(t).ConfigureAwait(false);
+                await call(t).ConfigureAwait(false);
             }
             return Stopwatch.GetTimestamp() - start;
         }
@@ -436,7 +436,7 @@ public static class Timer
         {
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < count; i++)
-                await call(t);
+                await call(t).ConfigureAwait(false);
             return Stopwatch.GetTimestamp() - start;
         }
     }
@@ -446,7 +446,7 @@ public static class Timer
         public async Task<(long, R)> Time()
         {
             var start = Stopwatch.GetTimestamp();
-            var r = await call();
+            var r = await call().ConfigureAwait(false);
             return (Stopwatch.GetTimestamp() - start, r);
         }
     }
@@ -457,16 +457,16 @@ public static class Timer
         {
             R r = default!;
             var start = Stopwatch.GetTimestamp();
-            r = await call();
-            r = await call();
-            r = await call();
-            r = await call();
-            r = await call();
-            r = await call();
-            r = await call();
-            r = await call();
-            r = await call();
-            r = await call();
+            r = await call().ConfigureAwait(false);
+            r = await call().ConfigureAwait(false);
+            r = await call().ConfigureAwait(false);
+            r = await call().ConfigureAwait(false);
+            r = await call().ConfigureAwait(false);
+            r = await call().ConfigureAwait(false);
+            r = await call().ConfigureAwait(false);
+            r = await call().ConfigureAwait(false);
+            r = await call().ConfigureAwait(false);
+            r = await call().ConfigureAwait(false);
             return (Stopwatch.GetTimestamp() - start, r);
         }
     }
@@ -479,16 +479,16 @@ public static class Timer
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < count; i++)
             {
-                r = await call();
-                r = await call();
-                r = await call();
-                r = await call();
-                r = await call();
-                r = await call();
-                r = await call();
-                r = await call();
-                r = await call();
-                r = await call();
+                r = await call().ConfigureAwait(false);
+                r = await call().ConfigureAwait(false);
+                r = await call().ConfigureAwait(false);
+                r = await call().ConfigureAwait(false);
+                r = await call().ConfigureAwait(false);
+                r = await call().ConfigureAwait(false);
+                r = await call().ConfigureAwait(false);
+                r = await call().ConfigureAwait(false);
+                r = await call().ConfigureAwait(false);
+                r = await call().ConfigureAwait(false);
             }
             return (Stopwatch.GetTimestamp() - start, r);
         }
@@ -501,7 +501,7 @@ public static class Timer
             R r = default!;
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < count; i++)
-                r = await call();
+                r = await call().ConfigureAwait(false);
             return (Stopwatch.GetTimestamp() - start, r);
         }
     }
@@ -511,7 +511,7 @@ public static class Timer
         public async Task<(long, R)> Time(T t)
         {
             var start = Stopwatch.GetTimestamp();
-            var r = await call(t);
+            var r = await call(t).ConfigureAwait(false);
             return (Stopwatch.GetTimestamp() - start, r);
         }
     }
@@ -522,16 +522,16 @@ public static class Timer
         {
             R r;
             var start = Stopwatch.GetTimestamp();
-            r = await call(t);
-            r = await call(t);
-            r = await call(t);
-            r = await call(t);
-            r = await call(t);
-            r = await call(t);
-            r = await call(t);
-            r = await call(t);
-            r = await call(t);
-            r = await call(t);
+            r = await call(t).ConfigureAwait(false);
+            r = await call(t).ConfigureAwait(false);
+            r = await call(t).ConfigureAwait(false);
+            r = await call(t).ConfigureAwait(false);
+            r = await call(t).ConfigureAwait(false);
+            r = await call(t).ConfigureAwait(false);
+            r = await call(t).ConfigureAwait(false);
+            r = await call(t).ConfigureAwait(false);
+            r = await call(t).ConfigureAwait(false);
+            r = await call(t).ConfigureAwait(false);
             return (Stopwatch.GetTimestamp() - start, r);
         }
     }
@@ -544,16 +544,16 @@ public static class Timer
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < count; i++)
             {
-                r = await call(t);
-                r = await call(t);
-                r = await call(t);
-                r = await call(t);
-                r = await call(t);
-                r = await call(t);
-                r = await call(t);
-                r = await call(t);
-                r = await call(t);
-                r = await call(t);
+                r = await call(t).ConfigureAwait(false);
+                r = await call(t).ConfigureAwait(false);
+                r = await call(t).ConfigureAwait(false);
+                r = await call(t).ConfigureAwait(false);
+                r = await call(t).ConfigureAwait(false);
+                r = await call(t).ConfigureAwait(false);
+                r = await call(t).ConfigureAwait(false);
+                r = await call(t).ConfigureAwait(false);
+                r = await call(t).ConfigureAwait(false);
+                r = await call(t).ConfigureAwait(false);
             }
             return (Stopwatch.GetTimestamp() - start, r);
         }
@@ -566,7 +566,7 @@ public static class Timer
             R r = default!;
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < count; i++)
-                r = await call(t);
+                r = await call(t).ConfigureAwait(false);
             return (Stopwatch.GetTimestamp() - start, r);
         }
     }
