@@ -26,8 +26,39 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
+public sealed class CsCheckException : Exception
+{
+    private CsCheckException() { }
+    public CsCheckException(string message) : base(message) { }
+    public CsCheckException(string message, Exception? exception) : base(message, exception) { }
+}
+
 public static partial class Check
 {
+    static long ParseEnvironmentVariableToLong(string variable, long defaultValue)
+    {
+        var value = Environment.GetEnvironmentVariable(variable);
+        return string.IsNullOrWhiteSpace(value) ? defaultValue : long.Parse(value);
+    }
+
+    static int ParseEnvironmentVariableToInt(string variable, int defaultValue)
+    {
+        var value = Environment.GetEnvironmentVariable(variable);
+        return string.IsNullOrWhiteSpace(value) ? defaultValue : int.Parse(value);
+    }
+
+    static double ParseEnvironmentVariableToDouble(string variable, double defaultValue)
+    {
+        var value = Environment.GetEnvironmentVariable(variable);
+        return string.IsNullOrWhiteSpace(value) ? defaultValue : double.Parse(value);
+    }
+
+    static string? ParseEnvironmentVariableToSeed(string variable)
+    {
+        var value = Environment.GetEnvironmentVariable(variable);
+        return string.IsNullOrWhiteSpace(value) ? null : PCG.Parse(value).ToString();
+    }
+
     static string PrintArray2D(Array a)
     {
         int I = a.GetLength(0), J = a.GetLength(1);
@@ -924,7 +955,7 @@ public sealed class Classifier
             c = -x.Length.CompareTo(y.Length);
             if (c != 0)
                 return c;
-            return -xs.CompareTo(ys);
+            return -string.CompareOrdinal(xs, ys);
         })))
         {
             var a = kv.Key.Split('/');

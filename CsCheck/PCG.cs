@@ -125,7 +125,7 @@ internal static class SeedString
     static int Index(char c)
     {
         int i = Chars64.IndexOf(c);
-        return i != -1 ? i : throw new Exception($"Invalid seed char: {c}");
+        return i != -1 ? i : throw new CsCheckException($"Invalid seed char: {c}");
     }
     internal static ulong Parse(string seed, out uint stream)
     {

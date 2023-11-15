@@ -376,17 +376,6 @@ public class GenTests
     }
 
     [Fact]
-    public void Double_Skew()
-    {
-        (from t in Gen.Double.Unit.Select(Gen.Double.Unit, Gen.Double[-10.0, 10.0])
-         let start = Math.Min(t.Item1, t.Item2)
-         let finish = Math.Max(t.Item1, t.Item2)
-         from value in Gen.Double.Skew[start, finish, t.Item3]
-         select (value, start, finish))
-        .Sample(i => i.value >= i.start && i.value <= i.finish);
-    }
-
-    [Fact]
     public void Decimal()
     {
         Gen.Decimal.Sample(i => {

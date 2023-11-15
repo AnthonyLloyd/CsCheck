@@ -2196,16 +2196,6 @@ public sealed class GenDouble : Gen<double>
     }
     /// <summary>With more special values like nan, inf, max, epsilon, -2, -1, 0, 1, 2.</summary>
     public readonly Gen<double> Special = new GenSpecial();
-    public readonly struct DoubleSkew
-    {
-        public Gen<double> this[double start, double finish, double a] =>
-            a >= 0.0 ? Gen.Double.Unit.Select(u => start + Math.Pow(u, a + 1.0) * (finish - start))
-            : Gen.Double.Unit.Select(u => finish - Math.Pow(u, 1.0 - a) * (finish - start));
-    }
-    /// <summary>Skew the distribution towards either end.
-    /// For a&gt;0 (positive skewness) the median decreases to 0.5*Math.Pow(0.5,a), and the mean decreases to 1.0/(1.0+a) of the range.
-    /// For a&lt;0 (negative skewness) the median increases to 1.0-0.5*Math.Pow(0.5,-a), and the mean increases 1.0-1.0/(1.0-a) of the range.</summary>
-    public readonly DoubleSkew Skew = new();
 }
 
 public sealed class GenDecimal : Gen<decimal>

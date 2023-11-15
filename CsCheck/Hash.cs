@@ -811,7 +811,7 @@ public sealed class HashStream : Stream
     public override void SetLength(long value) { }
     readonly Hash hash = new(null);
     uint bytes;
-    int position = 0;
+    int position;
     public override void Write(byte[] buffer, int offset, int count)
     {
         if (position == 3)

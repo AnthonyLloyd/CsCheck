@@ -24,70 +24,39 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-public sealed class CsCheckException : Exception
-{
-    private CsCheckException() { }
-    public CsCheckException(string message) : base(message) { }
-    public CsCheckException(string message, Exception? exception) : base(message, exception) { }
-}
-
 /// <summary>Main random testing Check functions.</summary>
 public static partial class Check
 {
-#pragma warning disable CA2211 // Non-constant fields should not be visible
     const int MAX_LENGTH = 5000;
     /// <summary>The number of iterations to run in the sample (default 100).</summary>
-    public static long Iter = 100;
+    public static long Iter = ParseEnvironmentVariableToLong("CsCheck_Iter", 100);
     /// <summary>The number of seconds to run the sample.</summary>
-    public static int Time = -1;
+    public static int Time = ParseEnvironmentVariableToInt("CsCheck_Time" , -1);
     /// <summary>The number of times to retry the seed to reproduce a SampleConcurrent fail (default 100).</summary>
-    public static int Replay = 100;
+    public static int Replay = ParseEnvironmentVariableToInt("CsCheck_Replay", 100);
     /// <summary>The number of threads to run the sample on (default number logical CPUs).</summary>
-    public static int Threads = Environment.ProcessorCount;
+    public static int Threads = ParseEnvironmentVariableToInt("CsCheck_Threads", Environment.ProcessorCount);
     /// <summary>The initial seed to use for the first iteration.</summary>
-    public static string? Seed;
+    public static string? Seed = ParseEnvironmentVariableToSeed("CsCheck_Seed");
     /// <summary>The sigma to use for Faster (default 6).</summary>
-    public static double Sigma = 6.0;
+    public static double Sigma = ParseEnvironmentVariableToDouble("CsCheck_Sigma", 6.0);
     /// <summary>The timeout in seconds to use for Faster (default 60 seconds).</summary>
-    public static int Timeout = 60;
+    public static int Timeout = ParseEnvironmentVariableToInt("CsCheck_Timeout", 60);
     /// <summary>The number of ulps to approximate to when printing doubles and floats.</summary>
-    public static int Ulps = 4;
+    public static int Ulps = ParseEnvironmentVariableToInt("CsCheck_Ulps", 4);
     /// <summary>The number of Where Gne iterations before throwing an exception.</summary>
-    public static int WhereLimit = 100;
-#pragma warning restore CA2211 // Non-constant fields should not be visible
-
-    static Check()
-    {
-        var iter = Environment.GetEnvironmentVariable("CsCheck_Iter");
-        if (!string.IsNullOrWhiteSpace(iter)) Iter = long.Parse(iter);
-        var time = Environment.GetEnvironmentVariable("CsCheck_Time");
-        if (!string.IsNullOrWhiteSpace(time)) Time = int.Parse(time);
-        var replay = Environment.GetEnvironmentVariable("CsCheck_Replay");
-        if (!string.IsNullOrWhiteSpace(replay)) Replay = int.Parse(replay);
-        var threads = Environment.GetEnvironmentVariable("CsCheck_Threads");
-        if (!string.IsNullOrWhiteSpace(threads)) Threads = int.Parse(threads);
-        var seed = Environment.GetEnvironmentVariable("CsCheck_Seed");
-        if (!string.IsNullOrWhiteSpace(seed)) Seed = PCG.Parse(seed).ToString();
-        var sigma = Environment.GetEnvironmentVariable("CsCheck_Sigma");
-        if (!string.IsNullOrWhiteSpace(sigma)) Sigma = double.Parse(sigma);
-        var timeout = Environment.GetEnvironmentVariable("CsCheck_Timeout");
-        if (!string.IsNullOrWhiteSpace(timeout)) Timeout = int.Parse(timeout);
-        var ulps = Environment.GetEnvironmentVariable("CsCheck_Ulps");
-        if (!string.IsNullOrWhiteSpace(ulps)) Ulps = int.Parse(ulps);
-        var whereLimit = Environment.GetEnvironmentVariable("CsCheck_WhereLimit");
-        if (!string.IsNullOrWhiteSpace(whereLimit)) WhereLimit = int.Parse(whereLimit);
-    }
+    public static int WhereLimit = ParseEnvironmentVariableToInt("CsCheck_WhereLimit", 100);
 
     sealed class SampleActionWorker<T>(Gen<T> gen, Action<T> assert, CountdownEvent cde, string? seed, long target, bool isIter) : IThreadPoolWorkItem
     {
-        public PCG? MinPCG = null;
-        public ulong MinState = 0UL;
-        public Size? MinSize = null;
+        public PCG? MinPCG;
+        public ulong MinState;
+        public Size? MinSize;
         public T MinT = default!;
-        public Exception? MinException = null;
+        public Exception? MinException;
         public int Shrinks = -1;
         public long Total = seed is null ? 0 : 1;
-        public long Skipped = 0;
+        public long Skipped;
         public void Execute()
         {
             var pcg = PCG.ThreadPCG;
@@ -193,6 +162,7 @@ public static partial class Check
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
         cde.Wait();
+        cde.Dispose();
         if (worker.MinPCG is not null) throw worker.Exception(print ?? Print);
         if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
     }
@@ -844,14 +814,14 @@ public static partial class Check
 
     sealed class SampleFuncWorker<T>(Gen<T> gen, Func<T, bool> predicate, CountdownEvent cde, string? seed, long target, bool isIter) : IThreadPoolWorkItem
     {
-        public PCG? MinPCG = null;
-        public ulong MinState = 0UL;
-        public Size? MinSize = null;
+        public PCG? MinPCG;
+        public ulong MinState;
+        public Size? MinSize;
         public T MinT = default!;
-        public Exception? MinException = null;
+        public Exception? MinException;
         public int Shrinks = -1;
         public long Total = seed is null ? 0 : 1;
-        public long Skipped = 0;
+        public long Skipped;
         public void Execute()
         {
             var pcg = PCG.ThreadPCG;
@@ -983,6 +953,7 @@ public static partial class Check
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
         cde.Wait();
+        cde.Dispose();
         if (worker.MinPCG is not null) throw worker.Exception(print ?? Print);
         if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
     }
@@ -2911,7 +2882,7 @@ public static partial class Check
 
     sealed class SingleWorker<T>(Gen<T> gen, Func<T, bool> predicate) : IThreadPoolWorkItem
     {
-        public volatile string? message = null;
+        public volatile string? message;
         public void Execute()
         {
             var pcg = PCG.ThreadPCG;
@@ -3043,8 +3014,8 @@ internal sealed class FasterResult(double sigma)
     public int Faster, Slower;
     public MedianEstimator Median = new();
     readonly Queue<double> queue = new(capacity);
-    SpinLock spinLock = new();
-    bool processing = false;
+    SpinLock spinLock;
+    bool processing;
 
     public float SigmaSquared
     {
