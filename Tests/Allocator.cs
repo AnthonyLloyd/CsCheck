@@ -17,6 +17,8 @@ public static class Allocator
             residual -= allocation;
             results[i] = allocation;
         }
+        if (residual >= weights.Length || residual <= -weights.Length)
+            throw new Exception($"Allocate numeric overflow, quantity={quantity}, weights={string.Join(',', weights)}, residual={residual}");
         while (residual != 0)
         {
             var minErrorIncrease = double.MaxValue;
@@ -52,6 +54,8 @@ public static class Allocator
             residual -= allocation;
             results[i] = allocation;
         }
+        if (residual >= weights.Length || residual <= -weights.Length)
+            throw new Exception($"Allocate numeric overflow, quantity={quantity}, weights={string.Join(',', weights)}, residual={residual}");
         while (residual != 0)
         {
             var minErrorIncrease = double.MaxValue;
