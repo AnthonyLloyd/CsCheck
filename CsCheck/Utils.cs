@@ -25,6 +25,7 @@ using System.Runtime.CompilerServices;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Reflection;
 
 public sealed class CsCheckException : Exception
 {
@@ -35,6 +36,14 @@ public sealed class CsCheckException : Exception
 
 public static partial class Check
 {
+    public static void SetMessage(Exception exception, string message)
+    {
+        if (exception == null)
+            throw new ArgumentNullException(nameof(exception));
+        var fieldInfo = typeof(Exception).GetField("_message", BindingFlags.Instance | BindingFlags.NonPublic);
+        fieldInfo!.SetValue(exception, message);
+    }
+
     static long ParseEnvironmentVariableToLong(string variable, long defaultValue)
     {
         var value = Environment.GetEnvironmentVariable(variable);

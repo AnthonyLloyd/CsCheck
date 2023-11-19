@@ -886,14 +886,15 @@ public static partial class Check
                 }
             }
         }
-        public CsCheckException Exception(Func<T, string> print)
+        public string Exception(Func<T, string> print)
         {
             var seedString = MinPCG!.ToString(MinState);
             var tString = print(MinT!);
             if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
-            throw new CsCheckException(
-                $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({Shrinks:#,0} shrinks, {Skipped:#,0} skipped, {Total:#,0} total).\n{tString}",
-                MinException);
+            var error = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({Shrinks:#,0} shrinks, {Skipped:#,0} skipped, {Total:#,0} total).\n{tString}";
+            if (MinException is not null)
+                error = $"{error}\n{MinException.Message}\n{MinException.StackTrace}";
+            return error;
         }
     }
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -954,7 +955,7 @@ public static partial class Check
         worker.Execute();
         cde.Wait();
         cde.Dispose();
-        if (worker.MinPCG is not null) throw worker.Exception(print ?? Print);
+        if (worker.MinPCG is not null) throw new CsCheckException(worker.Exception(print ?? Print));
         if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
     }
 
@@ -980,6 +981,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print);

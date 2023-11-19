@@ -117,7 +117,7 @@ public static class MathX
                 lo += p;
         }
         return lo + hi;
-    }   
+    }
 
     static void Compress(ref double lo, ref Span<double> partials, ref double hi)
     {

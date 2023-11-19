@@ -17,34 +17,25 @@ public static class Allocator
             residual -= allocation;
             results[i] = allocation;
         }
-        if (residual != 0)
+        while (residual != 0)
         {
-            if (residual >= weights.Length || residual <= -weights.Length)
-                throw new Exception($"Allocate numeric overflow, quantity={quantity}, weights={string.Join(',', weights)}, residual={residual}");
-            if (sumWeights > 0 && residual < 0 || sumWeights < 0 && residual > 0)
+            var minErrorIncrease = double.MaxValue;
+            var maxWeight = 0.0;
+            var index = 0;
+            var increment = Math.Sign(residual);
+            for (int i = 0; i < weights.Length; i++)
             {
-                sumWeights = -sumWeights;
-                quantity = -quantity;
-            }
-            do
-            {
-                var maxError = double.Epsilon;
-                var maxWeight = 0.0;
-                var index = 0;
-                for (int i = 0; i < weights.Length; i++)
+                var error = results[i] * sumWeights - quantity * weights[i];
+                var errorIncrease = Math.Abs(error + increment * sumWeights) - Math.Abs(error);
+                if (errorIncrease < minErrorIncrease || errorIncrease == minErrorIncrease && Math.Abs(weights[i]) > maxWeight)
                 {
-                    var error = quantity * weights[i] - results[i] * sumWeights;
-                    if (error > maxError || error == maxError && Math.Abs(weights[i]) > maxWeight)
-                    {
-                        maxError = error;
-                        maxWeight = Math.Abs(weights[i]);
-                        index = i;
-                    }
+                    minErrorIncrease = errorIncrease;
+                    maxWeight = Math.Abs(weights[i]);
+                    index = i;
                 }
-                var increment = Math.Sign(residual);
-                results[index] += increment;
-                residual -= increment;
-            } while (residual != 0);
+            }
+            results[index] += increment;
+            residual -= increment;
         }
         return results;
     }
@@ -61,34 +52,61 @@ public static class Allocator
             residual -= allocation;
             results[i] = allocation;
         }
-        if (residual != 0)
+        while (residual != 0)
         {
-            if (residual >= weights.Length || residual <= -weights.Length)
-                throw new Exception($"Allocate numeric overflow, quantity={quantity}, weights={string.Join(',', weights)}, residual={residual}");
-            if (sumWeights > 0 && residual < 0 || sumWeights < 0 && residual > 0)
+            var minErrorIncrease = double.MaxValue;
+            var maxWeight = 0.0;
+            var index = 0;
+            var increment = Math.Sign(residual);
+            for (int i = 0; i < weights.Length; i++)
             {
-                sumWeights = -sumWeights;
-                quantity = -quantity;
-            }
-            do
-            {
-                var maxError = double.Epsilon;
-                var maxWeight = 0.0;
-                var index = 0;
-                for (int i = 0; i < weights.Length; i++)
+                var error = results[i] * sumWeights - quantity * weights[i];
+                var errorIncrease = Math.Abs(error + increment * sumWeights) - Math.Abs(error);
+                if (errorIncrease < minErrorIncrease || errorIncrease == minErrorIncrease && Math.Abs(weights[i]) > maxWeight)
                 {
-                    var error = quantity * weights[i] - results[i] * sumWeights;
-                    if (error > maxError || error == maxError && Math.Abs(weights[i]) > maxWeight)
-                    {
-                        maxError = error;
-                        maxWeight = Math.Abs(weights[i]);
-                        index = i;
-                    }
+                    minErrorIncrease = errorIncrease;
+                    maxWeight = Math.Abs(weights[i]);
+                    index = i;
                 }
-                var increment = Math.Sign(residual);
-                results[index] += increment;
-                residual -= increment;
-            } while (residual != 0);
+            }
+            results[index] += increment;
+            residual -= increment;
+        }
+        return results;
+    }
+
+    public static long[] Allocate(long quantity, long[] weights)
+    {
+        var sumWeights = 0L;
+        foreach (var weight in weights)
+            sumWeights += weight;
+        var residual = quantity;
+        var results = new long[weights.Length];
+        for (int i = 0; i < weights.Length; i++)
+        {
+            var allocation = Math.DivRem(checked(quantity * weights[i]), sumWeights, out var remainder) + remainder * 2 / sumWeights;
+            residual -= allocation;
+            results[i] = allocation;
+        }
+        while (residual != 0)
+        {
+            var minErrorIncrease = long.MaxValue;
+            var maxWeight = 0L;
+            var index = 0;
+            var increment = Math.Sign(residual);
+            for (int i = 0; i < weights.Length; i++)
+            {
+                var error = results[i] * sumWeights - quantity * weights[i];
+                var errorIncrease = Math.Abs(error + increment * sumWeights) - Math.Abs(error);
+                if (errorIncrease < minErrorIncrease || errorIncrease == minErrorIncrease && Math.Abs(weights[i]) > maxWeight)
+                {
+                    minErrorIncrease = errorIncrease;
+                    maxWeight = Math.Abs(weights[i]);
+                    index = i;
+                }
+            }
+            results[index] += increment;
+            residual -= increment;
         }
         return results;
     }
