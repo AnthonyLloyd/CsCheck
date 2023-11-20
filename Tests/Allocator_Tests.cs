@@ -12,11 +12,14 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
     readonly static Gen<(long Quantity, double[] Weights)> genAllSigns =
         Gen.Select(Gen.Long[-1000, 1000], Gen.Double[-1000, 1000].Array[2, 100].Where(ws => ws.Sum() > 1e-3));
 
+    readonly static Gen<(long Quantity, long[] Weights)> genAllSignsLong =
+        Gen.Select(Gen.Long[-1000, 1000], Gen.Long[-1000, 1000].Array[2, 100].Where(ws => ws.Sum() != 0));
+
     readonly static Gen<(long Quantity, double[] Weights)> genPositive =
         Gen.Select(Gen.Long[1, 10_000], Gen.Double[0, 100_000].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
 
-    readonly static Gen<(long Quantity, long[] Weights)> genAllSignsLong =
-        Gen.Select(Gen.Long[-1000, 1000], Gen.Long[-1000, 1000].Array[2, 100].Where(ws => ws.Sum() != 0));
+    readonly static Gen<(long Quantity, long[] Weights)> genPositiveLong =
+        Gen.Select(Gen.Long[1, 10_000], Gen.Long[0, 100_000].Array[1, 30].Where(ws => ws.Sum() != 0));
 
     static bool TotalCorrectly<W>(long quantity, W[] weights, Func<long, W[], long[]> allocator)
         => allocator(quantity, weights).Sum() == quantity;
@@ -37,6 +40,12 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
     public void Allocate_BalinskiYoung_TotalsCorrectly()
     {
         genPositive.Sample((quantity, weights) => TotalCorrectly(quantity, weights, Allocator.Allocate_BalinskiYoung));
+    }
+
+    [Fact]
+    public void Allocate_BalinskiYoung_Long_TotalsCorrectly()
+    {
+        genPositiveLong.Sample((quantity, weights) => TotalCorrectly(quantity, weights, Allocator.Allocate_BalinskiYoung));
     }
 
     static bool BetweenFloorAndCeiling<W>(long quantity, W[] weights, Func<long, W[], long[]> allocate)
@@ -68,6 +77,12 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
     public void Allocate_BalinskiYoung_BetweenFloorAndCeiling()
     {
         genPositive.Sample((quantity, weights) => BetweenFloorAndCeiling(quantity, weights, Allocator.Allocate_BalinskiYoung));
+    }
+
+    [Fact]
+    public void Allocate_BalinskiYoung_Long_BetweenFloorAndCeiling()
+    {
+        genPositiveLong.Sample((quantity, weights) => BetweenFloorAndCeiling(quantity, weights, Allocator.Allocate_BalinskiYoung));
     }
 
     static bool SmallerWeightsDontGetLargerAllocation<W>(long quantity, W[] weights, Func<long, W[], long[]> allocate) where W : notnull
@@ -109,6 +124,12 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
         genPositive.Sample((quantity, weights) => SmallerWeightsDontGetLargerAllocation(quantity, weights, Allocator.Allocate_BalinskiYoung));
     }
 
+    [Fact]
+    public void Allocate_BalinskiYoung_Long_SmallerWeightsDontGetLargerAllocation()
+    {
+        genPositiveLong.Sample((quantity, weights) => SmallerWeightsDontGetLargerAllocation(quantity, weights, Allocator.Allocate_BalinskiYoung));
+    }
+
     static bool GivesSameResultReorderedForReorderedWeights<W>(long quantity, W[] weights, W[] shuffled, Func<long, W[], long[]> allocate)
     {
         var allocations = allocate(quantity, weights);
@@ -136,6 +157,14 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
     public void Allocate_BalinskiYoung_GivesSameResultReorderedForReorderedWeights()
     {
         genPositive.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s)))
+        .Sample((quantity, weights, shuffled) => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate_BalinskiYoung)
+        , output.WriteLine);
+    }
+
+    [Fact]
+    public void Allocate_BalinskiYoung_Long_GivesSameResultReorderedForReorderedWeights()
+    {
+        genPositiveLong.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s)))
         .Sample((quantity, weights, shuffled) => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate_BalinskiYoung)
         , output.WriteLine);
     }
@@ -305,7 +334,7 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
         }, seed: "82h-ttvU9vZM");
     }
 
-    static bool NoAlabamaParadox(long quantity, double[] weights, Func<long, double[], long[]> allocate)
+    static bool NoAlabamaParadox<W>(long quantity, W[] weights, Func<long, W[], long[]> allocate)
     {
         var allocations = allocate(quantity, weights);
         var allocationsPlus = allocate(quantity + 1, weights);
@@ -319,6 +348,12 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
     public void Allocate_BalinskiYoung_NoAlabamaParadox()
     {
         genPositive.Sample((quantity, weights) => NoAlabamaParadox(quantity, weights, Allocator.Allocate_BalinskiYoung));
+    }
+
+    [Fact]
+    public void Allocate_BalinskiYoung_Long_NoAlabamaParadox()
+    {
+        genPositiveLong.Sample((quantity, weights) => NoAlabamaParadox(quantity, weights, Allocator.Allocate_BalinskiYoung));
     }
 
     [Fact]

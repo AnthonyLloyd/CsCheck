@@ -17,28 +17,33 @@ public static class Allocator
             residual -= allocation;
             results[i] = allocation;
         }
+        if (residual == 0) return results;
         if (residual >= weights.Length || residual <= -weights.Length)
             throw new Exception($"Allocate numeric overflow, quantity={quantity}, weights={string.Join(',', weights)}, residual={residual}");
-        while (residual != 0)
+        if (residual * sumWeights < 0)
         {
-            var minErrorIncrease = double.MaxValue;
+            quantity = -quantity;
+            sumWeights = -sumWeights;
+        }
+        do
+        {
+            var minError = double.MaxValue;
             var maxWeight = 0.0;
             var index = 0;
-            var increment = Math.Sign(residual);
             for (int i = 0; i < weights.Length; i++)
             {
                 var error = results[i] * sumWeights - quantity * weights[i];
-                var errorIncrease = Math.Abs(error + increment * sumWeights) - Math.Abs(error);
-                if (errorIncrease < minErrorIncrease || errorIncrease == minErrorIncrease && Math.Abs(weights[i]) > maxWeight)
+                if (error < minError || error == minError && Math.Abs(weights[i]) > maxWeight)
                 {
-                    minErrorIncrease = errorIncrease;
+                    minError = error;
                     maxWeight = Math.Abs(weights[i]);
                     index = i;
                 }
             }
+            var increment = Math.Sign(residual);
             results[index] += increment;
             residual -= increment;
-        }
+        } while (residual != 0);
         return results;
     }
 
@@ -54,28 +59,33 @@ public static class Allocator
             residual -= allocation;
             results[i] = allocation;
         }
+        if (residual == 0) return results;
         if (residual >= weights.Length || residual <= -weights.Length)
             throw new Exception($"Allocate numeric overflow, quantity={quantity}, weights={string.Join(',', weights)}, residual={residual}");
-        while (residual != 0)
+        if (residual * sumWeights < 0)
         {
-            var minErrorIncrease = double.MaxValue;
+            quantity = -quantity;
+            sumWeights = -sumWeights;
+        }
+        do
+        {
+            var minError = double.MaxValue;
             var maxWeight = 0.0;
             var index = 0;
-            var increment = Math.Sign(residual);
             for (int i = 0; i < weights.Length; i++)
             {
                 var error = results[i] * sumWeights - quantity * weights[i];
-                var errorIncrease = Math.Abs(error + increment * sumWeights) - Math.Abs(error);
-                if (errorIncrease < minErrorIncrease || errorIncrease == minErrorIncrease && Math.Abs(weights[i]) > maxWeight)
+                if (error < minError || error == minError && Math.Abs(weights[i]) > maxWeight)
                 {
-                    minErrorIncrease = errorIncrease;
+                    minError = error;
                     maxWeight = Math.Abs(weights[i]);
                     index = i;
                 }
             }
+            var increment = Math.Sign(residual);
             results[index] += increment;
             residual -= increment;
-        }
+        } while (residual != 0);
         return results;
     }
 
@@ -92,26 +102,31 @@ public static class Allocator
             residual -= allocation;
             results[i] = allocation;
         }
-        while (residual != 0)
+        if (residual == 0) return results;
+        if (residual * sumWeights < 0)
         {
-            var minErrorIncrease = long.MaxValue;
+            quantity = -quantity;
+            sumWeights = -sumWeights;
+        }
+        do
+        {
+            var minError = long.MaxValue;
             var maxWeight = 0L;
             var index = 0;
-            var increment = Math.Sign(residual);
             for (int i = 0; i < weights.Length; i++)
             {
                 var error = results[i] * sumWeights - quantity * weights[i];
-                var errorIncrease = Math.Abs(error + increment * sumWeights) - Math.Abs(error);
-                if (errorIncrease < minErrorIncrease || errorIncrease == minErrorIncrease && Math.Abs(weights[i]) > maxWeight)
+                if (error < minError || error == minError && Math.Abs(weights[i]) > maxWeight)
                 {
-                    minErrorIncrease = errorIncrease;
+                    minError = error;
                     maxWeight = Math.Abs(weights[i]);
                     index = i;
                 }
             }
+            var increment = Math.Sign(residual);
             results[index] += increment;
             residual -= increment;
-        }
+        } while (residual != 0);
         return results;
     }
 
@@ -128,9 +143,38 @@ public static class Allocator
             {
                 var a = allocations[i];
                 var w = weights[i];
-                if (a < w * q / sumWeights) // to keep to quota rule
+                if (sumWeights * a < w * q) // to keep to quota rule
                 {
                     var r = w / (1 + a); // divisor method
+                    if (r > rmax || (r == rmax && a < amin))
+                    {
+                        rmax = r;
+                        amin = a;
+                        index = i;
+                    }
+                }
+            }
+            allocations[index]++;
+        }
+        return allocations;
+    }
+
+    public static long[] Allocate_BalinskiYoung(long quantity, long[] weights)
+    {
+        var sumWeights = weights.Sum();
+        var allocations = new long[weights.Length];
+        for (var q = 1L; q <= quantity; q++)
+        {
+            var rmax = double.MinValue;
+            var amin = long.MaxValue;
+            var index = -1;
+            for (int i = 0; i < weights.Length; i++)
+            {
+                var a = allocations[i];
+                var w = weights[i];
+                if (sumWeights * a < w * q) // to keep to quota rule
+                {
+                    var r = (double)w / (1 + a); // divisor method
                     if (r > rmax || (r == rmax && a < amin))
                     {
                         rmax = r;
