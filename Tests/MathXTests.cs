@@ -169,6 +169,16 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
+    public void FSum_Compress_Needed_Example()
+    {
+        var weights = new double[] { -8485E-81, -68, 11d / 3, -5623E-76, 47E-55, -19, 88, 134E-33 };
+        var shuffled = new double[] { -8485E-81, 47E-55, -19, 11d / 3, 134E-33, -5623E-76, 88, -68 };
+        var weightsSum = weights.FSum();
+        var shuffledSum = shuffled.FSum();
+        Assert.Equal(weightsSum, shuffledSum);
+    }
+
+    [Fact]
     public void NSum_FSum_Error_Distribution()
     {
         genDouble.Array[3, 100]

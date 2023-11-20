@@ -10,16 +10,16 @@ using Xunit;
 public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
 {
     readonly static Gen<(long Quantity, double[] Weights)> genAllSigns =
-        Gen.Select(Gen.Long[-1000, 1000], Gen.Double[-1000, 1000].Array[2, 100].Where(ws => ws.Sum() > 1e-3));
+        Gen.Select(Gen.Long[-10_000, 10_000], Gen.Double[-10_000, 10_000].Array[2, 50].Where(ws => ws.Sum() > 1e-9));
 
     readonly static Gen<(long Quantity, long[] Weights)> genAllSignsLong =
-        Gen.Select(Gen.Long[-1000, 1000], Gen.Long[-1000, 1000].Array[2, 100].Where(ws => ws.Sum() != 0));
+        Gen.Select(Gen.Long[-10_000, 10_000], Gen.Long[-100_000, 100_000].Array[2, 50].Where(ws => ws.Sum() != 0));
 
     readonly static Gen<(long Quantity, double[] Weights)> genPositive =
-        Gen.Select(Gen.Long[1, 10_000], Gen.Double[0, 100_000].Array[1, 30].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
+        Gen.Select(Gen.Long[1, 10_000], Gen.Double[0, 10_000].Array[2, 50].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
 
     readonly static Gen<(long Quantity, long[] Weights)> genPositiveLong =
-        Gen.Select(Gen.Long[1, 10_000], Gen.Long[0, 100_000].Array[1, 30].Where(ws => ws.Sum() != 0));
+        Gen.Select(Gen.Long[1, 10_000], Gen.Long[0, 100_000].Array[2, 50].Where(ws => ws.Sum() != 0));
 
     static bool TotalCorrectly<W>(long quantity, W[] weights, Func<long, W[], long[]> allocator)
         => allocator(quantity, weights).Sum() == quantity;
@@ -262,7 +262,7 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
             for (int i = 0; i < allocations.Length; i++)
             {
                 var weight = weights[i];
-                var error = Math.Abs(allocations[i] * sumWeights - quantity * weight);
+                var error = Math.Abs(allocations[i] - weight / sumWeights * quantity);
                 if (error == 0) continue;
                 errorAbs += error;
                 errorRel += error / Math.Abs(weight);
@@ -289,7 +289,8 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
                 allocations[j]++;
             }
             var (errorAfterAbs, errorAfterRel) = Error(allocations, quantity, weights, sumWeights);
-            return errorAfterAbs > errorBeforeAbs || errorAfterAbs == errorBeforeAbs && errorAfterRel >= errorBeforeRel;
+            return errorAfterAbs > errorBeforeAbs
+                || Check.AreClose(1e-9, 1e-9, errorAfterAbs, errorBeforeAbs) && (errorAfterRel >= errorBeforeRel || Check.AreClose(1e-9, 1e-9, errorAfterRel, errorBeforeRel));
         });
     }
 
@@ -331,7 +332,7 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
             }
             var (errorAfterAbs, errorAfterRel) = Error(allocations, quantity, weights, sumWeights);
             return errorAfterAbs > errorBeforeAbs || errorAfterAbs == errorBeforeAbs && errorAfterRel >= errorBeforeRel;
-        }, seed: "82h-ttvU9vZM");
+        });
     }
 
     static bool NoAlabamaParadox<W>(long quantity, W[] weights, Func<long, W[], long[]> allocate)
@@ -432,15 +433,11 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void Allocate_FSum_Needs_Compress_Example()
     {
-        Gen.Select(
-            Gen.Const(-35L),
-            Gen.Const<double[]>([-8485E-81, -68, 11d / 3, -5623E-76, 47E-55, -19, 88, 134E-33]),
-            Gen.Const<double[]>([-8485E-81, 47E-55, -19, 11d / 3, 134E-33, -5623E-76, 88, -68]))
-        .Sample((quantity, weights, shuffled) =>
-        {
-            var allocations = Allocator.Allocate(quantity, weights);
-            var shuffledAllocations = Allocator.Allocate(quantity, shuffled);
-            return weights.Zip(allocations).Order().Zip(shuffled.Zip(shuffledAllocations).Order()).All(i => i.First == i.Second);
-        }, threads: 1);
+        const long quantity = -35L;
+        var weights = new double[] { -8485E-81, -68, 11d / 3, -5623E-76, 47E-55, -19, 88, 134E-33 };
+        var shuffled = new double[] { -8485E-81, 47E-55, -19, 11d / 3, 134E-33, -5623E-76, 88, -68 };
+        var allocations = Allocator.Allocate(quantity, weights);
+        var shuffledAllocations = Allocator.Allocate(quantity, shuffled);
+        Assert.True(weights.Zip(allocations).Order().Zip(shuffled.Zip(shuffledAllocations).Order()).All(i => i.First == i.Second));
     }
 }

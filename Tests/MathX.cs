@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 public static class MathX
 {
@@ -119,6 +120,7 @@ public static class MathX
         return lo + hi;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static void Compress(ref double lo, ref Span<double> partials, ref double hi)
     {
         double q;

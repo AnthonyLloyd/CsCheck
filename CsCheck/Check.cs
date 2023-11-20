@@ -27,7 +27,6 @@ using System.Threading.Tasks;
 /// <summary>Main random testing Check functions.</summary>
 public static partial class Check
 {
-    const int MAX_LENGTH = 5000;
     /// <summary>The number of iterations to run in the sample (default 100).</summary>
     public static long Iter = ParseEnvironmentVariableToLong("CsCheck_Iter", 100);
     /// <summary>The number of seconds to run the sample.</summary>
@@ -103,14 +102,9 @@ public static partial class Check
                 }
             }
         }
-        public CsCheckException Exception(Func<T, string> print)
+        public string ExceptionMessage(Func<T, string> print)
         {
-            var seedString = MinPCG!.ToString(MinState);
-            var tString = print(MinT!);
-            if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
-            throw new CsCheckException(
-                $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({Shrinks:#,0} shrinks, {Skipped:#,0} skipped, {Total:#,0} total).\n{tString}",
-                MinException);
+            return ExceptionString(MinPCG!.ToString(MinState), print(MinT!), MinException, Shrinks, Skipped, Total);
         }
     }
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -163,7 +157,7 @@ public static partial class Check
         worker.Execute();
         cde.Wait();
         cde.Dispose();
-        if (worker.MinPCG is not null) throw worker.Exception(print ?? Print);
+        if (worker.MinPCG is not null) throw new CsCheckException(worker.ExceptionMessage(print ?? Print));
         if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
     }
 
@@ -176,6 +170,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print);
@@ -189,6 +184,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print);
@@ -202,6 +198,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print);
@@ -215,6 +212,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print);
@@ -228,6 +226,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print);
@@ -241,6 +240,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print);
@@ -254,6 +254,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
@@ -535,13 +536,7 @@ public static partial class Check
             tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
-        {
-            var seedString = minPCG.ToString(minState);
-            var tString = (print ?? Print)(minT!);
-            if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
-            var summary = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n";
-            throw new CsCheckException(summary + tString, minException);
-        }
+            throw new CsCheckException(ExceptionString(minPCG.ToString(minState), (print ?? Print)(minT!), minException, shrinks, skipped, total));
         if (writeLine is not null) writeLine($"Passed {total:#,0} iterations.");
     }
 
@@ -554,6 +549,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print);
@@ -567,6 +563,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print);
@@ -580,6 +577,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print);
@@ -593,6 +591,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print);
@@ -606,6 +605,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> assert,
          Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print);
@@ -619,6 +619,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> assert,
          Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print);
@@ -632,6 +633,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> assert,
          Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
@@ -886,17 +888,12 @@ public static partial class Check
                 }
             }
         }
-        public string Exception(Func<T, string> print)
+        public string ExceptionMessage(Func<T, string> print)
         {
-            var seedString = MinPCG!.ToString(MinState);
-            var tString = print(MinT!);
-            if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
-            var error = $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({Shrinks:#,0} shrinks, {Skipped:#,0} skipped, {Total:#,0} total).\n{tString}";
-            if (MinException is not null)
-                error = $"{error}\n{MinException.Message}\n{MinException.StackTrace}";
-            return error;
+            return ExceptionString(MinPCG!.ToString(MinState), print(MinT), MinException, Shrinks, Skipped, Total);
         }
     }
+
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
@@ -955,7 +952,7 @@ public static partial class Check
         worker.Execute();
         cde.Wait();
         cde.Dispose();
-        if (worker.MinPCG is not null) throw new CsCheckException(worker.Exception(print ?? Print));
+        if (worker.MinPCG is not null) throw new CsCheckException(worker.ExceptionMessage(print ?? Print));
         if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
     }
 
@@ -968,6 +965,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print);
@@ -995,6 +993,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print);
@@ -1008,6 +1007,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print);
@@ -1021,6 +1021,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print);
@@ -1034,6 +1035,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print);
@@ -1047,6 +1049,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
@@ -1178,14 +1181,7 @@ public static partial class Check
             tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
-        {
-            var seedString = minPCG.ToString(minState);
-            var tString = (print ?? Print)(minT!);
-            if (tString.Length > MAX_LENGTH) tString = string.Concat(tString.AsSpan(0, MAX_LENGTH), " ...");
-            throw new CsCheckException(
-                $"Set seed: \"{seedString}\" or $env:CsCheck_Seed = \"{seedString}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{tString}",
-                minException);
-        }
+            throw new CsCheckException(ExceptionString(minPCG.ToString(minState), (print ?? Print)(minT!), minException, shrinks, skipped, total));
         if (writeLine is not null) writeLine($"Passed {total:#,0} iterations.");
     }
 
@@ -1198,6 +1194,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print);
@@ -1211,6 +1208,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print);
@@ -1224,6 +1222,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print);
@@ -1237,6 +1236,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print);
@@ -1250,6 +1250,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<bool>> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print);
@@ -1263,6 +1264,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<bool>> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print);
@@ -1276,6 +1278,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<bool>> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
@@ -1376,6 +1379,7 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
@@ -1394,6 +1398,7 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
@@ -1414,6 +1419,7 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
@@ -1435,6 +1441,7 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
@@ -1457,6 +1464,7 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         GenOperation<Actual, Model> operation5,
@@ -1482,6 +1490,7 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         GenOperation<Actual, Model> operation5, GenOperation<Actual, Model> operation6,
@@ -1710,6 +1719,7 @@ public static partial class Check
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation, Func<T, T, bool>? equal = null, string? seed = null,
         long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleConcurrent(initial, [operation], equal, seed, iter, time, threads, print, replay, writeLine);
@@ -1729,6 +1739,7 @@ public static partial class Check
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, Func<T, T, bool>? equal = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleConcurrent(initial, [operation1, operation2], equal, seed, iter, time, threads, print, replay, writeLine);
@@ -1749,6 +1760,7 @@ public static partial class Check
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, Func<T, T, bool>? equal = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleConcurrent(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, print, replay, writeLine);
@@ -1770,6 +1782,7 @@ public static partial class Check
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4,
         Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1,
          Action<string>? writeLine = null)
@@ -1793,6 +1806,7 @@ public static partial class Check
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4,
         GenOperation<T> operation5, Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
         int replay = -1, Action<string>? writeLine = null)
@@ -1818,6 +1832,7 @@ public static partial class Check
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4,
         GenOperation<T> operation5, GenOperation<T> operation6, Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
@@ -2178,6 +2193,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> faster, Action<T1, T2> slower, double sigma = -1.0, int threads = -1, int repeat = 1,
         int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
@@ -2193,6 +2209,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> faster, Action<T1, T2, T3> slower, double sigma = -1.0, int threads = -1,
         int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
@@ -2208,6 +2225,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> faster, Action<T1, T2, T3, T4> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
@@ -2224,6 +2242,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> faster, Action<T1, T2, T3, T4, T5> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
@@ -2240,6 +2259,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> faster, Action<T1, T2, T3, T4, T5, T6> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
@@ -2256,6 +2276,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> faster, Action<T1, T2, T3, T4, T5, T6, T7> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
@@ -2272,6 +2293,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> faster, Action<T1, T2, T3, T4, T5, T6, T7, T8> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
@@ -2352,6 +2374,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> faster, Func<T1, T2, Task> slower, double sigma = -1.0, int threads = -1,
         int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
@@ -2367,6 +2390,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> faster, Func<T1, T2, T3, Task> slower, double sigma = -1.0, int threads = -1,
         int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
@@ -2382,6 +2406,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> faster, Func<T1, T2, T3, T4, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
@@ -2398,6 +2423,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> faster, Func<T1, T2, T3, T4, T5, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
@@ -2414,6 +2440,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> faster, Func<T1, T2, T3, T4, T5, T6, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
@@ -2430,6 +2457,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
@@ -2445,6 +2473,7 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), sigma, threads, repeat, timeout, seed, raiseexception);
@@ -2577,6 +2606,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> faster, Func<T1, T2, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
@@ -2593,6 +2623,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> faster, Func<T1, T2, T3, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
@@ -2609,6 +2640,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> faster, Func<T1, T2, T3, T4, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), equal, sigma, threads, repeat, timeout, seed,
@@ -2626,6 +2658,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> faster, Func<T1, T2, T3, T4, T5, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), equal, sigma, threads, repeat,
@@ -2643,6 +2676,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> faster, Func<T1, T2, T3, T4, T5, T6, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), equal, sigma,
@@ -2660,6 +2694,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
@@ -2677,6 +2712,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
@@ -2772,6 +2808,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<R>> faster, Func<T1, T2, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
@@ -2788,6 +2825,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<R>> faster, Func<T1, T2, T3, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
@@ -2804,6 +2842,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<R>> faster, Func<T1, T2, T3, T4, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
@@ -2821,6 +2860,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<R>> faster, Func<T1, T2, T3, T4, T5, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
@@ -2838,6 +2878,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
@@ -2855,6 +2896,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
@@ -2872,6 +2914,7 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),

@@ -25,7 +25,6 @@ using System.Runtime.CompilerServices;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Reflection;
 
 public sealed class CsCheckException : Exception
 {
@@ -36,12 +35,12 @@ public sealed class CsCheckException : Exception
 
 public static partial class Check
 {
-    public static void SetMessage(Exception exception, string message)
+    static string ExceptionString(string seed, string minT, Exception? minException, int shrinks, long skipped, long total)
     {
-        if (exception == null)
-            throw new ArgumentNullException(nameof(exception));
-        var fieldInfo = typeof(Exception).GetField("_message", BindingFlags.Instance | BindingFlags.NonPublic);
-        fieldInfo!.SetValue(exception, message);
+        const int MAX_LENGTH = 5000;
+        if (minT.Length > MAX_LENGTH) minT = string.Concat(minT.AsSpan(0, MAX_LENGTH), " ...");
+        var error = $"Set seed: \"{seed}\" or $env:CsCheck_Seed = \"{seed}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{minT}";
+        return minException is null ? error : $"{error}\n{minException.Message}\n{minException.StackTrace}";
     }
 
     static long ParseEnvironmentVariableToLong(string variable, long defaultValue)

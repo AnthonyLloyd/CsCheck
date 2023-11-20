@@ -38,6 +38,7 @@ No Reflection was used in the making of this product.
 ## Generator Creation Example
 
 Use **Gen** and its Linq methods to compose generators for any type. Here we create a **Gen** for json documents.
+More often it will simply be composing a few primitives and collections.
 Don't worry about shrinking as it's automatic and the best in the business.
 
 ```csharp

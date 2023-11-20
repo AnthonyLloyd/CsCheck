@@ -24,7 +24,7 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
         <Version>3.0.1</Version>
         <PackageReleaseNotes>
-Improved stack trace.
+More obvious stack trace for exceptions in user code.
         </PackageReleaseNotes>
         <TargetFramework>net6.0</TargetFramework>
         <LangVersion>preview</LangVersion>
