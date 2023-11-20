@@ -28,19 +28,24 @@ using System.Runtime.InteropServices;
 
 public sealed class CsCheckException : Exception
 {
+    readonly Exception? _exception;
     private CsCheckException() { }
     public CsCheckException(string message) : base(message) { }
-    public CsCheckException(string message, Exception? exception) : base(message, exception) { }
+    public CsCheckException(string message, Exception? exception)
+        : base(exception is null ? message : string.Concat(message, '\n', exception.Message))
+    {
+        _exception = exception;
+    }
+    public override string? StackTrace => _exception?.StackTrace;
 }
 
 public static partial class Check
 {
-    static string ExceptionString(string seed, string minT, Exception? minException, int shrinks, long skipped, long total)
+    static string SampleErrorMessage(string seed, string minT, int shrinks, long skipped, long total)
     {
         const int MAX_LENGTH = 5000;
         if (minT.Length > MAX_LENGTH) minT = string.Concat(minT.AsSpan(0, MAX_LENGTH), " ...");
-        var error = $"Set seed: \"{seed}\" or $env:CsCheck_Seed = \"{seed}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{minT}";
-        return minException is null ? error : $"{error}\n{minException.Message}\n{minException.StackTrace}";
+        return $"Set seed: \"{seed}\" or $env:CsCheck_Seed = \"{seed}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{minT}";
     }
 
     static long ParseEnvironmentVariableToLong(string variable, long defaultValue)

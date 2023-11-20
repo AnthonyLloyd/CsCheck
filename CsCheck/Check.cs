@@ -104,7 +104,7 @@ public static partial class Check
         }
         public string ExceptionMessage(Func<T, string> print)
         {
-            return ExceptionString(MinPCG!.ToString(MinState), print(MinT!), MinException, Shrinks, Skipped, Total);
+            return SampleErrorMessage(MinPCG!.ToString(MinState), print(MinT!), Shrinks, Skipped, Total);
         }
     }
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -157,7 +157,7 @@ public static partial class Check
         worker.Execute();
         cde.Wait();
         cde.Dispose();
-        if (worker.MinPCG is not null) throw new CsCheckException(worker.ExceptionMessage(print ?? Print));
+        if (worker.MinPCG is not null) throw new CsCheckException(worker.ExceptionMessage(print ?? Print), worker.MinException);
         if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
     }
 
@@ -536,7 +536,7 @@ public static partial class Check
             tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
-            throw new CsCheckException(ExceptionString(minPCG.ToString(minState), (print ?? Print)(minT!), minException, shrinks, skipped, total));
+            throw new CsCheckException(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
         if (writeLine is not null) writeLine($"Passed {total:#,0} iterations.");
     }
 
@@ -890,7 +890,7 @@ public static partial class Check
         }
         public string ExceptionMessage(Func<T, string> print)
         {
-            return ExceptionString(MinPCG!.ToString(MinState), print(MinT), MinException, Shrinks, Skipped, Total);
+            return SampleErrorMessage(MinPCG!.ToString(MinState), print(MinT), Shrinks, Skipped, Total);
         }
     }
 
@@ -952,7 +952,7 @@ public static partial class Check
         worker.Execute();
         cde.Wait();
         cde.Dispose();
-        if (worker.MinPCG is not null) throw new CsCheckException(worker.ExceptionMessage(print ?? Print));
+        if (worker.MinPCG is not null) throw new CsCheckException(worker.ExceptionMessage(print ?? Print), worker.MinException);
         if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
     }
 
@@ -1181,7 +1181,7 @@ public static partial class Check
             tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
-            throw new CsCheckException(ExceptionString(minPCG.ToString(minState), (print ?? Print)(minT!), minException, shrinks, skipped, total));
+            throw new CsCheckException(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
         if (writeLine is not null) writeLine($"Passed {total:#,0} iterations.");
     }
 
@@ -2145,7 +2145,7 @@ public static partial class Check
             catch (Exception e)
             {
                 var tString = Print(t);
-                if (tString.Length > 100) tString = tString[..100];
+                if (tString.Length > 300) tString = tString[..300];
                 result.Exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tString}", e);
                 running = false;
             }
@@ -2350,7 +2350,7 @@ public static partial class Check
             catch (Exception e)
             {
                 var tString = Print(t);
-                if (tString.Length > 100) tString = tString[..100];
+                if (tString.Length > 300) tString = tString[..300];
                 result.Exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tString}", e);
                 running = false;
             }
@@ -2521,7 +2521,7 @@ public static partial class Check
             catch (Exception e)
             {
                 var tString = Print(t);
-                if (tString.Length > 100) tString = tString[..100];
+                if (tString.Length > 300) tString = tString[..300];
                 result.Exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tString}", e);
                 running = false;
             }
@@ -2783,7 +2783,7 @@ public static partial class Check
             catch (Exception e)
             {
                 var tString = Print(t);
-                if (tString.Length > 100) tString = tString[..100];
+                if (tString.Length > 300) tString = tString[..300];
                 result.Exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tString}", e);
                 running = false;
             }
