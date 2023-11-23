@@ -289,10 +289,9 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
                 allocations[j]++;
             }
             var (errorAfterAbs, errorAfterRel) = Error(allocations, quantity, weights, sumWeights);
-            return errorAfterAbs > errorBeforeAbs || errorAfterAbs == errorBeforeAbs && errorAfterRel >= errorBeforeRel;
-            //return errorAfterAbs > errorBeforeAbs
-            //    || Check.AreClose(1e-9, 1e-9, errorAfterAbs, errorBeforeAbs) && (errorAfterRel >= errorBeforeRel || Check.AreClose(1e-9, 1e-9, errorAfterRel, errorBeforeRel));
-        }, seed: "aoVhxtom-2eu");
+            return errorAfterAbs > errorBeforeAbs
+                || Check.AreClose(1e-9, 1e-9, errorAfterAbs, errorBeforeAbs) && (errorAfterRel >= errorBeforeRel || Check.AreClose(1e-9, 1e-9, errorAfterRel, errorBeforeRel));
+        });
     }
 
     [Fact]
