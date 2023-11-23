@@ -73,7 +73,7 @@ public static class MathX
     }
 
     /// <summary>Shewchuk summation</summary>
-    public static double FSum(this double[] values, bool compress = false, bool compresstwosum = false, bool renormalise = false)
+    public static double FSum(this double[] values, bool compress = false)
     {
         if (values.Length < 3) return values.Length == 2 ? values[0] + values[1] : values.Length == 1 ? values[0] : 0.0;
         Span<double> partials = stackalloc double[16];
@@ -114,14 +114,6 @@ public static class MathX
                 partials = partials[..count];
             if (compress)
                 Compress(ref lo, ref partials, ref hi);
-            if(compresstwosum)
-                CompressTwoSum(ref lo, ref partials, ref hi);
-            if (renormalise)
-            {
-                partials = [lo, .. partials, hi];
-                lo = 0; hi = 0;
-                Renormalise(ref partials);
-            }
             foreach (var p in partials)
                 lo += p;
         }
@@ -159,79 +151,6 @@ public static class MathX
         hi = FastTwoSum(hi, Q, out q);
         if (q != 0.0) partials[top++] = q;
         partials = partials[..top];
-    }
-
-    static void CompressTwoSum(ref double lo, ref Span<double> partials, ref double hi)
-    {
-        double q;
-        hi = TwoSum(hi, partials[^1], out var Q);
-        var bottom = partials.Length;
-        for (int i = partials.Length - 2; i >= 0; i--)
-        {
-            Q = TwoSum(Q, partials[i], out q);
-            if (q != 0.0)
-            {
-                partials[--bottom] = Q;
-                Q = q;
-            }
-        }
-        lo = TwoSum(Q, lo, out q);
-        if (q != 0.0)
-        {
-            partials[--bottom] = lo;
-            lo = q;
-        }
-        if (bottom == partials.Length) { partials = []; return; }
-        Q = TwoSum(partials[bottom], lo, out lo);
-        var top = 0;
-        for (int i = bottom + 1; i < partials.Length; i++)
-        {
-            Q = TwoSum(partials[i], Q, out q);
-            if (q != 0.0) partials[top++] = q;
-        }
-        hi = TwoSum(hi, Q, out q);
-        if (q != 0.0) partials[top++] = q;
-        partials = partials[..top];
-    }
-
-    static void Renormalise(ref Span<double> e)
-    {
-        var Q = e[^1];
-        var bottom = e.Length - 1;
-        for (int i = e.Length - 2; i >= 0; i--)
-        {
-            Q = FastTwoSum(Q, e[i], out var q);
-            if (q != 0.0)
-            {
-                e[bottom--] = Q;
-                Q = q;
-            }
-        }
-        e[bottom] = Q;
-        var top = 0;
-        e[0] = Q;
-        for (int i = bottom + 1; i < e.Length; i++)
-        {
-            Q = TwoSum(e[i], e[top], out var q);
-            e[top] = Q;
-            if (q != 0.0)
-            {
-                var l = top++ - 1;
-                while (l >= 0)
-                {
-                    var c2 = TwoSum(e[l + 1], e[l], out var d2);
-                    if (d2 == 0.0)
-                    {
-                        e[l--] = c2;
-                        top--;
-                    }
-                    else
-                        break;
-                }
-                e[top] = q;
-            }
-        }
-        e = e[..(top + 1)];
     }
 
     public static double SSum(this double[] values)

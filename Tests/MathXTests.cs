@@ -182,57 +182,6 @@ public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
         }, output.WriteLine/*, time: 10*/);
     }
 
-    [Fact]
-    public void FSum_Shuffle_Error_Distribution_Renormalise()
-    {
-        genDouble.Array[3, 100]
-        .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
-        .Sample((original, shuffled) =>
-        {
-            var originalSum = MathX.FSum(original, renormalise: true);
-            var shuffledSum = MathX.FSum(shuffled, renormalise: true);
-            return Check.UlpsBetween(originalSum, shuffledSum).ToString().PadLeft(5);
-        }, output.WriteLine/*, time: 10*/);
-    }
-
-    [Fact]
-    public void FSum_Shuffle_Error_Distribution_Compress_Renormalise()
-    {
-        genDouble.Array[3, 100]
-        .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
-        .Sample((original, shuffled) =>
-        {
-            var originalSum = MathX.FSum(original, true, true);
-            var shuffledSum = MathX.FSum(shuffled, true, true);
-            return Check.UlpsBetween(originalSum, shuffledSum).ToString().PadLeft(5);
-        }, output.WriteLine/*, time: 10*/);
-    }
-
-    [Fact]
-    public void FSum_Shuffle_Error_Distribution_Comparison()
-    {
-        genDouble.Array[3, 100]
-        .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
-        .Sample((original, shuffled) =>
-        {
-            var v1 = Check.UlpsBetween(MathX.FSum(original, false, false, false), MathX.FSum(shuffled, false, false, false));
-            var v2 = Check.UlpsBetween(MathX.FSum(original, true, false, false), MathX.FSum(shuffled, true, false, false));
-            var v3 = Check.UlpsBetween(MathX.FSum(original, false, true, false), MathX.FSum(shuffled, false, true, false));
-            var v4 = Check.UlpsBetween(MathX.FSum(original, false, false, true), MathX.FSum(shuffled, false, false, true));
-            var v5 = Check.UlpsBetween(MathX.FSum(original, true, false, true), MathX.FSum(shuffled, true, false, true));
-            var v6 = Check.UlpsBetween(MathX.FSum(original, false, true, true), MathX.FSum(shuffled, false, true, true));
-            return $"{v1}_{v2}_{v3}_{v4}_{v5}_{v6}";
-        }, output.WriteLine/*, time: 10*/);
-    }
- //   Passed Tests.MathXTests.FSum_Shuffle_Error_Distribution_Comparison [14 m 29 s]
- // Standard Output Messages:
- //|             |       Count |       % |    Median |   Lower Q |   Upper Q |   Minimum |       Maximum |
- //|-------------|------------:|--------:|----------:|----------:|----------:|----------:|--------------:|
- //| 0_0_0_0_0_0 | 399,999,616 | 100.00% | 30.0864μs | 12.9196μs | 57.2142μs |  0.2000μs | 16,827.5000μs |
- //| 1_0_0_0_0_0 |         299 |   0.00% | 29.4548μs | 16.3683μs | 46.2734μs |  2.5000μs |     91.6000μs |
- //| 1_1_1_1_1_1 |          85 |   0.00% | 40.5411μs | 22.8298μs | 60.4956μs |  2.1000μs |    102.9000μs |
-
-
   [Fact]
     public void FSum_Compress_Needed_Example()
     {
