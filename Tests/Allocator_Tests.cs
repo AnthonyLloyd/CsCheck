@@ -262,7 +262,7 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
             for (int i = 0; i < allocations.Length; i++)
             {
                 var weight = weights[i];
-                var error = Math.Abs(allocations[i] - weight / sumWeights * quantity);
+                var error = Math.Abs(quantity * weight / sumWeights - allocations[i]);
                 if (error == 0) continue;
                 errorAbs += error;
                 errorRel += error / Math.Abs(weight);
@@ -280,7 +280,7 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
         .SelectMany((quantity, weights) => GenChanges(weights.Length).Select(i => (quantity, weights, i)))
         .Sample((quantity, weights, changes) =>
         {
-            var sumWeights = weights.Sum();
+            var sumWeights = weights.FSum();
             var allocations = Allocator.Allocate(quantity, weights);
             var (errorBeforeAbs, errorBeforeRel) = Error(allocations, quantity, weights, sumWeights);
             foreach (var (i, j) in changes)
@@ -289,9 +289,10 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
                 allocations[j]++;
             }
             var (errorAfterAbs, errorAfterRel) = Error(allocations, quantity, weights, sumWeights);
-            return errorAfterAbs > errorBeforeAbs
-                || Check.AreClose(1e-9, 1e-9, errorAfterAbs, errorBeforeAbs) && (errorAfterRel >= errorBeforeRel || Check.AreClose(1e-9, 1e-9, errorAfterRel, errorBeforeRel));
-        });
+            return errorAfterAbs > errorBeforeAbs || errorAfterAbs == errorBeforeAbs && errorAfterRel >= errorBeforeRel;
+            //return errorAfterAbs > errorBeforeAbs
+            //    || Check.AreClose(1e-9, 1e-9, errorAfterAbs, errorBeforeAbs) && (errorAfterRel >= errorBeforeRel || Check.AreClose(1e-9, 1e-9, errorAfterRel, errorBeforeRel));
+        }, seed: "aoVhxtom-2eu");
     }
 
     [Fact]
