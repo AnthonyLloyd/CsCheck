@@ -134,31 +134,33 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
     {
         var allocations = allocate(quantity, weights);
         var shuffledAllocations = allocate(quantity, shuffled);
-        return weights.Zip(allocations).Order().Zip(shuffled.Zip(shuffledAllocations).Order()).All(i => Equals(i.First, i.Second));
+        return weights.Zip(allocations).Order().Zip(
+               shuffled.Zip(shuffledAllocations).Order())
+            .All(i => Equals(i.First, i.Second));
     }
 
     [Fact]
     public void Allocate_GivesSameResultReorderedForReorderedWeights()
     {
         genAllSigns.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s)))
-        .Sample((quantity, weights, shuffled) => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate)
-        , output.WriteLine);
+        .Sample((quantity, weights, shuffled)
+            => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate));
     }
 
     [Fact]
     public void Allocate_Long_GivesSameResultReorderedForReorderedWeights()
     {
         genAllSignsLong.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s)))
-        .Sample((quantity, weights, shuffled) => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate)
-        , output.WriteLine);
+        .Sample((quantity, weights, shuffled)
+            => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate));
     }
 
     [Fact]
     public void Allocate_BalinskiYoung_GivesSameResultReorderedForReorderedWeights()
     {
         genPositive.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s)))
-        .Sample((quantity, weights, shuffled) => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate_BalinskiYoung)
-        , output.WriteLine);
+        .Sample((quantity, weights, shuffled)
+            => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate_BalinskiYoung));
     }
 
     [Fact]
