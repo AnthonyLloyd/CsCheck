@@ -66,7 +66,7 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void DoubleVsDecimal_Faster()
     {
-        Check.Faster(new DoubleAdd(), new DecimalAdd(), repeat: 100, writeLine: output.WriteLine);
+        Check.Faster(new DoubleAdd(), new DecimalAdd(), threads: 1, repeat: 100, writeLine: output.WriteLine);
     }
 
     public struct DoubleAdd() : IInvoke
