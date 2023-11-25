@@ -1919,6 +1919,33 @@ public static partial class Check
         if (writeLine is not null) result.Output(writeLine);
     }
 
+    /// <summary>Assert the first function is faster than the second to a given sigma.</summary>
+    /// <param name="faster">The presumed faster code to test.</param>
+    /// <param name="slower">The presumed slower code to test.</param>
+    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
+    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
+    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
+    /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
+    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    public static void Faster<I1, I2>(I1 faster, I2 slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true,
+        Action<string>? writeLine = null) where I1 : IInvoke where I2 : IInvoke
+    {
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var worker = new FasterActionWorker(
+            Timer.Create(faster, repeat),
+            Timer.Create(slower, repeat),
+            result,
+            Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
+            raiseexception);
+        if (threads == -1) threads = Threads;
+        while (--threads > 0)
+            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+        worker.Execute();
+        if (result.Exception is not null) throw result.Exception;
+        if (writeLine is not null) result.Output(writeLine);
+    }
+
     sealed class FasterFuncWorker<T>(ITimerFunc<T> fasterTimer, ITimerFunc<T> slowerTimer, FasterResult result, Func<T, T, bool> equal, long endTimestamp, bool raiseexception) : IThreadPoolWorkItem
     {
         volatile bool running = true;

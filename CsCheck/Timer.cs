@@ -15,6 +15,7 @@ public interface ITimerTaskAction { Task<long> Time(); }
 public interface ITimerTaskAction<T> { Task<long> Time(T t); }
 public interface ITimerTaskFunc<R> { Task<(long, R)> Time(); }
 public interface ITimerTaskFunc<T, R> { Task<(long, R)> Time(T t); }
+public interface IInvoke { void Invoke(); }
 public interface IInvoke<T, R> { R Invoke(T t); }
 
 public static class Timer
@@ -59,6 +60,11 @@ public static class Timer
          : count == 10 ? new TimerTaskFuncTen<T, R>(call)
          : count % 10 == 0 ? new TimerTaskFuncManyTen<T, R>(call, count / 10)
          : new TimerTaskFuncMany<T, R>(call, count);
+    public static ITimerAction Create<I>(I call, int count) where I : IInvoke
+        => count == 1 ? new TimerInvokeOne<I>(call)
+         : count == 10 ? new TimerInvokeTen<I>(call)
+         : count % 10 == 0 ? new TimerInvokeManyTen<I>(call, count / 10)
+         : new TimerInvokeMany<I>(call, count);
     public static ITimerFunc<T, R> Create<I, T, R>(I call, int count) where I : IInvoke<T, R>
         => count == 1 ? new TimerInvokeOne<I, T, R>(call)
          : count == 10 ? new TimerInvokeTen<I, T, R>(call)
@@ -568,6 +574,68 @@ public static class Timer
             for (int i = 0; i < count; i++)
                 r = await call(t).ConfigureAwait(false);
             return (Stopwatch.GetTimestamp() - start, r);
+        }
+    }
+    sealed class TimerInvokeOne<I>(I call) : ITimerAction where I : IInvoke
+    {
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
+        public long Time()
+        {
+            var start = Stopwatch.GetTimestamp();
+            call.Invoke();
+            return Stopwatch.GetTimestamp() - start;
+        }
+    }
+    sealed class TimerInvokeTen<I>(I call) : ITimerAction where I : IInvoke
+    {
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
+        public long Time()
+        {
+            var start = Stopwatch.GetTimestamp();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            return Stopwatch.GetTimestamp() - start;
+        }
+    }
+    sealed class TimerInvokeManyTen<I>(I call, int count) : ITimerAction where I : IInvoke
+    {
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
+        public long Time()
+        {
+            var start = Stopwatch.GetTimestamp();
+            for (int i = 0; i < count; i++)
+            {
+                call.Invoke();
+                call.Invoke();
+                call.Invoke();
+                call.Invoke();
+                call.Invoke();
+                call.Invoke();
+                call.Invoke();
+                call.Invoke();
+                call.Invoke();
+                call.Invoke();
+            }
+            return Stopwatch.GetTimestamp() - start;
+        }
+    }
+    sealed class TimerInvokeMany<I>(I call, int count) : ITimerAction where I : IInvoke
+    {
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
+        public long Time()
+        {
+            var start = Stopwatch.GetTimestamp();
+            for (int i = 0; i < count; i++)
+                call.Invoke();
+            return Stopwatch.GetTimestamp() - start;
         }
     }
     sealed class TimerInvokeOne<I, T, R>(I call) : ITimerFunc<T, R> where I : IInvoke<T, R>

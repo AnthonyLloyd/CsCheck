@@ -62,4 +62,40 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         DoubleSumPrecision(9, 35_500); // 9_999_999.99
     }
+
+    [Fact]
+    public void DoubleVsDecimal_Faster()
+    {
+        Check.Faster(new DoubleAdd(), new DecimalAdd(), repeat: 100, writeLine: output.WriteLine);
+    }
+
+    public struct DoubleAdd() : IInvoke
+    {
+        double d1 = 12345.6789, d2 = 1234.56778;
+        public void Invoke()
+        {
+            d1 += d2;
+            d1 -= d2;
+            d2 += d1;
+            d2 -= d1;
+        }
+    }
+
+    public struct DecimalAdd() : IInvoke
+    {
+        decimal m1 = 12345.6789M, m2 = 1234.56778M;
+        public void Invoke()
+        {
+            m1 += m2;
+            m1 -= m2;
+            m2 += m1;
+            m2 -= m1;
+        }
+    }
 }
+
+// 1. Limitations of the options
+// 2. Performance
+// 3. Implementation
+// 4. Scaling
+// 5. Allocation and FSum
