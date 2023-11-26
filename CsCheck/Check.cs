@@ -3222,7 +3222,7 @@ internal sealed class FasterResult(double sigma)
             spinLock.Enter(ref lockTaken);
             if (!processing)
             {
-                var result = $"{Median.Median * 100.0:#0.0}%[{Median.Q1 * 100.0:#0.0}%..{Median.Q3 * 100.0:#0.0}%] {(Median.Median >= 0.0 ? "faster" : "slower")}";
+                var result = $"{Median.Median * 100.0:#0.00}%[{Median.Q1 * 100.0:#0.00}%..{Median.Q3 * 100.0:#0.00}%] {(Median.Median >= 0.0 ? "faster" : "slower")}";
                 if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
                 else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
                 result = $"{result}, sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
