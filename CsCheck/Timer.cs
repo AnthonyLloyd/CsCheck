@@ -63,11 +63,13 @@ public static class Timer
     public static ITimerAction Create<I>(I call, int count) where I : IInvoke
         => count == 1 ? new TimerInvokeOne<I>(call)
          : count == 10 ? new TimerInvokeTen<I>(call)
+         : count == 100 ? new TimerInvoke100<I>(call)
          : count % 10 == 0 ? new TimerInvokeManyTen<I>(call, count / 10)
          : new TimerInvokeMany<I>(call, count);
     public static ITimerFunc<T, R> Create<I, T, R>(I call, int count) where I : IInvoke<T, R>
         => count == 1 ? new TimerInvokeOne<I, T, R>(call)
          : count == 10 ? new TimerInvokeTen<I, T, R>(call)
+         : count == 100 ? new TimerInvoke100<I, T, R>(call)
          : count % 10 == 0 ? new TimerInvokeManyTen<I, T, R>(call, count / 10)
          : new TimerInvokeMany<I, T, R>(call, count);
     sealed class TimerActionOne(Action call) : ITimerAction
@@ -605,6 +607,115 @@ public static class Timer
             return Stopwatch.GetTimestamp() - start;
         }
     }
+    sealed class TimerInvoke100<I>(I call) : ITimerAction where I : IInvoke
+    {
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
+        public long Time()
+        {
+            var start = Stopwatch.GetTimestamp();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            call.Invoke();
+            return Stopwatch.GetTimestamp() - start;
+        }
+    }
     sealed class TimerInvokeManyTen<I>(I call, int count) : ITimerAction where I : IInvoke
     {
         [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
@@ -654,6 +765,115 @@ public static class Timer
         public long Time(T t, out R r)
         {
             var start = Stopwatch.GetTimestamp();
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            return Stopwatch.GetTimestamp() - start;
+        }
+    }
+    sealed class TimerInvoke100<I, T, R>(I call) : ITimerFunc<T, R> where I : IInvoke<T, R>
+    {
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
+        public long Time(T t, out R r)
+        {
+            var start = Stopwatch.GetTimestamp();
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
+            r = call.Invoke(t);
             r = call.Invoke(t);
             r = call.Invoke(t);
             r = call.Invoke(t);

@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using CsCheck;
 using Xunit;
 
@@ -301,6 +302,7 @@ public class HashTests(Xunit.Abstractions.ITestOutputHelper output)
     public readonly struct Pow1Struct : IInvoke<int, double>
     {
         static double Sqr(double x) => x * x;
+        [MethodImpl(MethodImplOptions.NoOptimization)]
         public double Invoke(int n) => n switch
         {
             0 => 1.0,
@@ -314,6 +316,7 @@ public class HashTests(Xunit.Abstractions.ITestOutputHelper output)
 
     public readonly struct Pow2Struct : IInvoke<int, double>
     {
+        [MethodImpl(MethodImplOptions.NoOptimization)]
         public double Invoke(int n)
         {
             double result = 1.0, baseVal = 10.0;
@@ -330,6 +333,7 @@ public class HashTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         static readonly double[] powCache = [1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18,
             1e19, 1e20, 1e21, 1e22, 1e23, 1e24, 1e25, 1e26, 1e27, 1e28, 1e29, 1e30, 1e31];
+        [MethodImpl(MethodImplOptions.NoOptimization)]
         public double Invoke(int n) => powCache[n];
     }
 }

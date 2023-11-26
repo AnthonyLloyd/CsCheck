@@ -3,6 +3,7 @@
 using CsCheck;
 using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Xunit;
 
 public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
@@ -66,11 +67,15 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void DoubleVsDecimal_Faster()
     {
-        Check.Faster(new DoubleAdd(), new DecimalAdd(), threads: 1, repeat: 1000, writeLine: output.WriteLine, timeout: 300);
+        Check.Faster(new DoubleAdd(), new DecimalAdd(), threads: 1, repeat: 100, writeLine: output.WriteLine);
     }
+
+#pragma warning disable RCS1118 // Mark local variable as const.
+#pragma warning disable IDE0059 // Unnecessary assignment of a value
 
     public struct DoubleAdd() : IInvoke
     {
+        [MethodImpl(MethodImplOptions.NoOptimization)]
         public readonly void Invoke()
         {
             var l1 = 12345.6789;
@@ -113,6 +118,7 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
 
     public struct DecimalAdd() : IInvoke
     {
+        [MethodImpl(MethodImplOptions.NoOptimization)]
         public readonly void Invoke()
         {
             var l1 = 12345.6789M;

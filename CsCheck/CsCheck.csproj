@@ -26,6 +26,8 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageReleaseNotes>
 More obvious stack trace for exceptions in user code.
 Added Faster IInvoke overload.
+Added 100 unrolling for IInvokes.
+Increased Faster % to two decimal places.
         </PackageReleaseNotes>
         <TargetFramework>net6.0</TargetFramework>
         <LangVersion>preview</LangVersion>
