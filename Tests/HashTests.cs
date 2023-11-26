@@ -295,8 +295,8 @@ public class HashTests(Xunit.Abstractions.ITestOutputHelper output)
         genInt.Faster(Pow1, Pow2, Check.EqualSkip, repeat: 100, writeLine: output.WriteLine);
         genInt.Faster(Pow3, Pow1, Check.EqualSkip, repeat: 100, writeLine: output.WriteLine);
         genInt.Faster(Pow3, i => Math.Pow(10, i), Check.EqualSkip, repeat: 100, writeLine: output.WriteLine);
-        genInt.Faster<Pow1Struct, Pow2Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 100, writeLine: output.WriteLine);
-        genInt.Faster<Pow3Struct, Pow1Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 100, writeLine: output.WriteLine);
+        genInt.Faster<Pow2Struct, Pow1Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 100, writeLine: output.WriteLine);
+        genInt.Faster<Pow3Struct, Pow2Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 100, writeLine: output.WriteLine);
     }
 
     public readonly struct Pow1Struct : IInvoke<int, double>
