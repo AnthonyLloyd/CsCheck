@@ -49,7 +49,7 @@ Increased Faster % to two decimal places.
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-        <PackageReference Include="Meziantou.Analyzer" Version="2.0.110" PrivateAssets="All" />
+        <PackageReference Include="Meziantou.Analyzer" Version="2.0.112" PrivateAssets="All" />
         <None Include="../CsCheck.png" Pack="true" PackagePath="" Visible="False" />
         <None Include="../README.md" Pack="true" PackagePath="" Visible="False" />
     </ItemGroup>

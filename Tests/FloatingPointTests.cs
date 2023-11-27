@@ -40,28 +40,66 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
         });
     }
 
+    private static void DoubleKSumPrecision(int significantFigures, int maxLength)
+    {
+        const double scaling = 0.01;
+        var lower = (long)Math.Pow(10, significantFigures - 1);
+        var upper = (long)Math.Pow(10, significantFigures) - 1;
+        Gen.Long[lower, upper].Array[100, maxLength]
+        .Sample(longs =>
+        {
+            var longSum = longs.Sum();
+            var doubleSum = longs.Select(i => i * scaling).ToArray().KSum();
+            return (doubleSum / scaling).ToString("#") == longSum.ToString();
+        });
+    }
+
     [Fact]
     public void DoubleSumPrecision12()
     {
-        DoubleSumPrecision(12, 350); // 9_999_999_999.99
+        DoubleSumPrecision(12, 350); // 1_000_000_000.00 - 9_999_999_999.99
+    }
+
+    [Fact]
+    public void DoubleKSumPrecision12()
+    {
+        DoubleKSumPrecision(12, 1_700); // 1_000_000_000.00 - 9_999_999_999.99
     }
 
     [Fact]
     public void DoubleSumPrecision11()
     {
-        DoubleSumPrecision(11, 1_500); // 999_999_999.99
+        DoubleSumPrecision(11, 1_500); // 100_000_000.00 - 999_999_999.99
+    }
+
+    [Fact]
+    public void DoubleKSumPrecision11()
+    {
+        DoubleKSumPrecision(11, 17_900); // 100_000_000.00 - 999_999_999.99
     }
 
     [Fact]
     public void DoubleSumPrecision10()
     {
-        DoubleSumPrecision(10, 7_100); // 99_999_999.99
+        DoubleSumPrecision(10, 7_100); // 10_000_000.00 - 99_999_999.99
+    }
+
+    [Fact]
+    public void DoubleKSumPrecision10()
+    {
+        DoubleKSumPrecision(10, 181_000); // 10_000_000.00 - 99_999_999.99
     }
 
     [Fact]
     public void DoubleSumPrecision9()
     {
-        DoubleSumPrecision(9, 35_500); // 9_999_999.99
+        DoubleSumPrecision(9, 35_500); // 1_000_000.00 - 9_999_999.99
+    }
+
+    [Fact]
+    public void DoubleKSumPrecision9()
+    {
+        DoubleKSumPrecision(9, 1_817_000); // 1_000_000.00 - 9_999_999.99
     }
 
     [Fact]
@@ -164,4 +202,6 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
 // 2. Performance
 // 3. Implementation
 // 4. Scaling
-// 5. Allocation and FSum
+// 10_000_000_000 x 0.01 USD
+// Realise on no primitive obsession and well defined io and service boundary.
+// 5. Allocation and KSum
