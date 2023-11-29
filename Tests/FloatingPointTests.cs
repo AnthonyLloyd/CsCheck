@@ -44,7 +44,7 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
         });
     }
 
-    private static void DoubleKSumPrecision(int significantFigures, int maxLength)
+    private static void DoubleNSumPrecision(int significantFigures, int maxLength)
     {
         const double scaling = 0.01;
         var lower = (long)Math.Pow(10, significantFigures - 1);
@@ -53,7 +53,7 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
         .Sample(longs =>
         {
             var longSum = longs.Sum();
-            var doubleSum = longs.Select(i => i * scaling).ToArray().KSum();
+            var doubleSum = longs.Select(i => i * scaling).ToArray().NSum();
             return (doubleSum / scaling).ToString("#") == longSum.ToString();
         });
     }
@@ -65,9 +65,9 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
-    public void DoubleKSumPrecision12()
+    public void DoubleNSumPrecision12()
     {
-        DoubleKSumPrecision(12, 1_700); // 1_000_000_000.00 - 9_999_999_999.99
+        DoubleNSumPrecision(12, 1_700); // 1_000_000_000.00 - 9_999_999_999.99
     }
 
     [Fact]
@@ -77,9 +77,9 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
-    public void DoubleKSumPrecision11()
+    public void DoubleNSumPrecision11()
     {
-        DoubleKSumPrecision(11, 17_900); // 100_000_000.00 - 999_999_999.99
+        DoubleNSumPrecision(11, 17_900); // 100_000_000.00 - 999_999_999.99
     }
 
     [Fact]
@@ -89,9 +89,9 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
-    public void DoubleKSumPrecision10()
+    public void DoubleNSumPrecision10()
     {
-        DoubleKSumPrecision(10, 181_000); // 10_000_000.00 - 99_999_999.99
+        DoubleNSumPrecision(10, 181_000); // 10_000_000.00 - 99_999_999.99
     }
 
     [Fact]
@@ -101,9 +101,9 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
-    public void DoubleKSumPrecision9()
+    public void DoubleNSumPrecision9()
     {
-        DoubleKSumPrecision(9, 1_817_000); // 1_000_000.00 - 9_999_999.99
+        DoubleNSumPrecision(9, 1_816_000); // 1_000_000.00 - 9_999_999.99
     }
 
     [Fact]

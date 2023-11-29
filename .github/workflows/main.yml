@@ -18,6 +18,5 @@ jobs:
     - uses: actions/setup-dotnet@v3
       with:
         dotnet-version: '8.0.x'
-        include-prerelease: true
     - name: Test
       run: dotnet test -c Release -l 'console;verbosity=detailed'
