@@ -8,25 +8,6 @@ trim_trailing_whitespace = true
 
 csharp_style_namespace_declarations = file_scoped:warning
 
-<<<<<<< Updated upstream
-dotnet_diagnostic.rcs1123.severity = none  # Roslynator - Add parentheses when necessary
-dotnet_diagnostic.rcs1110.severity = none  # Roslynator - Declare type inside namespace
-dotnet_diagnostic.rcs1196.severity = none  # Roslynator - Call extension method as instance method
-dotnet_diagnostic.rcs1154.severity = none  # Roslynator - Sort enum members
-dotnet_diagnostic.rcs1001.severity = none  # Roslynator - Add braces (when expression spans over multiple lines)
-dotnet_diagnostic.RCS1003.severity = none # RCS1003: Add braces to if-else (when expression spans over multiple lines).
-
-dotnet_diagnostic.MA0011.severity = none # MA0011: IFormatProvider is missing
-dotnet_diagnostic.MA0069.severity = none # MA0069: Non-constant static fields should not be visible
-dotnet_diagnostic.MA0048.severity = none # MA0048: File name must match type name
-dotnet_diagnostic.MA0003.severity = none # MA0003: Add parameter name to improve readability
-dotnet_diagnostic.MA0047.severity = none # MA0047: Declare types in namespaces
-dotnet_diagnostic.MA0051.severity = none # MA0051: Method is too long
-dotnet_diagnostic.MA0076.severity = none # MA0076: Do not use implicit culture-sensitive ToString in interpolated strings
-dotnet_diagnostic.MA0075.severity = none # MA0075: Do not use implicit culture-sensitive ToString
-dotnet_diagnostic.MA0001.severity = none # MA0001: StringComparison is missing
-dotnet_diagnostic.MA0016.severity = none # MA0016: Prefer using collection abstraction instead of implementation
-=======
 dotnet_diagnostic.CA1307.severity = none # Specify StringComparison for clarity
 dotnet_diagnostic.CA1051.severity = none # Do not declare visible instance fields
 dotnet_diagnostic.CA1062.severity = none # Validate arguments of public methods
@@ -63,4 +44,3 @@ dotnet_diagnostic.MA0076.severity = none # Do not use implicit culture-sensitive
 dotnet_diagnostic.MA0075.severity = none # Do not use implicit culture-sensitive ToString
 dotnet_diagnostic.MA0001.severity = none # StringComparison is missing
 dotnet_diagnostic.MA0016.severity = none # Prefer using collection abstraction instead of implementation
->>>>>>> Stashed changes

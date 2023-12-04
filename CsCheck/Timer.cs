@@ -1,9 +1,7 @@
 ﻿namespace CsCheck;
 
-using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 
 #pragma warning disable IDE0059 // Unnecessary assignment of a value
 

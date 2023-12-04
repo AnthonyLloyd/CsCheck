@@ -14,12 +14,8 @@
 
 namespace CsCheck;
 
-using System;
 using System.Text;
-using System.Linq;
-using System.Threading;
 using System.Diagnostics;
-using System.Collections.Generic;
 
 /// <summary>Causal profiling functionality.</summary>
 public static class Causal
