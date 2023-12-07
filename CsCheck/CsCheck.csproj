@@ -30,10 +30,10 @@ Increased Faster % to two decimal places and added times ratio.
         </PackageReleaseNotes>
         <TargetFramework>net6.0</TargetFramework>
         <LangVersion>preview</LangVersion>
-        <WarningLevel>999</WarningLevel>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <WarningLevel>9999</WarningLevel>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <SignAssembly>true</SignAssembly>
         <DelaySign>false</DelaySign>
         <AssemblyOriginatorKeyFile>../SigningKey.snk</AssemblyOriginatorKeyFile>
