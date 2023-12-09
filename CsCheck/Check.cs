@@ -3216,8 +3216,16 @@ internal sealed class FasterResult(double sigma)
             spinLock.Enter(ref lockTaken);
             if (!processing)
             {
-                var times = 1 / (1 - Math.Abs(Median.Median));
-                var result = $"{Median.Median * 100.0:#0.00}%[{Median.Q1 * 100.0:#0.00}%..{Median.Q3 * 100.0:#0.00}%] {times:#0.00}x {(Median.Median >= 0.0 ? "faster" : "slower")}";
+                var times = Median.Median >= 0.0 ? 1 / (1 - Median.Median) : 1 + Median.Median;
+                var q1Times = Median.Q1 >= 0.0 ? 1 / (1 - Median.Q1) : 1 + Median.Q1;
+                var q3Times = Median.Q3 >= 0.0 ? 1 / (1 - Median.Q3) : 1 + Median.Q3;
+                var faster = Median.Median >= 0.0 ? "faster" : "slower";
+                if (Median.Median < 0.0)
+                {
+                    times = 1 / times;
+                    (q1Times, q3Times) = (1 / q3Times, 1 / q1Times);
+                }
+                var result = $"{Median.Median:P2}[{Median.Q1:P2}..{Median.Q3:P2}] {times:#0.00}x[{q1Times:#0.00}x..{q3Times:#0.00}x] {faster}";
                 if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
                 else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
                 result = $"{result}, sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
