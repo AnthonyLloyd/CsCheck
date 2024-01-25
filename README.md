@@ -387,7 +387,9 @@ Standard Output Messages:
 32.29%[29.47%..36.51%] 1.48x[1.42x..1.58x] faster, sigma=50.0 (2,551 vs 17)
 ```
 
- The first number is the estimated median performance improvement with the interquartile range in the square brackets.
+ The first number is the estimated percentage median performance improvement with the interquartile range in the square brackets.
+ The second number is the estimated times median performance improvement with the interquartile range in the square brackets.
+ 33⅓% faster = 1.5x faster and 90% faster = 10x faster take your pick.
  The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
  distribution for the null hypothesis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
 
