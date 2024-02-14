@@ -5,8 +5,6 @@ using CsCheck;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
-#pragma warning disable xUnit1031 // Do not use blocking task operations in test method
-
 public class CacheTests
 {
     class ConcurrentDictionaryCache<K, V> : ConcurrentDictionary<K, V>, ICache<K, V> where K : notnull
@@ -20,7 +18,7 @@ public class CacheTests
     {
         Check.SampleConcurrent(
             Gen.Const(() => new ConcurrentDictionaryCache<int, int>()),
-            Gen.Int[1, 5].Operation<ConcurrentDictionaryCache<int, int>>((d, i) => d.GetOrAddAtomicAsync(i, i => Task.FromResult(i)).AsTask().Wait()),
+            Gen.Int[1, 5].Operation<ConcurrentDictionaryCache<int, int>>((d, i) => d.GetOrAddAtomicAsync(i, i => Task.FromResult(i)).AsTask()),
             equal: (a, b) => Check.Equal(a.Keys, b.Keys),
             print: a => Check.Print(a.Keys)
         );
