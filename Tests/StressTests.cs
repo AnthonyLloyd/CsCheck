@@ -6,22 +6,16 @@ using CsCheck;
 
 public class StressTests(Xunit.Abstractions.ITestOutputHelper output)
 {
-    // can set env var in dotnet test now
-    static Gen<List<string>> SubsetOf(List<string> items)
-    {
-        return Gen.Int[1, items.Count - 1].SelectMany(n => Gen.Shuffle(items, n));
-    }
-
-    [Fact]
+    [Fact(Skip = "stress test shouldn't normally run")]
     public async Task Stress_Test_Full_Suite()
     {
-        const int timeout = 30;
+        const int timeout = 120;
         const int memoryLimit = 10 * 1024 * 1204;
         var testProject = Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.Parent!.FullName;
         var tests = GetTestNames(testProject);
         tests.Remove($"{nameof(Tests)}.{nameof(StressTests)}.{nameof(Stress_Test_Full_Suite)}");
         var maxMemory = 0L;
-        await SubsetOf(tests).SampleAsync(async tests =>
+        await Gen.Shuffle(tests, 1, tests.Count).SampleAsync(async tests =>
         {
             var args = $"test --nologo -v m --tl:off --no-build -c Release --filter {string.Join('|', tests)} {testProject}";
             using var process = new Process();
@@ -47,7 +41,7 @@ public class StressTests(Xunit.Abstractions.ITestOutputHelper output)
                     memory = process.PeakWorkingSet64;
                 }
                 catch { }
-                if (memory > memoryLimit)
+                if (memory > maxMemory)
                     Interlocked.Exchange(ref maxMemory, memory);
                 if (memory > memoryLimit)
                 {

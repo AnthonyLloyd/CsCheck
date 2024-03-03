@@ -34,7 +34,7 @@ Increased Faster % to two decimal places and added times ratios.
         <WarningLevel>9999</WarningLevel>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <!--<SignAssembly>true</SignAssembly>-->
+        <SignAssembly>true</SignAssembly>
         <DelaySign>false</DelaySign>
         <AssemblyOriginatorKeyFile>../SigningKey.snk</AssemblyOriginatorKeyFile>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
