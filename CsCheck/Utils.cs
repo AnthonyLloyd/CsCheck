@@ -41,7 +41,7 @@ public static partial class Check
     {
         const int MAX_LENGTH = 5000;
         if (minT.Length > MAX_LENGTH) minT = string.Concat(minT.AsSpan(0, MAX_LENGTH), " ...");
-        return $"Set seed: \"{seed}\" or $env:CsCheck_Seed = \"{seed}\" to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{minT}";
+        return $"Set seed: \"{seed}\" or -e CsCheck_Seed={seed} to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{minT}";
     }
 
     static long ParseEnvironmentVariableToLong(string variable, long defaultValue)

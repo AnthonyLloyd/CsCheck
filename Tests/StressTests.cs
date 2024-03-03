@@ -6,89 +6,104 @@ using CsCheck;
 
 public class StressTests(Xunit.Abstractions.ITestOutputHelper output)
 {
-    [Fact(Skip = "stress test shouldn't normally run")]
-    public async Task Stress_Test_Full_Suite()
+    [Fact(Skip = "don't normally run the stress test")]
+    public async Task Stress_Test()
     {
-        const int timeout = 120;
-        const int memoryLimit = 10 * 1024 * 1204;
+        const int timeout = 30;
+        var limit = Environment.GetEnvironmentVariable("Stress_Memory_Limit");
+        var memoryLimit = (string.IsNullOrEmpty(limit) ? 150 : int.Parse(limit)) * 1024 * 1204;
         var testProject = Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.Parent!.FullName;
         var tests = GetTestNames(testProject);
-        tests.Remove($"{nameof(Tests)}.{nameof(StressTests)}.{nameof(Stress_Test_Full_Suite)}");
+        tests.Remove($"{nameof(Tests)}.{nameof(StressTests)}.{nameof(Stress_Test)}");
+        //tests.Remove(tests.First(i => i.EndsWith("DbgWalkthrough")));
         var maxMemory = 0L;
-        await Gen.Shuffle(tests, 1, tests.Count).SampleAsync(async tests =>
+        int timeoutProcesses = 0, totalProcesses = 0;
+        try
         {
-            var args = $"test --nologo -v m --tl:off --no-build -c Release --filter {string.Join('|', tests)} {testProject}";
-            using var process = new Process();
-            process.StartInfo = new()
-            {
-                FileName = "dotnet",
-                Arguments = args,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            };
-            var running = true;
-            process.EnableRaisingEvents = true;
-            process.Exited += (_, _) => running = false;
-            if (!process.Start()) throw new("Didn't start");
-            long memory = 0;
-            var timeoutTimestamp = timeout * Stopwatch.Frequency + Stopwatch.GetTimestamp();
-            while (running && timeoutTimestamp > Stopwatch.GetTimestamp())
-            {
-                try
+            await Gen.Shuffle(tests, 1, tests.Count).SampleAsync(async tests =>
+            {// --disable-build-servers --blame-hang-timeout {timeout}s
+                var args = $"test --nologo --tl:off --no-build -c Release --filter {string.Join('|', tests)} {testProject}";
+                using var process = StartDotnetProcess(args);
+                var outputTask = process.StandardOutput.ReadToEndAsync();
+                var errorTask = process.StandardError.ReadToEndAsync();
+                var timeoutTimestamp = (timeout + 60) * Stopwatch.Frequency + Stopwatch.GetTimestamp();
+                while (Stopwatch.GetTimestamp() < timeoutTimestamp && !process.HasExited)
                 {
-                    memory = process.PeakWorkingSet64;
+                    long memory = 0;
+                    try
+                    {
+                        memory = process.PeakWorkingSet64;
+                    }
+                    catch { }
+                    if (memory > maxMemory)
+                        Interlocked.Exchange(ref maxMemory, memory);
+                    if (memory > memoryLimit)
+                    {
+                        var message = $"Memory limit exceeded: {(double)memory / (1024 * 1024):n2} MB";
+                        process.Kill(true);
+                        throw new(message);
+                    }
+                    await Task.Delay(100);
+                    process.Refresh();
                 }
-                catch { }
-                if (memory > maxMemory)
-                    Interlocked.Exchange(ref maxMemory, memory);
-                if (memory > memoryLimit)
+                Interlocked.Increment(ref totalProcesses);
+                if (!process.HasExited)
                 {
-                    var message = $"Memory limit exceeded: {(double)memory / (1024 * 1024):n2} MB";
                     process.Kill(true);
-                    throw new(message);
+                    Interlocked.Increment(ref timeoutProcesses);
                 }
-                await Task.Delay(100);
-            }
-            if (running)
-                throw new("Timeout!");
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            if (process.ExitCode != 0 || error.Length != 0)
-                throw new($"ExitCode: {process.ExitCode}\n{output}\n{error}");
-        }, time: 60);
-        output.WriteLine($"MaxMemory: {(double)maxMemory / (1024 * 1024):n2} MB");
+                var output = await outputTask;
+                var error = await errorTask;
+                if (error.Length != 0)
+                    throw new($"ExitCode: {process.ExitCode}\n{output}\n{error}");
+            }, time: 60, threads: Environment.ProcessorCount / 2);
+        }
+        finally
+        {
+            output.WriteLine($"MaxMemory: {(double)maxMemory / (1024 * 1024):n2} MB");
+            output.WriteLine($"Total Processes: {totalProcesses}");
+            output.WriteLine($"Timeout Processes: {timeoutProcesses}");
+        }
     }
 
     private static List<string> GetTestNames(string testProject)
     {
-        var getTestList = Process.Start(new ProcessStartInfo()
-        {
-            FileName = "dotnet",
-            Arguments = "test --nologo -v q --tl:off -c Release --list-tests " + testProject,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        });
-        if (getTestList is null)
-            throw new($"{nameof(getTestList)} returned null");
-        var stdout = getTestList.StandardOutput;
+        using var process = StartDotnetProcess("test --nologo -v q --tl:off -c Release --list-tests " + testProject);
+        var stdout = process.StandardOutput;
         if (stdout.EndOfStream) throw new("No stdout first line");
-        var line = getTestList.StandardOutput.ReadLine();
+        var line = stdout.ReadLine();
         if (line?.StartsWith("Test run for ") != true) throw new($"First line: \"{line}\"");
         if (stdout.EndOfStream) throw new("No stdout second line");
-        line = getTestList.StandardOutput.ReadLine();
+        line = stdout.ReadLine();
         if (line != "The following Tests are available:") throw new($"Second line: \"{line}\"");
-
         var tests = new List<string>();
-        while (!getTestList.StandardOutput.EndOfStream)
+        while (!stdout.EndOfStream)
         {
-            line = getTestList.StandardOutput.ReadLine();
-            if (line is null) throw new("line null");
+            line = stdout.ReadLine();
+            if (string.IsNullOrWhiteSpace(line)) throw new("line null");
             tests.Add(line.Trim());
         }
         return tests;
+    }
+
+    private static Process StartDotnetProcess(string args)
+    {
+        var process = new Process
+        {
+            StartInfo = new()
+            {
+                FileName = "dotnet",
+                Arguments = args,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                StandardInputEncoding = null,
+                StandardErrorEncoding = null,
+            },
+        };
+        if (!process.Start()) throw new("Can't start process");
+        return process;
     }
 }

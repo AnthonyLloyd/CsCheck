@@ -619,7 +619,7 @@ dotnet test -c Release -e CsCheck_Iter=10000 --filter Multithreading
 
 dotnet test -c Release -e CsCheck_Time=60 --filter Multithreading
 
-dotnet test -c Release -e CsCheck_Seed='0N0XIzNsQ0O2' --filter List
+dotnet test -c Release -e CsCheck_Seed=0N0XIzNsQ0O2 --filter List
 
 dotnet test -c Release -e CsCheck_Sigma=50 -l 'console;verbosity=detailed' --filter Faster
 

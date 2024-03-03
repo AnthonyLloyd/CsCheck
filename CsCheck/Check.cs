@@ -2167,7 +2167,7 @@ public static partial class Check
             {
                 var tString = Print(t);
                 if (tString.Length > 300) tString = tString[..300];
-                result.Exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tString}", e);
+                result.Exception = new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tString}", e);
                 running = false;
             }
         }
@@ -2372,7 +2372,7 @@ public static partial class Check
             {
                 var tString = Print(t);
                 if (tString.Length > 300) tString = tString[..300];
-                result.Exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tString}", e);
+                result.Exception = new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tString}", e);
                 running = false;
             }
         }
@@ -2526,7 +2526,7 @@ public static partial class Check
                         vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
                         var vss = Print(slowerValue);
                         vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
-                        result.Exception ??= new CsCheckException($"Return values differ: CsCheck_Seed = \"{pcg.ToString(state)}\"{vfs}{vss}");
+                        result.Exception ??= new CsCheckException($"Return values differ: CsCheck_Seed={pcg.ToString(state)}{vfs}{vss}");
                         running = false;
                         return;
                     }
@@ -2543,7 +2543,7 @@ public static partial class Check
             {
                 var tString = Print(t);
                 if (tString.Length > 300) tString = tString[..300];
-                result.Exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tString}", e);
+                result.Exception = new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tString}", e);
                 running = false;
             }
         }
@@ -2805,7 +2805,7 @@ public static partial class Check
             {
                 var tString = Print(t);
                 if (tString.Length > 300) tString = tString[..300];
-                result.Exception = new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\" T={tString}", e);
+                result.Exception = new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tString}", e);
                 running = false;
             }
         }
