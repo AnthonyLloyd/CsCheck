@@ -615,15 +615,15 @@ replay - The number of times to retry the seed to reproduce a SampleConcurrent f
 Global defaults can also be set via environment variables:
 
 ```powershell
-$env:CsCheck_Iter = 10000; dotnet test -c Release --filter Multithreading; rm env:CsCheck*
+dotnet test -c Release -e CsCheck_Iter=10000 --filter Multithreading
 
-$env:CsCheck_Time = 60; dotnet test -c Release --filter Multithreading; rm env:CsCheck*
+dotnet test -c Release -e CsCheck_Time=60 --filter Multithreading
 
-$env:CsCheck_Seed = '0N0XIzNsQ0O2'; dotnet test -c Release --filter List; rm env:CsCheck*
+dotnet test -c Release -e CsCheck_Seed='0N0XIzNsQ0O2' --filter List
 
-$env:CsCheck_Sigma = 50; dotnet test -c Release -l 'console;verbosity=detailed' --filter Faster; rm env:CsCheck*
+dotnet test -c Release -e CsCheck_Sigma=50 -l 'console;verbosity=detailed' --filter Faster
 
-$env:CsCheck_Threads = 1; dotnet test -c Release -l 'console;verbosity=detailed' --filter Perf; rm env:CsCheck*
+dotnet test -c Release -e CsCheck_Threads=1 -l 'console;verbosity=detailed' --filter Perf
 ```
 
 ## Development
