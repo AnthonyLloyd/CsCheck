@@ -9,24 +9,21 @@ public class StressTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact(Skip = "don't normally run the stress test")]
     public async Task Stress_Test()
     {
-        const int timeout = 30;
+        const long oneMB = 1024 * 1024;
+        const int hang_timeout = 120;
         var limit = Environment.GetEnvironmentVariable("Stress_Memory_Limit");
-        var memoryLimit = (string.IsNullOrEmpty(limit) ? 150 : int.Parse(limit)) * 1024 * 1204;
+        var memoryLimit = (string.IsNullOrEmpty(limit) ? 150 : int.Parse(limit)) * oneMB;
         var testProject = Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.Parent!.FullName;
+        var args = $"test --nologo --tl:off --no-build -c Release {testProject} --filter ";
         var tests = GetTestNames(testProject);
         tests.Remove($"{nameof(Tests)}.{nameof(StressTests)}.{nameof(Stress_Test)}");
-        //tests.Remove(tests.First(i => i.EndsWith("DbgWalkthrough")));
-        var maxMemory = 0L;
-        int timeoutProcesses = 0, totalProcesses = 0;
+        long hungProcesses = 0, totalProcesses = 0, maxMemory = 0;
         try
         {
             await Gen.Shuffle(tests, 1, tests.Count).SampleAsync(async tests =>
-            {// --disable-build-servers --blame-hang-timeout {timeout}s
-                var args = $"test --nologo --tl:off --no-build -c Release --filter {string.Join('|', tests)} {testProject}";
-                using var process = StartDotnetProcess(args);
-                var outputTask = process.StandardOutput.ReadToEndAsync();
-                var errorTask = process.StandardError.ReadToEndAsync();
-                var timeoutTimestamp = (timeout + 60) * Stopwatch.Frequency + Stopwatch.GetTimestamp();
+            {
+                using var process = StartDotnetProcess(args + string.Join('|', tests));
+                var timeoutTimestamp = hang_timeout * Stopwatch.Frequency + Stopwatch.GetTimestamp();
                 while (Stopwatch.GetTimestamp() < timeoutTimestamp && !process.HasExited)
                 {
                     long memory = 0;
@@ -39,9 +36,8 @@ public class StressTests(Xunit.Abstractions.ITestOutputHelper output)
                         Interlocked.Exchange(ref maxMemory, memory);
                     if (memory > memoryLimit)
                     {
-                        var message = $"Memory limit exceeded: {(double)memory / (1024 * 1024):n2} MB";
                         process.Kill(true);
-                        throw new(message);
+                        throw new($"Memory limit exceeded: {(double)memory / oneMB:n2} MB");
                     }
                     await Task.Delay(100);
                     process.Refresh();
@@ -50,19 +46,20 @@ public class StressTests(Xunit.Abstractions.ITestOutputHelper output)
                 if (!process.HasExited)
                 {
                     process.Kill(true);
-                    Interlocked.Increment(ref timeoutProcesses);
+                    Interlocked.Increment(ref hungProcesses);
+                    throw new("Hang timeout!");
                 }
-                var output = await outputTask;
-                var error = await errorTask;
+                var output = await process.StandardOutput.ReadToEndAsync();
+                var error = await process.StandardError.ReadToEndAsync();
                 if (error.Length != 0)
                     throw new($"ExitCode: {process.ExitCode}\n{output}\n{error}");
-            }, time: 60, threads: Environment.ProcessorCount / 2);
+            }, time: 60, threads: 8);
         }
         finally
         {
-            output.WriteLine($"MaxMemory: {(double)maxMemory / (1024 * 1024):n2} MB");
+            output.WriteLine($"MaxMemory: {(double)maxMemory / oneMB:n2} MB");
             output.WriteLine($"Total Processes: {totalProcesses}");
-            output.WriteLine($"Timeout Processes: {timeoutProcesses}");
+            output.WriteLine($"Hung Processes: {hungProcesses}");
         }
     }
 
