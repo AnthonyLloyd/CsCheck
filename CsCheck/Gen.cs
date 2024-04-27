@@ -84,9 +84,9 @@ public abstract class Gen<T> : IGen<T>
     public abstract T Generate(PCG pcg, Size? min, out Size size);
 
     public GenOperation<S> Operation<S>(Func<T, string> name, Action<S, T> action) => GenOperation.Create(this, name, action);
-    public GenOperation<S> Operation<S>(Func<T, string> name, Func<S, T, Task> async) => GenOperation.Create(this, name, (S s, T t) => async(s, t).Wait());
+    public GenOperation<S> Operation<S>(Func<T, string> name, Func<S, T, Task> async) => GenOperation.Create(this, name, (S s, T t) => async(s, t).GetAwaiter().GetResult());
     public GenOperation<S> Operation<S>(Action<S, T> action) => GenOperation.Create(this, action);
-    public GenOperation<S> Operation<S>(Func<S, T, Task> async) => GenOperation.Create(this, (S s, T t) => async(s, t).Wait());
+    public GenOperation<S> Operation<S>(Func<S, T, Task> async) => GenOperation.Create(this, (S s, T t) => async(s, t).GetAwaiter().GetResult());
     public GenOperation<Actual, Model> Operation<Actual, Model>(Func<T, string> name, Action<Actual, Model, T> action) => GenOperation.Create(this, name, action);
     public GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, Model, T> action) => GenOperation.Create(this, action);
     public GenMetamorphic<S> Metamorphic<S>(Func<T, string> name, Action<S, T> action1, Action<S, T> action2) => GenOperation.Create(this, name, action1, action2);
@@ -1453,9 +1453,9 @@ public static class Gen
     }
 
     public static GenOperation<T> Operation<T>(string name, Action<T> action) => GenOperation.Create(name, action);
-    public static GenOperation<T> Operation<T>(string name, Func<T, Task> async) => GenOperation.Create(name, (T t) => async(t).Wait());
+    public static GenOperation<T> Operation<T>(string name, Func<T, Task> async) => GenOperation.Create(name, (T t) => async(t).GetAwaiter().GetResult());
     public static GenOperation<T> Operation<T>(Action<T> action) => GenOperation.Create(action);
-    public static GenOperation<T> Operation<T>(Func<T, Task> async) => GenOperation.Create((T t) => async(t).Wait());
+    public static GenOperation<T> Operation<T>(Func<T, Task> async) => GenOperation.Create((T t) => async(t).GetAwaiter().GetResult());
     public static GenOperation<Actual, Model> Operation<Actual, Model>(string name, Action<Actual, Model> action) => GenOperation.Create(name, action);
     public static GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, Model> action) => GenOperation.Create(action);
 

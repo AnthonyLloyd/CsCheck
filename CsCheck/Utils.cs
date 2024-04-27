@@ -40,7 +40,7 @@ public static partial class Check
     static string SampleErrorMessage(string seed, string minT, int shrinks, long skipped, long total)
     {
         const int MAX_LENGTH = 5000;
-        if (minT.Length > MAX_LENGTH) minT = string.Concat(minT.AsSpan(0, MAX_LENGTH), " ...");
+        if (minT.Length > MAX_LENGTH) minT = $"{minT.AsSpan(0, MAX_LENGTH)} ...";
         return $"Set seed: \"{seed}\" or -e CsCheck_Seed={seed} to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{minT}";
     }
 
