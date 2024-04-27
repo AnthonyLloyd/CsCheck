@@ -420,7 +420,7 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
     public void Allocate_Exceptions()
     {
         Assert.Throws<Exception>(() => Allocator.Allocate(0, [0.0, 0.0, 0.0]));
-        Assert.Throws<Exception>(() => Allocator.Allocate(42, [1.0, -2.0, 1.0, 1e-50]));
+        Assert.Throws<Exception>(() => Allocator.Allocate(42, [1.0, -2.0, 1.0, 1e-70]));
     }
 
     [Fact]
