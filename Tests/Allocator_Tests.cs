@@ -420,13 +420,8 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void Allocate_Exceptions()
     {
-        var quantity = 0;
-        var weights_i = 0.0;
-        var sumWeights = 0.0;
-        var allocation = (int)Math.Round(quantity * weights_i / sumWeights, MidpointRounding.AwayFromZero);
-        Assert.Equal(int.MinValue, allocation);
-        //Assert.Throws<Exception>(() => Allocator.Allocate(0, [0.0, 0.0, 0.0]));
-        //Assert.Throws<Exception>(() => Allocator.Allocate(42, [1.0, -2.0, 1.0, 0]));
+        Assert.Throws<Exception>(() => Allocator.Allocate(0, [0.0, 0.0, 0.0]));
+        Assert.Throws<Exception>(() => Allocator.Allocate(42, [1.0, -2.0, 1.0, 1e-30]));
     }
 
     [Fact]

@@ -55,7 +55,7 @@ public static class Allocator
         var results = new int[weights.Length];
         for (int i = 0; i < weights.Length; i++)
         {
-            var allocation = (int)Math.Round(quantity * weights[i] / sumWeights, MidpointRounding.AwayFromZero);
+            var allocation = checked ((int)Math.Round(quantity * weights[i] / sumWeights, MidpointRounding.AwayFromZero));
             residual -= allocation;
             results[i] = allocation;
         }
