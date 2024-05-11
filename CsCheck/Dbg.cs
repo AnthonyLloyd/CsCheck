@@ -17,7 +17,6 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using CsCheck;
 using System.Runtime.InteropServices;
-using System.Collections.Concurrent;
 
 #pragma warning disable CA1050 // Declare types in namespaces
 
@@ -86,19 +85,22 @@ public static class Dbg
         Clear();
     }
 
-    public static KeyValuePair<string, (MedianEstimator Completed, MedianEstimator Running)>[] OutputTimeStats()
+    public static KeyValuePair<string, (MedianEstimator Completed, MedianEstimator Running)>[] OutputTimeStats(bool reset = true)
     {
-        var stats = Interlocked.Exchange(ref times, new());
+        var stats = reset ? Interlocked.Exchange(ref times, new()) : times;
         lock (stats)
         {
             var now = Stopwatch.GetTimestamp();
             return stats.Select(i =>
             {
                 var (completed, starts) = i.Value;
-                var running = new MedianEstimator();
-                foreach (var start in starts)
-                    running.Add(now - start);
-                return KeyValuePair.Create(i.Key, (completed, running));
+                lock (starts)
+                {
+                    var running = new MedianEstimator();
+                    foreach (var start in starts)
+                        running.Add(now - start);
+                    return KeyValuePair.Create(i.Key, (completed, running));
+                }
             }).ToArray();
         }
     }
