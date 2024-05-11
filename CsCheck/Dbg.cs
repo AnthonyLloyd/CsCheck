@@ -17,6 +17,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using CsCheck;
 using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
 
 #pragma warning disable CA1050 // Declare types in namespaces
 
@@ -29,7 +30,7 @@ public static class Dbg
     static MapSlim<string, int> counts = new();
     static MapSlim<string, object?> objects = new();
     static MapSlim<string, Action> functions = new();
-    static MapSlim<string, (long, int)> times = new();
+    static MapSlim<string, (MedianEstimator, List<long>)> times = new();
     static Action<string>? autoOutput;
     static bool autoEveryInfo;
 
@@ -51,7 +52,7 @@ public static class Dbg
     public static IEnumerable<string> Output()
     {
         foreach (var s in info)
-            yield return string.Concat("[Dbg] ", s);
+            yield return $"[Dbg] {s}";
         int maxLength = 0, total = 0;
         foreach (var kv in counts)
         {
@@ -61,28 +62,45 @@ public static class Dbg
         foreach (var kc in counts.OrderByDescending(i => i.Value))
         {
             var percent = ((float)kc.Value / total).ToString("0.00%").PadLeft(7);
-            yield return string.Concat("Count: ", kc.Key.PadRight(maxLength), percent, " ", kc.Value);
+            yield return $"Count: {kc.Key.PadRight(maxLength)}{percent} {kc.Value}";
         }
         maxLength = 0;
         int maxPercent = 0, maxTime = 0, maxCount = 0;
         foreach (var kv in times)
         {
             if (kv.Key.Length > maxLength) maxLength = kv.Key.Length;
-            if ((kv.Value.Item1 * 1000L / Stopwatch.Frequency).ToString("#,0").Length > maxTime)
-                maxTime = (kv.Value.Item1 * 1000L / Stopwatch.Frequency).ToString("#,0").Length;
-            if (((float)kv.Value.Item1 / times.Value(0).Item1).ToString("0.0%").Length > maxPercent)
-                maxPercent = ((float)kv.Value.Item1 / times.Value(0).Item1).ToString("0.0%").Length;
-            if (kv.Value.Item2.ToString().Length > maxCount)
-                maxCount = kv.Value.Item2.ToString().Length;
+            if ((kv.Value.Item1.Median * 1000L / Stopwatch.Frequency).ToString("#,0").Length > maxTime)
+                maxTime = (kv.Value.Item1.Median * 1000L / Stopwatch.Frequency).ToString("#,0").Length;
+            if (((float)kv.Value.Item1.Median / times.Value(0).Item1.Median).ToString("0.0%").Length > maxPercent)
+                maxPercent = ((float)kv.Value.Item1.Median / times.Value(0).Item1.Median).ToString("0.0%").Length;
+            if (kv.Value.Item1.N.ToString().Length > maxCount)
+                maxCount = kv.Value.Item1.N.ToString().Length;
         }
         foreach (var kc in times)
         {
-            var time = (kc.Value.Item1 * 1000L / Stopwatch.Frequency).ToString("#,0").PadLeft(maxTime + 1);
-            var percent = ((float)kc.Value.Item1 / times.Value(0).Item1).ToString("0.0%").PadLeft(maxPercent + 1);
-            var count = kc.Value.Item2.ToString().PadLeft(maxCount + 1);
-            yield return string.Concat("Time: ", kc.Key.PadRight(maxLength), time, "ms", percent, count);
+            var time = (kc.Value.Item1.Median * 1000L / Stopwatch.Frequency).ToString("#,0").PadLeft(maxTime + 1);
+            var percent = ((float)kc.Value.Item1.Median / times.Value(0).Item1.Median).ToString("0.0%").PadLeft(maxPercent + 1);
+            var count = kc.Value.Item1.N.ToString().PadLeft(maxCount + 1);
+            yield return $"Time: {kc.Key.PadRight(maxLength)}{time}ms{percent}{count}";
         }
         Clear();
+    }
+
+    public static KeyValuePair<string, (MedianEstimator Completed, MedianEstimator Running)>[] OutputTimeStats()
+    {
+        var stats = Interlocked.Exchange(ref times, new());
+        lock (stats)
+        {
+            var now = Stopwatch.GetTimestamp();
+            return stats.Select(i =>
+            {
+                var (completed, starts) = i.Value;
+                var running = new MedianEstimator();
+                foreach (var start in starts)
+                    running.Add(now - start);
+                return KeyValuePair.Create(i.Key, (completed, running));
+            }).ToArray();
+        }
     }
 
     /// <summary>Output held debug info.</summary>
@@ -128,7 +146,7 @@ public static class Dbg
     }
 
     /// <summary>Increment debug info counter. Function name when parameter not set.</summary>
-    public static void Count([CallerMemberName] string name = "", [CallerLineNumber] int line = 0) => Count(string.Concat(name, " ", line));
+    public static void Count([CallerMemberName] string name = "", [CallerLineNumber] int line = 0) => Count($"{name} {line}");
 
     public struct TimeRegion : IDisposable
     {
@@ -139,7 +157,25 @@ public static class Dbg
         public readonly void End()
         {
             var timestamp = Stopwatch.GetTimestamp();
-            lock (times) times.GetValueOrNullRef(Name).Item1 += timestamp - Start;
+            MedianEstimator estimator;
+            List<long> starts;
+            lock (times)
+            {
+                ref var time = ref times.GetValueOrNullRef(Name);
+                if (time.Item1 is null)
+                {
+                    time.Item1 = estimator = new();
+                    time.Item2 = starts = [];
+                }
+                else
+                {
+                    (estimator, starts) = time;
+                }
+            }
+            lock (starts)
+                starts.Remove(Start);
+            lock (estimator)
+                estimator.Add(timestamp - Start);
             if (autoOutput is not null) Output(autoOutput);
         }
 
@@ -147,12 +183,22 @@ public static class Dbg
         public readonly void Line([CallerLineNumber] int line = 0)
         {
             var timestamp = Stopwatch.GetTimestamp();
+            MedianEstimator estimator;
             lock (times)
             {
-                ref var time = ref times.GetValueOrNullRef(string.Concat(Name, " line ", line.ToString()));
-                time.Item1 += timestamp - Start;
-                time.Item2++;
+                ref var time = ref times.GetValueOrNullRef($"{Name} line {line}");
+                if (time.Item1 is null)
+                {
+                    time.Item1 = estimator = new();
+                    time.Item2 = [];
+                }
+                else
+                {
+                    estimator = time.Item1;
+                }
             }
+            lock (estimator)
+                estimator.Add(timestamp - Start);
         }
 
         public readonly void Dispose() => End();
@@ -169,8 +215,24 @@ public static class Dbg
     public static TimeRegion Time<T>(T t)
     {
         var name = Check.Print(t);
-        lock (times) times.GetValueOrNullRef(name!).Item2++;
-        return new() { Name = name!, Start = Stopwatch.GetTimestamp() };
+        List<long> starts;
+        lock (times)
+        {
+            ref var time = ref times.GetValueOrNullRef(name!);
+            if (time.Item1 is null)
+            {
+                time.Item1 = new();
+                time.Item2 = starts = [];
+            }
+            else
+            {
+                starts = time.Item2;
+            }
+        }
+        var start = Stopwatch.GetTimestamp();
+        lock(starts)
+            starts.Add(start);
+        return new() { Name = name!, Start = start };
     }
 
     /// <summary>Start a time measurement. Function name when parameter not set.</summary>
@@ -179,7 +241,7 @@ public static class Dbg
     /// <summary>Add debug info.</summary>
     public static void Info<T>(T t, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
-        var s = string.Concat(name, " ", line, ": ", Check.Print(t));
+        var s = $"{name} {line}: {Check.Print(t)}";
         lock (info)
         {
             info.Add(s);
@@ -190,7 +252,7 @@ public static class Dbg
     /// <summary>Method debug info.</summary>
     public static void Info<T>(Action<T> f, T t, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
-        var s = string.Concat(Check.Print(t), " -> ()");
+        var s = $"{Check.Print(t)} -> ()";
         Info(s, name, line);
         f(t);
     }
@@ -198,7 +260,7 @@ public static class Dbg
     /// <summary>Method debug info.</summary>
     public static void Info<T1, T2>(Action<T1, T2> f, T1 t1, T2 t2, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
-        var s = string.Concat(Check.Print(t1), " -> ", Check.Print(t2), " -> ()");
+        var s = $"{Check.Print(t1)} -> {Check.Print(t2)} -> ()";
         Info(s, name, line);
         f(t1, t2);
     }
@@ -206,7 +268,7 @@ public static class Dbg
     /// <summary>Method debug info.</summary>
     public static void Info<T1, T2, T3>(Action<T1, T2, T3> f, T1 t1, T2 t2, T3 t3, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
-        var s = string.Concat(Check.Print(t1), " -> ", Check.Print(t2), " -> ", Check.Print(t3), " -> ()");
+        var s = $"{Check.Print(t1)} -> {Check.Print(t2)} -> {Check.Print(t3)} -> ()";
         Info(s, name, line);
         f(t1, t2, t3);
     }
@@ -215,7 +277,7 @@ public static class Dbg
     public static R Info<R>(Func<R> f, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
         var r = f();
-        var s = string.Concat("() -> ", Check.Print(r));
+        var s = $"() -> {Check.Print(r)}";
         Info(s, name, line);
         return r;
     }
@@ -224,7 +286,7 @@ public static class Dbg
     public static R Info<T, R>(Func<T, R> f, T t, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
         var r = f(t);
-        Info(string.Concat(Check.Print(t), " -> ", Check.Print(r)), name, line);
+        Info($"{Check.Print(t)} -> {Check.Print(r)}", name, line);
         return r;
     }
 
@@ -232,7 +294,7 @@ public static class Dbg
     public static R Info<T1, T2, R>(Func<T1, T2, R> f, T1 t1, T2 t2, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
         var r = f(t1, t2);
-        Info(string.Concat(Check.Print(t1), " -> ", Check.Print(t2), " -> ", Check.Print(r)), name, line);
+        Info($"{Check.Print(t1)} -> {Check.Print(t2)} -> {Check.Print(r)}", name, line);
         return r;
     }
 
@@ -240,7 +302,7 @@ public static class Dbg
     public static R Info<T1, T2, T3, R>(Func<T1, T2, T3, R> f, T1 t1, T2 t2, T3 t3, [CallerMemberName] string name = "", [CallerLineNumber] int line = 0)
     {
         var r = f(t1, t2, t3);
-        Info(string.Concat(Check.Print(t1), " -> ", Check.Print(t2), " -> ", Check.Print(t3), " -> ", Check.Print(r)), name, line);
+        Info($"{Check.Print(t1)} -> {Check.Print(t2)} -> {Check.Print(t3)} -> {Check.Print(r)}", name, line);
         return r;
     }
 
