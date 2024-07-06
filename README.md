@@ -5,7 +5,7 @@ CsCheck is a C# random testing library inspired by QuickCheck.
 
 It differs in that generation and shrinking are both based on [PCG](https://www.pcg-random.org), a fast random number generator.
 
-This gives the following advantages:
+This gives the following advantages over tree based shrinking libraries:
 
 - Automatic shrinking. Gen classes are composable with no need for Arb classes. So less boilerplate.
 - Random testing and shrinking are parallelized. This and PCG make it very fast.
