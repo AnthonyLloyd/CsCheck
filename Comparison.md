@@ -1,6 +1,7 @@
 ﻿# Comparison with other random testing libraries
 
-See the [shrinking challenge](https://github.com/jlink/shrinking-challenge) for a set of example shrinking problems across testing libraries.
+See the [shrinking challenge](https://github.com/jlink/shrinking-challenge) for a set of example shrinking problems across testing libraries.  
+Also see how CsCheck is one of the few random testing libraries to do stateful and parallel testing in [The sad state of property-based testing libraries](https://stevana.github.io/the_sad_state_of_property-based_testing_libraries.html).
 
 ## Arbitrary
 
