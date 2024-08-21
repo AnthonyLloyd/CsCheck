@@ -87,10 +87,10 @@ public abstract class Gen<T> : IGen<T>
     public GenOperation<S> Operation<S>(Func<T, string> name, Func<S, T, Task> async) => GenOperation.Create(this, name, (S s, T t) => async(s, t).GetAwaiter().GetResult());
     public GenOperation<S> Operation<S>(Action<S, T> action) => GenOperation.Create(this, action);
     public GenOperation<S> Operation<S>(Func<S, T, Task> async) => GenOperation.Create(this, (S s, T t) => async(s, t).GetAwaiter().GetResult());
-    public GenOperation<Actual, Model> Operation<Actual, Model>(Func<T, string> name, Action<Actual, Model, T> action) => GenOperation.Create(this, name, action);
-    public GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, Model, T> action) => GenOperation.Create(this, action);
-    public GenMetamorphic<S> Metamorphic<S>(Func<T, string> name, Action<S, T> action1, Action<S, T> action2) => GenOperation.Create(this, name, action1, action2);
-    public GenMetamorphic<S> Metamorphic<S>(Action<S, T> action1, Action<S, T> action2) => GenOperation.Create(this, Check.Print, action1, action2);
+    public GenOperation<Actual, Model> Operation<Actual, Model>(Func<T, string> name, Action<Actual, T> actual, Action<Model, T> model) => GenOperation.Create(this, name, actual, model);
+    public GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, T> actual, Action<Model, T> model) => GenOperation.Create(this, actual, model);
+    public GenMetamorphic<S> Metamorphic<S>(Func<T, string> name, Action<S, T> action1, Action<S, T> action2) => GenMetamorphic.Create(this, name, action1, action2);
+    public GenMetamorphic<S> Metamorphic<S>(Action<S, T> action1, Action<S, T> action2) => GenMetamorphic.Create(this, Check.Print, action1, action2);
 
     /// <summary>Generator for an array of <typeparamref name="T"/></summary>
     public GenArray<T> Array => new(this);
@@ -1456,8 +1456,8 @@ public static class Gen
     public static GenOperation<T> Operation<T>(string name, Func<T, Task> async) => GenOperation.Create(name, (T t) => async(t).GetAwaiter().GetResult());
     public static GenOperation<T> Operation<T>(Action<T> action) => GenOperation.Create(action);
     public static GenOperation<T> Operation<T>(Func<T, Task> async) => GenOperation.Create((T t) => async(t).GetAwaiter().GetResult());
-    public static GenOperation<Actual, Model> Operation<Actual, Model>(string name, Action<Actual, Model> action) => GenOperation.Create(name, action);
-    public static GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, Model> action) => GenOperation.Create(action);
+    public static GenOperation<Actual, Model> Operation<Actual, Model>(string name, Action<Actual> actual, Action<Model> model) => GenOperation.Create(name, actual, model);
+    public static GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual> actual, Action<Model> model) => GenOperation.Create(actual, model);
 
     /// <summary>Generator for bool.</summary>
     public static readonly GenBool Bool = new();
@@ -2851,16 +2851,16 @@ public sealed class GenOperation<T> : Gen<(string, Action<T>)>
     public override (string, Action<T>) Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
 }
 
-public sealed class GenOperation<T1, T2> : Gen<(string, Action<T1, T2>)>
+public sealed class GenOperation<Actual, Model> : Gen<(string, Action<Actual>, Action<Model>)>
 {
+    readonly Gen<(string, Action<Actual>, Action<Model>)> gen;
     public bool AddOpNumber;
-    readonly Gen<(string, Action<T1, T2>)> gen;
-    internal GenOperation(Gen<(string, Action<T1, T2>)> gen, bool addOpNumber)
+    internal GenOperation(Gen<(string, Action<Actual>, Action<Model>)> gen, bool addOpNumber)
     {
         this.gen = gen;
         AddOpNumber = addOpNumber;
     }
-    public override (string, Action<T1, T2>) Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
+    public override (string, Action<Actual>, Action<Model>) Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
 }
 
 public sealed class GenMetamorphic<T> : Gen<(string, Action<T>, Action<T>)>
@@ -2876,18 +2876,22 @@ public static class GenOperation
         new(gen.Select<T, (string, Action<S>)>(t => (" " + Check.Print(t), s => action(s, t))), true);
     public static GenOperation<S> Create<S, T>(Gen<T> gen, Func<T, string> name, Action<S, T> action) =>
         new(gen.Select<T, (string, Action<S>)>(t => (name(t), s => action(s, t))), false);
-    public static GenOperation<S1, S2> Create<S1, S2, T>(Gen<T> gen, Action<S1, S2, T> action) =>
-        new(gen.Select<T, (string, Action<S1, S2>)>(t => (" " + Check.Print(t), (s1, s2) => action(s1, s2, t))), true);
-    public static GenOperation<S1, S2> Create<S1, S2, T>(Gen<T> gen, Func<T, string> name, Action<S1, S2, T> action) =>
-        new(gen.Select<T, (string, Action<S1, S2>)>(t => (name(t), (s1, s2) => action(s1, s2, t))), false);
+    public static GenOperation<Actual, Model> Create<Actual, Model, T>(Gen<T> gen, Action<Actual, T> actual, Action<Model, T> model) =>
+        new(gen.Select<T, (string, Action<Actual>, Action<Model>)>(t => (" " + Check.Print(t), a => actual(a, t), m => model(m, t))), true);
+    public static GenOperation<Actual, Model> Create<Actual, Model, T>(Gen<T> gen, Func<T, string> name, Action<Actual, T> actual, Action<Model, T> model) =>
+        new(gen.Select<T, (string, Action<Actual>, Action<Model>)>(t => (name(t), a => actual(a, t), m => model(m, t))), false);
+    public static GenOperation<Actual, Model> Create<Actual, Model>(Action<Actual> actual, Action<Model> model)
+        => new(Gen.Const(("", actual, model)), true);
+    public static GenOperation<Actual, Model> Create<Actual, Model>(string name, Action<Actual> actual, Action<Model> model)
+        => new(Gen.Const((name, actual, model)), false);
     public static GenOperation<T> Create<T>(Action<T> action)
         => new(Gen.Const(("", action)), true);
     public static GenOperation<T> Create<T>(string name, Action<T> action)
         => new(Gen.Const((name, action)), false);
-    public static GenOperation<T1, T2> Create<T1, T2>(Action<T1, T2> action)
-        => new(Gen.Const(("", action)), true);
-    public static GenOperation<T1, T2> Create<T1, T2>(string name, Action<T1, T2> action)
-        => new(Gen.Const((name, action)), false);
+}
+
+public static class GenMetamorphic
+{
     public static GenMetamorphic<S> Create<S, T>(Gen<T> gen, Func<T, string> name, Action<S, T> action1, Action<S, T> action2) =>
         new(gen.Select<T, (string, Action<S>, Action<S>)>(t => (name(t), s => action1(s, t), s => action2(s, t))));
 }

@@ -1277,9 +1277,9 @@ public static partial class Check
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
 
-    sealed class ModelBasedData<Actual, Model>(Actual actualState, Model modelState, uint stream, ulong seed, (string, Action<Actual, Model>)[] operations)
+    sealed class ModelBasedData<Actual, Model>(Actual actualState, Model modelState, uint stream, ulong seed, (string, Action<Actual>, Action<Model>)[] operations)
     {
-        public Actual ActualState = actualState; public Model ModelState = modelState; public uint Stream = stream; public ulong Seed = seed; public (string, Action<Actual, Model>)[] Operations = operations; public Exception? Exception;
+        public Actual ActualState = actualState; public Model ModelState = modelState; public uint Stream = stream; public ulong Seed = seed; public (string, Action<Actual>, Action<Model>)[] Operations = operations; public Exception? Exception;
     }
 
     sealed class GenInitial<Actual, Model>(Gen<(Actual, Model)> initial) : Gen<(Actual Actual, Model Model, uint Stream, ulong Seed)>
@@ -1316,12 +1316,12 @@ public static partial class Check
         printActual ??= Print;
         printModel ??= Print;
 
-        var opNameActions = new Gen<(string, Action<Actual, Model>)>[operations.Length];
+        var opNameActions = new Gen<(string, Action<Actual>, Action<Model>)>[operations.Length];
         for (int i = 0; i < operations.Length; i++)
         {
             var op = operations[i];
             var opName = "Op" + i;
-            opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2)) : op;
+            opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2, t.Item3)) : op;
         }
 
         new GenInitial<Actual, Model>(initial)
@@ -1331,7 +1331,10 @@ public static partial class Check
             try
             {
                 foreach (var operation in d.Operations)
-                    operation.Item2(d.ActualState, d.ModelState);
+                {
+                    operation.Item2(d.ActualState);
+                    operation.Item3(d.ModelState);
+                }
                 return equal(d.ActualState, d.ModelState);
             }
             catch (Exception e)

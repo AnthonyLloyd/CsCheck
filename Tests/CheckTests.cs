@@ -221,14 +221,10 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         Gen.Int[0, 5].List.Select(l => (new ConcurrentBag<int>(l), l))
         .SampleModelBased(
-            Gen.Int.Operation<ConcurrentBag<int>, List<int>>((bag, list, i) =>
-            {
-                bag.Add(i);
-                list.Add(i);
-            }),
-            Gen.Operation<ConcurrentBag<int>, List<int>>((bag, list) => Assert.Equal(bag.TryTake(out var i), list.Remove(i)))
-            , threads: 1
-        );
+            Gen.Int.Operation<ConcurrentBag<int>, List<int>>((bag, i) => bag.Add(i), (list, i) => list.Add(i)),
+            Gen.Operation<ConcurrentBag<int>, List<int>>(bag => bag.TryTake(out _), list => { if (list.Count > 0) list.RemoveAt(0); }),
+            equal: (bag, list) => bag.Count == list.Count
+        , threads: 1);
     }
 
     [Fact]
@@ -240,16 +236,6 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
             Gen.Operation<ConcurrentBag<int>>("TryTake()", bag => bag.TryTake(out _))
         );
     }
-
-    //[Fact]
-    //public void SampleConcurrent_List()
-    //{
-    //    Gen.Int.List
-    //    .SampleConcurrent(
-    //        Gen.Int.Operation<List<int>>(i => $"Add({i})", (list, i) => list.Add(i))
-    //    //Gen.Const<(string, Action<List<int>>)>(("Remove()", list => list.RemoveAt(0)))
-    //    );
-    //}
 
     [Fact]
     public void SampleConcurrent_ConcurrentDictionary()

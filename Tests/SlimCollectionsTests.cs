@@ -15,11 +15,9 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         Gen.Int.Array.Select(a => (new ListSlim<int>(a), new List<int>(a)))
         .SampleModelBased(
-            Gen.Int.Operation<ListSlim<int>, List<int>>((ls, l, i) =>
-            {
-                ls.Add(i);
-                l.Add(i);
-            })
+            Gen.Int.Operation<ListSlim<int>, List<int>>(
+                (ls, i) => ls.Add(i),
+                (l, i) => l.Add(i))
         );
     }
 
@@ -40,11 +38,10 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         Gen.Int.Array.Select(a => (new SetSlim<int>(a), new HashSet<int>(a)))
         .SampleModelBased(
-            Gen.Int.Operation<SetSlim<int>, HashSet<int>>((ls, l, i) =>
-            {
-                ls.Add(i);
-                l.Add(i);
-            })
+            Gen.Int.Operation<SetSlim<int>, HashSet<int>>(
+                (ss, i) => ss.Add(i),
+                (hs, i) => hs.Add(i)
+            )
         );
     }
 
@@ -100,11 +97,9 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
         Gen.Dictionary(Gen.Int, Gen.Byte)
         .Select(d => (new MapSlim<int, byte>(d), new Dictionary<int, byte>(d)))
         .SampleModelBased(
-            Gen.Select(Gen.Int[0, 100], Gen.Byte).Operation<MapSlim<int, byte>, Dictionary<int, byte>>((m, d, t) =>
-            {
-                m[t.Item1] = t.Item2;
-                d[t.Item1] = t.Item2;
-            })
+            Gen.Select(Gen.Int[0, 100], Gen.Byte).Operation<MapSlim<int, byte>, Dictionary<int, byte>>(
+                (m, t) => m[t.Item1] = t.Item2,
+                (d, t) => d[t.Item1] = t.Item2)
         );
     }
 

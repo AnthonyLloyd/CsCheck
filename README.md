@@ -229,15 +229,15 @@ SampleModelBased generates an initial actual and model and then applies a random
 ### SetSlim Add
 ```csharp
 [Fact]
-public void SetSlim_ModelBased()
+public void
+SetSlim_ModelBased()
 {
     Gen.Int.Array.Select(a => (new SetSlim<int>(a), new HashSet<int>(a)))
     .SampleModelBased(
-        Gen.Int.Operation<SetSlim<int>, HashSet<int>>((ls, l, i) =>
-        {
-            ls.Add(i);
-            l.Add(i);
-        })
+        Gen.Int.Operation<SetSlim<int>, HashSet<int>>(
+            (ss, i) => ss.Add(i),
+            (hs, i) => hs.Add(i)
+        )
         // ... other operations
     );
 }
