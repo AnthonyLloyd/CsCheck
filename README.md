@@ -11,7 +11,7 @@ This gives the following advantages over tree based shrinking libraries:
 - Random testing and shrinking are parallelized. This and PCG make it very fast.
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be continued later to give simpler cases for high dimensional problems.
-- Concurrency testing and random shrinking work well together. Repeat is not needed.
+- Parallel testing and random shrinking work well together. Repeat is not needed.
 
 See [why](https://github.com/AnthonyLloyd/CsCheck/blob/master/Why.md) you should use it, the [comparison](https://github.com/AnthonyLloyd/CsCheck/blob/master/Comparison.md) with other random testing libraries, or how CsCheck does in the [shrinking challenge](https://github.com/jlink/shrinking-challenge).
 In one [shrinking challenge test](https://github.com/jlink/shrinking-challenge/blob/main/challenges/binheap.md) CsCheck managed to shrink to a new smaller example than was thought possible and is not reached by any other testing library.
@@ -21,7 +21,7 @@ CsCheck also has functionality to make multiple types of testing simple and fast
 - [Random testing](#Random-testing)
 - [Model-based testing](#Model-based-testing)
 - [Metamorphic testing](#Metamorphic-testing)
-- [Concurrency testing](#Concurrency-testing)
+- [Parallel testing](#Parallel-testing)
 - [Causal profiling](#Causal-profiling)
 - [Regression testing](#Regression-testing)
 - [Performance testing](#Performance-testing)
@@ -267,21 +267,21 @@ public void MapSlim_Metamorphic()
 }
 ```
 
-## Concurrency testing
+## Parallel testing
 
-CsCheck has support for concurrency testing with full shrinking capability.
-A concurrent sequence of operations are run on an initial state and the result is compared to all the possible linearized versions.
-At least one of these must be equal to the concurrent version.
+CsCheck has support for parallels testing with full shrinking capability.
+A number of operations are run on an initial state in parallel and the result is compared to all the possible linearized versions.
+At least one of these must be equal to the parallel result.
 
 Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603) and [paper](https://github.com/AnthonyLloyd/AnthonyLloyd.github.io/raw/master/public/cscheck/finding-race-conditions.pdf). This is actually easier to implement with CsCheck than QuickCheck because the random shrinking does not need to repeat each step as QuickCheck does (10 times by default) to make shrinking deterministic.
 
 ### SetSlim
 ```csharp
 [Fact]
-public void SetSlim_Concurrency()
+public void SetSlim_Parallel()
 {
     Gen.Byte.Array.Select(a => new SetSlim<byte>(a))
-    .SampleConcurrent(
+    .SampleParallel(
         Gen.Byte.Operation<SetSlim<byte>>((l, i) => { lock (l) l.Add(i); }),
         Gen.Int.NonNegative.Operation<SetSlim<byte>>((l, i) => { if (i < l.Count) { var _ = l[i]; } }),
         Gen.Byte.Operation<SetSlim<byte>>((l, i) => { var _ = l.IndexOf(i); }),
@@ -610,7 +610,7 @@ timeout - The timeout in seconds to use for Faster (default 60 seconds).
 print - A function to convert the state to a string for error reporting (default Check.Print).  
 equal - A function to check if the two states are the same (default Check.Equal).  
 sigma - For Faster sigma is the number of standard deviations from the null hypothesis (default 6).  
-replay - The number of times to retry the seed to reproduce a SampleConcurrent fail (default 100).  
+replay - The number of times to retry the seed to reproduce a SampleParallel fail (default 100).  
 
 Global defaults can also be set via environment variables:
 

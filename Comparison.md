@@ -87,7 +87,7 @@ Size is also a better representation of comparison especially for collections or
 There are examples where increasing on one axis while decreasing on others can lead to smaller cases e.g. if Version fails for `2 * ma + mi + bu ≥ 255 * 2`
 CsCheck will be able to shrink to `255.0.0` but [Hedgehog](https://github.com/hedgehogqa) won't.
 
-For concurrency testing random shrinkers also has an advantage. Concurrency tests may not fail deterministically.
+For parallel testing random shrinkers also has an advantage. Parallel tests may not fail deterministically.
 This is a real problem for path explorer shrinkers. The only solution is to repeat each test multiple times (10 for QuickCheck) since they need to follow defined paths.
 For a random shrinker you can just continue testing different random cases until one fails and limit the size to that each time.
 

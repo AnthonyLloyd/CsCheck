@@ -99,9 +99,9 @@ public class SieveLruCacheTests
     }
 
     [Fact]
-    public void SampleConcurrent()
+    public void SampleParallel()
     {
-        Check.SampleConcurrent(
+        Check.SampleParallel(
             Gen.Const(() => new SieveLruCache<int, int>(4)),
             Gen.Int[1, 5].Operation<SieveLruCache<int, int>>((d, i) => d.GetOrAdd(i, i => i)),
             equal: (a, b) => Check.Equal(a.Keys, b.Keys),

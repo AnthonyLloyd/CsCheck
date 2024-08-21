@@ -475,7 +475,7 @@ public static partial class Check
         return actual.Equals(model);
     }
 
-    internal static void Run<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[]? threadIds = null)
+    internal static void Run<T>(T parallelState, (string, Action<T>)[] operations, int threads, int[]? threadIds = null)
     {
         Exception? exception = null;
         var opId = -1;
@@ -488,7 +488,7 @@ public static partial class Check
                 while ((i = Interlocked.Increment(ref opId)) < operations.Length)
                 {
                     if (threadIds is not null) threadIds[i] = tid;
-                    try { operations[i].Item2(concurrentState); }
+                    try { operations[i].Item2(parallelState); }
                     catch (Exception e)
                     {
                         if (exception is null)
@@ -505,7 +505,7 @@ public static partial class Check
         if (exception is not null) throw exception;
     }
 
-    internal static void RunReplay<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[] threadIds)
+    internal static void RunReplay<T>(T parallelState, (string, Action<T>)[] operations, int threads, int[] threadIds)
     {
         Exception? exception = null;
         var runners = new Thread[threads];
@@ -518,7 +518,7 @@ public static partial class Check
                 {
                     if (threadIds[i] == tid)
                     {
-                        try { operations[i].Item2(concurrentState); }
+                        try { operations[i].Item2(parallelState); }
                         catch (Exception e)
                         {
                             if (exception is null)
