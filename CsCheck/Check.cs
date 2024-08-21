@@ -1575,8 +1575,6 @@ public static partial class Check
         public T State = state; public uint Stream = stream; public ulong Seed = seed; public (string, Action<T>)[] Operations = operations; public int Threads = threads; public int[]? ThreadIds; public Exception? Exception;
     }
 
-    internal const int MAX_CONCURRENT_OPERATIONS = 10;
-
     sealed class GenConcurrent<T>(Gen<T> initial) : Gen<(T Value, uint Stream, ulong Seed)>
     {
         public override (T, uint, ulong) Generate(PCG pcg, Size? min, out Size size)
@@ -1595,6 +1593,7 @@ public static partial class Check
     /// <param name="operations">The operation generators that can act on the state concurrently.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1602,7 +1601,7 @@ public static partial class Check
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T>[] operations, Func<T, T, bool>? equal = null, string? seed = null,
-        long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
     {
         equal ??= Equal;
         seed ??= Seed;
@@ -1630,7 +1629,7 @@ public static partial class Check
         bool firstIteration = true;
 
         new GenConcurrent<T>(initial)
-        .Select(Gen.OneOf(opNameActions).Array[1, MAX_CONCURRENT_OPERATIONS]
+        .Select(Gen.OneOf(opNameActions).Array[2, maxParallelOperations]
         .SelectMany(ops => Gen.Int[1, Math.Min(threads, ops.Length)].Select(i => (ops, i))), (a, b) =>
             new ConcurrentData<T>(a.Value, a.Stream, a.Seed, b.ops, b.i)
         )
@@ -1710,6 +1709,7 @@ public static partial class Check
     /// <param name="operation">An operation generator that can act on the state concurrently.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1718,8 +1718,8 @@ public static partial class Check
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation, Func<T, T, bool>? equal = null, string? seed = null,
-        long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
-        => SampleConcurrent(initial, [operation], equal, seed, iter, time, threads, print, replay, writeLine);
+        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleConcurrent(initial, [operation], equal, seed, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1730,6 +1730,7 @@ public static partial class Check
     /// <param name="operation2">An operation generator that can act on the state concurrently.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1737,9 +1738,9 @@ public static partial class Check
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, Func<T, T, bool>? equal = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
-        => SampleConcurrent(initial, [operation1, operation2], equal, seed, iter, time, threads, print, replay, writeLine);
+    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, Func<T, T, bool>? equal = null, string? seed = null,
+        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleConcurrent(initial, [operation1, operation2], equal, seed, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1751,6 +1752,7 @@ public static partial class Check
     /// <param name="operation3">An operation generator that can act on the state concurrently.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1758,9 +1760,9 @@ public static partial class Check
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, Func<T, T, bool>? equal = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
-        => SampleConcurrent(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, print, replay, writeLine);
+    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, Func<T, T, bool>? equal = null, string? seed = null,
+        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleConcurrent(initial, [operation1, operation2, operation3], equal, seed, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1773,6 +1775,7 @@ public static partial class Check
     /// <param name="operation4">An operation generator that can act on the state concurrently.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1780,10 +1783,9 @@ public static partial class Check
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4,
-        Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1,
-         Action<string>? writeLine = null)
-        => SampleConcurrent(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, print, replay, writeLine);
+    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4, Func<T, T, bool>? equal = null, string? seed = null,
+        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleConcurrent(initial, [operation1, operation2, operation3, operation4], equal, seed, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1797,6 +1799,7 @@ public static partial class Check
     /// <param name="operation5">An operation generator that can act on the state concurrently.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1804,11 +1807,11 @@ public static partial class Check
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4,
-        GenOperation<T> operation5, Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
+    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5, Func<T, T, bool>? equal = null, string? seed = null,
+        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
         int replay = -1, Action<string>? writeLine = null)
         => SampleConcurrent(initial, [operation1, operation2, operation3, operation4, operation5],
-            equal, seed, iter, time, threads, print, replay, writeLine);
+            equal, seed, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample model-based operations on a random initial state concurrently.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1823,6 +1826,7 @@ public static partial class Check
     /// <param name="operation6">An operation generator that can act on the state concurrently.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1830,11 +1834,10 @@ public static partial class Check
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4,
-        GenOperation<T> operation5, GenOperation<T> operation6, Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+    public static void SampleConcurrent<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5, GenOperation<T> operation6, Func<T, T, bool>? equal = null, string? seed = null,
+        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleConcurrent(initial, [operation1, operation2, operation3, operation4, operation5, operation6],
-            equal, seed, iter, time, threads, print, replay, writeLine);
+            equal, seed, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Assert actual is in line with expected using a chi-squared test to sigma.</summary>
     /// <param name="expected">The expected bin counts.</param>

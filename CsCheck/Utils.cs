@@ -475,10 +475,8 @@ public static partial class Check
         return actual.Equals(model);
     }
 
-    static readonly int[] DummyArray = new int[MAX_CONCURRENT_OPERATIONS];
     internal static void Run<T>(T concurrentState, (string, Action<T>)[] operations, int threads, int[]? threadIds = null)
     {
-        threadIds ??= DummyArray;
         Exception? exception = null;
         var opId = -1;
         var runners = new Thread[threads];
@@ -489,7 +487,7 @@ public static partial class Check
                 int i, tid = (int)threadId!;
                 while ((i = Interlocked.Increment(ref opId)) < operations.Length)
                 {
-                    threadIds[i] = tid;
+                    if (threadIds is not null) threadIds[i] = tid;
                     try { operations[i].Item2(concurrentState); }
                     catch (Exception e)
                     {
