@@ -1593,7 +1593,8 @@ public static partial class Check
     /// <param name="operations">The operation generators that can act on the state in parallel.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1601,7 +1602,7 @@ public static partial class Check
     /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     public static void SampleParallel<T>(this Gen<T> initial, GenOperation<T>[] operations, Func<T, T, bool>? equal = null, string? seed = null,
-        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
     {
         equal ??= Equal;
         seed ??= Seed;
@@ -1709,7 +1710,8 @@ public static partial class Check
     /// <param name="operation">An operation generator that can act on the state in parallel.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1718,8 +1720,8 @@ public static partial class Check
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<T>(this Gen<T> initial, GenOperation<T> operation, Func<T, T, bool>? equal = null, string? seed = null,
-        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
-        => SampleParallel(initial, [operation], equal, seed, maxParallelOperations, iter, time, threads, print, replay, writeLine);
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleParallel(initial, [operation], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample operations on a random initial state in parallel.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1730,7 +1732,8 @@ public static partial class Check
     /// <param name="operation2">An operation generator that can act on the state in parallel.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1739,8 +1742,8 @@ public static partial class Check
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, Func<T, T, bool>? equal = null, string? seed = null,
-        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
-        => SampleParallel(initial, [operation1, operation2], equal, seed, maxParallelOperations, iter, time, threads, print, replay, writeLine);
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleParallel(initial, [operation1, operation2], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample operations on a random initial state in parallel.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1752,7 +1755,8 @@ public static partial class Check
     /// <param name="operation3">An operation generator that can act on the state in parallel.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1761,8 +1765,8 @@ public static partial class Check
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, Func<T, T, bool>? equal = null, string? seed = null,
-        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
-        => SampleParallel(initial, [operation1, operation2, operation3], equal, seed, maxParallelOperations, iter, time, threads, print, replay, writeLine);
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleParallel(initial, [operation1, operation2, operation3], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample operations on a random initial state in parallel.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1775,7 +1779,8 @@ public static partial class Check
     /// <param name="operation4">An operation generator that can act on the state in parallel.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1784,8 +1789,8 @@ public static partial class Check
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4, Func<T, T, bool>? equal = null, string? seed = null,
-        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
-        => SampleParallel(initial, [operation1, operation2, operation3, operation4], equal, seed, maxParallelOperations, iter, time, threads, print, replay, writeLine);
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleParallel(initial, [operation1, operation2, operation3, operation4], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample operations on a random initial state in parallel.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1799,7 +1804,8 @@ public static partial class Check
     /// <param name="operation5">An operation generator that can act on the state in parallel.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1808,10 +1814,9 @@ public static partial class Check
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5, Func<T, T, bool>? equal = null, string? seed = null,
-        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
         int replay = -1, Action<string>? writeLine = null)
-        => SampleParallel(initial, [operation1, operation2, operation3, operation4, operation5],
-            equal, seed, maxParallelOperations, iter, time, threads, print, replay, writeLine);
+        => SampleParallel(initial, [operation1, operation2, operation3, operation4, operation5], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Sample operations on a random initial state in parallel.
     /// The result is compared against the result of the possible sequential permutations.
@@ -1826,7 +1831,8 @@ public static partial class Check
     /// <param name="operation6">An operation generator that can act on the state in parallel.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
@@ -1835,9 +1841,8 @@ public static partial class Check
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5, GenOperation<T> operation6, Func<T, T, bool>? equal = null, string? seed = null,
-        int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
-        => SampleParallel(initial, [operation1, operation2, operation3, operation4, operation5, operation6],
-            equal, seed, maxParallelOperations, iter, time, threads, print, replay, writeLine);
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleParallel(initial, [operation1, operation2, operation3, operation4, operation5, operation6], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
     /// <summary>Assert actual is in line with expected using a chi-squared test to sigma.</summary>
     /// <param name="expected">The expected bin counts.</param>
