@@ -1570,9 +1570,16 @@ public static partial class Check
         });
     }
 
-    sealed class SampleParallelData<T>(T state, uint stream, ulong seed, (string, Action<T>)[] operations, int threads)
+    sealed class SampleParallelData<T>(T state, uint stream, ulong seed, (string, Action<T>)[] sequencialOperations, (string, Action<T>)[] parallelOperations, int threads)
     {
-        public T State = state; public uint Stream = stream; public ulong Seed = seed; public (string, Action<T>)[] Operations = operations; public int Threads = threads; public int[]? ThreadIds; public Exception? Exception;
+        public T InitialState = state;
+        public uint Stream = stream;
+        public ulong Seed = seed;
+        public (string, Action<T>)[] SequencialOperations = sequencialOperations;
+        public (string, Action<T>)[] ParallelOperations = parallelOperations;
+        public int Threads = threads;
+        public int[]? ThreadIds;
+        public Exception? Exception;
     }
 
     sealed class GenSampleParallel<T>(Gen<T> initial) : Gen<(T Value, uint Stream, ulong Seed)>
@@ -1629,12 +1636,14 @@ public static partial class Check
 
         bool firstIteration = true;
 
-        new GenSampleParallel<T>(initial)
-        .Select(Gen.OneOf(opNameActions).Array[2, maxParallelOperations]
-        .SelectMany(ops => Gen.Int[1, Math.Min(threads, ops.Length)].Select(i => (ops, i))), (a, b) =>
-            new SampleParallelData<T>(a.Value, a.Stream, a.Seed, b.ops, b.i)
-        )
-        .Sample(cd =>
+        var genOps = Gen.OneOf(opNameActions);
+        Gen.Int[2, maxParallelOperations]
+        .SelectMany(np => Gen.Int[2, Math.Min(threads, np)].Select(nt => (nt, np)))
+        .SelectMany((nt, np) => Gen.Int[0, maxSequentialOperations].Select(ns => (ns, nt, np)))
+        .SelectMany((ns, nt, np) => new GenSampleParallel<T>(initial).Select(genOps.Array[ns], genOps.Array[np])
+                                    .Select((initial, sequencial, parallel) => (initial, sequencial, nt, parallel)))
+        .Select((initial, sequencial, threads, parallel) => new SampleParallelData<T>(initial.Value, initial.Stream, initial.Seed, sequencial, parallel, threads))
+        .Sample(spd =>
         {
             bool linearizable = false;
             do
@@ -1642,22 +1651,22 @@ public static partial class Check
                 try
                 {
                     if (replayThreads is null)
-                        Run(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = new int[cd.Operations.Length]);
+                        Run(spd.InitialState, spd.SequencialOperations, spd.ParallelOperations, spd.Threads, spd.ThreadIds = new int[spd.ParallelOperations.Length]);
                     else
-                        RunReplay(cd.State, cd.Operations, cd.Threads, cd.ThreadIds = replayThreads);
+                        RunReplay(spd.InitialState, spd.SequencialOperations, spd.ParallelOperations, spd.Threads, spd.ThreadIds = replayThreads);
                 }
                 catch (Exception e)
                 {
-                    cd.Exception = e;
+                    spd.Exception = e;
                     break;
                 }
-                Parallel.ForEach(Permutations(cd.ThreadIds, cd.Operations), (sequence, state) =>
+                Parallel.ForEach(Permutations(spd.ThreadIds, spd.ParallelOperations), (sequence, state) =>
                 {
-                    var linearState = initial.Generate(new PCG(cd.Stream, cd.Seed), null, out _);
+                    var linearState = initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _);
                     try
                     {
-                        Run(linearState, sequence, 1);
-                        if (equal(cd.State, linearState))
+                        Run(linearState, spd.SequencialOperations, sequence, 1);
+                        if (equal(spd.InitialState, linearState))
                         {
                             linearizable = true;
                             state.Stop();
@@ -1669,23 +1678,23 @@ public static partial class Check
             firstIteration = false;
             return linearizable;
         }, writeLine, seed, iter, time, threads: 1,
-        p =>
+        spd =>
         {
             print ??= Print;
-            if (p == null) return "";
+            if (spd == null) return "";
             var sb = new StringBuilder();
-            sb.Append("\n   Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
-            sb.Append("\n   On Threads: ").Append(Print(p.ThreadIds));
-            sb.Append("\nInitial state: ").Append(print(initial.Generate(new PCG(p.Stream, p.Seed), null, out _)));
-            sb.Append("\n  Final state: ").Append(p.Exception is not null ? p.Exception.ToString() : print(p.State));
+            sb.Append("\n   Operations: ").Append(Print(spd.ParallelOperations.Select(i => i.Item1).ToList()));
+            sb.Append("\n   On Threads: ").Append(Print(spd.ThreadIds));
+            sb.Append("\nInitial state: ").Append(print(initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _)));
+            sb.Append("\n  Final state: ").Append(spd.Exception is not null ? spd.Exception.ToString() : print(spd.InitialState));
             bool first = true;
-            foreach (var sequence in Permutations(p.ThreadIds!, p.Operations))
+            foreach (var sequence in Permutations(spd.ThreadIds!, spd.ParallelOperations))
             {
-                var linearState = initial.Generate(new PCG(p.Stream, p.Seed), null, out _);
+                var linearState = initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _);
                 string result;
                 try
                 {
-                    Run(linearState, sequence, 1);
+                    Run(linearState, spd.SequencialOperations, sequence, 1);
                     result = print(linearState);
                 }
                 catch (Exception e)

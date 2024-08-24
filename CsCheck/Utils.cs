@@ -475,8 +475,10 @@ public static partial class Check
         return actual.Equals(model);
     }
 
-    internal static void Run<T>(T parallelState, (string, Action<T>)[] operations, int threads, int[]? threadIds = null)
+    internal static void Run<T>(T initialState, (string, Action<T>)[] sequencialOperations, (string, Action<T>)[] parallelOperations, int threads, int[]? threadIds = null)
     {
+        for (int i = 0; i < sequencialOperations.Length; i++)
+            sequencialOperations[i].Item2(initialState);
         Exception? exception = null;
         var opId = -1;
         var runners = new Thread[threads];
@@ -485,16 +487,16 @@ public static partial class Check
             runners[threads] = new Thread(threadId =>
             {
                 int i, tid = (int)threadId!;
-                while ((i = Interlocked.Increment(ref opId)) < operations.Length)
+                while ((i = Interlocked.Increment(ref opId)) < parallelOperations.Length)
                 {
                     if (threadIds is not null) threadIds[i] = tid;
-                    try { operations[i].Item2(parallelState); }
+                    try { parallelOperations[i].Item2(initialState); }
                     catch (Exception e)
                     {
                         if (exception is null)
                         {
                             exception = e;
-                            Interlocked.Exchange(ref opId, operations.Length);
+                            Interlocked.Exchange(ref opId, parallelOperations.Length);
                         }
                     }
                 }
@@ -505,8 +507,10 @@ public static partial class Check
         if (exception is not null) throw exception;
     }
 
-    internal static void RunReplay<T>(T parallelState, (string, Action<T>)[] operations, int threads, int[] threadIds)
+    internal static void RunReplay<T>(T initialState, (string, Action<T>)[] sequencialOperations, (string, Action<T>)[] parallelOperations, int threads, int[] threadIds)
     {
+        for (int i = 0; i < sequencialOperations.Length; i++)
+            sequencialOperations[i].Item2(initialState);
         Exception? exception = null;
         var runners = new Thread[threads];
         while (--threads >= 0)
@@ -514,17 +518,17 @@ public static partial class Check
             runners[threads] = new Thread(threadId =>
             {
                 int opId = -1, i = -1, tid = (int)threadId!;
-                while ((i = Interlocked.Increment(ref opId)) < operations.Length)
+                while ((i = Interlocked.Increment(ref opId)) < parallelOperations.Length)
                 {
                     if (threadIds[i] == tid)
                     {
-                        try { operations[i].Item2(parallelState); }
+                        try { parallelOperations[i].Item2(initialState); }
                         catch (Exception e)
                         {
                             if (exception is null)
                             {
                                 exception = e;
-                                Interlocked.Exchange(ref opId, operations.Length);
+                                Interlocked.Exchange(ref opId, parallelOperations.Length);
                             }
                         }
                     }
