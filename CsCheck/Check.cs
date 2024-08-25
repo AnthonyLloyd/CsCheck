@@ -1582,6 +1582,19 @@ public static partial class Check
         public Exception? Exception;
     }
 
+    sealed class SampleParallelData<Actual, Model>(Actual actual, Model model, uint stream, ulong seed, (string, Action<Actual>, Action<Model>)[] sequencialOperations, (string, Action<Actual>, Action<Model>)[] parallelOperations, int threads)
+    {
+        public Actual InitialActual = actual;
+        public Model InitialModel = model;
+        public uint Stream = stream;
+        public ulong Seed = seed;
+        public (string, Action<Actual>, Action<Model>)[] SequencialOperations = sequencialOperations;
+        public (string, Action<Actual>, Action<Model>)[] ParallelOperations = parallelOperations;
+        public int Threads = threads;
+        public int[]? ThreadIds;
+        public Exception? Exception;
+    }
+
     sealed class GenSampleParallel<T>(Gen<T> initial) : Gen<(T Value, uint Stream, ulong Seed)>
     {
         public override (T, uint, ulong) Generate(PCG pcg, Size? min, out Size size)
@@ -1589,6 +1602,17 @@ public static partial class Check
             var stream = pcg.Stream;
             var seed = pcg.Seed;
             return (initial.Generate(pcg, null, out size), stream, seed);
+        }
+    }
+
+    sealed class GenSampleParallel<Actual, Model>(Gen<(Actual, Model)> initial) : Gen<(Actual Actual, Model Model, uint Stream, ulong Seed)>
+    {
+        public override (Actual, Model, uint, ulong) Generate(PCG pcg, Size? min, out Size size)
+        {
+            var stream = pcg.Stream;
+            var seed = pcg.Seed;
+            var (actual, model) = initial.Generate(pcg, null, out size);
+            return (actual, model, stream, seed);
         }
     }
 
@@ -1852,6 +1876,134 @@ public static partial class Check
     public static void SampleParallel<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5, GenOperation<T> operation6, Func<T, T, bool>? equal = null, string? seed = null,
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3, operation4, operation5, operation6], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
+
+    /// <summary>Sample operations on a random initial actual state in parallel.
+    /// The actual result is compared against the model result of the possible sequential permutations.
+    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.
+    /// There is no need for the model operations to be thread safe as they are only run sequencially.</summary>
+    /// <param name="initial">The initial actual and model state generator.</param>
+    /// <param name="operations">The actual and model operation generators that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    public static void SampleParallel<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model>[] operations, Func<Actual, Model, bool>? equal = null, string? seed = null,
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
+    {
+        equal ??= ModelEqual;
+        seed ??= Seed;
+        if (iter == -1) iter = Iter;
+        if (time == -1) time = Time;
+        if (threads == -1) threads = Threads;
+        if (replay == -1) replay = Replay;
+        int[]? replayThreads = null;
+        printActual ??= Print;
+        printModel ??= Print;
+        if (seed?.Contains('[') == true)
+        {
+            int i = seed.IndexOf('[');
+            int j = seed.IndexOf(']', i + 1);
+            replayThreads = seed.Substring(i + 1, j - i - 1).Split(',').Select(int.Parse).ToArray();
+            seed = seed[..i];
+        }
+
+        var opNameActions = new Gen<(string, Action<Actual>, Action<Model>)>[operations.Length];
+        for (int i = 0; i < operations.Length; i++)
+        {
+            var op = operations[i];
+            var opName = "Op" + i;
+            opNameActions[i] = op.AddOpNumber ? op.Select((name, actual, model) => (opName + name, actual, model)) : op;
+        }
+
+        bool firstIteration = true;
+
+        var genOps = Gen.OneOf(opNameActions);
+        Gen.Int[2, maxParallelOperations]
+        .SelectMany(np => Gen.Int[2, Math.Min(threads, np)].Select(nt => (nt, np)))
+        .SelectMany((nt, np) => Gen.Int[0, maxSequentialOperations].Select(ns => (ns, nt, np)))
+        .SelectMany((ns, nt, np) => new GenSampleParallel<Actual, Model>(initial).Select(genOps.Array[ns], genOps.Array[np])
+                                    .Select((initial, sequencial, parallel) => (initial, sequencial, nt, parallel)))
+        .Select((initial, sequencial, threads, parallel) => new SampleParallelData<Actual, Model>(initial.Actual, initial.Model, initial.Stream, initial.Seed, sequencial, parallel, threads))
+        .Sample(spd =>
+        {
+            bool linearizable = false;
+            do
+            {
+                var actualSequencialOperations = Array.ConvertAll(spd.SequencialOperations, i => (i.Item1, i.Item2));
+                var actualParallelOperations = Array.ConvertAll(spd.ParallelOperations, i => (i.Item1, i.Item2));
+                try
+                {
+                    if (replayThreads is null)
+                        Run(spd.InitialActual, actualSequencialOperations, actualParallelOperations, spd.Threads, spd.ThreadIds = new int[spd.ParallelOperations.Length]);
+                    else
+                        RunReplay(spd.InitialActual, actualSequencialOperations, actualParallelOperations, spd.Threads, spd.ThreadIds = replayThreads);
+                }
+                catch (Exception e)
+                {
+                    spd.Exception = e;
+                    break;
+                }
+                var modelSequencialOperations = Array.ConvertAll(spd.SequencialOperations, i => (i.Item1, i.Item3));
+                var modelParallelOperations = Array.ConvertAll(spd.ParallelOperations, i => (i.Item1, i.Item3));
+                Parallel.ForEach(Permutations(spd.ThreadIds, modelParallelOperations), (sequence, state) =>
+                {
+                    var (_, initialModel) = initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _);
+                    try
+                    {
+                        Run(initialModel, modelSequencialOperations, sequence, 1);
+                        if (equal(spd.InitialActual, initialModel))
+                        {
+                            linearizable = true;
+                            state.Stop();
+                        }
+                    }
+                    catch { state.Stop(); }
+                });
+            } while (linearizable && firstIteration && seed is not null && --replay > 0);
+            firstIteration = false;
+            return linearizable;
+        }, writeLine, seed, iter, time, threads: 1,
+        spd =>
+        {
+            if (spd == null) return "";
+            var sb = new StringBuilder();
+            sb.Append("\n   Operations: ").Append(Print(spd.ParallelOperations.Select(i => i.Item1).ToList()));
+            sb.Append("\n   On Threads: ").Append(Print(spd.ThreadIds));
+            sb.Append("\nInitial state: ").Append(printActual(initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _).Item1));
+            sb.Append("\n  Final state: ").Append(spd.Exception is not null ? spd.Exception.ToString() : printActual(spd.InitialActual));
+            var modelSequencialOperations = Array.ConvertAll(spd.SequencialOperations, i => (i.Item1, i.Item3));
+            var modelParallelOperations = Array.ConvertAll(spd.ParallelOperations, i => (i.Item1, i.Item3));
+            bool first = true;
+            foreach (var sequence in Permutations(spd.ThreadIds!, modelParallelOperations))
+            {
+                var (_, initialModel) = initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _);
+                string result;
+                try
+                {
+                    Run(initialModel, modelSequencialOperations, sequence, 1);
+                    result = printModel(initialModel);
+                }
+                catch (Exception e)
+                {
+                    result = e.ToString();
+                }
+                sb.Append(first ? "\n   Linearized: " : "\n             : ");
+                sb.Append(Print(sequence.Select(i => i.Item1).ToList()));
+                sb.Append(" -> ");
+                sb.Append(result);
+                first = false;
+            }
+            return sb.ToString();
+        });
+    }
 
     /// <summary>Assert actual is in line with expected using a chi-squared test to sigma.</summary>
     /// <param name="expected">The expected bin counts.</param>
