@@ -1877,11 +1877,9 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3, operation4, operation5, operation6], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
-    /// <summary>Sample operations on a random initial actual state in parallel.
-    /// The actual result is compared against the model result of the possible sequential permutations.
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequencially on the initial model state.
     /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.
-    /// There is no need for the model operations to be thread safe as they are only run sequencially.</summary>
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial actual and model state generator.</param>
     /// <param name="operations">The actual and model operation generators that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
     /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
@@ -2004,6 +2002,147 @@ public static partial class Check
             return sb.ToString();
         });
     }
+
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequencially on the initial model state.
+    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial actual and model state generator.</param>
+    /// <param name="operation">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void SampleParallel<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation, Func<Actual, Model, bool>? equal = null, string? seed = null,
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleParallel(initial, [operation], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
+
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequencially on the initial model state.
+    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial actual and model state generator.</param>
+    /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void SampleParallel<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1, GenOperation<Actual, Model> operation2, Func<Actual, Model, bool>? equal = null, string? seed = null,
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleParallel(initial, [operation1, operation2], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
+
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequencially on the initial model state.
+    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial actual and model state generator.</param>
+    /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation3">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void SampleParallel<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1, GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, Func<Actual, Model, bool>? equal = null, string? seed = null,
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleParallel(initial, [operation1, operation2, operation3], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
+
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequencially on the initial model state.
+    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial actual and model state generator.</param>
+    /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation3">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation4">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void SampleParallel<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1, GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4, Func<Actual, Model, bool>? equal = null, string? seed = null,
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleParallel(initial, [operation1, operation2, operation3, operation4], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
+
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequencially on the initial model state.
+    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial actual and model state generator.</param>
+    /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation3">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation4">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation5">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void SampleParallel<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1, GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4, GenOperation<Actual, Model> operation5, Func<Actual, Model, bool>? equal = null, string? seed = null,
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleParallel(initial, [operation1, operation2, operation3, operation4, operation5], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
+
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequencially on the initial model state.
+    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial actual and model state generator.</param>
+    /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation3">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation4">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation5">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="operation6">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequencially.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
+    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void SampleParallel<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1, GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4, GenOperation<Actual, Model> operation5, GenOperation<Actual, Model> operation6, Func<Actual, Model, bool>? equal = null, string? seed = null,
+        int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
+        => SampleParallel(initial, [operation1, operation2, operation3, operation4, operation5, operation6], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
 
     /// <summary>Assert actual is in line with expected using a chi-squared test to sigma.</summary>
     /// <param name="expected">The expected bin counts.</param>
