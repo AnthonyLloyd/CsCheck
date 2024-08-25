@@ -261,6 +261,16 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
+    public void SampleParallelModel_ConcurrentQueue()
+    {
+        Gen.Const(() => (new ConcurrentQueue<int>(), new Queue<int>()))
+        .SampleParallel(
+            Gen.Int.Operation<ConcurrentQueue<int>, Queue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i), (q, i) => q.Enqueue(i)),
+            Gen.Operation<ConcurrentQueue<int>, Queue<int>>("TryDequeue()", q => q.TryDequeue(out _), q => q.TryDequeue(out _))
+        );
+    }
+
+    [Fact]
     public void Equality()
     {
         Check.Equality(Gen.Int);
