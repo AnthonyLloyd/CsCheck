@@ -24,7 +24,14 @@ CsCheck also makes parallel, performance and regression testing simple and fast.
         <PackageTags>quickcheck;random;model-based;metamorphic;parallel;performance;causal-profiling;regression;testing</PackageTags>
         <Version>4.0.0</Version>
         <PackageReleaseNotes>
-Update to .NET 8
+Added SampleParallel overloads using a sequencially run model for linearization.
+Added running operations sequentially before parallel to SampleParallel.
+Added maxSequentialOperations and maxParallelOperations parameters to SampleParallel.
+
+BREAKING CHANGES:
+- Now targets net8.0, version 3.2.2 was the last to target net6.0.
+- SampleConcurrent renamed to SampleParallel.
+- GenOperation&lt;Actual,Model&gt; takes separate actions for actual and model.
         </PackageReleaseNotes>
         <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>
