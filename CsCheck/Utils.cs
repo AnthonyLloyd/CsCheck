@@ -21,6 +21,8 @@ using System.Runtime.CompilerServices;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System;
 
 public sealed class CsCheckException : Exception
 {
@@ -475,69 +477,82 @@ public static partial class Check
         return actual.Equals(model);
     }
 
-    internal static void Run<T>(T initialState, (string, Action<T>)[] sequencialOperations, (string, Action<T>)[] parallelOperations, int threads, int[]? threadIds = null)
+    sealed class RunWorker<T>(T state, (string, Action<T>)[] parallelOperations, int[]? threadIds) : IThreadPoolWorkItem
     {
-        for (int i = 0; i < sequencialOperations.Length; i++)
-            sequencialOperations[i].Item2(initialState);
-        Exception? exception = null;
-        var opId = -1;
-        var runners = new Thread[threads];
-        while (--threads >= 0)
+        int opId = -1, threadId = -1;
+        public volatile bool Hold = true;
+        public Exception? Exception;
+        public void Execute()
         {
-            runners[threads] = new Thread(threadId =>
+            int i, tid = Interlocked.Increment(ref threadId);
+            while (Hold) { }
+            while ((i = Interlocked.Increment(ref opId)) < parallelOperations.Length)
             {
-                int i, tid = (int)threadId!;
-                while ((i = Interlocked.Increment(ref opId)) < parallelOperations.Length)
+                if (threadIds is not null) threadIds[i] = tid;
+                try { parallelOperations[i].Item2(state); }
+                catch (Exception e)
                 {
-                    if (threadIds is not null) threadIds[i] = tid;
-                    try { parallelOperations[i].Item2(initialState); }
-                    catch (Exception e)
+                    if (Exception is null)
                     {
-                        if (exception is null)
-                        {
-                            exception = e;
-                            Interlocked.Exchange(ref opId, parallelOperations.Length);
-                        }
+                        Exception = e;
+                        opId = 1_000_000;
                     }
                 }
-            });
+            }
         }
-        for (int i = 0; i < runners.Length; i++) runners[i].Start(i);
-        for (int i = 0; i < runners.Length; i++) runners[i].Join();
-        if (exception is not null) throw exception;
     }
 
-    internal static void RunReplay<T>(T initialState, (string, Action<T>)[] sequencialOperations, (string, Action<T>)[] parallelOperations, int threads, int[] threadIds)
+    internal static void Run<T>(T state, (string, Action<T>)[] sequencialOperations, (string, Action<T>)[] parallelOperations, int threads, int[]? threadIds = null)
     {
         for (int i = 0; i < sequencialOperations.Length; i++)
-            sequencialOperations[i].Item2(initialState);
-        Exception? exception = null;
+            sequencialOperations[i].Item2(state);
+        var worker = new RunWorker<T>(state, parallelOperations, threadIds);
         var runners = new Thread[threads];
-        while (--threads >= 0)
+        for (int i = 0; i < runners.Length; i++) runners[i] = new Thread(worker.Execute);
+        for (int i = 0; i < runners.Length; i++) runners[i].Start();
+        worker.Hold = false;
+        for (int i = 0; i < runners.Length; i++) runners[i].Join();
+        if (worker.Exception is not null) throw worker.Exception;
+    }
+
+    sealed class RunReplayWorker<T>(T state, (string, Action<T>)[] parallelOperations, int[] threadIds) : IThreadPoolWorkItem
+    {
+        int threadId = -1;
+        public volatile bool Hold = true;
+        public Exception? Exception;
+        public void Execute()
         {
-            runners[threads] = new Thread(threadId =>
+            int i, opId = -1, tid = Interlocked.Increment(ref threadId);
+            while (Hold) { }
+            while ((i = Interlocked.Increment(ref opId)) < parallelOperations.Length)
             {
-                int opId = -1, i = -1, tid = (int)threadId!;
-                while ((i = Interlocked.Increment(ref opId)) < parallelOperations.Length)
+                if (threadIds[i] == tid)
                 {
-                    if (threadIds[i] == tid)
+                    try { parallelOperations[i].Item2(state); }
+                    catch (Exception e)
                     {
-                        try { parallelOperations[i].Item2(initialState); }
-                        catch (Exception e)
+                        if (Exception is null)
                         {
-                            if (exception is null)
-                            {
-                                exception = e;
-                                Interlocked.Exchange(ref opId, parallelOperations.Length);
-                            }
+                            Exception = e;
+                            opId = 1_000_000;
                         }
                     }
                 }
-            });
+            }
         }
-        for (int i = 0; i < runners.Length; i++) runners[i].Start(i);
+    }
+
+    internal static void RunReplay<T>(T state, (string, Action<T>)[] sequencialOperations, (string, Action<T>)[] parallelOperations, int threads, int[] threadIds)
+    {
+        for (int i = 0; i < sequencialOperations.Length; i++)
+            sequencialOperations[i].Item2(state);
+        var worker = new RunReplayWorker<T>(state, parallelOperations, threadIds);
+        var runners = new Thread[threads];
+        for (int i = 0; i < runners.Length; i++) runners[i] = new Thread(worker.Execute);
+        for (int i = 0; i < runners.Length; i++) runners[i].Start();
+        worker.Hold = false;
         for (int i = 0; i < runners.Length; i++) runners[i].Join();
-        if (exception is not null) throw exception;
+        if (worker.Exception is not null) throw worker.Exception;
     }
 
     internal static IEnumerable<T[]> Permutations<T>(int[] threadIds, T[] sequence)
