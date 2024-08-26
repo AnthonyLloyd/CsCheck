@@ -1973,10 +1973,11 @@ public static partial class Check
         {
             if (spd == null) return "";
             var sb = new StringBuilder();
-            sb.Append("\n   Operations: ").Append(Print(spd.ParallelOperations.Select(i => i.Item1).ToList()));
-            sb.Append("\n   On Threads: ").Append(Print(spd.ThreadIds));
-            sb.Append("\nInitial state: ").Append(printActual(initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _).Item1));
-            sb.Append("\n  Final state: ").Append(spd.Exception is not null ? spd.Exception.ToString() : printActual(spd.InitialActual));
+            sb.Append("\n        Initial state: ").Append(printActual(initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _).Item1));
+            sb.Append("\nSequencial Operations: ").Append(Print(spd.SequencialOperations.Select(i => i.Item1).ToList()));
+            sb.Append("\n  Parallel Operations: ").Append(Print(spd.ParallelOperations.Select(i => i.Item1).ToList()));
+            sb.Append("\n           On Threads: ").Append(Print(spd.ThreadIds));
+            sb.Append("\n          Final state: ").Append(spd.Exception is not null ? spd.Exception.ToString() : printActual(spd.InitialActual));
             var modelSequencialOperations = Array.ConvertAll(spd.SequencialOperations, i => (i.Item1, i.Item3));
             var modelParallelOperations = Array.ConvertAll(spd.ParallelOperations, i => (i.Item1, i.Item3));
             bool first = true;
