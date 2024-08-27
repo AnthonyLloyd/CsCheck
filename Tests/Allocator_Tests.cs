@@ -51,7 +51,7 @@ public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
 
     static bool BetweenFloorAndCeiling<W>(long quantity, W[] weights, Func<long, W[], long[]> allocate)
     {
-        var sumWeights = weights.Sum(w => Convert.ToDouble(w));
+        var sumWeights = weights.Select(w => Convert.ToDouble(w)).ToArray().FSum(compress: true);
         var allocations = allocate(quantity, weights);
         for (int i = 0; i < allocations.Length; i++)
         {

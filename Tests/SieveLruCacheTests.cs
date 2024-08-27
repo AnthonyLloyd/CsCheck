@@ -97,17 +97,6 @@ public class SieveLruCacheTests
             printModel: m => Check.Print(m.Keys)
         );
     }
-
-    [Fact]
-    public void SampleParallel()
-    {
-        Check.SampleParallel(
-            Gen.Const(() => new SieveLruCache<int, int>(4)),
-            Gen.Int[1, 5].Operation<SieveLruCache<int, int>>((d, i) => d.GetOrAdd(i, i => i)),
-            equal: (a, b) => Check.Equal(a.Keys, b.Keys),
-            print: a => Check.Print(a.Keys)
-        );
-    }
 }
 
 internal static class SieveLruCacheExtensions

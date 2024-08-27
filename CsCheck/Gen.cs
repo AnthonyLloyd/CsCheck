@@ -1939,7 +1939,8 @@ public sealed class GenFloat : Gen<float>
                     lower--;
                 var rational = Gen.Int[lower + 1, denominator]
                     .SelectMany(den => GenInt(start * den, finish * den)
-                    .Select(num => (float)num / den));
+                    .Select(num => (float)num / den))
+                    .Where(r => r >= start && r <= finish);
                 myGens[1] = (1, rational);
             }
             Gen<float>? exponential = null;

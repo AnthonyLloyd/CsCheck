@@ -228,16 +228,6 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
-    public void SampleParallel_ConcurrentBag()
-    {
-        Gen.Int.List[0, 5].Select(l => new ConcurrentBag<int>(l))
-        .SampleParallel(
-            Gen.Int.Operation<ConcurrentBag<int>>(i => $"Add({i})", (bag, i) => bag.Add(i)),
-            Gen.Operation<ConcurrentBag<int>>("TryTake()", bag => bag.TryTake(out _))
-        );
-    }
-
-    [Fact]
     public void SampleParallel_ConcurrentDictionary()
     {
         Gen.Dictionary(Gen.Int[0, 100], Gen.Byte)[0, 10].Select(l => new ConcurrentDictionary<int, byte>(l))

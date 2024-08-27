@@ -26,10 +26,10 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         Gen.Byte.Array.Select(a => new ListSlim<byte>(a))
         .SampleParallel(
-            Gen.Byte.Operation<ListSlim<byte>>((l, i) => { lock (l) l.Add(i); }),
-            Gen.Int.NonNegative.Operation<ListSlim<byte>>((l, i) => { if (i < l.Count) { var _ = l[i]; } }),
-            Gen.Int.NonNegative.Select(Gen.Byte).Operation<ListSlim<byte>>((l, t) => { if (t.Item1 < l.Count) l[t.Item1] = t.Item2; }),
-            Gen.Operation<ListSlim<byte>>(l => l.ToArray())
+            Gen.Byte.Operation<ListSlim<byte>>(i =>  $"Add {i}", (l, i) => { lock (l) l.Add(i); }),
+            Gen.Int.NonNegative.Operation<ListSlim<byte>>(i => $"Get {i}", (l, i) => { if (i < l.Count) { var _ = l[i]; } }),
+            Gen.Int.NonNegative.Select(Gen.Byte).Operation<ListSlim<byte>>(t => $"Set {t}", (l, t) => { if (t.Item1 < l.Count) l[t.Item1] = t.Item2; }),
+            Gen.Operation<ListSlim<byte>>("ToArray", l => l.ToArray())
         );
     }
 

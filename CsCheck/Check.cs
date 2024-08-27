@@ -1707,10 +1707,11 @@ public static partial class Check
             print ??= Print;
             if (spd == null) return "";
             var sb = new StringBuilder();
-            sb.Append("\n   Operations: ").Append(Print(spd.ParallelOperations.Select(i => i.Item1).ToList()));
-            sb.Append("\n   On Threads: ").Append(Print(spd.ThreadIds));
-            sb.Append("\nInitial state: ").Append(print(initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _)));
-            sb.Append("\n  Final state: ").Append(spd.Exception is not null ? spd.Exception.ToString() : print(spd.InitialState));
+            sb.Append("\n        Initial state: ").Append(print(initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _)));
+            sb.Append("\nSequencial Operations: ").Append(Print(spd.SequencialOperations.Select(i => i.Item1).ToList()));
+            sb.Append("\n  Parallel Operations: ").Append(Print(spd.ParallelOperations.Select(i => i.Item1).ToList()));
+            sb.Append("\n           On Threads: ").Append(Print(spd.ThreadIds));
+            sb.Append("\n          Final state: ").Append(spd.Exception is not null ? spd.Exception.ToString() : print(spd.InitialState));
             bool first = true;
             foreach (var sequence in Permutations(spd.ThreadIds!, spd.ParallelOperations))
             {
@@ -1725,7 +1726,7 @@ public static partial class Check
                 {
                     result = e.ToString();
                 }
-                sb.Append(first ? "\n   Linearized: " : "\n             : ");
+                sb.Append(first ? "\n           Linearized: " : "\n                     : ");
                 sb.Append(Print(sequence.Select(i => i.Item1).ToList()));
                 sb.Append(" -> ");
                 sb.Append(result);
@@ -1994,7 +1995,7 @@ public static partial class Check
                 {
                     result = e.ToString();
                 }
-                sb.Append(first ? "\n   Linearized: " : "\n             : ");
+                sb.Append(first ? "\n           Linearized: " : "\n                     : ");
                 sb.Append(Print(sequence.Select(i => i.Item1).ToList()));
                 sb.Append(" -> ");
                 sb.Append(result);
