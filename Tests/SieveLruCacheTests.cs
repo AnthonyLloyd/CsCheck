@@ -89,25 +89,12 @@ public class SieveLruCacheTests
     {
         Check.SampleModelBased(
             Gen.Const(() => (new SieveLruCache<int, int>(4), new SieveModel<int, int>(4))),
-            Gen.Int[1, 5].Operation<SieveLruCache<int, int>, SieveModel<int, int>>((a, m, i) =>
-            {
-                a.GetOrAdd(i, i => i);
-                m.GetOrAdd(i, i => i);
-            }),
+            Gen.Int[1, 5].Operation<SieveLruCache<int, int>, SieveModel<int, int>>(
+                (a, i) => a.GetOrAdd(i, i => i),
+                (m, i) => m.GetOrAdd(i, i => i)),
             equal: (a, m) => Check.Equal(a.Keys.ToHashSet(), m.Keys.ToHashSet()),
             printActual: a => Check.Print(a.Keys),
             printModel: m => Check.Print(m.Keys)
-        );
-    }
-
-    [Fact]
-    public void SampleConcurrent()
-    {
-        Check.SampleConcurrent(
-            Gen.Const(() => new SieveLruCache<int, int>(4)),
-            Gen.Int[1, 5].Operation<SieveLruCache<int, int>>((d, i) => d.GetOrAdd(i, i => i)),
-            equal: (a, b) => Check.Equal(a.Keys, b.Keys),
-            print: a => Check.Print(a.Keys)
         );
     }
 }

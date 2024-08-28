@@ -11,9 +11,9 @@ This gives the following advantages:
 - Random testing and shrinking are parallelized. This and PCG make it very fast.
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be continued later to give simpler cases for high dimensional problems.
-- Concurrency testing and random shrinking work well together.
+- Parallel testing and random shrinking work well together.
 
-CsCheck also makes concurrency, performance and regression testing simple and fast.
+CsCheck also makes parallel, performance and regression testing simple and fast.
         </Description>
         <Authors>Anthony Lloyd</Authors>
         <Owners>Anthony Lloyd</Owners>
@@ -21,12 +21,19 @@ CsCheck also makes concurrency, performance and regression testing simple and fa
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
-        <PackageTags>quickcheck;random;model-based;metamorphic;concurrency;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>3.2.2</Version>
+        <PackageTags>quickcheck;random;model-based;metamorphic;parallel;performance;causal-profiling;regression;testing</PackageTags>
+        <Version>4.0.0</Version>
         <PackageReleaseNotes>
-Added option to Dbg.Time stats for completed and running.
+Added SampleParallel overloads using a sequencially run model for linearization.
+Added running operations sequentially before parallel to SampleParallel.
+Added maxSequentialOperations and maxParallelOperations parameters to SampleParallel.
+
+BREAKING CHANGES:
+- Now targets net8.0, version 3.2.2 was the last to target net6.0.
+- SampleConcurrent renamed to SampleParallel.
+- GenOperation&lt;Actual,Model&gt; takes separate actions for actual and model.
         </PackageReleaseNotes>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <WarningLevel>9999</WarningLevel>
@@ -41,13 +48,13 @@ Added option to Dbg.Time stats for completed and running.
         <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-        <NoWarn>CS1591</NoWarn>
+        <NoWarn>CS1591,MA0143</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <AnalysisMode>All</AnalysisMode>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-        <PackageReference Include="Meziantou.Analyzer" Version="2.0.120" PrivateAssets="All" />
+        <PackageReference Include="Meziantou.Analyzer" Version="2.0.163" PrivateAssets="All" />
         <None Include="../CsCheck.png" Pack="true" PackagePath="" Visible="False" />
         <None Include="../README.md" Pack="true" PackagePath="" Visible="False" />
     </ItemGroup>

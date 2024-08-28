@@ -15,23 +15,21 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         Gen.Int.Array.Select(a => (new ListSlim<int>(a), new List<int>(a)))
         .SampleModelBased(
-            Gen.Int.Operation<ListSlim<int>, List<int>>((ls, l, i) =>
-            {
-                ls.Add(i);
-                l.Add(i);
-            })
+            Gen.Int.Operation<ListSlim<int>, List<int>>(
+                (ls, i) => ls.Add(i),
+                (l, i) => l.Add(i))
         );
     }
 
     [Fact]
-    public void ListSlim_Concurrency()
+    public void ListSlim_Parallel()
     {
         Gen.Byte.Array.Select(a => new ListSlim<byte>(a))
-        .SampleConcurrent(
-            Gen.Byte.Operation<ListSlim<byte>>((l, i) => { lock (l) l.Add(i); }),
-            Gen.Int.NonNegative.Operation<ListSlim<byte>>((l, i) => { if (i < l.Count) { var _ = l[i]; } }),
-            Gen.Int.NonNegative.Select(Gen.Byte).Operation<ListSlim<byte>>((l, t) => { if (t.Item1 < l.Count) l[t.Item1] = t.Item2; }),
-            Gen.Operation<ListSlim<byte>>(l => l.ToArray())
+        .SampleParallel(
+            Gen.Byte.Operation<ListSlim<byte>>(i =>  $"Add {i}", (l, i) => { lock (l) l.Add(i); }),
+            Gen.Int.NonNegative.Operation<ListSlim<byte>>(i => $"Get {i}", (l, i) => { if (i < l.Count) { var _ = l[i]; } }),
+            Gen.Int.NonNegative.Select(Gen.Byte).Operation<ListSlim<byte>>(t => $"Set {t}", (l, t) => { if (t.Item1 < l.Count) l[t.Item1] = t.Item2; }),
+            Gen.Operation<ListSlim<byte>>("ToArray", l => l.ToArray())
         );
     }
 
@@ -40,19 +38,18 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         Gen.Int.Array.Select(a => (new SetSlim<int>(a), new HashSet<int>(a)))
         .SampleModelBased(
-            Gen.Int.Operation<SetSlim<int>, HashSet<int>>((ls, l, i) =>
-            {
-                ls.Add(i);
-                l.Add(i);
-            })
+            Gen.Int.Operation<SetSlim<int>, HashSet<int>>(
+                (ss, i) => ss.Add(i),
+                (hs, i) => hs.Add(i)
+            )
         );
     }
 
     [Fact]
-    public void SetSlim_Concurrency()
+    public void SetSlim_Parallel()
     {
         Gen.Byte.Array.Select(a => new SetSlim<byte>(a))
-        .SampleConcurrent(
+        .SampleParallel(
             Gen.Byte.Operation<SetSlim<byte>>((l, i) => { lock (l) l.Add(i); }),
             Gen.Int.NonNegative.Operation<SetSlim<byte>>((l, i) => { if (i < l.Count) { var _ = l[i]; } }),
             Gen.Byte.Operation<SetSlim<byte>>((l, i) => { var _ = l.IndexOf(i); }),
@@ -100,11 +97,9 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
         Gen.Dictionary(Gen.Int, Gen.Byte)
         .Select(d => (new MapSlim<int, byte>(d), new Dictionary<int, byte>(d)))
         .SampleModelBased(
-            Gen.Select(Gen.Int[0, 100], Gen.Byte).Operation<MapSlim<int, byte>, Dictionary<int, byte>>((m, d, t) =>
-            {
-                m[t.Item1] = t.Item2;
-                d[t.Item1] = t.Item2;
-            })
+            Gen.Select(Gen.Int[0, 100], Gen.Byte).Operation<MapSlim<int, byte>, Dictionary<int, byte>>(
+                (m, t) => m[t.Item1] = t.Item2,
+                (d, t) => d[t.Item1] = t.Item2)
         );
     }
 
@@ -121,10 +116,10 @@ public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
-    public void MapSlim_Concurrency()
+    public void MapSlim_Parallel()
     {
         Gen.Dictionary(Gen.Int, Gen.Byte).Select(d => new MapSlim<int, byte>(d))
-        .SampleConcurrent(
+        .SampleParallel(
             Gen.Int.Select(Gen.Byte).Operation<MapSlim<int, byte>>((m, t) => { lock (m) m[t.Item1] = t.Item2; }),
             Gen.Int.NonNegative.Operation<MapSlim<int, byte>>((m, i) => { if (i < m.Count) { var _ = m.Key(i); } }),
             Gen.Int.Operation<MapSlim<int, byte>>((m, i) => { var _ = m.IndexOf(i); }),

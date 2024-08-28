@@ -14,9 +14,9 @@ public class CacheTests
     }
 
     [Fact]
-    public void GetOrAddAtomicAsync_SampleConcurrent()
+    public void GetOrAddAtomicAsync_SampleParallel()
     {
-        Check.SampleConcurrent(
+        Check.SampleParallel(
             Gen.Const(() => new ConcurrentDictionaryCache<int, int>()),
             Gen.Int[1, 5].Operation<ConcurrentDictionaryCache<int, int>>((d, i) => d.GetOrAddAtomicAsync(i, i => Task.FromResult(i)).AsTask()),
             equal: (a, b) => Check.Equal(a.Keys, b.Keys),

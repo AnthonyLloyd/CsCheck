@@ -107,11 +107,9 @@ namespace Tests
                 return (new ImHolder<ImHashMap234<int, int>> { Im = d }, m);
             })
             .SampleModelBased(
-                Gen.Int[0, upperBound].Select(Gen.Int).Operation<ImHolder<ImHashMap234<int, int>>, Dictionary<int, int>>((h, d, kv) =>
-                {
-                    h.Im = h.Im.AddOrUpdate(kv.Item1, kv.Item2);
-                    d[kv.Item1] = kv.Item2;
-                })
+                Gen.Int[0, upperBound].Select(Gen.Int).Operation<ImHolder<ImHashMap234<int, int>>, Dictionary<int, int>>(
+                    (h, kv) => { h.Im = h.Im.AddOrUpdate(kv.Item1, kv.Item2); },
+                    (d, kv) => { d[kv.Item1] = kv.Item2; })
                 , equal: (h, d) =>
                 {
                     var he = h.Im.Enumerate().Select(kv => (kv.Key, kv.Value)).ToList();
