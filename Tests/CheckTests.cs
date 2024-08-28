@@ -243,7 +243,7 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void SampleParallel_ConcurrentQueue()
     {
-        Gen.Int.List[0, 5].Select(l => new ConcurrentQueue<int>(l))
+        Gen.Const(() => new ConcurrentQueue<int>())
         .SampleParallel(
             Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
             Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))

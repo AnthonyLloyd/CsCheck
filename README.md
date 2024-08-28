@@ -269,23 +269,34 @@ public void MapSlim_Metamorphic()
 
 ## Parallel testing
 
-CsCheck has support for parallels testing with full shrinking capability.
-A number of operations are run on an initial state in parallel and the result is compared to all the possible linearized versions.
+CsCheck has support for parallel testing with full shrinking capability.
+A number of operations are run sequentially and then a number in parallel on an initial state and the result is compared to all the possible linearized versions.
 At least one of these must be equal to the parallel result.
 
 Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603) and [paper](https://github.com/AnthonyLloyd/AnthonyLloyd.github.io/raw/master/public/cscheck/finding-race-conditions.pdf). This is actually easier to implement with CsCheck than QuickCheck because the random shrinking does not need to repeat each step as QuickCheck does (10 times by default) to make shrinking deterministic.
 
-### SetSlim
 ```csharp
 [Fact]
-public void SetSlim_Parallel()
+public void SampleParallel_ConcurrentQueue()
 {
-    Gen.Byte.Array.Select(a => new SetSlim<byte>(a))
+    Gen.Const(() => new ConcurrentQueue<int>())
     .SampleParallel(
-        Gen.Byte.Operation<SetSlim<byte>>((l, i) => { lock (l) l.Add(i); }),
-        Gen.Int.NonNegative.Operation<SetSlim<byte>>((l, i) => { if (i < l.Count) { var _ = l[i]; } }),
-        Gen.Byte.Operation<SetSlim<byte>>((l, i) => { var _ = l.IndexOf(i); }),
-        Gen.Operation<SetSlim<byte>>(l => l.ToArray())
+        Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
+        Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
+    );
+}
+```
+
+Can also be tested against a model (which doesn't need to be thread-safe):
+
+```csharp
+[Fact]
+public void SampleParallelModel_ConcurrentQueue()
+{
+    Gen.Const(() => (new ConcurrentQueue<int>(), new Queue<int>()))
+    .SampleParallel(
+        Gen.Int.Operation<ConcurrentQueue<int>, Queue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i), (q, i) => q.Enqueue(i)),
+        Gen.Operation<ConcurrentQueue<int>, Queue<int>>("TryDequeue()", q => q.TryDequeue(out _), q => q.TryDequeue(out _))
     );
 }
 ```
@@ -297,7 +308,6 @@ It shows which regions are the bottleneck and what overall performance gain coul
 
 Idea from Emery Berger. My blog posts on this [here](http://anthonylloyd.github.io/blog/2019/10/11/causal-profiling).
 
-### Fasta
 ```csharp
 [Fact]
 public void Fasta()
@@ -366,7 +376,6 @@ Since it's statistical and relative you can run it as a normal test anywhere e.g
 It's fast because it runs in parallel and knows when to stop.
 It's just what you need to iteratively improve performance while making sure it still produces the correct results.
 
-### Linq Sum
 ```csharp
 [Fact]
 public void Faster_Linq_Random()

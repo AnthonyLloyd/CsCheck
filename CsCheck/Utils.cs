@@ -502,10 +502,10 @@ public static partial class Check
         }
     }
 
-    internal static void Run<T>(T state, (string, Action<T>)[] sequencialOperations, (string, Action<T>)[] parallelOperations, int threads, int[]? threadIds = null)
+    internal static void Run<T>(T state, (string, Action<T>)[] sequentialOperations, (string, Action<T>)[] parallelOperations, int threads, int[]? threadIds = null)
     {
-        for (int i = 0; i < sequencialOperations.Length; i++)
-            sequencialOperations[i].Item2(state);
+        for (int i = 0; i < sequentialOperations.Length; i++)
+            sequentialOperations[i].Item2(state);
         var worker = new RunWorker<T>(state, parallelOperations, threadIds);
         var runners = new Thread[threads];
         for (int i = 0; i < runners.Length; i++) runners[i] = new Thread(worker.Execute);
@@ -542,10 +542,10 @@ public static partial class Check
         }
     }
 
-    internal static void RunReplay<T>(T state, (string, Action<T>)[] sequencialOperations, (string, Action<T>)[] parallelOperations, int threads, int[] threadIds)
+    internal static void RunReplay<T>(T state, (string, Action<T>)[] sequentialOperations, (string, Action<T>)[] parallelOperations, int threads, int[] threadIds)
     {
-        for (int i = 0; i < sequencialOperations.Length; i++)
-            sequencialOperations[i].Item2(state);
+        for (int i = 0; i < sequentialOperations.Length; i++)
+            sequentialOperations[i].Item2(state);
         var worker = new RunReplayWorker<T>(state, parallelOperations, threadIds);
         var runners = new Thread[threads];
         for (int i = 0; i < runners.Length; i++) runners[i] = new Thread(worker.Execute);
