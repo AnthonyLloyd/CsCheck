@@ -160,7 +160,7 @@ public static partial class Check
                                 metric.Succeeded ? "passed" : "failed", metric.input
                                 , "reason", d, "testing", d, null, d, d));
                         genLogParameters.streamWriter.Write(JsonSerializer.Serialize(tycheData));
-
+                        genLogParameters.streamWriter.Flush();
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(genLogParameters), genLogParameters, null);

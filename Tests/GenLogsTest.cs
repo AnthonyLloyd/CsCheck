@@ -4,7 +4,7 @@ using CsCheck;
 
 namespace Tests;
 
-public class MetricLogsTest
+public class GenLogsTest
 {
     static int[] Tally(int n, int[] ia)
     {
@@ -36,8 +36,6 @@ public class MetricLogsTest
                 catch
                 {
                 }
-
-                writer.Flush();
 
                 memoryStream.Position = 0;
                 string json;
