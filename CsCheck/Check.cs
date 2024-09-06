@@ -147,13 +147,6 @@ public static partial class Check
                 switch (genLogParameters.logProcessor)
                 {
                     case LogProcessor.Tyche:
-                        string? currentDir = Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory)?.Parent?.Parent
-                            ?.Parent?.FullName;
-                        if (currentDir == null)
-                        {
-                            // Fallback to the current directory if we can't find the project root
-                            currentDir = AppDomain.CurrentDomain.BaseDirectory;
-                        }
                         var d = new Dictionary<string, string>(StringComparer.Ordinal);
                         var tycheData = metrics.Select(metric =>
                             new TycheData<T>("test_case", metric.Timestamp, genLogParameters.properyUnderTest,
