@@ -141,10 +141,9 @@ public static partial class Check
                 }
                 catch
                 {
-                    channel.Writer.TryWrite(new GenLogger.LogContext<T>(t, true));
+                    channel.Writer.TryWrite(new GenLogger.LogContext<T>(t, false));
                     throw;
                 }
-
             };
         }
 
