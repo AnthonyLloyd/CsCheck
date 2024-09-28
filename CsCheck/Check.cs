@@ -11,11 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 namespace CsCheck;
-
-using System.Collections.Concurrent;
-using System.Text.Json;
+using System.Threading.Channels;
+using Logging;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -42,9 +40,7 @@ public static partial class Check
     /// <summary>The number of Where Gne iterations before throwing an exception.</summary>
     public static int WhereLimit = ParseEnvironmentVariableToInt("CsCheck_WhereLimit", 100);
 
-    public record GenLog<T>(string Type, double Timestamp, T input, bool Succeeded);
-
-    sealed class SampleActionWorker<T>(Gen<T> gen, Action<T> assert, CountdownEvent cde, string? seed, long target, bool isIter, bool recordMetrics) : IThreadPoolWorkItem
+    sealed class SampleActionWorker<T>(Gen<T> gen, Action<T> assert, CountdownEvent cde, string? seed, long target, bool isIter) : IThreadPoolWorkItem
     {
         public PCG? MinPCG;
         public ulong MinState;
@@ -54,7 +50,6 @@ public static partial class Check
         public int Shrinks = -1;
         public long Total = seed is null ? 0 : 1;
         public long Skipped;
-        public ConcurrentBag<GenLog<T>> GenLogs = new();
 
         public void Execute()
         {
@@ -82,13 +77,6 @@ public static partial class Check
                         if (MinSize is null || Size.IsLessThan(size, MinSize))
                         {
                             assert(t);
-                            if (recordMetrics)
-                                GenLogs.Add(
-                                    new GenLog<T>(
-                                        "test_case",
-                                        ((DateTimeOffset)DateTime.Now).ToUnixTimeMilliseconds() / 1000.0,
-                                        t,
-                                        true));
                         }
                         else
                             skippedLocal++;
@@ -107,13 +95,6 @@ public static partial class Check
                             MinException = e;
                             Shrinks++;
                         }
-                        if (recordMetrics)
-                            GenLogs.Add(
-                                new GenLog<T>(
-                                    "test_case",
-                                    ((DateTimeOffset)DateTime.Now).ToUnixTimeMilliseconds() / 1000.0,
-                                    t,
-                                    false));
                     }
                 }
             }
@@ -121,44 +102,6 @@ public static partial class Check
         public string ExceptionMessage(Func<T, string> print)
         {
             return SampleErrorMessage(MinPCG!.ToString(MinState), print(MinT!), Shrinks, Skipped, Total);
-        }
-    }
-
-    public static class GenLogger
-    {
-        public enum LogProcessor
-        {
-            Tyche
-        }
-
-        public record GenLogParameters(StreamWriter streamWriter, LogProcessor logProcessor, String properyUnderTest);
-
-        public record TycheData<T>(
-            string type, double run_start, string property, string status, T representation,
-            string? status_reason, Dictionary<string, string> arguments, string? how_generated, Dictionary<string, string> features,
-            Dictionary<string, string>? coverage, Dictionary<string, string> timing, Dictionary<string, string> metadata);
-
-        public static void Process<T>(
-            ConcurrentBag<GenLog<T>> metrics,
-            GenLogParameters genLogParameters)
-        {
-            if (!metrics.IsEmpty)
-            {
-                switch (genLogParameters.logProcessor)
-                {
-                    case LogProcessor.Tyche:
-                        var d = new Dictionary<string, string>(StringComparer.Ordinal);
-                        var tycheData = metrics.Select(metric =>
-                            new TycheData<T>("test_case", metric.Timestamp, genLogParameters.properyUnderTest,
-                                metric.Succeeded ? "passed" : "failed", metric.input
-                                , "reason", d, "testing", d, null, d, d));
-                        genLogParameters.streamWriter.Write(JsonSerializer.Serialize(tycheData));
-                        genLogParameters.streamWriter.Flush();
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(genLogParameters), genLogParameters, null);
-                }
-            }
         }
     }
 
@@ -171,10 +114,10 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="genLogParameters"> if not null, writes logs to stream in processor specific manner</param>
+    /// <param name="loggerFunc"> code to call related to writing metrics regarding generated inputs to file</param>
     public static void Sample<T>(this Gen<T> gen, Action<T> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
-        GenLogger.GenLogParameters? genLogParameters = null)
+        Func<(Func<Task>, Channel<GenLogger.LogContext<T>>)>? loggerFunc = null)
     {
         seed ??= Seed;
         if (iter == -1) iter = Iter;
@@ -182,14 +125,37 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         bool isIter = time < 0;
         var cde = new CountdownEvent(threads);
+
+        Func<Task>? loggerTaskFunc = null;
+        Channel<GenLogger.LogContext<T>>? channel = null;
+        Action<T>? assertWithLogging = null;
+        if (loggerFunc is not null)
+        {
+            (loggerTaskFunc, channel) = loggerFunc();
+            assertWithLogging = t =>
+            {
+                try
+                {
+                    assert(t);
+                    channel.Writer.TryWrite(new GenLogger.LogContext<T>(t, true));
+                }
+                catch
+                {
+                    channel.Writer.TryWrite(new GenLogger.LogContext<T>(t, true));
+                    throw;
+                }
+
+            };
+        }
+
         var worker = new SampleActionWorker<T>(
             gen,
-            assert,
+            assertWithLogging ?? assert,
             cde,
             seed,
             isIter ? seed is null ? iter : iter - 1 : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency,
-            isIter,
-            genLogParameters != null);
+            isIter);
+
         if (seed is not null)
         {
             var pcg = PCG.Parse(seed);
@@ -211,13 +177,26 @@ public static partial class Check
             }
         }
 
+        //Starts background task where Channel.reader listens
+        Task? loggerTask = null;
+        if (loggerTaskFunc is not null)
+        {
+            loggerTask = Task.Run(loggerTaskFunc);
+        }
+
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
         cde.Wait();
         cde.Dispose();
-        if (genLogParameters != null)
-            GenLogger.Process(worker.GenLogs, genLogParameters);
+
+        //close writer after completion and wait for completion of the loggertask
+        if (loggerTaskFunc is not null && channel is not null && loggerTask is not null)
+        {
+            channel.Writer.Complete();
+            loggerTask.Wait();
+        }
+
         if (worker.MinPCG is not null)
             throw new CsCheckException(worker.ExceptionMessage(print ?? Print), worker.MinException);
         if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
