@@ -50,7 +50,9 @@ public class GenLogsTest
 
             var tycheData = JsonSerializer.Deserialize<TycheData>(json);
 
-            Assert.False((tycheData != null && LogCheck(tycheData)));
+            Assert.True(tycheData != null && LogCheck(tycheData));
+            Assert.True(JsonSerializer.Deserialize<int[]>(tycheData.representation)?.Sum() == 20);
+
         }
 
         bool LogCheck(TycheData td)
@@ -59,7 +61,6 @@ public class GenLogsTest
                 td.type == "test_case" &&
                 td.status == (generatedIntUponTrue == 1 ? "passed" : "failed") &&
                 td.property == "Bool_Distribution_WithTycheLogs" &&
-                JsonSerializer.Deserialize<int[]>(td.representation)?.Sum() == 0 &&
                 td.how_generated == "testing";
         }
     }
