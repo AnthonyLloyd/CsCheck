@@ -1,19 +1,19 @@
 ﻿// Copyright 2024 Anthony Lloyd
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 namespace CsCheck;
-
+using System.Threading.Channels;
+using Logging;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -50,6 +50,7 @@ public static partial class Check
         public int Shrinks = -1;
         public long Total = seed is null ? 0 : 1;
         public long Skipped;
+
         public void Execute()
         {
             var pcg = PCG.ThreadPCG;
@@ -74,7 +75,9 @@ public static partial class Check
                         state = pcg.State;
                         t = gen.Generate(pcg, MinSize, out size);
                         if (MinSize is null || Size.IsLessThan(size, MinSize))
+                        {
                             assert(t);
+                        }
                         else
                             skippedLocal++;
                     }
@@ -101,6 +104,7 @@ public static partial class Check
             return SampleErrorMessage(MinPCG!.ToString(MinState), print(MinT!), Shrinks, Skipped, Total);
         }
     }
+
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
@@ -110,8 +114,10 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="loggerFunc"> code to call related to writing metrics regarding generated inputs to file</param>
     public static void Sample<T>(this Gen<T> gen, Action<T> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
+        Func<(Func<Task>, Channel<GenLogger.LogContext<T>>)>? loggerFunc = null)
     {
         seed ??= Seed;
         if (iter == -1) iter = Iter;
@@ -119,13 +125,36 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         bool isIter = time < 0;
         var cde = new CountdownEvent(threads);
+
+        Func<Task>? loggerTaskFunc = null;
+        Channel<GenLogger.LogContext<T>>? channel = null;
+        Action<T>? assertWithLogging = null;
+        if (loggerFunc is not null)
+        {
+            (loggerTaskFunc, channel) = loggerFunc();
+            assertWithLogging = t =>
+            {
+                try
+                {
+                    assert(t);
+                    channel.Writer.TryWrite(new GenLogger.LogContext<T>(t, true));
+                }
+                catch
+                {
+                    channel.Writer.TryWrite(new GenLogger.LogContext<T>(t, false));
+                    throw;
+                }
+            };
+        }
+
         var worker = new SampleActionWorker<T>(
             gen,
-            assert,
+            assertWithLogging ?? assert,
             cde,
             seed,
             isIter ? seed is null ? iter : iter - 1 : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency,
             isIter);
+
         if (seed is not null)
         {
             var pcg = PCG.Parse(seed);
@@ -146,12 +175,29 @@ public static partial class Check
                 worker.Shrinks++;
             }
         }
+
+        //Starts background task where Channel.reader listens
+        Task? loggerTask = null;
+        if (loggerTaskFunc is not null)
+        {
+            loggerTask = Task.Run(loggerTaskFunc);
+        }
+
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
         cde.Wait();
         cde.Dispose();
-        if (worker.MinPCG is not null) throw new CsCheckException(worker.ExceptionMessage(print ?? Print), worker.MinException);
+
+        //close writer after completion and wait for completion of the loggertask
+        if (loggerTaskFunc is not null && channel is not null && loggerTask is not null)
+        {
+            channel.Writer.Complete();
+            loggerTask.Wait();
+        }
+
+        if (worker.MinPCG is not null)
+            throw new CsCheckException(worker.ExceptionMessage(print ?? Print), worker.MinException);
         if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
     }
 

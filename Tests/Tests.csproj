@@ -23,4 +23,7 @@
         <ProjectReference Include="..\CsCheck\CsCheck.csproj" />
         <Using Include="Xunit" />
     </ItemGroup>
+    <ItemGroup>
+      <Folder Include="Logging\" />
+    </ItemGroup>
 </Project>
