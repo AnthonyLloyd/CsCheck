@@ -63,14 +63,6 @@ public sealed class PCG
         while (n < threshold) n = Next64();
         return n % maxExclusive;
     }
-    public uint Next(uint maxExclusive, ulong multiplier)
-    {
-        if (maxExclusive == 1U) return 0U;
-        var threshold = HashHelper.FastMod((uint)-(int)maxExclusive, maxExclusive, multiplier);
-        var n = Next();
-        while (n < threshold) n = Next();
-        return HashHelper.FastMod(n, maxExclusive, multiplier);
-    }
     public override string ToString() => SeedString.ToString(State, Stream);
     public string ToString(ulong state) => SeedString.ToString(state, Stream);
     public static PCG Parse(string seed)

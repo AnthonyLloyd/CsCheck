@@ -1,10 +1,13 @@
 ﻿namespace Tests;
 
+using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using CsCheck;
 using Xunit;
 
-public class PCGTests
+public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
 {
     [Fact] // from the github https://github.com/imneme/pcg-c-basic minimal c implementation http://www.pcg-random.org/download.html#minimal-c-implementation
     public void PCG_Demo_1()
@@ -202,4 +205,108 @@ public class PCGTests
         const double root3 = 6.6854976605820742;
         Gen.Double[root2, root3 * 2.0].Sample(_ => true);
     }
+
+    [Fact]
+    public void PCG_Multiplier_IS_Not_Faster()
+    {
+        Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[1, 10_000])
+        .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m, HashHelper.GetFastModMultiplier(m)))
+        .Faster(
+            (o, _, u, _) => o.Next(u),
+            (_, n, u, m) => n.Next(u, m),
+            repeat: 100,
+            writeLine: output.WriteLine
+        );
+    }
+
+    [Fact]
+    public void PCG_New_Faster()
+    {
+        Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[1, 10_000])
+        .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m))
+        .Faster(
+            (_, n, m) => { n.Next(m); },
+            (o, _, m) => { o.Next(m); },
+            repeat: 100,
+            writeLine: output.WriteLine
+        );
+    }
+
+    public sealed class PCGTest
+    {
+        static int threadCount;
+        [ThreadStatic] static PCG? threadPCG;
+        public static PCG ThreadPCG => threadPCG ??= new PCG((uint)Interlocked.Increment(ref threadCount));
+        readonly ulong Inc;
+        public ulong State;
+        public uint Stream => (uint)(Inc >> 1);
+        public ulong Seed => State - Inc;
+        PCGTest(ulong inc, ulong state)
+        {
+            Inc = inc;
+            State = state;
+        }
+        public PCGTest(uint stream, ulong seed)
+        {
+            Inc = (stream << 1) | 1UL;
+            State = Inc + seed;
+        }
+        public PCGTest(uint stream) : this(stream, (ulong)Stopwatch.GetTimestamp()) { }
+        public uint Next()
+        {
+            ulong state = State * 6364136223846793005UL + Inc;
+            State = state;
+            return BitOperations.RotateRight(
+                (uint)((state ^ (state >> 18)) >> 27),
+                (int)(state >> 59));
+        }
+        public ulong Next64() => ((ulong)Next() << 32) + Next();
+        public uint Next(uint maxExclusive)
+        {
+            var x = Next();
+            var m = (ulong)x * maxExclusive;
+            var l = (uint)m;
+            if (l < maxExclusive)
+            {
+                var t = (uint)-maxExclusive;
+                if (t >= maxExclusive)
+                {
+                    t -= maxExclusive;
+                    if (t >= maxExclusive)
+                        t %= maxExclusive;
+                }
+                while (l < t)
+                {
+                    x = Next();
+                    m = (ulong)x * maxExclusive;
+                    l = (uint)m;
+                }
+            }
+            return (uint)(m >> 32);
+        }
+        public ulong Next64(ulong maxExclusive)
+        {
+            if (maxExclusive <= uint.MaxValue) return Next((uint)maxExclusive);
+            var threshold = ((ulong)-(long)maxExclusive) % maxExclusive;
+            var n = Next64();
+            while (n < threshold) n = Next64();
+            return n % maxExclusive;
+        }
+        public uint Next(uint maxExclusive, ulong multiplier)
+        {
+            if (maxExclusive == 1U) return 0U;
+            var threshold = HashHelper.FastMod((uint)-(int)maxExclusive, maxExclusive, multiplier);
+            var n = Next();
+            while (n < threshold) n = Next();
+            return HashHelper.FastMod(n, maxExclusive, multiplier);
+        }
+        public override string ToString() => SeedString.ToString(State, Stream);
+        public string ToString(ulong state) => SeedString.ToString(state, Stream);
+        public static PCGTest Parse(string seed)
+        {
+            var state = SeedString.Parse(seed, out var stream);
+            return new PCGTest((stream << 1) | 1UL, state);
+        }
+    }
+
 }

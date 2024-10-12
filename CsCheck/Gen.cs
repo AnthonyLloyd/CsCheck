@@ -1699,17 +1699,6 @@ public sealed class GenInt : Gen<int>
             return i;
         }
     }
-    sealed class RangeFastMod(int start, uint length) : Gen<int>
-    {
-        readonly ulong multiplier = HashHelper.GetFastModMultiplier(length);
-        public override int Generate(PCG pcg, Size? min, out Size size)
-        {
-            int i = (int)(start + pcg.Next(length, multiplier));
-            size = new Size(Zigzag(i));
-            return i;
-        }
-    }
-
     /// <summary>Generate int uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<int> this[int start, int finish]
     {
@@ -1717,8 +1706,6 @@ public sealed class GenInt : Gen<int>
         {
             if (finish < start) throw new CsCheckException($"GenInt finish {finish} < start {start}");
             uint length = (uint)(finish - start + 1);
-            if (Environment.Is64BitProcess)
-                return length <= int.MaxValue ? new RangeFastMod(start, length) : new Range(start, length);
             return new Range(start, length);
         }
     }
