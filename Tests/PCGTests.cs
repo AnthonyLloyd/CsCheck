@@ -228,6 +228,7 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
             (_, n, m) => { n.Next(m); },
             (o, _, m) => { o.Next(m); },
             repeat: 100,
+            raiseexception: false,
             writeLine: output.WriteLine
         );
     }
