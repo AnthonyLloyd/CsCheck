@@ -207,20 +207,21 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
-    public void PCG_Multiplier_IS_Not_Faster()
+    public void PCG_Multiplier_Is_Not_Faster()
     {
         Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[1, 10_000])
         .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m, HashHelper.GetFastModMultiplier(m)))
         .Faster(
-            (o, _, u, _) => o.Next(u),
             (_, n, u, m) => n.Next(u, m),
+            (o, _, u, _) => o.Next(u),
             repeat: 100,
+            raiseexception: false,
             writeLine: output.WriteLine
         );
     }
 
     [Fact]
-    public void PCG_New_Faster()
+    public void PCG_New_Is_Not_Faster()
     {
         Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[1, 10_000])
         .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m))
