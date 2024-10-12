@@ -267,8 +267,7 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
         {
             var x = Next();
             var m = (ulong)x * maxExclusive;
-            var l = (uint)m;
-            if (l < maxExclusive)
+            if ((uint)m < maxExclusive)
             {
                 var t = (uint)-maxExclusive;
                 if (t >= maxExclusive)
@@ -277,11 +276,10 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
                     if (t >= maxExclusive)
                         t %= maxExclusive;
                 }
-                while (l < t)
+                while ((uint)m < t)
                 {
                     x = Next();
                     m = (ulong)x * maxExclusive;
-                    l = (uint)m;
                 }
             }
             return (uint)(m >> 32);
