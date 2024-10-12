@@ -948,7 +948,9 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t)) return t;
             }
-            throw new CsCheckException("Failing Where max count");
+            ThrowHelper.ThrowFailingWhereMaxCount();
+            size = default!;
+            return default!;
         }
     }
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
@@ -966,7 +968,9 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2)) return (t1, t2);
             }
-            throw new CsCheckException("Failing Where max count");
+            ThrowHelper.ThrowFailingWhereMaxCount();
+            size = default!;
+            return default!;
         }
     }
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
@@ -984,7 +988,9 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2, t3)) return (t1, t2, t3);
             }
-            throw new CsCheckException("Failing Where max count");
+            ThrowHelper.ThrowFailingWhereMaxCount();
+            size = default!;
+            return default!;
         }
     }
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
@@ -1002,7 +1008,9 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2, t3, t4)) return (t1, t2, t3, t4);
             }
-            throw new CsCheckException("Failing Where max count");
+            ThrowHelper.ThrowFailingWhereMaxCount();
+            size = default!;
+            return default!;
         }
     }
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
@@ -1020,7 +1028,9 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2, t3, t4, t5)) return (t1, t2, t3, t4, t5);
             }
-            throw new CsCheckException("Failing Where max count");
+            ThrowHelper.ThrowFailingWhereMaxCount();
+            size = default!;
+            return default!;
         }
     }
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
@@ -1038,7 +1048,9 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2, t3, t4, t5, t6)) return (t1, t2, t3, t4, t5, t6);
             }
-            throw new CsCheckException("Failing Where max count");
+            ThrowHelper.ThrowFailingWhereMaxCount();
+            size = default!;
+            return default!;
         }
     }
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
@@ -1056,7 +1068,9 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2, t3, t4, t5, t6, t7)) return (t1, t2, t3, t4, t5, t6, t7);
             }
-            throw new CsCheckException("Failing Where max count");
+            ThrowHelper.ThrowFailingWhereMaxCount();
+            size = default!;
+            return default!;
         }
     }
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
@@ -1074,7 +1088,9 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2, t3, t4, t5, t6, t7, t8)) return (t1, t2, t3, t4, t5, t6, t7, t8);
             }
-            throw new CsCheckException("Failing Where max count");
+            ThrowHelper.ThrowFailingWhereMaxCount();
+            size = default!;
+            return default!;
         }
     }
     /// <summary>Filters the elements of a generator based on a predicate.</summary>
@@ -1101,10 +1117,11 @@ public static class Gen
     }
     /// <summary>Create a generator where the element is one of the constants.</summary>
     public static Gen<T> OneOfConst<T>(params T[] constants)
-        => constants is null ? throw new CsCheckException("Gen.OneOfConst constants is null")
-         : constants.Length == 0 ? throw new CsCheckException("Gen.OneOfConst constants is empty")
-         : HashHelper.IsPow2(constants.Length) ? new GenOneOfConstPow2<T>(constants)
-         : new GenOneOfConst<T>(constants);
+    {
+        if (constants is null) ThrowHelper.Throw("Gen.OneOfConst constants is null");
+        if (constants.Length == 0) ThrowHelper.Throw("Gen.OneOfConst constants is empty");
+        return HashHelper.IsPow2(constants.Length) ? new GenOneOfConstPow2<T>(constants) : new GenOneOfConst<T>(constants);
+    }
 
     sealed class GenOneOf<T>(params IGen<T>[] gens) : Gen<T>
     {
@@ -1130,10 +1147,11 @@ public static class Gen
     }
     /// <summary>Create a generator where the element is generated from one of the generators.</summary>
     public static Gen<T> OneOf<T>(params IGen<T>[] gens)
-        => gens is null ? throw new CsCheckException("Gen.OneOf gens is null")
-         : gens.Length == 0 ? throw new CsCheckException("Gen.OneOf gens is empty")
-         : HashHelper.IsPow2(gens.Length) ? new GenOneOfPow2<T>(gens)
-        : new GenOneOf<T>(gens);
+    {
+        if (gens is null) ThrowHelper.Throw("Gen.OneOf gens is null");
+        if (gens.Length == 0) ThrowHelper.Throw("Gen.OneOf gens is empty");
+        return HashHelper.IsPow2(gens.Length) ? new GenOneOfPow2<T>(gens) : new GenOneOf<T>(gens);
+    }
 
     /// <summary>Create a generator for an enum.</summary>
     public static Gen<T> Enum<T>() where T : Enum
@@ -1172,8 +1190,8 @@ public static class Gen
     /// <summary>Create a generator where the element is one of the constants weighted by the frequency.</summary>
     public static Gen<T> FrequencyConst<T>(params (int Frequency, T Constant)[] constants)
     {
-        if (constants is null) throw new CsCheckException("Gen.FrequencyConst constants is null");
-        if (constants.Length == 0) throw new CsCheckException("Gen.FrequencyConst constants is empty");
+        if (constants is null) ThrowHelper.Throw("Gen.FrequencyConst constants is null");
+        if (constants.Length == 0) ThrowHelper.Throw("Gen.FrequencyConst constants is empty");
         uint total = 0;
         foreach (var (i, _) in constants) total += (uint)i;
         return HashHelper.IsPow2(total) ? new GenFrequencyConstPow2<T>(total, constants) : new GenFrequencyConst<T>(total, constants);
@@ -1224,8 +1242,8 @@ public static class Gen
     /// <summary>Create a generator where the element is generated by one of the generators weighted by the frequency.</summary>
     public static Gen<T> Frequency<T>(params (int Frequency, IGen<T> Generator)[] gens)
     {
-        if (gens is null) throw new CsCheckException("Gen.Frequency gens is null");
-        if (gens.Length == 0) throw new CsCheckException("Gen.Frequency gens is empty");
+        if (gens is null) ThrowHelper.Throw("Gen.Frequency gens is null");
+        if (gens.Length == 0) ThrowHelper.Throw("Gen.Frequency gens is empty");
         uint total = 0;
         foreach (var (i, _) in gens) total += (uint)i;
         return HashHelper.IsPow2(total) ? new GenFrequencyPow2<T>(total, gens) : new GenFrequency<T>(total, gens);
@@ -1557,8 +1575,13 @@ public sealed class GenSByte : Gen<sbyte>
 
     /// <summary>Generate sbyte uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<sbyte> this[sbyte start, sbyte finish]
-        => finish < start ? throw new CsCheckException($"GenSByte finish {finish} < start {start}")
-        : new Range(start, (uint)(finish - start) + 1U);
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range(start, (uint)(finish - start) + 1U);
+        }
+    }
 }
 
 public sealed class GenByte : Gen<byte>
@@ -1581,8 +1604,13 @@ public sealed class GenByte : Gen<byte>
 
     /// <summary>Generate byte uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<byte> this[byte start, byte finish]
-        => finish < start ? throw new CsCheckException($"GenByte finish {finish} < start {start}")
-         : new Range(start, (uint)finish - start + 1U);
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range(start, (uint)finish - start + 1U);
+        }
+    }
 }
 
 public sealed class GenShort : Gen<short>
@@ -1611,8 +1639,13 @@ public sealed class GenShort : Gen<short>
 
     /// <summary>Generate short uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<short> this[short start, short finish]
-        => finish < start ? throw new CsCheckException($"GenShort finish {finish} < start {start}")
-        : new Range(start, (uint)(finish - start + 1));
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range(start, (uint)(finish - start + 1));
+        }
+    }
 }
 
 public sealed class GenUShort : Gen<ushort>
@@ -1635,8 +1668,13 @@ public sealed class GenUShort : Gen<ushort>
 
     /// <summary>Generate ushort uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<ushort> this[ushort start, ushort finish]
-        => finish < start ? throw new CsCheckException($"GenUShort finish {finish} < start {start}")
-         : new Range(start, (ushort)(finish - start + 1));
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range(start, (ushort)(finish - start + 1));
+        }
+    }
 }
 
 public sealed class GenInt : Gen<int>
@@ -1704,9 +1742,8 @@ public sealed class GenInt : Gen<int>
     {
         get
         {
-            if (finish < start) throw new CsCheckException($"GenInt finish {finish} < start {start}");
-            uint length = (uint)(finish - start + 1);
-            return new Range(start, length);
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range(start, (uint)(finish - start + 1));
         }
     }
 }
@@ -1732,8 +1769,13 @@ public sealed class GenUInt : Gen<uint>
     }
     /// <summary>Generate uint uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<uint> this[uint start, uint finish]
-        => finish < start ? throw new CsCheckException($"GenUInt finish {finish} < start {start}")
-         : new Range(start, finish - start + 1U);
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range(start, finish - start + 1U);
+        }
+    }
 }
 public sealed class GenUInt4 : Gen<uint>
 {
@@ -1850,8 +1892,13 @@ public sealed class GenLong : Gen<long>
     }
     /// <summary>Generate long uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<long> this[long start, long finish]
-        => finish < start ? throw new CsCheckException($"GenLong finish {finish} < start {start}")
-         : new Range(start, (ulong)(finish - start + 1));
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range(start, (ulong)(finish - start + 1));
+        }
+    }
 }
 
 public sealed class GenULong : Gen<ulong>
@@ -1874,8 +1921,13 @@ public sealed class GenULong : Gen<ulong>
         }
     }
     public Gen<ulong> this[ulong start, ulong finish]
-        => finish < start ? throw new CsCheckException($"GenULong finish {finish} < start {start}")
-         : new Range(start, finish - start + 1UL);
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range(start, finish - start + 1UL);
+        }
+    }
 }
 
 public sealed class GenFloat : Gen<float>
@@ -1910,7 +1962,7 @@ public sealed class GenFloat : Gen<float>
     {
         get
         {
-            if (finish < start) throw new CsCheckException($"GenFloat finish {finish} < start {start}");
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
             const int denominator = 99;
             const int minExp = -99;
             static Gen<int> GenInt(float start, float finish)
@@ -2043,7 +2095,7 @@ public sealed class GenDouble : Gen<double>
     {
         get
         {
-            if (finish < start) throw new CsCheckException($"GenDouble finish {finish} < start {start}");
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
             const int denominator = 99;
             const int minExp = -99;
             static Gen<int> GenInt(double start, double finish)
@@ -2174,7 +2226,7 @@ public sealed class GenDecimal : Gen<decimal>
     {
         get
         {
-            if (finish < start) throw new CsCheckException($"GenDecimal finish {finish} < start {start}");
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
             const int denominator = 99;
             const int minExp = -99;
             static Gen<int> GenInt(decimal start, decimal finish)
@@ -2260,8 +2312,13 @@ public sealed class GenDateTime : Gen<DateTime>
 
     /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<DateTime> this[DateTime start, DateTime finish]
-        => finish < start ? throw new CsCheckException($"GenDateTime finish {finish} < start {start}")
-         : new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
+        }
+    }
 }
 
 public sealed class GenDate : Gen<DateTime>
@@ -2285,8 +2342,13 @@ public sealed class GenDate : Gen<DateTime>
 
     /// <summary>Generate Date uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<DateTime> this[DateTime start, DateTime finish]
-        => finish < start ? throw new CsCheckException($"GenDate finish {finish} < start {start}")
-         : new Range((uint)(start.Ticks / TimeSpan.TicksPerDay), (uint)((finish.Ticks - start.Ticks) / TimeSpan.TicksPerDay) + 1U);
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range((uint)(start.Ticks / TimeSpan.TicksPerDay), (uint)((finish.Ticks - start.Ticks) / TimeSpan.TicksPerDay) + 1U);
+        }
+    }
 }
 
 public sealed class GenDateOnly : Gen<DateOnly>
@@ -2310,8 +2372,13 @@ public sealed class GenDateOnly : Gen<DateOnly>
 
     /// <summary>Generate DateOnly uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<DateOnly> this[DateOnly start, DateOnly finish]
-        => finish < start ? throw new CsCheckException($"GenDateOnly finish {finish} < start {start}")
-         : new Range((uint)start.GetHashCode(), (uint)(finish.GetHashCode() - start.GetHashCode() + 1));
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range((uint)start.GetHashCode(), (uint)(finish.GetHashCode() - start.GetHashCode() + 1));
+        }
+    }
 }
 
 public sealed class GenTimeOnly : Gen<TimeOnly>
@@ -2335,8 +2402,13 @@ public sealed class GenTimeOnly : Gen<TimeOnly>
 
     /// <summary>Generate TimeOnly uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<TimeOnly> this[TimeOnly start, TimeOnly finish]
-        => finish < start ? throw new CsCheckException($"GenTimeOnly finish {finish} < start {start}")
-         : new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
+        }
+    }
 }
 
 public sealed class GenTimeSpan : Gen<TimeSpan>
@@ -2358,8 +2430,13 @@ public sealed class GenTimeSpan : Gen<TimeSpan>
     }
     /// <summary>Generate TimeSpan uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<TimeSpan> this[TimeSpan start, TimeSpan finish]
-        => finish < start ? throw new CsCheckException($"GenTimeSpan finish {finish} < start {start}")
-         : new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
+        }
+    }
 }
 
 public sealed class GenDateTimeOffset : Gen<DateTimeOffset>
@@ -2432,12 +2509,24 @@ public sealed class GenString : Gen<string>
     public override string Generate(PCG pcg, Size? min, out Size size)
         => d.Generate(pcg, min, out size);
     /// <summary>Generate string with length in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
-    public Gen<string> this[int start, int finish] =>
-        finish < start ? throw new CsCheckException($"GenString finish {finish} < start {start}")
-        : Gen.Char.Array[start, finish].Select(i => new string(i));
-    public Gen<string> this[Gen<char> gen, int start, int finish] =>
-        finish < start ? throw new CsCheckException($"GenString finish {finish} < start {start}")
-        : gen.Array[start, finish].Select(i => new string(i));
+    public Gen<string> this[int start, int finish]
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return Gen.Char.Array[start, finish].Select(i => new string(i));
+        }
+    }
+
+    public Gen<string> this[Gen<char> gen, int start, int finish]
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return gen.Array[start, finish].Select(i => new string(i));
+        }
+    }
+
     public Gen<string> this[Gen<char> gen] =>
         gen.Array.Select(i => new string(i));
     /// <summary>Generate string from chars in the string.</summary>
@@ -2474,9 +2563,15 @@ public sealed class GenArray<T>(Gen<T> gen) : Gen<T[]>
     }
     public Gen<T[]> this[Gen<int> length] => new GenLength(gen, length);
     /// <summary>Generate an array with length in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
-    public Gen<T[]> this[int start, int finish] =>
-        finish < start ? throw new CsCheckException($"GenArray finish {finish} < start {start}")
-        : new GenLength(gen, Gen.Int[start, finish]);
+    public Gen<T[]> this[int start, int finish]
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new GenLength(gen, Gen.Int[start, finish]);
+        }
+    }
+
     sealed class FixedLength(Gen<T> gen, int length) : Gen<T[]>
     {
         public override T[] Generate(PCG pcg, Size? min, out Size size)
@@ -2520,7 +2615,7 @@ public sealed class GenArrayUnique<T>(Gen<T> gen) : Gen<T[]>
             }
             else if (++bad == 1000)
             {
-                throw new CsCheckException("Failing to add to ArrayUnique");
+                ThrowHelper.Throw("Failing to add to ArrayUnique");
             }
         }
         return vs;
@@ -2534,9 +2629,15 @@ public sealed class GenArrayUnique<T>(Gen<T> gen) : Gen<T[]>
     }
     public Gen<T[]> this[Gen<int> length] => new GenLength(gen, length);
     /// <summary>Generate a unique array with length in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
-    public Gen<T[]> this[int start, int finish] =>
-        finish < start ? throw new CsCheckException($"GenArrayUnique finish {finish} < start {start}")
-        : new GenLength(gen, Gen.Int[start, finish]);
+    public Gen<T[]> this[int start, int finish]
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new GenLength(gen, Gen.Int[start, finish]);
+        }
+    }
+
     sealed class FixedLength(Gen<T> gen, int length) : Gen<T[]>
     {
         public override T[] Generate(PCG pcg, Size? min, out Size size)
@@ -2629,9 +2730,15 @@ public sealed class GenList<T>(Gen<T> gen) : Gen<List<T>>
     }
     public Gen<List<T>> this[Gen<int> length] => new GenLength(gen, length);
     /// <summary>Generate a List with Count in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
-    public Gen<List<T>> this[int start, int finish] =>
-        finish < start ? throw new CsCheckException($"GenList finish {finish} < start {start}")
-        : new GenLength(gen, Gen.Int[start, finish]);
+    public Gen<List<T>> this[int start, int finish]
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new GenLength(gen, Gen.Int[start, finish]);
+        }
+    }
+
     sealed class FixedLength(Gen<T> gen, int length) : Gen<List<T>>
     {
         public override List<T> Generate(PCG pcg, Size? min, out Size size)
@@ -2670,7 +2777,7 @@ public sealed class GenHashSet<T>(Gen<T> gen) : Gen<HashSet<T>>
             }
             else if (++bad == 1000)
             {
-                throw new CsCheckException("Failing to add to HashSet");
+                ThrowHelper.Throw("Failing to add to HashSet");
             }
         }
         return vs;
@@ -2684,9 +2791,15 @@ public sealed class GenHashSet<T>(Gen<T> gen) : Gen<HashSet<T>>
     }
     public Gen<HashSet<T>> this[Gen<int> length] => new GenLength(gen, length);
     /// <summary>Generate a HashSet with Count in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
-    public Gen<HashSet<T>> this[int start, int finish] =>
-        finish < start ? throw new CsCheckException($"GenHashSet finish {finish} < start {start}")
-        : new GenLength(gen, Gen.Int[start, finish]);
+    public Gen<HashSet<T>> this[int start, int finish]
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new GenLength(gen, Gen.Int[start, finish]);
+        }
+    }
+
     sealed class FixedLength(Gen<T> gen, int length) : Gen<HashSet<T>>
     {
         public override HashSet<T> Generate(PCG pcg, Size? min, out Size size)
@@ -2732,7 +2845,7 @@ public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictiona
             }
             else if (++bad == 1000)
             {
-                throw new CsCheckException("Failing to add to Dictionary");
+                ThrowHelper.Throw("Failing to add to Dictionary");
             }
         }
         return vs;
@@ -2746,9 +2859,15 @@ public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictiona
     }
     public Gen<Dictionary<K, V>> this[Gen<int> length] => new GenLength(genK, genV, length);
     /// <summary>Generate a Dictionary with Count in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
-    public Gen<Dictionary<K, V>> this[int start, int finish] =>
-        finish < start ? throw new CsCheckException($"GenDictionary finish {finish} < start {start}")
-        : new GenLength(genK, genV, Gen.Int[start, finish]);
+    public Gen<Dictionary<K, V>> this[int start, int finish]
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new GenLength(genK, genV, Gen.Int[start, finish]);
+        }
+    }
+
     sealed class FixedLength(Gen<K> genK, Gen<V> genV, int length) : Gen<Dictionary<K, V>>
     {
         public override Dictionary<K, V> Generate(PCG pcg, Size? min, out Size size)
@@ -2794,7 +2913,7 @@ public sealed class GenSortedDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<So
             }
             else if (++bad == 1000)
             {
-                throw new CsCheckException("Failing to add to SortedDictionary");
+                ThrowHelper.Throw("Failing to add to SortedDictionary");
             }
         }
         return vs;
@@ -2808,9 +2927,15 @@ public sealed class GenSortedDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<So
     }
     public Gen<SortedDictionary<K, V>> this[Gen<int> length] => new GenLength(genK, genV, length);
     /// <summary>Generate a SortedDictionary with Count in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
-    public Gen<SortedDictionary<K, V>> this[int start, int finish] =>
-        finish < start ? throw new CsCheckException($"GenSortedDictionary finish {finish} < start {start}")
-        : new GenLength(genK, genV, Gen.Int[start, finish]);
+    public Gen<SortedDictionary<K, V>> this[int start, int finish]
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new GenLength(genK, genV, Gen.Int[start, finish]);
+        }
+    }
+
     sealed class FixedLength(Gen<K> genK, Gen<V> genV, int length) : Gen<SortedDictionary<K, V>>
     {
         public override SortedDictionary<K, V> Generate(PCG pcg, Size? min, out Size size)

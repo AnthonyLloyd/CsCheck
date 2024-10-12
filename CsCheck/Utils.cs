@@ -23,6 +23,8 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Collections.Generic;
 
 public sealed class CsCheckException : Exception
 {
@@ -1038,4 +1040,23 @@ public static class HashHelper
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsPow2(int value) => (value & (value - 1)) == 0;
+}
+
+public static class ThrowHelper
+{
+    [DoesNotReturn]
+    public static void ThrowFinishLessThanStart<T>(T start, T finish)
+    {
+        throw new CsCheckException($"finish {finish} < start {start}");
+    }
+    [DoesNotReturn]
+    public static void ThrowFailingWhereMaxCount()
+    {
+        throw new CsCheckException("Failing Where max count");
+    }
+    [DoesNotReturn]
+    public static void Throw(string message)
+    {
+        throw new CsCheckException(message);
+    }
 }
