@@ -221,14 +221,16 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
         );
     }
 
+    static void Ignore<T>(T _) { }
+
     [Fact]
     public void PCG_New_Is_Not_Faster()
     {
         Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[1, 10_000])
         .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m))
         .Faster(
-            (_, n, m) => { n.Next(m); },
-            (o, _, m) => { o.Next(m); },
+            (_, n, m) => Ignore(n.Next(m)),
+            (o, _, m) => Ignore(o.Next(m)),
             repeat: 100,
             raiseexception: false,
             writeLine: output.WriteLine
@@ -241,8 +243,8 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
         Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[1, 10_000])
         .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m, ((ulong)-m) % m))
         .Faster(
-            (_, n, m, t) => { n.NextLemire(m, t); },
-            (o, _, m, _) => { o.Next(m); },
+            (_, n, m, t) => Ignore(n.NextLemire(m, t)),
+            (o, _, m, _) => Ignore(o.Next(m)),
             repeat: 100,
             raiseexception: false,
             writeLine: output.WriteLine
@@ -333,5 +335,4 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
             return new PCGTest((stream << 1) | 1UL, state);
         }
     }
-
 }

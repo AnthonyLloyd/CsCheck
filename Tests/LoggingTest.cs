@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using CsCheck;
 
-public class GenLogsTest
+public class LoggingTest
 {
     static int[] Tally(int n, int[] ia)
     {

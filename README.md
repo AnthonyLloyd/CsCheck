@@ -16,6 +16,7 @@ This gives the following advantages over tree based shrinking libraries:
 
 See [why](https://github.com/AnthonyLloyd/CsCheck/blob/master/Why.md) you should use it, the [comparison](https://github.com/AnthonyLloyd/CsCheck/blob/master/Comparison.md) with other random testing libraries, or how CsCheck does in the [shrinking challenge](https://github.com/jlink/shrinking-challenge).
 In one [shrinking challenge test](https://github.com/jlink/shrinking-challenge/blob/main/challenges/binheap.md) CsCheck managed to shrink to a new smaller example than was thought possible and is not reached by any other testing library.
+CsCheck is the only random testing library that can always shrink to the simplest example (given enough time).
 
 CsCheck also has functionality to make multiple types of testing simple and fast:
 

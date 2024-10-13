@@ -9,7 +9,7 @@ public static class GenLogger
 
     public enum LogProcessor
     {
-        Tyche
+        Tyche,
     }
 
     public static Func<(Func<Task> loggingTask, Channel<LogContext<T>>)> CreateLogger<T>(StreamWriter w, LogProcessor p, string propertyUnderTest)
@@ -52,6 +52,7 @@ public static class GenLogger
     }
 }
 
+#pragma warning disable IDE1006 // Naming Styles
 public record TycheData(string type, double run_start, string property, string status, string representation,
     string? status_reason, Dictionary<string, string> arguments, string? how_generated, Dictionary<string, string> features,
     Dictionary<string, string>? coverage, Dictionary<string, string> timing, Dictionary<string, string> metadata);
