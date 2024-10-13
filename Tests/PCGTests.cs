@@ -234,6 +234,20 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
         );
     }
 
+    [Fact]
+    public void PCG_Lemire_Is_Faster()
+    {
+        Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[1, 10_000])
+        .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m))
+        .Faster(
+            (_, n, m) => { n.NextLemire(m); },
+            (o, _, m) => { o.Next(m); },
+            repeat: 100,
+            raiseexception: false,
+            writeLine: output.WriteLine
+        );
+    }
+
     public sealed class PCGTest
     {
         static int threadCount;
@@ -282,6 +296,17 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
                     m = (ulong)x * maxExclusive;
                 }
             }
+            return (uint)(m >> 32);
+        }
+        public uint NextLemire(uint maxExclusive)
+        {
+            ulong m;
+            var threshold = ((ulong)-maxExclusive) % maxExclusive;
+            do
+            {
+                m = (ulong)Next() * maxExclusive;
+            }
+            while ((uint)m < threshold);
             return (uint)(m >> 32);
         }
         public ulong Next64(ulong maxExclusive)
