@@ -1,9 +1,7 @@
-﻿using System.Text;
+﻿namespace Tests;
+using System.Text;
 using System.Text.Json;
 using CsCheck;
-using CsCheck.Logging;
-
-namespace Tests;
 
 public class GenLogsTest
 {
@@ -19,41 +17,38 @@ public class GenLogsTest
     [InlineData(0)]
     public void Bool_Distribution_WithTycheLogs(int generatedIntUponTrue)
     {
-        using (MemoryStream memoryStream = new())
-        using (StreamWriter writer = new StreamWriter(memoryStream))
+        using var memoryStream = new MemoryStream();
+        using var writer = new StreamWriter(memoryStream);
+        var loggerFunc = GenLogger.CreateLogger<int[]>(writer, GenLogger.LogProcessor.Tyche,
+            "Bool_Distribution_WithTycheLogs");
+
+        // Random test logic
+        const int frequency = 10;
+        var expected = Enumerable.Repeat(frequency, 2).ToArray();
+
+        //Try catch to suppress failing original test logic
+        try
         {
-            var loggerFunc = GenLogger.CreateLogger<int[]>(writer, GenLogger.LogProcessor.Tyche,
-                "Bool_Distribution_WithTycheLogs");
-
-            // Random test logic
-            const int frequency = 10;
-            var expected = Enumerable.Repeat(frequency, 2).ToArray();
-
-            //Try catch to suppress failing original test logic
-            try
-            {
-                Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array[2 * frequency]
-                    .Select(sample => Tally(2, sample))
-                    .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2, loggerFunc:loggerFunc);
-            }
-            catch
-            {
-            }
-
-            //Actual logic we want to test.
-            memoryStream.Position = 0;
-            string json;
-            using (StreamReader reader = new StreamReader(memoryStream, Encoding.UTF8))
-            {
-                json = reader.ReadToEnd();
-            }
-
-            var tycheData = JsonSerializer.Deserialize<TycheData>(json);
-
-            Assert.True(tycheData != null && LogCheck(tycheData));
-            Assert.True(JsonSerializer.Deserialize<int[]>(tycheData.representation)?.Sum() == 20);
-
+            Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array[2 * frequency]
+                .Select(sample => Tally(2, sample))
+                .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2, loggerFunc: loggerFunc);
         }
+        catch
+        {
+        }
+
+        //Actual logic we want to test.
+        memoryStream.Position = 0;
+        string json;
+        using (var reader = new StreamReader(memoryStream, Encoding.UTF8))
+        {
+            json = reader.ReadToEnd();
+        }
+
+        var tycheData = JsonSerializer.Deserialize<TycheData>(json);
+
+        Assert.True(tycheData != null && LogCheck(tycheData));
+        Assert.Equal(20, JsonSerializer.Deserialize<int[]>(tycheData.representation)?.Sum());
 
         bool LogCheck(TycheData td)
         {
@@ -71,25 +66,22 @@ public class GenLogsTest
     public void Bool_Distribution_WithTycheLogs_ToFile(int generatedIntUponTrue)
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\.."));
-        using (StreamWriter writer = new StreamWriter(Path.Combine(projectRoot, "Logging", "Testrun.jsonl")))
+        using var writer = new StreamWriter(Path.Combine(projectRoot, "Logging", "Testrun.jsonl"));
+        var loggerFunc = GenLogger.CreateLogger<int[]>(writer, GenLogger.LogProcessor.Tyche, "Bool_Distribution_WithTycheLogs");
+
+        // Random test logic
+        const int frequency = 10;
+        var expected = Enumerable.Repeat(frequency, 2).ToArray();
+
+        //Try catch to suppress failing original test logic
+        try
         {
-            var loggerFunc = GenLogger.CreateLogger<int[]>(writer, GenLogger.LogProcessor.Tyche,
-                "Bool_Distribution_WithTycheLogs");
-
-            // Random test logic
-            const int frequency = 10;
-            var expected = Enumerable.Repeat(frequency, 2).ToArray();
-
-            //Try catch to suppress failing original test logic
-            try
-            {
-                Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array[2 * frequency]
-                    .Select(sample => Tally(2, sample))
-                    .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 100, time: -2, loggerFunc:loggerFunc);
-            }
-            catch
-            {
-            }
+            Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array[2 * frequency]
+                .Select(sample => Tally(2, sample))
+                .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 100, time: -2, loggerFunc: loggerFunc);
+        }
+        catch
+        {
         }
     }
 }

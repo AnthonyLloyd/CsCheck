@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using CsCheck;
+using Perfolizer.Metrology;
 using Xunit;
 
 public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
@@ -238,10 +239,10 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
     public void PCG_Lemire_Is_Faster()
     {
         Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[1, 10_000])
-        .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m))
+        .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m, ((ulong)-m) % m))
         .Faster(
-            (_, n, m) => { n.NextLemire(m); },
-            (o, _, m) => { o.Next(m); },
+            (_, n, m, t) => { n.NextLemire(m, t); },
+            (o, _, m, _) => { o.Next(m); },
             repeat: 100,
             raiseexception: false,
             writeLine: output.WriteLine
@@ -298,10 +299,9 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
             }
             return (uint)(m >> 32);
         }
-        public uint NextLemire(uint maxExclusive)
+        public uint NextLemire(uint maxExclusive, ulong threshold)
         {
             ulong m;
-            var threshold = ((ulong)-maxExclusive) % maxExclusive;
             do
             {
                 m = (ulong)Next() * maxExclusive;

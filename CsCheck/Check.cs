@@ -13,10 +13,10 @@
 // limitations under the License.
 namespace CsCheck;
 using System.Threading.Channels;
-using Logging;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using CsCheck;
 
 /// <summary>Main random testing Check functions.</summary>
 public static partial class Check
