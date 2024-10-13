@@ -210,7 +210,7 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void PCG_Multiplier_Is_Not_Faster()
     {
-        Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[1, 10_000])
+        Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[2, 10_000])
         .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m, HashHelper.GetFastModMultiplier(m)))
         .Faster(
             (_, n, u, m) => n.Next(u, m),
@@ -226,7 +226,7 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void PCG_New_Is_Not_Faster()
     {
-        Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[1, 10_000])
+        Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[2, 10_000])
         .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m))
         .Faster(
             (_, n, m) => Ignore(n.Next(m)),
@@ -240,11 +240,25 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void PCG_Lemire_Is_Faster()
     {
-        Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[1, 10_000])
+        Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[2, 10_000])
         .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m, ((ulong)-m) % m))
         .Faster(
             (_, n, m, t) => Ignore(n.NextLemire(m, t)),
             (o, _, m, _) => Ignore(o.Next(m)),
+            repeat: 100,
+            raiseexception: false,
+            writeLine: output.WriteLine
+        );
+    }
+
+    [Fact]
+    public void PCG_Current_With_Threshold_Is_Faster()
+    {
+        Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[2, 10_000])
+        .Select((i, s, m) => (new PCGTest(i, s), new PCGTest(i, s), m, ((uint)-(int)m) % m))
+        .Faster(
+            (_, n, m, t) => Ignore(n.NextLemire(m, t)),
+            (o, _, m, t) => Ignore(o.NextCurrentWithThreshold(m, t)),
             repeat: 100,
             raiseexception: false,
             writeLine: output.WriteLine
@@ -310,6 +324,13 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
             }
             while ((uint)m < threshold);
             return (uint)(m >> 32);
+        }
+        public uint NextCurrentWithThreshold(uint maxExclusive, uint threshold)
+        {
+            if (maxExclusive == 1U) return 0U;
+            var n = Next();
+            while (n < threshold) n = Next();
+            return n % maxExclusive;
         }
         public ulong Next64(ulong maxExclusive)
         {
