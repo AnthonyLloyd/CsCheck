@@ -215,7 +215,7 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
         .Faster(
             (_, n, u, m) => n.Next(u, m),
             (o, _, u, _) => o.Next(u),
-            repeat: 100,
+            repeat: 1000,
             raiseexception: false,
             writeLine: output.WriteLine
         );
@@ -231,7 +231,7 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
         .Faster(
             (_, n, m) => Ignore(n.Next(m)),
             (o, _, m) => Ignore(o.Next(m)),
-            repeat: 100,
+            repeat: 1000,
             raiseexception: false,
             writeLine: output.WriteLine
         );
@@ -245,7 +245,7 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
         .Faster(
             (_, n, m, t) => Ignore(n.NextLemire(m, t)),
             (o, _, m, _) => Ignore(o.Next(m)),
-            repeat: 100,
+            repeat: 1000,
             raiseexception: false,
             writeLine: output.WriteLine
         );
@@ -259,7 +259,7 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
         .Faster(
             (_, n, m, t) => Ignore(n.NextLemire(m, t)),
             (o, _, m, t) => Ignore(o.NextCurrentWithThreshold(m, t)),
-            repeat: 100,
+            repeat: 1000,
             raiseexception: false,
             writeLine: output.WriteLine
         );
@@ -327,9 +327,8 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
         }
         public uint NextCurrentWithThreshold(uint maxExclusive, uint threshold)
         {
-            uint n;
-            do { n = Next(); }
-            while (n < threshold);
+            var n = Next();
+            while (n < threshold) n = Next();
             return n % maxExclusive;
         }
         public ulong Next64(ulong maxExclusive)

@@ -16,7 +16,7 @@ using System.Threading.Channels;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using CsCheck;
+using System.Reflection;
 
 /// <summary>Main random testing Check functions.</summary>
 public static partial class Check
@@ -39,6 +39,7 @@ public static partial class Check
     public static int Ulps = ParseEnvironmentVariableToInt("CsCheck_Ulps", 4);
     /// <summary>The number of Where Gne iterations before throwing an exception.</summary>
     public static int WhereLimit = ParseEnvironmentVariableToInt("CsCheck_WhereLimit", 100);
+    internal static bool IsDebug = Assembly.GetCallingAssembly().GetCustomAttribute<DebuggableAttribute>()?.IsJITTrackingEnabled ?? false;
 
     sealed class SampleActionWorker<T>(Gen<T> gen, Action<T> assert, CountdownEvent cde, string? seed, long target, bool isIter) : IThreadPoolWorkItem
     {
@@ -2224,7 +2225,7 @@ public static partial class Check
                 {
                     if (result.Add(fasterTimer.Time(), slowerTimer.Time()))
                     {
-                        if (raiseexception && result.NotFaster)
+                        if (raiseexception && result.NotFaster && !IsDebug)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2310,7 +2311,7 @@ public static partial class Check
                 {
                     if (result.Add(fasterTimer.Time(out var fasterValue), slowerTimer.Time(out var slowerValue)))
                     {
-                        if (raiseexception && result.NotFaster)
+                        if (raiseexception && result.NotFaster && !IsDebug)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2366,7 +2367,7 @@ public static partial class Check
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
-        if (raiseexception && result.NotFaster)
+        if (raiseexception && result.NotFaster && !IsDebug)
             throw new CsCheckException(result.ToString());
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null) result.Output(writeLine);
@@ -2397,7 +2398,7 @@ public static partial class Check
                 {
                     if (result.Add(await fasterTimer.Time().ConfigureAwait(false), await slowerTimer.Time().ConfigureAwait(false)))
                     {
-                        if (raiseexception && result.NotFaster)
+                        if (raiseexception && result.NotFaster && !IsDebug)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2454,7 +2455,7 @@ public static partial class Check
                     var (slowerTime, slowerValue) = await slowerTimer.Time().ConfigureAwait(false);
                     if (result.Add(fasterTime, slowerTime))
                     {
-                        if (raiseexception && result.NotFaster)
+                        if (raiseexception && result.NotFaster && !IsDebug)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2508,7 +2509,7 @@ public static partial class Check
                     t = gen.Generate(pcg, null, out _);
                     if (running && result.Add(fasterTimer.Time(t), slowerTimer.Time(t)))
                     {
-                        if (raiseexception && result.NotFaster)
+                        if (raiseexception && result.NotFaster && !IsDebug)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2713,7 +2714,7 @@ public static partial class Check
                     if (!running) return;
                     if (result.Add(await fasterTimer.Time(t).ConfigureAwait(false), await slowerTimer.Time(t).ConfigureAwait(false)))
                     {
-                        if (raiseexception && result.NotFaster)
+                        if (raiseexception && result.NotFaster && !IsDebug)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2874,7 +2875,7 @@ public static partial class Check
                     t = gen.Generate(pcg, null, out _);
                     if (result.Add(fasterTimer.Time(t, out var fasterValue), slowerTimer.Time(t, out var slowerValue)))
                     {
-                        if (raiseexception && result.NotFaster)
+                        if (raiseexception && result.NotFaster && !IsDebug)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -3136,7 +3137,7 @@ public static partial class Check
                     var (slowerTime, slowerValue) = await slowerTimer.Time(t).ConfigureAwait(false);
                     if (result.Add(fasterTime, slowerTime))
                     {
-                        if (raiseexception && result.NotFaster)
+                        if (raiseexception && result.NotFaster && !IsDebug)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -3589,6 +3590,7 @@ internal sealed class FasterResult(double sigma)
                 else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
                 result = $"{result}, sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
                 if (lockTaken) spinLock.Exit();
+                if (Check.IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
                 return result;
             }
             if (lockTaken) spinLock.Exit();
