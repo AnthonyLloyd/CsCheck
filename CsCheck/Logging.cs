@@ -3,52 +3,84 @@ namespace CsCheck;
 using System.Text.Json;
 using System.Threading.Channels;
 
-public static class GenLogger
+public interface ILogger<T> : IDisposable
 {
-    public record LogContext<T>(T Value, bool Success);
+    Action<T> WrapAssert(Action<T> assert);
+}
 
+public sealed class TycheLogger<T> : ILogger<T>
+{
+    private readonly Task _loggingTask;
+    private readonly Channel<(T Value, bool Success)> _channel;
+    public TycheLogger(Func<Task> loggingTask, Channel<(T Value, bool Success)> channel)
+    {
+        _loggingTask = Task.Run(loggingTask);
+        _channel = channel;
+    }
+    public Action<T> WrapAssert(Action<T> assert)
+    {
+        return t =>
+        {
+            try
+            {
+                assert(t);
+                _channel.Writer.TryWrite((t, true));
+            }
+            catch
+            {
+                _channel.Writer.TryWrite((t, false));
+                throw;
+            }
+        };
+    }
+
+    public void Dispose()
+    {
+        _channel.Writer.Complete();
+        _loggingTask.Wait();
+    }
+}
+
+public static class Logging
+{
     public enum LogProcessor
     {
         Tyche,
     }
 
-    public static Func<(Func<Task> loggingTask, Channel<LogContext<T>>)> CreateLogger<T>(StreamWriter w, LogProcessor p, string propertyUnderTest)
+    public static ILogger<T> CreateLogger<T>(StreamWriter w, LogProcessor p, string propertyUnderTest)
     {
-        return () =>
-        {
-            w.AutoFlush = true;
-            var channel = Channel.CreateUnbounded<LogContext<T>>(
-                new UnboundedChannelOptions
-                {
-                    SingleReader = true,
-                    SingleWriter = false
-                }
-            );
-            switch (p)
+        w.AutoFlush = true;
+        var channel = Channel.CreateUnbounded<(T Value, bool Success)>(
+            new UnboundedChannelOptions
             {
-                case LogProcessor.Tyche:
-                    var t = async () =>
-                    {
-                        while (await channel.Reader.WaitToReadAsync().ConfigureAwait(false))
-                        {
-                            var d = new Dictionary<string, string>(StringComparer.Ordinal);
-                            var item = await channel.Reader.ReadAsync().ConfigureAwait(false);
-                            var value = item.Value;
-                            var timestamp = ((DateTimeOffset)DateTime.UtcNow).ToUnixTimeMilliseconds() / 1000.0;
-                            var tycheData = new TycheData(
-                                "test_case", timestamp, propertyUnderTest,
-                                item.Success ? "passed" : "failed", JsonSerializer.Serialize(value),
-                                "reason", d, "testing", d, null, d, d
-                            );
-                            var serializedData = JsonSerializer.Serialize(tycheData);
-                            await w.WriteLineAsync(serializedData).ConfigureAwait(false);
-                        }
-                    };
-                    return (t, channel);
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(p), p, null);
+                SingleReader = true,
+                SingleWriter = false,
             }
-        };
+        );
+        switch (p)
+        {
+            case LogProcessor.Tyche:
+                var t = async () =>
+                {
+                    while (await channel.Reader.WaitToReadAsync().ConfigureAwait(false))
+                    {
+                        var d = new Dictionary<string, string>(StringComparer.Ordinal);
+                        var (value, success) = await channel.Reader.ReadAsync().ConfigureAwait(false);
+                        var timestamp = ((DateTimeOffset)DateTime.UtcNow).ToUnixTimeMilliseconds() / 1000.0;
+                        var tycheData = new TycheData(
+                            "test_case", timestamp, propertyUnderTest,
+                            success ? "passed" : "failed", JsonSerializer.Serialize(value),
+                            "reason", d, "testing", d, null, d, d
+                        );
+                        var serializedData = JsonSerializer.Serialize(tycheData);
+                        await w.WriteLineAsync(serializedData).ConfigureAwait(false);
+                    }
+                };
+                return new TycheLogger<T>(t, channel);
+            default:
+                throw new ArgumentOutOfRangeException(nameof(p), p, null);
+        }
     }
 }
 

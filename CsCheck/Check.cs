@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 namespace CsCheck;
-using System.Threading.Channels;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -115,10 +114,10 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="loggerFunc"> code to call related to writing metrics regarding generated inputs to file</param>
+    /// <param name="logger"> code to call related to writing metrics regarding generated inputs to file</param>
     public static void Sample<T>(this Gen<T> gen, Action<T> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
-        Func<(Func<Task>, Channel<GenLogger.LogContext<T>>)>? loggerFunc = null)
+        ILogger<T>? logger = null)
     {
         seed ??= Seed;
         if (iter == -1) iter = Iter;
@@ -126,31 +125,12 @@ public static partial class Check
         if (threads == -1) threads = Threads;
         bool isIter = time < 0;
         var cde = new CountdownEvent(threads);
-
-        Func<Task>? loggerTaskFunc = null;
-        Channel<GenLogger.LogContext<T>>? channel = null;
-        Action<T>? assertWithLogging = null;
-        if (loggerFunc is not null)
-        {
-            (loggerTaskFunc, channel) = loggerFunc();
-            assertWithLogging = t =>
-            {
-                try
-                {
-                    assert(t);
-                    channel.Writer.TryWrite(new GenLogger.LogContext<T>(t, true));
-                }
-                catch
-                {
-                    channel.Writer.TryWrite(new GenLogger.LogContext<T>(t, false));
-                    throw;
-                }
-            };
-        }
+        if (logger is not null)
+            assert = logger.WrapAssert(assert);
 
         var worker = new SampleActionWorker<T>(
             gen,
-            assertWithLogging ?? assert,
+            assert,
             cde,
             seed,
             isIter ? seed is null ? iter : iter - 1 : Stopwatch.GetTimestamp() + time * Stopwatch.Frequency,
@@ -177,25 +157,13 @@ public static partial class Check
             }
         }
 
-        //Starts background task where Channel.reader listens
-        Task? loggerTask = null;
-        if (loggerTaskFunc is not null)
-        {
-            loggerTask = Task.Run(loggerTaskFunc);
-        }
-
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
         cde.Wait();
         cde.Dispose();
 
-        //close writer after completion and wait for completion of the loggertask
-        if (loggerTaskFunc is not null && channel is not null && loggerTask is not null)
-        {
-            channel.Writer.Complete();
-            loggerTask.Wait();
-        }
+        logger?.Dispose();
 
         if (worker.MinPCG is not null)
             throw new CsCheckException(worker.ExceptionMessage(print ?? Print), worker.MinException);

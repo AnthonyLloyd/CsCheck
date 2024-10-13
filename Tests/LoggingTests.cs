@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using CsCheck;
 
-public class LoggingTest
+public class LoggingTests
 {
     static int[] Tally(int n, int[] ia)
     {
@@ -19,8 +19,7 @@ public class LoggingTest
     {
         using var memoryStream = new MemoryStream();
         using var writer = new StreamWriter(memoryStream);
-        var loggerFunc = GenLogger.CreateLogger<int[]>(writer, GenLogger.LogProcessor.Tyche,
-            "Bool_Distribution_WithTycheLogs");
+        var logger = Logging.CreateLogger<int[]>(writer, Logging.LogProcessor.Tyche, "Bool_Distribution_WithTycheLogs");
 
         // Random test logic
         const int frequency = 10;
@@ -31,7 +30,7 @@ public class LoggingTest
         {
             Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array[2 * frequency]
                 .Select(sample => Tally(2, sample))
-                .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2, loggerFunc: loggerFunc);
+                .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2, logger: logger);
         }
         catch
         {
@@ -67,7 +66,7 @@ public class LoggingTest
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\.."));
         using var writer = new StreamWriter(Path.Combine(projectRoot, "Logging", "Testrun.jsonl"));
-        var loggerFunc = GenLogger.CreateLogger<int[]>(writer, GenLogger.LogProcessor.Tyche, "Bool_Distribution_WithTycheLogs");
+        var logger = Logging.CreateLogger<int[]>(writer, Logging.LogProcessor.Tyche, "Bool_Distribution_WithTycheLogs");
 
         // Random test logic
         const int frequency = 10;
@@ -78,7 +77,7 @@ public class LoggingTest
         {
             Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array[2 * frequency]
                 .Select(sample => Tally(2, sample))
-                .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 100, time: -2, loggerFunc: loggerFunc);
+                .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 100, time: -2, logger: logger);
         }
         catch
         {
