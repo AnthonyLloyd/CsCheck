@@ -327,8 +327,9 @@ public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
         }
         public uint NextCurrentWithThreshold(uint maxExclusive, uint threshold)
         {
-            var n = Next();
-            while (n < threshold) n = Next();
+            uint n;
+            do { n = Next(); }
+            while (n < threshold);
             return n % maxExclusive;
         }
         public ulong Next64(ulong maxExclusive)
