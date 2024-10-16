@@ -374,7 +374,6 @@ public void Portfolio_Small_Mixed_Example()
 ## Performance testing
 
 **Faster** is used to statistically test that the first method is faster than the second and some condition is satisfied (by default equality of the output of the two methods).
-
 Since it's statistical and relative you can run it as a normal test anywhere e.g. across multiple platforms on a continuous integration server.
 It's fast because it runs in parallel and knows when to stop.
 It's just what you need to iteratively improve performance while making sure it still produces the correct results.
