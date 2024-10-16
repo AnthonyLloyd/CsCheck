@@ -75,8 +75,8 @@ static readonly Gen<JsonNode> genJsonNode = Gen.Recursive<JsonNode>((depth, genJ
 ## Random testing
 
 **Sample** is used to perform tests with a generator. Either return false or throw an exception for failure.
-**Sample** will aggressively shrink any failure down to the simplest example.  
-The default sample size is 100 iterations. Set iter: to change this or time: to run for a number of seconds.  
+**Sample** will aggressively shrink any failure down to the simplest example.
+The default sample size is 100 iterations. Set iter: to change this or time: to run for a number of seconds.
 Setting these from the command line can be a good way to run your tests in different ways and in Release mode.
 
 ### Unit Single
@@ -343,9 +343,9 @@ static int[] Rnds(int i, int j, ref int seed)
 ## Regression testing
 
 ### Portfolio Calculation
-**Single** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
-**Hash** is used to find and check a hash for a number of results.  
-It saves a temp cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
+**Single** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.
+**Hash** is used to find and check a hash for a number of results.
+It saves a temp cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.
 Together **Single** and **Hash** eliminate the need to commit data files in regression testing while also giving detailed information of any change.
 
 ```csharp
@@ -373,8 +373,8 @@ public void Portfolio_Small_Mixed_Example()
 
 ## Performance testing
 
-**Faster** is used to statistically test that the first method is faster than the second and produces the same result.  
-Since it's statistical and relative you can run it as a normal test anywhere e.g. across multiple platforms on a continuous integration server.  
+**Faster** is used to statistically test that the first method is faster than the second and some condition is satisfied (by default equality of the output of the two methods).
+Since it's statistical and relative you can run it as a normal test anywhere e.g. across multiple platforms on a continuous integration server.
 It's fast because it runs in parallel and knows when to stop.
 It's just what you need to iteratively improve performance while making sure it still produces the correct results.
 
@@ -613,15 +613,15 @@ public void Test()
 
 Check functions accept configuration optional parameters e.g. iter: 100_000, seed: "0N0XIzNsQ0O2", print: t => string.Join(", ", t):
 
-iter - The number of iterations to run in the sample (default 100).  
-time - The number of seconds to run the sample.  
-seed - The seed to use for the first iteration.  
-threads - The number of threads to run the sample on (default number logical CPUs).  
-timeout - The timeout in seconds to use for Faster (default 60 seconds).  
-print - A function to convert the state to a string for error reporting (default Check.Print).  
-equal - A function to check if the two states are the same (default Check.Equal).  
-sigma - For Faster sigma is the number of standard deviations from the null hypothesis (default 6).  
-replay - The number of times to retry the seed to reproduce a SampleParallel fail (default 100).  
+iter - The number of iterations to run in the sample (default 100).
+time - The number of seconds to run the sample.
+seed - The seed to use for the first iteration.
+threads - The number of threads to run the sample on (default number logical CPUs).
+timeout - The timeout in seconds to use for Faster (default 60 seconds).
+print - A function to convert the state to a string for error reporting (default Check.Print).
+equal - A function to check if the two states are the same (default Check.Equal).
+sigma - For Faster sigma is the number of standard deviations from the null hypothesis (default 6).
+replay - The number of times to retry the seed to reproduce a SampleParallel fail (default 100).
 
 Global defaults can also be set via environment variables:
 

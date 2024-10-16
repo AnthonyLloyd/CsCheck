@@ -157,6 +157,23 @@ public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
+    public void Faster_CustomCriterion()
+    {
+        var successCriterion = (double output1, double output2) => output1 >= 0.7 * output2;
+
+        Gen.Double[100, 1000]
+            .Faster(
+                d => d*0.8,
+                d =>
+                {
+                    Thread.Sleep(1);
+                    return d;
+                },
+                equal: successCriterion,
+                writeLine: output.WriteLine);
+    }
+
+    [Fact]
     public void Equal_Dictionary()
     {
         Assert.True(Check.Equal(
