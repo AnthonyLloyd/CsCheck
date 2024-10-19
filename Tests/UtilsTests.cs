@@ -223,4 +223,31 @@ public class IntArrayComparer : IEqualityComparer<int[]>, IComparer<int[]>
             return hash;
         }
     }
+
+    public static List<string>? GetResearchStages(ResearchProject project)
+    {
+        var phase = project.ExperimentalPhase;
+        if (phase is null) return null;
+        var stages = new List<string> { phase.PhaseName };
+        if (phase.LatestExperiment is not null)
+            stages.Add(phase.LatestExperiment.ExperimentName);
+        return stages;
+    }
+
+}
+
+public class Phase
+{
+    public string PhaseName { get; set; } = string.Empty;
+    public Experiment? LatestExperiment { get; set; }
+}
+
+public class Experiment
+{
+    public string ExperimentName {  get; set; } = string.Empty;
+}
+
+public class ResearchProject
+{
+    public Phase? ExperimentalPhase { get; set; }
 }

@@ -67,7 +67,7 @@ public static class Logging
                     {
                         var d = new Dictionary<string, string>(StringComparer.Ordinal);
                         var (value, success) = await channel.Reader.ReadAsync().ConfigureAwait(false);
-                        var timestamp = ((DateTimeOffset)DateTime.UtcNow).ToUnixTimeMilliseconds() / 1000.0;
+                        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
                         var tycheData = new TycheData(
                             "test_case", timestamp, propertyUnderTest,
                             success ? "passed" : "failed", JsonSerializer.Serialize(value),
