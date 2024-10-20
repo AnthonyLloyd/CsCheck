@@ -97,7 +97,8 @@ public static class Logging
                     {
                         var testcasesFilePath = Path.Combine(projectRoot, $".CsCheck\\observed", $"{todayString}_testcases.jsonl");
                         Directory.CreateDirectory(Path.GetDirectoryName(testcasesFilePath)!);
-                        using var w = new StreamWriter(testcasesFilePath, true);
+                        var fileStream = new FileStream(testcasesFilePath, FileMode.Append, FileAccess.Write, FileShare.Read);
+                        using var w = new StreamWriter(fileStream);
                         w.AutoFlush = true;
                         await LogTycheTestCases(propertyUnderTest, w, channel, runStart).ConfigureAwait(false);
                     }
