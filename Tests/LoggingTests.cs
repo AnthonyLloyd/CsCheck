@@ -19,7 +19,8 @@ public class LoggingTests
     {
         using var memoryStream = new MemoryStream();
         using var writer = new StreamWriter(memoryStream);
-        var logger = Logging.CreateLogger<int[]>(writer, Logging.LogProcessor.Tyche, "Bool_Distribution_WithTycheLogs");
+        writer.AutoFlush = true;
+        var logger = Logging.CreateLogger<int[]>(Logging.LogProcessor.Tyche, "Bool_Distribution_WithTycheLogs", writer);
 
         // Random test logic
         const int frequency = 10;
@@ -60,13 +61,11 @@ public class LoggingTests
     }
 
     //Test below can be used to see example of output
-    [Theory(Skip = "don't run test that generates output")]
+    [Theory(Skip="Only run if you want to verify Tyche output")]
     [InlineData(1)]
     public void Bool_Distribution_WithTycheLogs_ToFile(int generatedIntUponTrue)
     {
-        var projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\.."));
-        using var writer = new StreamWriter(Path.Combine(projectRoot, "Logging", "Testrun.jsonl"));
-        var logger = Logging.CreateLogger<int[]>(writer, Logging.LogProcessor.Tyche, "Bool_Distribution_WithTycheLogs");
+        var logger = Logging.CreateLogger<int[]>(Logging.LogProcessor.Tyche, "Bool_Distribution_WithTycheLogs");
 
         // Random test logic
         const int frequency = 10;
@@ -77,7 +76,7 @@ public class LoggingTests
         {
             Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array[2 * frequency]
                 .Select(sample => Tally(2, sample))
-                .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 100, time: -2, logger: logger);
+                .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2, logger: logger);
         }
         catch
         {
