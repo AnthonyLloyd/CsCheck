@@ -1,34 +1,42 @@
 namespace CsCheck;
 
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.Channels;
+using System.Xml;
 
-public interface ILogger<T> : IDisposable
+#pragma warning disable IDE0290 // Use primary constructor
+#pragma warning disable MA0004 // Use Task.ConfigureAwait
+#pragma warning disable CA2007 // Consider calling ConfigureAwait on the awaited task
+
+public interface ILogger : IDisposable
 {
-    Action<T> WrapAssert(Action<T> assert);
+    Action<T> WrapAssert<T>(Action<T> assert);
 }
 
-public sealed class TycheLogger<T> : ILogger<T>
+public sealed class TycheLogger : ILogger
 {
     private readonly Task _loggingTask;
-    private readonly Channel<(T Value, bool Success)> _channel;
-    public TycheLogger(Func<Task> loggingTask, Channel<(T Value, bool Success)> channel)
+    private readonly Channel<(object Value, bool Success)> _channel;
+
+    public TycheLogger(Func<Task> loggingTask, Channel<(object Value, bool Success)> channel)
     {
         _loggingTask = Task.Run(loggingTask);
         _channel = channel;
     }
-    public Action<T> WrapAssert(Action<T> assert)
+
+    public Action<T> WrapAssert<T>(Action<T> assert)
     {
         return t =>
         {
             try
             {
                 assert(t);
-                _channel.Writer.TryWrite((t, true));
+                _channel.Writer.TryWrite((t ?? (object)string.Empty, true));
             }
             catch
             {
-                _channel.Writer.TryWrite((t, false));
+                _channel.Writer.TryWrite((t ?? (object)string.Empty, false));
                 throw;
             }
         };
@@ -43,91 +51,66 @@ public sealed class TycheLogger<T> : ILogger<T>
 
 public static class Logging
 {
-    public enum LogProcessor
-    {
-        Tyche,
-    }
+    public enum LogProcessor { Tyche }
 
-    public static ILogger<T> CreateLogger<T>(LogProcessor p, string propertyUnderTest, StreamWriter? writer = null)
+    public static ILogger CreateLogger(LogProcessor p, [CallerMemberName] string? name = null, StreamWriter? writer = null) => p switch
     {
-        var channel = Channel.CreateUnbounded<(T Value, bool Success)>(
-            new UnboundedChannelOptions
-            {
-                SingleReader = true,
-                SingleWriter = false,
-            }
-        );
-        switch (p)
+        LogProcessor.Tyche => CreateTycheLogger(name, writer),
+        _ => throw new ArgumentOutOfRangeException(nameof(p), p, null),
+    };
+
+    public static ILogger CreateTycheLogger([CallerMemberName] string? name = null, StreamWriter? writer = null)
+    {
+        if (name is null) throw new CsCheckException("name is null");
+        var channel = Channel.CreateUnbounded<(object Value, bool Success)>(new() { SingleReader = true, SingleWriter = false });
+        return new TycheLogger(async () =>
         {
-            case LogProcessor.Tyche:
-                var t = async () =>
-                {
-                    var todayString = $"{DateTime.Today.Date:yyyy-M-dd}";
-                    var projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\.."));
+            var todayString = $"{DateTime.Today.Date:yyyy-M-dd}";
+            var runStart = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
+            if (writer is null)
+            {
+                var directory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../../../.cscheck/observed");
+                Directory.CreateDirectory(directory);
+                var infoFilePath = Path.Combine(directory, $"{todayString}_info.jsonl");
+                var infoRecord = new TycheInfo("info", runStart, name, "Hypothesis Statistics", "");
+                await using var infoWriter = new StreamWriter(infoFilePath, true);
+                infoWriter.AutoFlush = true;
+                await infoWriter.WriteLineAsync(JsonSerializer.Serialize(infoRecord));
+                infoWriter.Close();
 
-                    var runStart = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
-                    if (writer == null)
-                    {
-                        var infoFilePath = Path.Combine(projectRoot, ".cscheck\\observed", $"{todayString}_info.jsonl");
-                        Directory.CreateDirectory(Path.GetDirectoryName(infoFilePath)!);
-
-                        //Log information that Tyche uses to distinguish between different runs
-                        using var infoWriter = new StreamWriter(infoFilePath, true);
-                        infoWriter.AutoFlush = true;
-
-                        var infoRecord =
-                            new
-                            {
-                                type = "info",
-                                run_start = runStart,
-                                property = propertyUnderTest,
-                                title = "Hypothesis Statistics",
-                                content = ""
-                            };
-                        await infoWriter.WriteLineAsync(JsonSerializer.Serialize(infoRecord)).ConfigureAwait(false);
-                        infoWriter.Close();
-                    }
-
-                    if (writer != null)
-                    {
-                        writer.AutoFlush = true;
-                        await LogTycheTestCases(propertyUnderTest, writer, channel, runStart).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        var testcasesFilePath = Path.Combine(projectRoot, $".CsCheck\\observed", $"{todayString}_testcases.jsonl");
-                        Directory.CreateDirectory(Path.GetDirectoryName(testcasesFilePath)!);
-                        var fileStream = new FileStream(testcasesFilePath, FileMode.Append, FileAccess.Write, FileShare.Read);
-                        using var w = new StreamWriter(fileStream);
-                        w.AutoFlush = true;
-                        await LogTycheTestCases(propertyUnderTest, w, channel, runStart).ConfigureAwait(false);
-                    }
-                };
-                return new TycheLogger<T>(t, channel);
-            default:
-                throw new ArgumentOutOfRangeException(nameof(p), p, null);
-        }
+                var testcasesFilePath = Path.Combine(directory, $"{todayString}_testcases.jsonl");
+                var fileStream = new FileStream(testcasesFilePath, FileMode.Append, FileAccess.Write, FileShare.Read);
+                await using var writer = new StreamWriter(fileStream);
+                writer.AutoFlush = true;
+                await LogTycheTestCases(name, writer, channel, runStart);
+                await writer.DisposeAsync();
+            }
+            else
+            {
+                writer.AutoFlush = true;
+                await LogTycheTestCases(name, writer, channel, runStart);
+            }
+        }, channel);
     }
 
-    private static async Task LogTycheTestCases<T>(string propertyUnderTest, StreamWriter writer, Channel<(T Value, bool Success)> channel,
+    private static async Task LogTycheTestCases(string propertyUnderTest, StreamWriter writer, Channel<(object Value, bool Success)> channel,
         double runStart)
     {
-        while (await channel.Reader.WaitToReadAsync().ConfigureAwait(false))
+        while (await channel.Reader.WaitToReadAsync())
         {
-            var d = new Dictionary<string, string>(StringComparer.Ordinal);
-            var (value, success) = await channel.Reader.ReadAsync().ConfigureAwait(false);
-            var tycheData = new TycheData(
-                "test_case", runStart, propertyUnderTest,
-                success ? "passed" : "failed", JsonSerializer.Serialize(value),
-                "reason", d, "testing", d, null, d, d
-            );
+            var (value, success) = await channel.Reader.ReadAsync();
+            var tycheData = new TycheData("test_case", runStart, propertyUnderTest, success ? "passed" : "failed", JsonSerializer.Serialize(value)
+                , "reason", _emptyDictionary, "testing", _emptyDictionary, null, _emptyDictionary, _emptyDictionary);
             var serializedData = JsonSerializer.Serialize(tycheData);
-            await writer.WriteLineAsync(serializedData).ConfigureAwait(false);
+            await writer.WriteLineAsync(serializedData);
         }
     }
+
+    private static readonly Dictionary<string, string> _emptyDictionary = [];
 }
 
 #pragma warning disable IDE1006 // Naming Styles
+public record TycheInfo(string type, double run_start, string property, string title, string content);
 public record TycheData(string type, double run_start, string property, string status, string representation,
     string? status_reason, Dictionary<string, string> arguments, string? how_generated, Dictionary<string, string> features,
     Dictionary<string, string>? coverage, Dictionary<string, string> timing, Dictionary<string, string> metadata);

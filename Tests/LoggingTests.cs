@@ -20,7 +20,7 @@ public class LoggingTests
         using var memoryStream = new MemoryStream();
         using var writer = new StreamWriter(memoryStream);
         writer.AutoFlush = true;
-        var logger = Logging.CreateLogger<int[]>(Logging.LogProcessor.Tyche, "Bool_Distribution_WithTycheLogs", writer);
+        var logger = Logging.CreateTycheLogger(writer: writer);
 
         // Random test logic
         const int frequency = 10;
@@ -47,10 +47,10 @@ public class LoggingTests
 
         var tycheData = JsonSerializer.Deserialize<TycheData>(json);
 
-        Assert.True(tycheData != null && LogCheck(tycheData));
+        Assert.True(tycheData != null && LogCheck(tycheData, generatedIntUponTrue));
         Assert.Equal(20, JsonSerializer.Deserialize<int[]>(tycheData.representation)?.Sum());
 
-        bool LogCheck(TycheData td)
+        static bool LogCheck(TycheData td, int generatedIntUponTrue)
         {
             return
                 td.type == "test_case" &&
@@ -61,16 +61,14 @@ public class LoggingTests
     }
 
     //Test below can be used to see example of output
-    [Theory(Skip="Only run if you want to verify Tyche output")]
+    [Theory(Skip = "Only run if you want to verify Tyche output")]
     [InlineData(1)]
     public void Bool_Distribution_WithTycheLogs_ToFile(int generatedIntUponTrue)
     {
-        var logger = Logging.CreateLogger<int[]>(Logging.LogProcessor.Tyche, "Bool_Distribution_WithTycheLogs");
-
+        var logger = Logging.CreateTycheLogger();
         // Random test logic
         const int frequency = 10;
         var expected = Enumerable.Repeat(frequency, 2).ToArray();
-
         //Try catch to suppress failing original test logic
         try
         {
@@ -78,8 +76,6 @@ public class LoggingTests
                 .Select(sample => Tally(2, sample))
                 .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2, logger: logger);
         }
-        catch
-        {
-        }
+        catch {}
     }
 }

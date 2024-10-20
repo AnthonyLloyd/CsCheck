@@ -117,7 +117,7 @@ public static partial class Check
     /// <param name="logger"> code to call related to writing metrics regarding generated inputs to file</param>
     public static void Sample<T>(this Gen<T> gen, Action<T> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
-        ILogger<T>? logger = null)
+        ILogger? logger = null)
     {
         seed ??= Seed;
         if (iter == -1) iter = Iter;
@@ -126,7 +126,7 @@ public static partial class Check
         bool isIter = time < 0;
         var cde = new CountdownEvent(threads);
         if (logger is not null)
-            assert = logger.WrapAssert(assert);
+            assert = logger.WrapAssert<T>(assert);
 
         var worker = new SampleActionWorker<T>(
             gen,
