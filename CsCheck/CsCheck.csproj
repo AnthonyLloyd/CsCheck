@@ -24,7 +24,7 @@ CsCheck also makes parallel, performance and regression testing simple and fast.
         <PackageTags>quickcheck;random;model-based;metamorphic;parallel;performance;causal-profiling;regression;testing</PackageTags>
         <Version>4.1.0</Version>
         <PackageReleaseNotes>
-Added ILogger logging parameter with Tyche logging implementation.
+Added ILogger logging Sample parameter with Tyche logging implementation. Thanks @pppls
 Added Debug check to Faster.
 Improved PCG performance.
         </PackageReleaseNotes>

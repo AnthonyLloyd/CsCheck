@@ -609,6 +609,10 @@ public void Test()
 }
 ```
 
+## Logging
+
+CsCheck now supports logging types and pass and fail results for analysis in Sample. We include a Tyche logging implementation.
+
 ## Configuration
 
 Check functions accept configuration optional parameters e.g. iter: 100_000, seed: "0N0XIzNsQ0O2", print: t => string.Join(", ", t):
