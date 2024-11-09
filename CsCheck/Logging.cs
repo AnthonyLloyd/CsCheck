@@ -12,7 +12,7 @@ public interface ILogger : IDisposable
     Func<T, Task<bool>> WrapAssert<T>(Func<T, Task<bool>> assert);
 }
 
-public sealed class TycheLogger : ILogger
+internal sealed class TycheLogger : ILogger
 {
     private readonly Task _loggingTask;
     private readonly Channel<(object Value, bool Success)> _channel;
@@ -104,13 +104,13 @@ public static class Logging
 {
     public enum LogProcessor { Tyche }
 
-    public static ILogger CreateLogger(LogProcessor p, [CallerMemberName] string? name = null, StreamWriter? writer = null) => p switch
+    public static ILogger CreateLogger(LogProcessor p, [CallerMemberName] string? name = null, string? directory = null, StreamWriter? writer = null) => p switch
     {
-        LogProcessor.Tyche => CreateTycheLogger(name, writer),
+        LogProcessor.Tyche => CreateTycheLogger(name, directory, writer),
         _ => throw new ArgumentOutOfRangeException(nameof(p), p, null),
     };
 
-    public static ILogger CreateTycheLogger([CallerMemberName] string? name = null, StreamWriter? writer = null)
+    public static ILogger CreateTycheLogger([CallerMemberName] string? name = null, string? directory = null, StreamWriter? writer = null)
     {
         if (name is null) throw new CsCheckException("name is null");
         var channel = Channel.CreateUnbounded<(object Value, bool Success)>(new() { SingleReader = true, SingleWriter = false });
@@ -120,7 +120,7 @@ public static class Logging
             var runStart = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
             if (writer is null)
             {
-                var directory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../../../.cscheck/observed");
+                directory ??= Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../../../.cscheck/observed");
                 Directory.CreateDirectory(directory);
                 var infoFilePath = Path.Combine(directory, $"{todayString}_info.jsonl");
                 var infoRecord = new TycheInfo("info", runStart, name, "Hypothesis Statistics", "");
@@ -161,7 +161,7 @@ public static class Logging
 }
 
 #pragma warning disable IDE1006 // Naming Styles
-public record TycheInfo(string type, double run_start, string property, string title, string content);
-public record TycheData(string type, double run_start, string property, string status, string representation,
+internal record TycheInfo(string type, double run_start, string property, string title, string content);
+internal record TycheData(string type, double run_start, string property, string status, string representation,
     string? status_reason, Dictionary<string, string> arguments, string? how_generated, Dictionary<string, string> features,
     Dictionary<string, string>? coverage, Dictionary<string, string> timing, Dictionary<string, string> metadata);
