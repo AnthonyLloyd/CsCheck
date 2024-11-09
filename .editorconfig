@@ -8,6 +8,8 @@ trim_trailing_whitespace = true
 
 csharp_style_namespace_declarations = file_scoped:warning
 
+dotnet_diagnostic.IDE0290.severity = none # Use primary constructor
+
 dotnet_diagnostic.CA1307.severity = none # Specify StringComparison for clarity
 dotnet_diagnostic.CA1051.severity = none # Do not declare visible instance fields
 dotnet_diagnostic.CA1062.severity = none # Validate arguments of public methods
@@ -24,6 +26,7 @@ dotnet_diagnostic.CA1309.severity = none # Use ordinal string comparison
 dotnet_diagnostic.CA1814.severity = none # Prefer jagged arrays over multidimensional
 dotnet_diagnostic.CA1711.severity = none # Identifiers should not have incorrect suffix
 dotnet_diagnostic.CA2211.severity = none # Non-constant fields should not be visible
+dotnet_diagnostic.CA2007.severity = none # Consider calling ConfigureAwait on the awaited task
 dotnet_diagnostic.CA1815.severity = silent # Override equals and operator equals on value types
 dotnet_diagnostic.CA1707.severity = silent # Identifiers should not contain underscores
 
@@ -44,3 +47,4 @@ dotnet_diagnostic.MA0076.severity = none # Do not use implicit culture-sensitive
 dotnet_diagnostic.MA0075.severity = none # Do not use implicit culture-sensitive ToString
 dotnet_diagnostic.MA0001.severity = none # StringComparison is missing
 dotnet_diagnostic.MA0016.severity = none # Prefer using collection abstraction instead of implementation
+dotnet_diagnostic.MA0004.severity = none # Use Task.ConfigureAwait

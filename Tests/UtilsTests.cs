@@ -81,68 +81,68 @@ public class ThreadStatsTests
     [Fact]
     public void Permutations_11()
     {
-        Test([1, 1], new int[][] {
+        Test([1, 1], [
             [1, 1],
-        });
+        ]);
     }
 
     [Fact]
     public void Permutations_12()
     {
-        Test([1, 2], new int[][] {
+        Test([1, 2], [
             [1, 2],
             [2, 1],
-        });
+        ]);
     }
 
     [Fact]
     public void Permutations_112()
     {
-        Test([1, 1, 2], new int[][] {
+        Test([1, 1, 2], [
             [1, 1, 2],
             [1, 2, 1],
-        });
+        ]);
     }
 
     [Fact]
     public void Permutations_121()
     {
-        Test([1, 2, 1], new int[][] {
+        Test([1, 2, 1], [
             [1, 2, 1],
             [2, 1, 1],
             [1, 1, 2],
-        });
+        ]);
     }
 
     [Fact]
     public void Permutations_123()
     {
-        Test([1, 2, 3], new int[][] {
+        Test([1, 2, 3], [
             [1, 2, 3],
             [2, 1, 3],
             [1, 3, 2],
             [3, 1, 2],
             [2, 3, 1],
             [3, 2, 1],
-        });
+        ]);
     }
 
     [Fact]
     public void Permutations_1212()
     {
-        Test([1, 2, 1, 2], new int[][] {
+        Test([1, 2, 1, 2], [
             [1, 2, 1, 2],
             [2, 1, 1, 2],
             [1, 1, 2, 2],
             [1, 2, 2, 1],
             [2, 1, 2, 1],
-        });
+        ]);
     }
 
     [Fact]
     public void Permutations_1231()
     {
-        Test([1, 2, 3, 1], new int[][] {
+        Test([1, 2, 3, 1], [
             [1, 2, 3, 1],
             [2, 1, 3, 1],
             [1, 3, 2, 1],
@@ -155,13 +155,13 @@ public class ThreadStatsTests
             [3, 2, 1, 1],
             [3, 1, 1, 2],
             [1, 1, 3, 2],
-        });
+        ]);
     }
 
     [Fact]
     public void Permutations_1232()
     {
-        Test([1, 2, 3, 2], new int[][] {
+        Test([1, 2, 3, 2], [
             [1, 2, 3, 2],
             [2, 1, 3, 2],
             [1, 3, 2, 2],
@@ -174,7 +174,7 @@ public class ThreadStatsTests
             [2, 3, 2, 1],
             [2, 2, 3, 1],
             [3, 2, 2, 1],
-        });
+        ]);
     }
 
     [Fact]
@@ -223,17 +223,6 @@ public class IntArrayComparer : IEqualityComparer<int[]>, IComparer<int[]>
             return hash;
         }
     }
-
-    public static List<string>? GetResearchStages(ResearchProject project)
-    {
-        var phase = project.ExperimentalPhase;
-        if (phase is null) return null;
-        var stages = new List<string> { phase.PhaseName };
-        if (phase.LatestExperiment is not null)
-            stages.Add(phase.LatestExperiment.ExperimentName);
-        return stages;
-    }
-
 }
 
 public class Phase

@@ -3,11 +3,6 @@ namespace CsCheck;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.Channels;
-using System.Xml;
-
-#pragma warning disable IDE0290 // Use primary constructor
-#pragma warning disable MA0004 // Use Task.ConfigureAwait
-#pragma warning disable CA2007 // Consider calling ConfigureAwait on the awaited task
 
 public interface ILogger : IDisposable
 {

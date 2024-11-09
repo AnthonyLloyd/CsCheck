@@ -184,10 +184,10 @@ public class SolveRootTests(Xunit.Abstractions.ITestOutputHelper output)
             return Gen.Select(genD, genD, genD)
                    .Where((a, b, c) => a < b && ((c < a && !AreClose(c, a)) || (c > b && !AreClose(c, b))))
                    .Select((a, b, c) => (a, f(a), b, f(b), c, f(c)))
-                   .Where((a, fa, b, fb, c, fc) => BoundsZero(fa, fb))
+                   .Where((_, fa, _, fb, _, _) => BoundsZero(fa, fb))
                    .Select((a, fa, b, fb, c, fc) => (root1, root2, a, b, c, QuadraticRoot(a, fa, b, fb, c, fc)));
         })
-        .Sample((root1, root2, a, b, c, x) => AreClose(root1, x) || AreClose(root2, x));
+        .Sample((root1, root2, _, _, _, x) => AreClose(root1, x) || AreClose(root2, x));
     }
 
     static (int, int[]) TestSolver(double tol, Func<double, Func<double, double>, double, double, double> solver)
