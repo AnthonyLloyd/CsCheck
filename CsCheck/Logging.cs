@@ -7,6 +7,9 @@ using System.Threading.Channels;
 public interface ILogger : IDisposable
 {
     Action<T> WrapAssert<T>(Action<T> assert);
+    Func<T, bool> WrapAssert<T>(Func<T, bool> assert);
+    Func<T, Task> WrapAssert<T>(Func<T, Task> assert);
+    Func<T, Task<bool>> WrapAssert<T>(Func<T, Task<bool>> assert);
 }
 
 public sealed class TycheLogger : ILogger
@@ -28,6 +31,59 @@ public sealed class TycheLogger : ILogger
             {
                 assert(t);
                 _channel.Writer.TryWrite((t ?? (object)string.Empty, true));
+            }
+            catch
+            {
+                _channel.Writer.TryWrite((t ?? (object)string.Empty, false));
+                throw;
+            }
+        };
+    }
+
+    public Func<T, bool> WrapAssert<T>(Func<T, bool> assert)
+    {
+        return t =>
+        {
+            try
+            {
+                var result = assert(t);
+                _channel.Writer.TryWrite((t ?? (object)string.Empty, result));
+                return result;
+            }
+            catch
+            {
+                _channel.Writer.TryWrite((t ?? (object)string.Empty, false));
+                throw;
+            }
+        };
+    }
+
+    public Func<T, Task> WrapAssert<T>(Func<T, Task> assert)
+    {
+        return async t =>
+        {
+            try
+            {
+                await assert(t);
+                _channel.Writer.TryWrite((t ?? (object)string.Empty, true));
+            }
+            catch
+            {
+                _channel.Writer.TryWrite((t ?? (object)string.Empty, false));
+                throw;
+            }
+        };
+    }
+
+    public Func<T, Task<bool>> WrapAssert<T>(Func<T, Task<bool>> assert)
+    {
+        return async t =>
+        {
+            try
+            {
+                var result = await assert(t);
+                _channel.Writer.TryWrite((t ?? (object)string.Empty, result));
+                return result;
             }
             catch
             {

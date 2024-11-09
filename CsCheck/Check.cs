@@ -114,7 +114,7 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger"> code to call related to writing metrics regarding generated inputs to file</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T>(this Gen<T> gen, Action<T> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
         ILogger? logger = null)
@@ -126,7 +126,7 @@ public static partial class Check
         bool isIter = time < 0;
         var cde = new CountdownEvent(threads);
         if (logger is not null)
-            assert = logger.WrapAssert<T>(assert);
+            assert = logger.WrapAssert(assert);
 
         var worker = new SampleActionWorker<T>(
             gen,
@@ -163,8 +163,6 @@ public static partial class Check
         cde.Wait();
         cde.Dispose();
 
-        logger?.Dispose();
-
         if (worker.MinPCG is not null)
             throw new CsCheckException(worker.ExceptionMessage(print ?? Print), worker.MinException);
         if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
@@ -179,10 +177,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
+        => Sample(gen, t => assert(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -193,10 +192,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
+        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -207,10 +207,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ILogger? logger = null)
+        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -221,10 +222,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ILogger? logger = null)
+        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -235,10 +237,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ILogger? logger = null)
+        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -249,10 +252,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null, ILogger? logger = null)
+        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -263,10 +267,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
-        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null, ILogger? logger = null)
+        => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -277,8 +282,9 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T>(this Gen<T> gen, Func<T, string> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
         Sample(gen, (T t) =>
@@ -286,7 +292,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print, logger);
         classifier.Print(writeLine);
     }
 
@@ -299,8 +305,9 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, string> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2) =>
@@ -308,7 +315,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print, logger);
         classifier.Print(writeLine);
     }
 
@@ -321,8 +328,9 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, string> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3) =>
@@ -330,7 +338,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print, logger);
         classifier.Print(writeLine);
     }
 
@@ -343,8 +351,9 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, string> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3, t4) =>
@@ -352,7 +361,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print, logger);
         classifier.Print(writeLine);
     }
 
@@ -365,8 +374,9 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, string> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3, t4, t5) =>
@@ -374,7 +384,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print, logger);
         classifier.Print(writeLine);
     }
 
@@ -387,8 +397,9 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, string> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3, t4, t5, t6) =>
@@ -396,7 +407,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5, t6);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print, logger);
         classifier.Print(writeLine);
     }
 
@@ -409,8 +420,10 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, string> classify,
-        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
+        ILogger? logger = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3, t4, t5, t6, t7) =>
@@ -418,7 +431,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5, t6, t7);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print, logger);
         classifier.Print(writeLine);
     }
 
@@ -431,8 +444,10 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, string> classify,
-        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
+        ILogger? logger = null)
     {
         var classifier = new Classifier();
         Sample(gen, (t1, t2, t3, t4, t5, t6, t7, t8) =>
@@ -440,7 +455,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = classify(t1, t2, t3, t4, t5, t6, t7, t8);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print);
+        }, null, seed, iter, time, threads, print, logger);
         classifier.Print(writeLine);
     }
 
@@ -453,13 +468,16 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
     {
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
+        if (logger is not null)
+            assert = logger.WrapAssert(assert);
 
         PCG? minPCG = null;
         ulong minState = 0UL;
@@ -558,10 +576,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -572,10 +591,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -586,10 +606,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ILogger? logger = null)
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -600,10 +621,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ILogger? logger = null)
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -614,10 +636,12 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> assert,
-         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print);
+         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
+         ILogger? logger = null)
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -628,10 +652,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> assert,
-         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print);
+         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null, ILogger? logger = null)
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -642,10 +667,12 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> assert,
-         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
-        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
+         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
+        ILogger? logger = null)
+        => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -656,8 +683,9 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task<string>> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async t =>
@@ -665,7 +693,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
+        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -678,8 +706,9 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<string>> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2) =>
@@ -687,7 +716,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
+        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -700,8 +729,9 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<string>> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3) =>
@@ -709,7 +739,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
+        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -722,8 +752,10 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<string>> classify,
-        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null,
+        ILogger? logger = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4) =>
@@ -731,7 +763,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
+        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -744,8 +776,10 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<string>> classify,
-        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null,
+        ILogger? logger = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4, t5) =>
@@ -753,7 +787,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
+        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -766,8 +800,10 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<string>> classify,
-        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
+        ILogger? logger = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6) =>
@@ -775,7 +811,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5, t6).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
+        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -788,8 +824,10 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<string>> classify,
-        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
+        ILogger? logger = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7) =>
@@ -797,7 +835,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5, t6, t7).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
+        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -810,8 +848,10 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<string>> classify,
-        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
+        Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
+        ILogger? logger = null)
     {
         var classifier = new Classifier();
         await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7, t8) =>
@@ -819,7 +859,7 @@ public static partial class Check
             var time = Stopwatch.GetTimestamp();
             var name = await classify(t1, t2, t3, t4, t5, t6, t7, t8).ConfigureAwait(false);
             classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print).ConfigureAwait(false);
+        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
         classifier.Print(writeLine);
     }
 
@@ -912,13 +952,16 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
     {
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
+        if (logger is not null)
+            predicate = logger.WrapAssert(predicate);
         bool isIter = time < 0;
         var cde = new CountdownEvent(threads);
         var worker = new SampleFuncWorker<T>(
@@ -974,10 +1017,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
+        => Sample(gen, t => predicate(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -988,10 +1032,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
+        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -1002,10 +1047,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ILogger? logger = null)
+        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -1016,10 +1062,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ILogger? logger = null)
+        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -1030,10 +1077,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ILogger? logger = null)
+        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -1044,10 +1092,12 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate,
-        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print);
+        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
+        ILogger? logger = null)
+        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -1058,10 +1108,12 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate,
-        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
-        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
+        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
+        ILogger? logger = null)
+        => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -1072,13 +1124,16 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task<bool>> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
     {
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
+        if (logger is not null)
+            predicate = logger.WrapAssert(predicate);
 
         PCG? minPCG = null;
         ulong minState = 0UL;
@@ -1203,10 +1258,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<bool>> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -1217,10 +1273,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<bool>> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -1231,10 +1288,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<bool>> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ILogger? logger = null)
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -1245,10 +1303,11 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<bool>> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print);
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ILogger? logger = null)
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -1259,10 +1318,12 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<bool>> predicate,
-        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print);
+        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
+        ILogger? logger = null)
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -1273,10 +1334,12 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<bool>> predicate,
-        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print);
+        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
+        ILogger? logger = null)
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
     /// <param name="gen">The sample input data generator.</param>
@@ -1287,10 +1350,12 @@ public static partial class Check
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<bool>> predicate,
-        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null)
-        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print);
+        Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
+        ILogger? logger = null)
+        => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print, logger);
 
     sealed class ModelBasedData<Actual, Model>(Actual actualState, Model modelState, uint stream, ulong seed, (string, Action<Actual>, Action<Model>)[] operations)
     {
@@ -1319,9 +1384,10 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model>[] operations,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
     {
         equal ??= ModelEqual;
         seed ??= Seed;
@@ -1376,7 +1442,7 @@ public static partial class Check
                 sb.Append("\n     Exception: ").Append(p.Exception);
             }
             return sb.ToString();
-        });
+        }, logger);
     }
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
@@ -1391,11 +1457,12 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
-        => SampleModelBased(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, writeLine);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBased(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1410,12 +1477,13 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
-        => SampleModelBased(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, writeLine);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBased(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1431,12 +1499,13 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
-        => SampleModelBased(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, writeLine);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBased(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1453,12 +1522,13 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
-        => SampleModelBased(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, writeLine);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBased(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1476,14 +1546,15 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         GenOperation<Actual, Model> operation5,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3, operation4, operation5],
-            equal, seed, iter, time, threads, printActual, printModel, writeLine);
+            equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1502,14 +1573,15 @@ public static partial class Check
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         GenOperation<Actual, Model> operation5, GenOperation<Actual, Model> operation6,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null)
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3, operation4, operation5, operation6],
-            equal, seed, iter, time, threads, printActual, printModel, writeLine);
+            equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
 
     sealed class MetamorphicData<T>(T state1, T state2, uint stream, ulong seed)
     {
@@ -1538,9 +1610,10 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void SampleMetamorphic<T>(this Gen<T> initial, GenMetamorphic<T> operations,
         Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<T, string>? print = null, Action<string>? writeLine = null)
+        Func<T, string>? print = null, Action<string>? writeLine = null, ILogger? logger = null)
     {
         equal ??= ModelEqual;
         seed ??= Seed;
@@ -1582,7 +1655,7 @@ public static partial class Check
                 sb.Append("\n    Exception: ").Append(p.Item1.Exception);
             }
             return sb.ToString();
-        });
+        }, logger);
     }
 
     sealed class SampleParallelData<T>(T state, uint stream, ulong seed, (string, Action<T>)[] sequentialOperations, (string, Action<T>)[] parallelOperations, int threads)
