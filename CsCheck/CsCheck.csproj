@@ -22,16 +22,11 @@ CsCheck also makes parallel, performance and regression testing simple and fast.
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;parallel;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>4.0.0</Version>
+        <Version>4.1.0</Version>
         <PackageReleaseNotes>
-Added SampleParallel overloads using a sequentially run model for linearization.
-Added running operations sequentially before parallel to SampleParallel.
-Added maxSequentialOperations and maxParallelOperations parameters to SampleParallel.
-
-BREAKING CHANGES:
-- Now targets net8.0, version 3.2.2 was the last to target net6.0.
-- SampleConcurrent renamed to SampleParallel.
-- GenOperation&lt;Actual,Model&gt; takes separate actions for actual and model.
+Added ILogger logging parameter with Tyche logging implementation.
+Added Debug check to Faster.
+Improved PCG performance.
         </PackageReleaseNotes>
         <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>

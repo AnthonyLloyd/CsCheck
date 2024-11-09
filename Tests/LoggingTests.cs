@@ -37,6 +37,8 @@ public class LoggingTests
         {
         }
 
+        logger.Dispose();
+
         //Actual logic we want to test.
         memoryStream.Position = 0;
         string json;
