@@ -1778,6 +1778,17 @@ public sealed class GenUInt : Gen<uint>
             return new Range(start, finish - start + 1U);
         }
     }
+    sealed class GenUniform : Gen<uint>
+    {
+        public override uint Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next();
+            size = new Size(i);
+            return i;
+        }
+    }
+    /// <summary>Generate a uint uniformly distributed with all values.</summary>
+    public Gen<uint> Uniform = new GenUniform();
 }
 public sealed class GenUInt4 : Gen<uint>
 {
@@ -1901,6 +1912,17 @@ public sealed class GenLong : Gen<long>
             return new Range(start, (ulong)(finish - start + 1));
         }
     }
+    sealed class GenUniform : Gen<long>
+    {
+        public override long Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = (long)pcg.Next64();
+            size = new Size(Zigzag(i));
+            return i;
+        }
+    }
+    /// <summary>Generate a long uniformly distributed with all values.</summary>
+    public Gen<long> Uniform = new GenUniform();
 }
 
 public sealed class GenULong : Gen<ulong>
@@ -1930,6 +1952,17 @@ public sealed class GenULong : Gen<ulong>
             return new Range(start, finish - start + 1UL);
         }
     }
+    sealed class GenUniform : Gen<ulong>
+    {
+        public override ulong Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64();
+            size = new Size(i);
+            return i;
+        }
+    }
+    /// <summary>Generate a ulong uniformly distributed with all values.</summary>
+    public Gen<ulong> Uniform = new GenUniform();
 }
 
 public sealed class GenFloat : Gen<float>
