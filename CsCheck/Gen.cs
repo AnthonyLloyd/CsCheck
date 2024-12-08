@@ -1541,6 +1541,8 @@ public static class Gen
     public static readonly GenChar Char = new();
     /// <summary>Generator for string.</summary>
     public static readonly GenString String = new();
+    /// <summary>Generator for a PCG seed.</summary>
+    public static readonly GenSeed Seed = new();
 }
 
 public sealed class GenBool : Gen<bool>
@@ -2533,6 +2535,15 @@ public sealed class GenString : Gen<string>
     public Gen<string> this[string chars] =>
         Gen.Char[chars].Array.Select(i => new string(i));
     public readonly Gen<string> AlphaNumeric = Gen.Char.AlphaNumeric.Array.Select(i => new string(i));
+}
+
+public sealed class GenSeed : Gen<string>
+{
+    public override string Generate(PCG pcg, Size? min, out Size size)
+    {
+        size = new Size(0);
+        return new PCG(pcg.Next(), pcg.Next64()).ToString();
+    }
 }
 
 public sealed class GenArray<T>(Gen<T> gen) : Gen<T[]>
