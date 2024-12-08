@@ -17,6 +17,8 @@ namespace CsCheck;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Xml.Linq;
+using Microsoft.VisualBasic;
+using System.Collections.Generic;
 
 /// <summary>Size representation of Gen generated data.</summary>
 public sealed class Size
@@ -1427,6 +1429,96 @@ public static class Gen
     /// <summary>Create a generator by shuffling the generated elements.</summary>
     public static Gen<List<T>> Shuffle<T>(this Gen<List<T>> gen, int start, int finish) =>
         SelectMany(gen, Int[start, finish], (a, l) => Shuffle(a, l));
+
+    sealed class GenShuffleSelectArray<T>(Gen<T>[] gens) : Gen<T[]>
+    {
+        public override T[] Generate(PCG pcg, Size? min, out Size size)
+        {
+            size = new Size(0);
+            var r = new T[gens.Length];
+            for (int i = 0; i < gens.Length; i++)
+            {
+                r[i] = gens[i].Generate(pcg, min, out var s);
+                size.Add(s);
+                if (Size.IsLessThan(min, size)) return default!;
+            }
+            ShuffleInPlace(r, pcg, 0);
+            return r;
+        }
+    }
+    /// <summary>Create a generator by shuffling the generator elements and generating each.</summary>
+    public static Gen<T[]> ShuffleSelect<T>(this Gen<T>[] gens) => new GenShuffleSelectArray<T>(gens);
+
+    sealed class GenShuffleSelectArrayLength<T>(Gen<T>[] gens, int length) : Gen<T[]>
+    {
+        public override T[] Generate(PCG pcg, Size? min, out Size size)
+        {
+            var array = (Gen<T>[])gens.Clone();
+            int lower = Math.Max(gens.Length - length, 0);
+            ShuffleInPlace(array, pcg, lower);
+            size = new Size(0);
+            var r = new T[length];
+            for (int i = 0; i < length; i++)
+            {
+                r[i] = array[i + lower].Generate(pcg, min, out var s);
+                size.Add(s);
+                if (Size.IsLessThan(min, size)) return default!;
+            }
+            return r;
+        }
+    }
+    /// <summary>Create a generator by shuffling the generator elements and generating each.</summary>
+    public static Gen<T[]> ShuffleSelect<T>(this Gen<T>[] gens, int length) =>
+        new GenShuffleSelectArrayLength<T>(gens, length);
+
+    /// <summary>Create a generator by shuffling the generator elements and generating each.</summary>
+    public static Gen<T[]> ShuffleSelect<T>(this Gen<T>[] gens, int start, int finish) =>
+        SelectMany(Int[start, finish], l => ShuffleSelect(gens, l));
+
+    sealed class GenShuffleSelectList<T>(List<Gen<T>> gens) : Gen<List<T>>
+    {
+        public override List<T> Generate(PCG pcg, Size? min, out Size size)
+        {
+            size = new Size(0);
+            var r = new List<T>(gens.Count);
+            foreach (var gen in gens)
+            {
+                r.Add(gen.Generate(pcg, min, out var s));
+                size.Add(s);
+                if (Size.IsLessThan(min, size)) return default!;
+            }
+            ShuffleInPlace(r, pcg, 0);
+            return r;
+        }
+    }
+    /// <summary>Create a generator by shuffling the generator elements and generating each.</summary>
+    public static Gen<List<T>> ShuffleSelect<T>(this List<Gen<T>> gens) => new GenShuffleSelectList<T>(gens);
+
+    sealed class GenShuffleSelectListLength<T>(List<Gen<T>> gens, int length) : Gen<List<T>>
+    {
+        public override List<T> Generate(PCG pcg, Size? min, out Size size)
+        {
+            var array = gens.ToArray();
+            int lower = Math.Max(array.Length - length, 0);
+            ShuffleInPlace(array, pcg, lower);
+            size = new Size(0);
+            var r = new List<T>(length);
+            for (int i = 0; i < length; i++)
+            {
+                r.Add(array[i + lower].Generate(pcg, min, out var s));
+                size.Add(s);
+                if (Size.IsLessThan(min, size)) return default!;
+            }
+            return r;
+        }
+    }
+    /// <summary>Create a generator by shuffling the generator elements and generating each.</summary>
+    public static Gen<List<T>> ShuffleSelect<T>(this List<Gen<T>> gens, int length) =>
+        new GenShuffleSelectListLength<T>(gens, length);
+
+    /// <summary>Create a generator by shuffling the generator elements and generating each.</summary>
+    public static Gen<List<T>> ShuffleSelect<T>(this List<Gen<T>> gens, int start, int finish) =>
+        SelectMany(Int[start, finish], l => ShuffleSelect(gens, l));
 
     sealed class GenNullable<T>(Gen<T> gen, uint nullLimit) : Gen<T?> where T : struct
     {
