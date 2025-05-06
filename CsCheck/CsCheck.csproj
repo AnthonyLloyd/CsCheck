@@ -22,11 +22,9 @@ CsCheck also makes parallel, performance and regression testing simple and fast.
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;parallel;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>4.2.0</Version>
+        <Version>4.2.1</Version>
         <PackageReleaseNotes>
-Added Uniform for Gen.UInt, Gen.Long and Gen.ULong.
-Added Gen.Seed.
-Added ShuffleSelect to transform List&lt;Gen&lt;T&gt;&gt; to Gen&lt;List&lt;T&gt;&gt;.
+Fix bad check initialization in ArrayUnique.
         </PackageReleaseNotes>
         <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>
