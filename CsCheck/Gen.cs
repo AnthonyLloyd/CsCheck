@@ -2739,15 +2739,16 @@ public sealed class GenArrayUnique<T>(Gen<T> gen) : Gen<T[]>
         var hs = new HashSet<T>();
         var vs = new T[length];
         int i = 0;
+        var bad = 0;
         while (i < length)
         {
             var v = gen.Generate(pcg, null, out var s);
-            var bad = 0;
             if (hs.Add(v))
             {
                 vs[i++] = v;
                 total.Add(s);
                 if (Size.IsLessThan(min, size)) return default!;
+                bad = 0;
             }
             else if (++bad == 1000)
             {
