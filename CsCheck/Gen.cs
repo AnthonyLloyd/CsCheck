@@ -2418,6 +2418,7 @@ public sealed class GenDecimal : Gen<decimal>
     public Gen<decimal> Unit = new GenUnit();
 }
 
+/// <summary>Generate DateTime with DateTimeKind.Unspecified.</summary>
 public sealed class GenDateTime : Gen<DateTime>
 {
     const ulong max = 3155378975999999999UL; //(ulong)DateTime.MaxValue.Ticks;
@@ -2436,7 +2437,6 @@ public sealed class GenDateTime : Gen<DateTime>
             return new DateTime((long)i);
         }
     }
-
     /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<DateTime> this[DateTime start, DateTime finish]
     {
@@ -2446,6 +2446,66 @@ public sealed class GenDateTime : Gen<DateTime>
             return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
         }
     }
+
+    sealed class GenDateTimeUtc : Gen<DateTime>
+    {
+        public override DateTime Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64(max);
+            size = new Size(i >> 10);
+            return new DateTime((long)i, DateTimeKind.Utc);
+        }
+        sealed class Range(ulong start, ulong length) : Gen<DateTime>
+        {
+            public override DateTime Generate(PCG pcg, Size? min, out Size size)
+            {
+                ulong i = start + pcg.Next64(length);
+                size = new Size(i);
+                return new DateTime((long)i, DateTimeKind.Utc);
+            }
+        }
+        /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
+        public Gen<DateTime> this[DateTime start, DateTime finish]
+        {
+            get
+            {
+                if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+                return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
+            }
+        }
+    }
+
+    public readonly Gen<DateTime> Utc = new GenDateTimeUtc();
+
+    sealed class GenDateTimeLocal : Gen<DateTime>
+    {
+        public override DateTime Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next64(max);
+            size = new Size(i >> 10);
+            return new DateTime((long)i, DateTimeKind.Local);
+        }
+        sealed class Range(ulong start, ulong length) : Gen<DateTime>
+        {
+            public override DateTime Generate(PCG pcg, Size? min, out Size size)
+            {
+                ulong i = start + pcg.Next64(length);
+                size = new Size(i);
+                return new DateTime((long)i, DateTimeKind.Local);
+            }
+        }
+        /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
+        public Gen<DateTime> this[DateTime start, DateTime finish]
+        {
+            get
+            {
+                if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+                return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
+            }
+        }
+    }
+
+    public readonly Gen<DateTime> Local = new GenDateTimeLocal();
 }
 
 public sealed class GenDate : Gen<DateTime>
