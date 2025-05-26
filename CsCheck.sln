@@ -12,7 +12,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{0C
 		Comparison.md = Comparison.md
 		.github\workflows\main.yml = .github\workflows\main.yml
 		README.md = README.md
-		Size.md = Size.md
 		Why.md = Why.md
 	EndProjectSection
 EndProject
