@@ -17,7 +17,7 @@ CsCheck also makes parallel, performance and regression testing simple and fast.
         </Description>
         <Authors>Anthony Lloyd</Authors>
         <Owners>Anthony Lloyd</Owners>
-        <Copyright>Copyright 2024</Copyright>
+        <Copyright>Copyright 2025</Copyright>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
