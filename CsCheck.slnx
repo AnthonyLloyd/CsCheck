@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Solution/">
+    <File Path=".github/workflows/main.yml" />
+    <File Path="Comparison.md" />
+    <File Path="README.md" />
+    <File Path="Why.md" />
+  </Folder>
+  <Project Path="CsCheck/CsCheck.csproj" />
+  <Project Path="Tests/Tests.csproj" />
+</Solution>
