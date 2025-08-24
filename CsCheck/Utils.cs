@@ -646,6 +646,52 @@ public static partial class Check
         var bi = new FloatConverter { F = b }.I;
         return Math.Abs(bi - ai) <= ulps;
     }
+
+    public static BigO BigO(double[] n, double[] time)
+    {
+        static double RegressionFit(double[] x, double[] y, Func<double, double> fx, Func<double, double> fy, out double a, out double b)
+        {
+            double p = 0, q = 0, xy = 0, sy = 0, r = y.Length;
+            for (int i = 0; i < x.Length; i++)
+            {
+                var x_i = x[i];
+                var f_i = fx(x_i);
+                q += f_i;
+                p += f_i * f_i;
+                var y_i = fy(y[i]);
+                xy += f_i * y_i;
+                sy += y_i;
+            }
+            var det = p * r - q * q;
+            a = (r * xy - q * sy) / det;
+            b = (p * sy - q * xy) / det;
+            var error = 0.0;
+            for (int i = 0; i < x.Length; i++)
+            {
+                var x_i = x[i];
+                var e = a * fx(x_i) + b - fy(y[i]);
+                error += e * e;
+            }
+            return error;
+        }
+        var bestResult = CsCheck.BigO.Constant;
+        var bestError = double.MaxValue;
+        double error = RegressionFit(n, time, x => x, x => x, out var a, out var b);
+        if (error < bestError) { bestError = error; bestResult = CsCheck.BigO.Linear; }
+        error = RegressionFit(n, time, x => x * x, x => x, out _, out _);
+        if (error < bestError) { bestError = error; bestResult = CsCheck.BigO.Quadratic; }
+        error = RegressionFit(n, time, x => x * x * x, x => x, out _, out _);
+        if (error < bestError) { bestError = error; bestResult = CsCheck.BigO.Cubic; }
+        error = RegressionFit(n, time, Math.Log, x => x, out _, out _);
+        if (error < bestError) { bestError = error; bestResult = CsCheck.BigO.Logarithmic; }
+        error = RegressionFit(n, time, x => x * Math.Log(x), x => x, out _, out _);
+        if (error < bestError) { bestError = error; bestResult = CsCheck.BigO.Linearithmic; }
+        error = RegressionFit(n, time, x => x, x => Math.Log(x), out _, out _);
+        if (error < bestError) { bestError = error; bestResult = CsCheck.BigO.Exponential; }
+        if (bestResult == CsCheck.BigO.Linear && (n.Max() - n.Min()) * a * 10 < b)
+            bestResult = CsCheck.BigO.Constant;
+        return bestResult;
+    }
 }
 
 /// <summary>A median and quartile estimator.</summary>
@@ -1059,4 +1105,15 @@ public static class ThrowHelper
     {
         throw new CsCheckException(message);
     }
+}
+
+public enum BigO
+{
+    Constant,
+    Linear,
+    Quadratic,
+    Cubic,
+    Logarithmic,
+    Linearithmic,
+    Exponential,
 }

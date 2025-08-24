@@ -11,7 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 namespace CsCheck;
+
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -287,7 +289,7 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
-        Sample(gen, (T t) =>
+        Sample(gen, t =>
         {
             var time = Stopwatch.GetTimestamp();
             var name = classify(t);
@@ -1734,7 +1736,7 @@ public static partial class Check
         {
             int i = seed.IndexOf('[');
             int j = seed.IndexOf(']', i + 1);
-            replayThreads = seed.Substring(i + 1, j - i - 1).Split(',').Select(int.Parse).ToArray();
+            replayThreads = Array.ConvertAll(seed.Substring(i + 1, j - i - 1).Split(','), int.Parse);
             seed = seed[..i];
         }
 
@@ -1998,7 +2000,7 @@ public static partial class Check
         {
             int i = seed.IndexOf('[');
             int j = seed.IndexOf(']', i + 1);
-            replayThreads = seed.Substring(i + 1, j - i - 1).Split(',').Select(int.Parse).ToArray();
+            replayThreads = Array.ConvertAll(seed.Substring(i + 1, j - i - 1).Split(','), int.Parse);
             seed = seed[..i];
         }
 
@@ -3469,6 +3471,23 @@ public static partial class Check
                 throw new CsCheckException($"Actual {actualFullHash} but expected {expected}");
             }
         }
+    }
+
+    public static BigO BigO<T>(int[] n, Func<int, Gen<T>> genN, Action<T> function, int iter = 9, int repeat = 1)
+    {
+        var gens = Array.ConvertAll(n, i => genN(i));
+        var y = new MedianEstimator[n.Length];
+        for (int i = 0; i < y.Length; i++)
+            y[i] = new MedianEstimator();
+        var timer = Timer.Create(function, repeat);
+        while (iter-- > 0)
+            for (int i = 0; i < n.Length; i++)
+            {
+                var g = gens[i].Single();
+                var t = timer.Time(g);
+                y[i].Add(t);
+            }
+        return BigO(Array.ConvertAll(n, i => (double)i), Array.ConvertAll(y, m => m.Median));
     }
 }
 

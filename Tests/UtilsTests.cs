@@ -190,6 +190,18 @@ public class ThreadStatsTests
             Assert.Equal(ss.Count, ps.Count);
         });
     }
+
+    [Fact]
+    public void BigO_Exact_Examples()
+    {
+        Assert.Equal(BigO.Constant, Check.BigO([1, 2, 3], [5, 5, 5]));
+        Assert.Equal(BigO.Linear, Check.BigO([1, 2, 3], [5, 6, 7]));
+        Assert.Equal(BigO.Quadratic, Check.BigO([1, 2, 3], [5, 8, 13]));
+        Assert.Equal(BigO.Cubic, Check.BigO([1, 2, 3], [1, 8, 27]));
+        Assert.Equal(BigO.Logarithmic, Check.BigO([1, 2, 3], [1, 1 + Math.Log(2), 1 + Math.Log(3)]));
+        Assert.Equal(BigO.Linearithmic, Check.BigO([1, 2, 3], [1, 1 + 2 * Math.Log(2), 1 + 3 * Math.Log(3)]));
+        Assert.Equal(BigO.Exponential, Check.BigO([1, 2, 3], [4, 8, 16]));
+    }
 }
 
 public class IntArrayComparer : IEqualityComparer<int[]>, IComparer<int[]>

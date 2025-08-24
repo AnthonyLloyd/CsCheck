@@ -16,11 +16,9 @@ namespace CsCheck;
 
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
-using System.Xml.Linq;
-using Microsoft.VisualBasic;
 using System.Collections.Generic;
 
-/// <summary>Size representation of Gen generated data.</summary>
+/// <summary>Size representation of Gen generated data.</summary>s
 public sealed class Size
 {
     public ulong I;
