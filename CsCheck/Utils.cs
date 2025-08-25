@@ -490,7 +490,7 @@ public static partial class Check
             while (Hold) { }
             while ((i = Interlocked.Increment(ref opId)) < parallelOperations.Length)
             {
-                if (threadIds is not null) threadIds[i] = tid;
+                threadIds?[i] = tid;
                 try { parallelOperations[i].Item2(state); }
                 catch (Exception e)
                 {
@@ -647,7 +647,7 @@ public static partial class Check
         return Math.Abs(bi - ai) <= ulps;
     }
 
-    public static BigO BigO(double[] n, double[] time)
+    public static BigO BigO(double[] n, double[] time, double constantFactor = 0.1)
     {
         static double RegressionFit(double[] x, double[] y, Func<double, double> fx, Func<double, double> fy, out double a, out double b)
         {
@@ -676,22 +676,51 @@ public static partial class Check
         }
         var bestResult = CsCheck.BigO.Constant;
         var bestError = double.MaxValue;
-        double error = RegressionFit(n, time, x => x, x => x, out var a, out var b);
-        if (error < bestError) { bestError = error; bestResult = CsCheck.BigO.Linear; }
-        error = RegressionFit(n, time, x => x * x, x => x, out _, out _);
-        if (error < bestError) { bestError = error; bestResult = CsCheck.BigO.Quadratic; }
-        error = RegressionFit(n, time, x => x * x * x, x => x, out _, out _);
-        if (error < bestError) { bestError = error; bestResult = CsCheck.BigO.Cubic; }
-        error = RegressionFit(n, time, Math.Log, x => x, out _, out _);
-        if (error < bestError) { bestError = error; bestResult = CsCheck.BigO.Logarithmic; }
-        error = RegressionFit(n, time, x => x * Math.Log(x), x => x, out _, out _);
-        if (error < bestError) { bestError = error; bestResult = CsCheck.BigO.Linearithmic; }
-        error = RegressionFit(n, time, x => x, x => Math.Log(x), out _, out _);
-        if (error < bestError) { bestError = error; bestResult = CsCheck.BigO.Exponential; }
-        if (bestResult == CsCheck.BigO.Linear && (n.Max() - n.Min()) * a * 10 < b)
-            bestResult = CsCheck.BigO.Constant;
+        double error = RegressionFit(n, time, Id, Id, out var a, out var b);
+        if (error < bestError)
+        {
+            bestError = error;
+            bestResult = (n.Max() - n.Min()) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Linear;
+        }
+        error = RegressionFit(n, time, Quadratic, Id, out a, out b);
+        if (error < bestError)
+        {
+            bestError = error;
+            bestResult = (Quadratic(n.Max()) - Quadratic(n.Min())) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Quadratic;
+        }
+        error = RegressionFit(n, time, Cubic, Id, out a, out b);
+        if (error < bestError)
+        {
+            bestError = error;
+            bestResult = (Cubic(n.Max()) - Cubic(n.Min())) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Cubic;
+        }
+        error = RegressionFit(n, time, Logarithmic, Id, out a, out b);
+        if (error < bestError)
+        {
+            bestError = error;
+            bestResult = (Logarithmic(n.Max()) - Logarithmic(n.Min())) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Logarithmic;
+        }
+        error = RegressionFit(n, time, Linearithmic, Id, out a, out b);
+        if (error < bestError)
+        {
+            bestError = error;
+            bestResult = (Linearithmic(n.Max()) - Linearithmic(n.Min())) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Linearithmic;
+        }
+        error = RegressionFit(n, time, Id, Math.Log, out a, out b);
+        if (error < bestError)
+        {
+            bestError = error;
+            bestResult = (n.Max() - n.Min()) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Exponential;
+        }
         return bestResult;
     }
+
+    private static double Id(double x) => x;
+    private static double Quadratic(double x) => x * x;
+    private static double Cubic(double x) => x * x * x;
+    private static double Logarithmic(double x) => Math.Log(x);
+    private static double Linearithmic(double x) => x * Math.Log(x);
+
 }
 
 /// <summary>A median and quartile estimator.</summary>

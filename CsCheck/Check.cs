@@ -3473,21 +3473,18 @@ public static partial class Check
         }
     }
 
-    public static BigO BigO<T>(int[] n, Func<int, Gen<T>> genN, Action<T> function, int iter = 9, int repeat = 1)
+    public static BigO BigO<T>(int[] n, Func<int, Gen<T>> genN, Action<T> action, int iter = 100, int repeat = 1, double constantFactor = 0.1)
     {
         var gens = Array.ConvertAll(n, i => genN(i));
         var y = new MedianEstimator[n.Length];
         for (int i = 0; i < y.Length; i++)
             y[i] = new MedianEstimator();
-        var timer = Timer.Create(function, repeat);
+        var timer = Timer.Create(action, repeat);
+        var pcg = PCG.ThreadPCG;
         while (iter-- > 0)
             for (int i = 0; i < n.Length; i++)
-            {
-                var g = gens[i].Single();
-                var t = timer.Time(g);
-                y[i].Add(t);
-            }
-        return BigO(Array.ConvertAll(n, i => (double)i), Array.ConvertAll(y, m => m.Median));
+                y[i].Add(timer.Time(gens[i].Generate(pcg, null, out _)));
+        return BigO(Array.ConvertAll(n, i => (double)i), Array.ConvertAll(y, m => m.Median), constantFactor);
     }
 }
 
