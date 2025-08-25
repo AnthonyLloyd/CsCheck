@@ -490,7 +490,7 @@ public static partial class Check
             while (Hold) { }
             while ((i = Interlocked.Increment(ref opId)) < parallelOperations.Length)
             {
-                threadIds?[i] = tid;
+                if (threadIds is not null) threadIds[i] = tid;
                 try { parallelOperations[i].Item2(state); }
                 catch (Exception e)
                 {
