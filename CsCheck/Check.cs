@@ -3473,8 +3473,9 @@ public static partial class Check
         }
     }
 
-    public static BigO BigO<T>(int[] n, Func<int, Gen<T>> genN, Action<T> action, int iter = 100, int repeat = 1, double constantFactor = 0.1)
+    public static BigO BigO<T>(int[] n, Func<int, Gen<T>> genN, Action<T> action, long iter = -1, int repeat = 1, double constantFactor = 0.1)
     {
+        if (iter == -1) iter = Iter;
         var gens = Array.ConvertAll(n, i => genN(i));
         var y = new MedianEstimator[n.Length];
         for (int i = 0; i < y.Length; i++)

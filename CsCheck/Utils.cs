@@ -649,7 +649,7 @@ public static partial class Check
 
     public static BigO BigO(double[] n, double[] time, double constantFactor = 0.1)
     {
-        static double RegressionFit(double[] x, double[] y, Func<double, double> fx, Func<double, double> fy, out double a, out double b)
+        static double RegressionFit(double[] x, double[] y, Func<double, double> fx, Func<double, double> fy, Func<double, double> fyi, out double a, out double b)
         {
             double p = 0, q = 0, xy = 0, sy = 0, r = y.Length;
             for (int i = 0; i < x.Length; i++)
@@ -669,44 +669,50 @@ public static partial class Check
             for (int i = 0; i < x.Length; i++)
             {
                 var x_i = x[i];
-                var e = a * fx(x_i) + b - fy(y[i]);
+                var e = fyi(a * fx(x_i) + b) - y[i];
                 error += e * e;
             }
             return error;
         }
         var bestResult = CsCheck.BigO.Constant;
         var bestError = double.MaxValue;
-        double error = RegressionFit(n, time, Id, Id, out var a, out var b);
+        double error = RegressionFit(n, time, Id, Id, Id, out var a, out var b);
         if (error < bestError)
         {
             bestError = error;
             bestResult = (n.Max() - n.Min()) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Linear;
         }
-        error = RegressionFit(n, time, Quadratic, Id, out a, out b);
+        error = RegressionFit(n, time, Quadratic, Id, Id, out a, out b);
         if (error < bestError)
         {
             bestError = error;
             bestResult = (Quadratic(n.Max()) - Quadratic(n.Min())) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Quadratic;
         }
-        error = RegressionFit(n, time, Cubic, Id, out a, out b);
+        error = RegressionFit(n, time, Cubic, Id, Id, out a, out b);
         if (error < bestError)
         {
             bestError = error;
             bestResult = (Cubic(n.Max()) - Cubic(n.Min())) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Cubic;
         }
-        error = RegressionFit(n, time, Logarithmic, Id, out a, out b);
+        error = RegressionFit(n, time, Quartic, Id, Id, out a, out b);
+        if (error < bestError)
+        {
+            bestError = error;
+            bestResult = (Quartic(n.Max()) - Quartic(n.Min())) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Quartic;
+        }
+        error = RegressionFit(n, time, Logarithmic, Id, Id, out a, out b);
         if (error < bestError)
         {
             bestError = error;
             bestResult = (Logarithmic(n.Max()) - Logarithmic(n.Min())) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Logarithmic;
         }
-        error = RegressionFit(n, time, Linearithmic, Id, out a, out b);
+        error = RegressionFit(n, time, Linearithmic, Id, Id, out a, out b);
         if (error < bestError)
         {
             bestError = error;
             bestResult = (Linearithmic(n.Max()) - Linearithmic(n.Min())) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Linearithmic;
         }
-        error = RegressionFit(n, time, Id, Math.Log, out a, out b);
+        error = RegressionFit(n, time, Id, Math.Log, Math.Exp, out a, out b);
         if (error < bestError)
         {
             bestError = error;
@@ -718,6 +724,11 @@ public static partial class Check
     private static double Id(double x) => x;
     private static double Quadratic(double x) => x * x;
     private static double Cubic(double x) => x * x * x;
+    private static double Quartic(double x)
+    {
+        x *= x;
+        return x * x;
+    }
     private static double Logarithmic(double x) => Math.Log(x);
     private static double Linearithmic(double x) => x * Math.Log(x);
 
@@ -1142,6 +1153,7 @@ public enum BigO
     Linear,
     Quadratic,
     Cubic,
+    Quartic,
     Logarithmic,
     Linearithmic,
     Exponential,
