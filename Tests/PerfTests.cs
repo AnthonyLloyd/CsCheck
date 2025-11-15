@@ -3,7 +3,7 @@
 using CsCheck;
 using Xunit;
 
-public class PerfTests(Xunit.Abstractions.ITestOutputHelper output)
+public class PerfTests(ITestOutputHelper output)
 {
     [Fact]
     public void ValueTuple_Vs_Out()

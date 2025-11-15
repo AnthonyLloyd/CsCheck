@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using CsCheck;
 using Xunit;
 
-public class SolveRootTests(Xunit.Abstractions.ITestOutputHelper output)
+public class SolveRootTests(ITestOutputHelper output)
 {
     readonly Action<string> writeLine = output.WriteLine;
 

@@ -5,7 +5,7 @@ using System.Linq;
 using CsCheck;
 using Xunit;
 
-public class AllocatorMany_Tests(Xunit.Abstractions.ITestOutputHelper output)
+public class AllocatorMany_Tests(ITestOutputHelper output)
 {
     [Fact]
     public void RoundingSolutionTest()

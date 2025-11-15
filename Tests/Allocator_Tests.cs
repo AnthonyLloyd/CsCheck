@@ -8,7 +8,7 @@ using ImTools;
 using Rationals;
 using Xunit;
 
-public class Allocator_Tests(Xunit.Abstractions.ITestOutputHelper output)
+public class Allocator_Tests(ITestOutputHelper output)
 {
     readonly static Gen<(long Quantity, double[] Weights)> genAllSigns =
         Gen.Select(Gen.Long[-10_000, 10_000], Gen.Double[-10_000, 10_000].Array[2, 50].Where(ws => ws.Sum() > 1e-9));

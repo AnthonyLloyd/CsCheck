@@ -10,7 +10,7 @@ using BenchmarkDotNet.Loggers;
 using BenchmarkDotNet.Running;
 using Xunit;
 
-public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
+public class FloatingPointTests(ITestOutputHelper output)
 {
     [Fact]
     public void DoubleSupportsRoundtripPrecisionTo15()
@@ -304,7 +304,7 @@ public class FloatingPointTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 }
 
-public class BenchmarkTests(Xunit.Abstractions.ITestOutputHelper output)
+public class BenchmarkTests(ITestOutputHelper output)
 {
     //[Fact]
     public void FloatingAdd_Perf()

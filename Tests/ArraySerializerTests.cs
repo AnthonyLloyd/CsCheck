@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using CsCheck;
 using Xunit;
 
-public class ArraySerializerTests(Xunit.Abstractions.ITestOutputHelper output)
+public class ArraySerializerTests(ITestOutputHelper output)
 {
     [Fact]
     public void Varint()

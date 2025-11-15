@@ -7,7 +7,7 @@ using System.Linq;
 using CsCheck;
 using Xunit;
 
-public class CheckTests(Xunit.Abstractions.ITestOutputHelper output)
+public class CheckTests(ITestOutputHelper output)
 {
     static void Assert_Commutative<T, R>(Gen<T> gen, Func<T, T, R> operation)
     {

@@ -4,7 +4,7 @@ using System;
 using System.Diagnostics;
 using CsCheck;
 
-public class StressTests(Xunit.Abstractions.ITestOutputHelper output)
+public class StressTests(ITestOutputHelper output)
 {
     [Fact(Skip = "don't normally run the stress test")]
     public async Task Stress_Test()

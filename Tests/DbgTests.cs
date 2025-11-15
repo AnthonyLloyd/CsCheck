@@ -3,7 +3,7 @@
 using System.Collections.Generic;
 using Xunit;
 
-public class DbgTests(Xunit.Abstractions.ITestOutputHelper output)
+public class DbgTests(ITestOutputHelper output)
 {
     static IEnumerable<char> Enumerable(string s) => s;
     static int[] Calc1(double _) => [1, 2];

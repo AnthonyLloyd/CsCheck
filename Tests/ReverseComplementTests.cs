@@ -12,7 +12,7 @@ namespace Tests
     using CsCheck;
     using Xunit;
 
-    public class ReverseComplementTests(Xunit.Abstractions.ITestOutputHelper output)
+    public class ReverseComplementTests(ITestOutputHelper output)
     {
         [Fact(Skip = "Long running test.")]
         public void ReverseComplement_Faster()
@@ -29,7 +29,7 @@ namespace Tests
     public class CausalTests
     {
         readonly Action<string> writeLine;
-        public CausalTests(Xunit.Abstractions.ITestOutputHelper output) => writeLine = output.WriteLine;
+        public CausalTests(ITestOutputHelper output) => writeLine = output.WriteLine;
 
         [Fact(Skip = "Long running test.")]
         public void Fasta()

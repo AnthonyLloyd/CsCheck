@@ -111,7 +111,7 @@ public class StreamSerializerTests
     }
 }
 
-public class HashTests(Xunit.Abstractions.ITestOutputHelper output)
+public class HashTests(ITestOutputHelper output)
 {
     [Fact]
     public void Hash_Example()

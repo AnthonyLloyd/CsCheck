@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 using CsCheck;
 using Xunit;
 
-public class SlimCollectionsTests(Xunit.Abstractions.ITestOutputHelper output)
+public class SlimCollectionsTests(ITestOutputHelper output)
 {
     [Fact]
     public void ListSlim_ModelBased()

@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using CsCheck;
 using Xunit;
 
-public class MathXTests(Xunit.Abstractions.ITestOutputHelper output)
+public class MathXTests(ITestOutputHelper output)
 {
     static readonly Gen<double> genDouble = Gen.Double[-1e123, 1e123];
 

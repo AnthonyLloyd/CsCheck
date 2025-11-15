@@ -8,7 +8,7 @@ using CsCheck;
 using Perfolizer.Metrology;
 using Xunit;
 
-public class PCGTests(Xunit.Abstractions.ITestOutputHelper output)
+public class PCGTests(ITestOutputHelper output)
 {
     [Fact] // from the github https://github.com/imneme/pcg-c-basic minimal c implementation http://www.pcg-random.org/download.html#minimal-c-implementation
     public void PCG_Demo_1()
