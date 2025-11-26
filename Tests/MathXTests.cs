@@ -2,15 +2,13 @@
 
 using System;
 using System.Linq;
-using System.Runtime.InteropServices;
 using CsCheck;
-using Xunit;
 
-public class MathXTests(ITestOutputHelper output)
+public class MathXTests
 {
     static readonly Gen<double> genDouble = Gen.Double[-1e123, 1e123];
 
-    [Fact]
+    [Test]
     public void TwoSum_FastTwoSum_Are_Equal_Check()
     {
         Gen.Select(genDouble, genDouble)
@@ -18,7 +16,7 @@ public class MathXTests(ITestOutputHelper output)
         .Sample((a, b) => MathX.TwoSum(a, b, out var err1) == MathX.FastTwoSum(a, b, out var err2) && err1 == err2);
     }
 
-    [Fact]
+    [Test]
     public void TwoSum_Twice_Check()
     {
         Gen.Select(genDouble, genDouble)
@@ -31,7 +29,7 @@ public class MathXTests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
+    [Test]
     public void TwoSub_Check()
     {
         Gen.Select(genDouble, genDouble)
@@ -45,7 +43,7 @@ public class MathXTests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
+    [Test]
     public void TwoMul_Check()
     {
         Gen.Select(genDouble, genDouble)
@@ -59,52 +57,52 @@ public class MathXTests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
-    public void KSum_Examples()
+    [Test]
+    public async Task KSum_Examples()
     {
-        Assert.Equal(0, MathX.KSum([]));
-        Assert.Equal(0, MathX.KSum([0]));
-        Assert.Equal(13, MathX.KSum([13]));
-        Assert.Equal(6, MathX.KSum([13, -7]));
-        Assert.Equal(1, MathX.KSum([3.000000000000002, -1.000000000000001, -1.000000000000001]));
-        Assert.Equal(1, MathX.KSum([.1, .1, .1, .1, .1, .1, .1, .1, .1, .1]));
-        Assert.Equal(1, MathX.KSum([.23, .19, .17, .13, .11, .07, .05, .03, .02]));
-        Assert.NotEqual(2, MathX.KSum([1, 1e100, 1, -1e100])); // reached it's accuracy tracking limit
-        Assert.NotEqual(20000, MathX.KSum([10000, 1e104, 10000, -1e104]));
-        Assert.NotEqual(1e-100, MathX.KSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50]));
+        await Assert.That(MathX.KSum([])).IsEqualTo(0);
+        await Assert.That(MathX.KSum([0])).IsEqualTo(0);
+        await Assert.That(MathX.KSum([13])).IsEqualTo(13);
+        await Assert.That(MathX.KSum([13, -7])).IsEqualTo(6);
+        await Assert.That(MathX.KSum([3.000000000000002, -1.000000000000001, -1.000000000000001])).IsEqualTo(1);
+        await Assert.That(MathX.KSum([.1, .1, .1, .1, .1, .1, .1, .1, .1, .1])).IsEqualTo(1);
+        await Assert.That(MathX.KSum([.23, .19, .17, .13, .11, .07, .05, .03, .02])).IsEqualTo(1);
+        await Assert.That(MathX.KSum([1, 1e100, 1, -1e100])).IsNotEqualTo(2); // reached it's accuracy tracking limit
+        await Assert.That(MathX.KSum([10000, 1e104, 10000, -1e104])).IsNotEqualTo(20000);
+        await Assert.That(MathX.KSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50])).IsNotEqualTo(1e-100);
     }
 
-    [Fact]
-    public void NSum_Examples()
+    [Test]
+    public async Task NSum_Examples()
     {
-        Assert.Equal(0, MathX.NSum([]));
-        Assert.Equal(0, MathX.NSum([0]));
-        Assert.Equal(13, MathX.NSum([13]));
-        Assert.Equal(6, MathX.NSum([13, -7]));
-        Assert.Equal(1, MathX.NSum([3.000000000000002, -1.000000000000001, -1.000000000000001]));
-        Assert.Equal(1, MathX.NSum([.1, .1, .1, .1, .1, .1, .1, .1, .1, .1]));
-        Assert.Equal(1, MathX.NSum([.23, .19, .17, .13, .11, .07, .05, .03, .02]));
-        Assert.Equal(2, MathX.NSum([1, 1e100, 1, -1e100]));
-        Assert.Equal(20000, MathX.NSum([10000, 1e104, 10000, -1e104]));
-        Assert.NotEqual(1e-100, MathX.NSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50])); // reached it's accuracy tracking limit
+        await Assert.That(MathX.NSum([])).IsEqualTo(0);
+        await Assert.That(MathX.NSum([0])).IsEqualTo(0);
+        await Assert.That(MathX.NSum([13])).IsEqualTo(13);
+        await Assert.That(MathX.NSum([13, -7])).IsEqualTo(6);
+        await Assert.That(MathX.NSum([3.000000000000002, -1.000000000000001, -1.000000000000001])).IsEqualTo(1);
+        await Assert.That(MathX.NSum([.1, .1, .1, .1, .1, .1, .1, .1, .1, .1])).IsEqualTo(1);
+        await Assert.That(MathX.NSum([.23, .19, .17, .13, .11, .07, .05, .03, .02])).IsEqualTo(1);
+        await Assert.That(MathX.NSum([1, 1e100, 1, -1e100])).IsEqualTo(2);
+        await Assert.That(MathX.NSum([10000, 1e104, 10000, -1e104])).IsEqualTo(20000);
+        await Assert.That(MathX.NSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50])).IsNotEqualTo(1e-100); // reached it's accuracy tracking limit
     }
 
-    [Fact]
-    public void FSum_Examples()
+    [Test]
+    public async Task FSum_Examples()
     {
-        Assert.Equal(0, MathX.FSum([]));
-        Assert.Equal(0, MathX.FSum([0]));
-        Assert.Equal(13, MathX.FSum([13]));
-        Assert.Equal(6, MathX.FSum([13, -7]));
-        Assert.Equal(1, MathX.FSum([3.000000000000002, -1.000000000000001, -1.000000000000001]));
-        Assert.Equal(1, MathX.FSum([.1, .1, .1, .1, .1, .1, .1, .1, .1, .1]));
-        Assert.Equal(1, MathX.FSum([.23, .19, .17, .13, .11, .07, .05, .03, .02]));
-        Assert.Equal(2, MathX.FSum([1, 1e100, 1, -1e100]));
-        Assert.Equal(20000, MathX.FSum([10000, 1e104, 10000, -1e104]));
-        Assert.Equal(1e-100, MathX.FSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50]));
+        await Assert.That(MathX.FSum([])).IsEqualTo(0);
+        await Assert.That(MathX.FSum([0])).IsEqualTo(0);
+        await Assert.That(MathX.FSum([13])).IsEqualTo(13);
+        await Assert.That(MathX.FSum([13, -7])).IsEqualTo(6);
+        await Assert.That(MathX.FSum([3.000000000000002, -1.000000000000001, -1.000000000000001])).IsEqualTo(1);
+        await Assert.That(MathX.FSum([.1, .1, .1, .1, .1, .1, .1, .1, .1, .1])).IsEqualTo(1);
+        await Assert.That(MathX.FSum([.23, .19, .17, .13, .11, .07, .05, .03, .02])).IsEqualTo(1);
+        await Assert.That(MathX.FSum([1, 1e100, 1, -1e100])).IsEqualTo(2);
+        await Assert.That(MathX.FSum([10000, 1e104, 10000, -1e104])).IsEqualTo(20000);
+        await Assert.That(MathX.FSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50])).IsEqualTo(1e-100);
     }
 
-    [Fact]
+    [Test]
     public void NSum_Shuffle_Check()
     {
         genDouble.Array[3, 100]
@@ -117,7 +115,7 @@ public class MathXTests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
+    [Test]
     public void FSum_Shuffle_Check()
     {
         genDouble.Array[3, 100]
@@ -130,7 +128,7 @@ public class MathXTests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
+    [Test]
     public void KSum_Shuffle_Error_Distribution()
     {
         genDouble.Array[3, 100]
@@ -140,10 +138,10 @@ public class MathXTests(ITestOutputHelper output)
             var originalSum = MathX.KSum(original);
             var shuffledSum = MathX.KSum(shuffled);
             return Check.UlpsBetween(originalSum, shuffledSum).ToString().PadLeft(5);
-        }, output.WriteLine/*, time: 10*/);
+        }, TUnitX.WriteLine/*, time: 10*/);
     }
 
-    [Fact]
+    [Test]
     public void NSum_Shuffle_Error_Distribution()
     {
         genDouble.Array[3, 100]
@@ -153,10 +151,10 @@ public class MathXTests(ITestOutputHelper output)
             var originalSum = MathX.NSum(original);
             var shuffledSum = MathX.NSum(shuffled);
             return Check.UlpsBetween(originalSum, shuffledSum).ToString().PadLeft(5);
-        }, output.WriteLine/*, time: 10*/);
+        }, TUnitX.WriteLine/*, time: 10*/);
     }
 
-    [Fact]
+    [Test]
     public void FSum_Shuffle_Error_Distribution()
     {
         genDouble.Array[3, 100]
@@ -166,10 +164,10 @@ public class MathXTests(ITestOutputHelper output)
             var originalSum = MathX.FSum(original);
             var shuffledSum = MathX.FSum(shuffled);
             return Check.UlpsBetween(originalSum, shuffledSum).ToString().PadLeft(5);
-        }, output.WriteLine/*, time: 10*/);
+        }, TUnitX.WriteLine/*, time: 10*/);
     }
 
-    [Fact]
+    [Test]
     public void FSum_Shuffle_Error_Distribution_Compress()
     {
         genDouble.Array[3, 100]
@@ -179,23 +177,23 @@ public class MathXTests(ITestOutputHelper output)
             var originalSum = MathX.FSum(original, compress: true);
             var shuffledSum = MathX.FSum(shuffled, compress: true);
             return Check.UlpsBetween(originalSum, shuffledSum).ToString().PadLeft(5);
-        }, output.WriteLine/*, time: 10*/);
+        }, TUnitX.WriteLine/*, time: 10*/);
     }
 
-  [Fact]
-    public void FSum_Compress_Needed_Example()
+  [Test]
+    public async Task FSum_Compress_Needed_Example()
     {
         var weights = new double[] { -8485E-81, -68, 11d / 3, -5623E-76, 47E-55, -19, 88, 134E-33 };
         var shuffled = new double[] { -8485E-81, 47E-55, -19, 11d / 3, 134E-33, -5623E-76, 88, -68 };
         var weightsFSum = weights.FSum();
         var shuffledFSum = shuffled.FSum();
-        Assert.NotEqual(weightsFSum, shuffledFSum);
+        await Assert.That(weightsFSum).IsNotEqualTo(shuffledFSum);
         var weightsFSumCompress = weights.FSum(compress: true);
         var shuffledFSumCompress = shuffled.FSum(compress: true);
-        Assert.Equal(weightsFSumCompress, shuffledFSumCompress);
+        await Assert.That(weightsFSumCompress).IsEqualTo(shuffledFSumCompress);
     }
 
-    [Fact]
+    [Test]
     public void NSum_FSum_Error_Distribution()
     {
         genDouble.Array[3, 100]
@@ -204,25 +202,25 @@ public class MathXTests(ITestOutputHelper output)
             var fsumSum = MathX.FSum(values);
             var nsumSum = MathX.NSum(values);
             return Check.UlpsBetween(fsumSum, nsumSum).ToString().PadLeft(5);
-        }, output.WriteLine/*, time: 10*/);
+        }, TUnitX.WriteLine/*, time: 10*/);
     }
 
-    [Fact]
-    public void SSum_Examples()
+    [Test]
+    public async Task SSum_Examples()
     {
-        Assert.Equal(0, MathX.SSum([]));
-        Assert.Equal(0, MathX.SSum([0]));
-        Assert.Equal(13, MathX.SSum([13]));
-        Assert.Equal(13, MathX.SSum([7, 13, -7]));
-        Assert.Equal(1, MathX.SSum([3.000000000000002, -1.000000000000001, -1.000000000000001]));
-        Assert.Equal(1, MathX.SSum([.1, .1, .1, .1, .1, .1, .1, .1, .1, .1]));
-        Assert.Equal(1, MathX.SSum([.23, .19, .17, .13, .11, .07, .05, .03, .02]));
-        Assert.Equal(2, MathX.SSum([1, 1e100, 1, -1e100]));
-        Assert.Equal(20000, MathX.SSum([10000, 1e104, 10000, -1e104]));
-        Assert.Equal(1e-100, MathX.SSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50]));
+        await Assert.That(MathX.SSum([])).IsEqualTo(0);
+        await Assert.That(MathX.SSum([0])).IsEqualTo(0);
+        await Assert.That(MathX.SSum([13])).IsEqualTo(13);
+        await Assert.That(MathX.SSum([7, 13, -7])).IsEqualTo(13);
+        await Assert.That(MathX.SSum([3.000000000000002, -1.000000000000001, -1.000000000000001])).IsEqualTo(1);
+        await Assert.That(MathX.SSum([.1, .1, .1, .1, .1, .1, .1, .1, .1, .1])).IsEqualTo(1);
+        await Assert.That(MathX.SSum([.23, .19, .17, .13, .11, .07, .05, .03, .02])).IsEqualTo(1);
+        await Assert.That(MathX.SSum([1, 1e100, 1, -1e100])).IsEqualTo(2);
+        await Assert.That(MathX.SSum([10000, 1e104, 10000, -1e104])).IsEqualTo(20000);
+        await Assert.That(MathX.SSum([1e100, 1, -1e100, 1e-100, 1e50, -1, -1e50])).IsEqualTo(1e-100);
     }
 
-    [Fact]
+    [Test]
     public void SSum_Shuffle_Check()
     {
         genDouble.Array[2, 10]
@@ -235,7 +233,7 @@ public class MathXTests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
+    [Test]
     public void SSum_Negative_Check()
     {
         genDouble.Array[2, 10]
@@ -249,7 +247,7 @@ public class MathXTests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
+    [Test]
     public void SSum_Shuffle_Negative_Check()
     {
         genDouble.Array[2, 10]
@@ -264,7 +262,7 @@ public class MathXTests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
+    [Test]
     public void FSum_Vs_SSum_Perf()
     {
         genDouble.Array[2, 100]
@@ -272,11 +270,11 @@ public class MathXTests(ITestOutputHelper output)
             values => values.FSum(),
             values => values.SSum(),
             Check.EqualSkip,
-            writeLine: output.WriteLine
+            writeLine: TUnitX.WriteLine
         );
     }
 
-    [Fact]
+    [Test]
     public void Mantissa()
     {
         genDouble.Sample(d =>

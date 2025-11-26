@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CsCheck;
-using Xunit;
 
 public class ModelTests
 {
@@ -64,7 +63,7 @@ public class ModelTests
         public readonly static Gen<Portfolio> Portfolio = Gen.Select(Name, Currency, Position.Array, (n, c, p) => new Portfolio(n, c, p));
     }
 
-    [Fact]
+    [Test]
     public void Portfolio_Small_Mixed_Example()
     {
         var portfolio = ModelGen.Portfolio.Single(p =>

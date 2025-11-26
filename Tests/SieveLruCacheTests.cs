@@ -1,13 +1,12 @@
 ﻿namespace Tests;
 
 using System.Diagnostics.CodeAnalysis;
-using Xunit;
 using CsCheck;
 
 public class SieveLruCacheTests
 {
-    [Fact]
-    public void ExampleEvictsTail()
+    [Test]
+    public async Task ExampleEvictsTail()
     {
         var cache = new SieveLruCache<char, int>(3);
         var i = 0;
@@ -16,15 +15,16 @@ public class SieveLruCacheTests
         cache.GetOrAdd('B', UsedFactory);
         cache.GetOrAdd('C', UsedFactory);
         cache.GetOrAdd('D', UsedFactory);
-        Assert.Equal(new Dictionary<char, int>{
-            {'B', 1},
-            {'C', 2},
-            {'D', 3},
-        }, cache.Keys.ToDictionary(k => k, k => cache.TryGetValue(k, out var v) ? v : 999));
+        await Assert.That(cache.Keys.ToDictionary(k => k, k => cache.TryGetValue(k, out var v) ? v : 999)).IsEquivalentTo(
+            new Dictionary<char, int>{
+                {'B', 1},
+                {'C', 2},
+                {'D', 3},
+        });
     }
 
-    [Fact]
-    public void ExampleEvictsHead()
+    [Test]
+    public async Task ExampleEvictsHead()
     {
         var cache = new SieveLruCache<int, int>(4);
         var i = 0;
@@ -40,16 +40,17 @@ public class SieveLruCacheTests
         cache.GetOrAdd(5, UsedFactory);
         cache.GetOrAdd(1, NotUsedFactory);
         cache.GetOrAdd(2, UsedFactory);
-        Assert.Equal(new Dictionary<int, int>{
-            {1, 0},
-            {2, 5},
-            {3, 2},
-            {5, 4},
-        }, cache.Keys.ToDictionary(k => k, k => cache.TryGetValue(k, out var v) ? v : 999));
+        await Assert.That(cache.Keys.ToDictionary(k => k, k => cache.TryGetValue(k, out var v) ? v : 999)).IsEquivalentTo(
+            new Dictionary<int, int>{
+                {1, 0},
+                {2, 5},
+                {3, 2},
+                {5, 4},
+        });
     }
 
-    [Fact]
-    public void ExampleBlog()
+    [Test]
+    public async Task ExampleBlog()
     {
         var cache = new SieveLruCache<char, int>(7);
         var i = 0;
@@ -73,18 +74,19 @@ public class SieveLruCacheTests
         cache.GetOrAdd('I', UsedFactory);
         cache.GetOrAdd('B', NotUsedFactory);
         cache.GetOrAdd('J', UsedFactory);
-        Assert.Equal(new Dictionary<char, int>{
-            {'A', 0},
-            {'B', 1},
-            {'D', 3},
-            {'G', 6},
-            {'H', 7},
-            {'I', 8},
-            {'J', 9},
-        }, cache.Keys.ToDictionary(k => k, k => cache.TryGetValue(k, out var v) ? v : 999));
+        await Assert.That(cache.Keys.ToDictionary(k => k, k => cache.TryGetValue(k, out var v) ? v : 999)).IsEquivalentTo(
+            new Dictionary<char, int>{
+                {'A', 0},
+                {'B', 1},
+                {'D', 3},
+                {'G', 6},
+                {'H', 7},
+                {'I', 8},
+                {'J', 9},
+        });
     }
 
-    [Fact]
+    [Test]
     public void SampleModelBased()
     {
         Check.SampleModelBased(

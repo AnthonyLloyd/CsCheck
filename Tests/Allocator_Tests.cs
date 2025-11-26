@@ -6,9 +6,8 @@ using System.Linq;
 using CsCheck;
 using ImTools;
 using Rationals;
-using Xunit;
 
-public class Allocator_Tests(ITestOutputHelper output)
+public class Allocator_Tests
 {
     readonly static Gen<(long Quantity, double[] Weights)> genAllSigns =
         Gen.Select(Gen.Long[-10_000, 10_000], Gen.Double[-10_000, 10_000].Array[2, 50].Where(ws => ws.Sum() > 1e-9));
@@ -25,25 +24,25 @@ public class Allocator_Tests(ITestOutputHelper output)
     static bool TotalCorrectly<W>(long quantity, W[] weights, Func<long, W[], long[]> allocator)
         => allocator(quantity, weights).Sum() == quantity;
 
-    [Fact]
+    [Test]
     public void Allocate_TotalCorrectly()
     {
         genAllSigns.Sample((quantity, weights) => TotalCorrectly(quantity, weights, Allocator.Allocate));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_Long_TotalCorrectly()
     {
         genAllSignsLong.Sample((quantity, weights) => TotalCorrectly(quantity, weights, Allocator.Allocate));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_BalinskiYoung_TotalsCorrectly()
     {
         genPositive.Sample((quantity, weights) => TotalCorrectly(quantity, weights, Allocator.Allocate_BalinskiYoung));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_BalinskiYoung_Long_TotalsCorrectly()
     {
         genPositiveLong.Sample((quantity, weights) => TotalCorrectly(quantity, weights, Allocator.Allocate_BalinskiYoung));
@@ -62,25 +61,25 @@ public class Allocator_Tests(ITestOutputHelper output)
         return true;
     }
 
-    [Fact]
+    [Test]
     public void Allocate_BetweenFloorAndCeiling()
     {
         genAllSigns.Sample((quantity, weights) => BetweenFloorAndCeiling(quantity, weights, Allocator.Allocate));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_Long_BetweenFloorAndCeiling()
     {
         genAllSignsLong.Sample((quantity, weights) => BetweenFloorAndCeiling(quantity, weights, Allocator.Allocate));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_BalinskiYoung_BetweenFloorAndCeiling()
     {
         genPositive.Sample((quantity, weights) => BetweenFloorAndCeiling(quantity, weights, Allocator.Allocate_BalinskiYoung));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_BalinskiYoung_Long_BetweenFloorAndCeiling()
     {
         genPositiveLong.Sample((quantity, weights) => BetweenFloorAndCeiling(quantity, weights, Allocator.Allocate_BalinskiYoung));
@@ -107,25 +106,25 @@ public class Allocator_Tests(ITestOutputHelper output)
         return true;
     }
 
-    [Fact]
+    [Test]
     public void Allocate_SmallerWeightsDontGetLargerAllocation()
     {
         genAllSigns.Sample((quantity, weights) => SmallerWeightsDontGetLargerAllocation(quantity, weights, Allocator.Allocate));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_Long_SmallerWeightsDontGetLargerAllocation()
     {
         genAllSignsLong.Sample((quantity, weights) => SmallerWeightsDontGetLargerAllocation(quantity, weights, Allocator.Allocate));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_BalinskiYoung_SmallerWeightsDontGetLargerAllocation()
     {
         genPositive.Sample((quantity, weights) => SmallerWeightsDontGetLargerAllocation(quantity, weights, Allocator.Allocate_BalinskiYoung));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_BalinskiYoung_Long_SmallerWeightsDontGetLargerAllocation()
     {
         genPositiveLong.Sample((quantity, weights) => SmallerWeightsDontGetLargerAllocation(quantity, weights, Allocator.Allocate_BalinskiYoung));
@@ -140,7 +139,7 @@ public class Allocator_Tests(ITestOutputHelper output)
             .All(i => Equals(i.First, i.Second));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_GivesSameResultReorderedForReorderedWeights()
     {
         genAllSigns.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s)))
@@ -148,7 +147,7 @@ public class Allocator_Tests(ITestOutputHelper output)
             => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_Long_GivesSameResultReorderedForReorderedWeights()
     {
         genAllSignsLong.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s)))
@@ -156,7 +155,7 @@ public class Allocator_Tests(ITestOutputHelper output)
             => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_BalinskiYoung_GivesSameResultReorderedForReorderedWeights()
     {
         genPositive.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s)))
@@ -164,12 +163,11 @@ public class Allocator_Tests(ITestOutputHelper output)
             => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate_BalinskiYoung));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_BalinskiYoung_Long_GivesSameResultReorderedForReorderedWeights()
     {
         genPositiveLong.SelectMany((q, w) => Gen.Shuffle(w).Select(s => (q, w, s)))
-        .Sample((quantity, weights, shuffled) => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate_BalinskiYoung)
-        , output.WriteLine);
+        .Sample((quantity, weights, shuffled) => GivesSameResultReorderedForReorderedWeights(quantity, weights, shuffled, Allocator.Allocate_BalinskiYoung));
     }
 
     static bool GivesOppositeForNegativeQuantity<W>(long quantity, W[] weights, Func<long, W[], long[]> allocate)
@@ -185,13 +183,13 @@ public class Allocator_Tests(ITestOutputHelper output)
         return true;
     }
 
-    [Fact]
+    [Test]
     public void Allocate_GivesOppositeForNegativeQuantity()
     {
         genAllSigns.Sample((quantity, weights) => GivesOppositeForNegativeQuantity(quantity, weights, Allocator.Allocate));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_Long_GivesOppositeForNegativeQuantity()
     {
         genAllSignsLong.Sample((quantity, weights) => GivesOppositeForNegativeQuantity(quantity, weights, Allocator.Allocate));
@@ -218,13 +216,13 @@ public class Allocator_Tests(ITestOutputHelper output)
         return true;
     }
 
-    [Fact]
+    [Test]
     public void Allocate_GivesSameForNegativeWeights()
     {
         genAllSigns.Sample((quantity, weights) => GivesSameForNegativeWeights(quantity, weights, Allocator.Allocate));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_Long_GivesSameForNegativeWeights()
     {
         genAllSignsLong.Sample((quantity, weights) => GivesSameForNegativeWeights(quantity, weights, Allocator.Allocate));
@@ -244,19 +242,19 @@ public class Allocator_Tests(ITestOutputHelper output)
         return true;
     }
 
-    [Fact]
+    [Test]
     public void Allocate_GivesOppositeForNegativeBoth()
     {
         genAllSigns.Sample((quantity, weights) => GivesOppositeForNegativeBoth(quantity, weights, Allocator.Allocate));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_Long_GivesOppositeForNegativeBoth()
     {
         genAllSignsLong.Sample((quantity, weights) => GivesOppositeForNegativeBoth(quantity, weights, Allocator.Allocate));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_HasSmallestAllocationError()
     {
         static (double, double) Error(long[] allocations, long quantity, double[] weights, double sumWeights)
@@ -297,7 +295,7 @@ public class Allocator_Tests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
+    [Test]
     public void Allocate_Long_HasSmallestAllocationError()
     {
         static (long, Rational) Error(long[] allocations, long quantity, long[] weights, long sumWeights)
@@ -348,99 +346,99 @@ public class Allocator_Tests(ITestOutputHelper output)
         return true;
     }
 
-    [Fact]
+    [Test]
     public void Allocate_BalinskiYoung_NoAlabamaParadox()
     {
         genPositive.Sample((quantity, weights) => NoAlabamaParadox(quantity, weights, Allocator.Allocate_BalinskiYoung));
     }
 
-    [Fact]
+    [Test]
     public void Allocate_BalinskiYoung_Long_NoAlabamaParadox()
     {
         genPositiveLong.Sample((quantity, weights) => NoAlabamaParadox(quantity, weights, Allocator.Allocate_BalinskiYoung));
     }
 
-    [Fact]
-    public void Allocate_BalinskiYoung_MinErrorExample()
+    [Test]
+    public async Task Allocate_BalinskiYoung_MinErrorExample()
     {
         var actual = Allocator.Allocate_BalinskiYoung(10L, [10.0, 20.0, 30.0]);
-        Assert.Equal([2, 3, 5], actual);
+        await Assert.That(actual).IsEquivalentTo((long[])[2, 3, 5]);
     }
 
-    [Fact]
-    public void Allocate_Twitter()
+    [Test]
+    public async Task Allocate_Twitter()
     {
         var actual = Allocator.Allocate(100L, [406.0, 348.0, 246.0, 0.0]);
-        Assert.Equal([40, 35, 25, 0], actual);
+        await Assert.That(actual).IsEquivalentTo((long[])[40, 35, 25, 0]);
     }
 
-    [Fact]
-    public void Allocate_TwitterZero()
+    [Test]
+    public async Task Allocate_TwitterZero()
     {
         var actual = Allocator.Allocate(0L, [406.0, 348.0, 246.0, 0.0]);
-        Assert.Equal([0, 0, 0, 0], actual);
+        await Assert.That(actual).IsEquivalentTo((long[])[0, 0, 0, 0]);
     }
 
-    [Fact]
-    public void Allocate_TwitterTotalNegative()
+    [Test]
+    public async Task Allocate_TwitterTotalNegative()
     {
         var actual = Allocator.Allocate(-100L, [406.0, 348.0, 246.0, 0.0]);
-        Assert.Equal([-40, -35, -25, -0], actual);
+        await Assert.That(actual).IsEquivalentTo((long[])[-40, -35, -25, -0]);
     }
 
-    [Fact]
-    public void Allocate_TwitterWeightsNegative()
+    [Test]
+    public async Task Allocate_TwitterWeightsNegative()
     {
         var actual = Allocator.Allocate(100L, [-406.0, -348.0, -246.0, -0.0]);
-        Assert.Equal([40, 35, 25, 0], actual);
+        await Assert.That(actual).IsEquivalentTo((long[])[40, 35, 25, 0]);
     }
 
-    [Fact]
-    public void Allocate_TwitterBothNegative()
+    [Test]
+    public async Task Allocate_TwitterBothNegative()
     {
         var actual = Allocator.Allocate(-100L, [-406.0, -348.0, -246.0, -0.0]);
-        Assert.Equal([-40, -35, -25, -0], actual);
+        await Assert.That(actual).IsEquivalentTo((long[])[-40, -35, -25, -0]);
     }
 
-    [Fact]
-    public void Allocate_TwitterTricky()
+    [Test]
+    public async Task Allocate_TwitterTricky()
     {
         var actual = Allocator.Allocate(100L, [404.0, 397.0, 57.0, 57.0, 57.0, 28.0]);
-        Assert.Equal([40, 39, 6, 6, 6, 3], actual);
+        await Assert.That(actual).IsEquivalentTo((long[])[40, 39, 6, 6, 6, 3]);
     }
 
-    [Fact]
-    public void Allocate_NegativeExample()
+    [Test]
+    public async Task Allocate_NegativeExample()
     {
         var positive = Allocator.Allocate(42, [1.5, 1.0, 39.5, -1.0, 1.0]);
         var negative = Allocator.Allocate(-42, [1.5, 1.0, 39.5, -1.0, 1.0]);
-        Assert.Equal(positive, Array.ConvertAll(negative, i => -i));
+        await Assert.That(Array.ConvertAll(negative, i => -i)).IsEquivalentTo(positive);
     }
 
-    [Fact(Skip = "Different behaviour on a mac, need to resolve")]
-    public void Allocate_Exceptions()
+    [Test][Skip("Different behaviour on a mac, need to resolve")]
+    public async Task Allocate_Exceptions()
     {
         Assert.Throws<Exception>(() => Allocator.Allocate(0, [0.0, 0.0, 0.0]));
         Assert.Throws<Exception>(() => Allocator.Allocate(42, [1.0, -2.0, 1.0, 1e-30]));
     }
 
-    [Fact]
-    public void Allocate_Integer()
+    [Test]
+    public async Task Allocate_Integer()
     {
-        Assert.Equal([-3, 1, 1], Allocator.Allocate(-1L, [-24.0, 6.0, 8.0]));
-        Assert.Equal([0, 0, -1], Allocator.Allocate(-1L, [-2.0, -4.0, 16.0]));
-        Assert.Equal([-2, -2, 3], Allocator.Allocate(-1L, [31.0, 19.0, -38.0]));
-        Assert.Equal([1, 4], Allocator.Allocate(5L, [1.0, 9.0]));
+        await Assert.That(Allocator.Allocate(-1L, [-24.0, 6.0, 8.0])).IsEquivalentTo((long[])[-3, 1, 1]);
+        await Assert.That(Allocator.Allocate(-1L, [-2.0, -4.0, 16.0])).IsEquivalentTo((long[])[0, 0, -1]);
+        await Assert.That(Allocator.Allocate(-1L, [31.0, 19.0, -38.0])).IsEquivalentTo((long[])[-2, -2, 3]);
+        await Assert.That(Allocator.Allocate(5L, [1.0, 9.0])).IsEquivalentTo((long[])[1, 4]);
     }
 
-    [Fact]
-    public void Allocate_FSum_Needs_Compress_Example()
+    [Test]
+    public async Task Allocate_FSum_Needs_Compress_Example()
     {
         const long quantity = -35L;
         var weights = new double[] { -8485E-81, -68, 11d / 3, -5623E-76, 47E-55, -19, 88, 134E-33 };
         var shuffled = new double[] { -8485E-81, 47E-55, -19, 11d / 3, 134E-33, -5623E-76, 88, -68 };
         var allocations = Allocator.Allocate(quantity, weights);
         var shuffledAllocations = Allocator.Allocate(quantity, shuffled);
-        Assert.True(weights.Zip(allocations).Order().Zip(shuffled.Zip(shuffledAllocations).Order()).All(i => i.First == i.Second));
+        await Assert.That(weights.Zip(allocations).Order().Zip(shuffled.Zip(shuffledAllocations).Order()).All(i => i.First == i.Second)).IsTrue();
     }
 }

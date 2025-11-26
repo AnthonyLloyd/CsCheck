@@ -12,10 +12,10 @@ public class LoggingTests
         return a;
     }
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(0)]
-    public void Bool_Distribution_WithTycheLogs(int generatedIntUponTrue)
+    [Test]
+    [Arguments(1)]
+    [Arguments(0)]
+    public async Task Bool_Distribution_WithTycheLogs(int generatedIntUponTrue)
     {
         using var memoryStream = new MemoryStream();
         using var writer = new StreamWriter(memoryStream);
@@ -49,8 +49,8 @@ public class LoggingTests
 
         var tycheData = JsonSerializer.Deserialize<TycheData>(json);
 
-        Assert.True(tycheData != null && LogCheck(tycheData, generatedIntUponTrue));
-        Assert.Equal(20, JsonSerializer.Deserialize<int[]>(tycheData.representation)?.Sum());
+        await Assert.That(tycheData != null && LogCheck(tycheData, generatedIntUponTrue)).IsTrue();
+        await Assert.That(JsonSerializer.Deserialize<int[]>(tycheData!.representation)?.Sum()).IsEqualTo(20);
 
         static bool LogCheck(TycheData td, int generatedIntUponTrue)
         {
@@ -63,8 +63,8 @@ public class LoggingTests
     }
 
     //Test below can be used to see example of output
-    [Theory(Skip = "Only run if you want to verify Tyche output")]
-    [InlineData(1)]
+    [Test][Skip("Only run if you want to verify Tyche output")]
+    [Arguments(1)]
     public void Bool_Distribution_WithTycheLogs_ToFile(int generatedIntUponTrue)
     {
         var logger = Logging.CreateTycheLogger();

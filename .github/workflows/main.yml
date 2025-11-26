@@ -19,4 +19,4 @@ jobs:
       with:
         dotnet-version: '10.0.x'
     - name: Test
-      run: dotnet test -c Release
+      run: dotnet run -c Release --project Tests --output Detailed --disable-logo --no-progress

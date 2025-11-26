@@ -3,11 +3,10 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using CsCheck;
-using Xunit;
 
-public class ArraySerializerTests(ITestOutputHelper output)
+public class ArraySerializerTests()
 {
-    [Fact]
+    [Test]
     public void Varint()
     {
         Gen.UInt.Sample(i =>
@@ -20,7 +19,7 @@ public class ArraySerializerTests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
+    [Test]
     public void PrefixVarint()
     {
         Gen.UInt.Sample(i =>
@@ -33,7 +32,7 @@ public class ArraySerializerTests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
+    [Test]
     public void Varint_Faster()
     {
         Gen.UInt.Select(Gen.Const(() => new byte[8]))
@@ -51,7 +50,7 @@ public class ArraySerializerTests(ITestOutputHelper output)
                 ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
                 pos = 0;
                 return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
-            }, sigma: 10, repeat: 500, raiseexception: false, writeLine: output.WriteLine);
+            }, sigma: 10, repeat: 500, raiseexception: false, writeLine: TUnitX.WriteLine);
     }
 }
 

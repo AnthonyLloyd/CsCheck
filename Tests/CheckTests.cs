@@ -5,17 +5,16 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using CsCheck;
-using Xunit;
 
-public class CheckTests(ITestOutputHelper output)
+public class CheckTests
 {
     static void Assert_Commutative<T, R>(Gen<T> gen, Func<T, T, R> operation)
     {
         Gen.Select(gen, gen)
-        .Sample((op1, op2) => Assert.Equal(operation(op1, op2), operation(op2, op1)));
+        .Sample((op1, op2) => operation(op1, op2)!.Equals(operation(op2, op1)));
     }
 
-    [Fact]
+    [Test]
     public void Sample_Addition_Is_Commutative()
     {
         Assert_Commutative(Gen.Byte, (x, y) => x + y);
@@ -30,7 +29,7 @@ public class CheckTests(ITestOutputHelper output)
         Assert_Commutative(Gen.Double, (x, y) => x + y);
     }
 
-    [Fact]
+    [Test]
     public void Sample_Multiplication_Is_Commutative()
     {
         Assert_Commutative(Gen.Byte, (x, y) => x * y);
@@ -49,10 +48,10 @@ public class CheckTests(ITestOutputHelper output)
     {
         Gen.Select(gen, gen, gen)
         .Sample((op1, op2, op3) =>
-            Assert.Equal(operation(op1, operation(op2, op3)), operation(operation(op1, op2), op3)));
+            operation(op1, operation(op2, op3))!.Equals(operation(operation(op1, op2), op3)));
     }
 
-    [Fact]
+    [Test]
     public void Sample_Addition_Is_Associative()
     {
         Assert_Associative(Gen.UInt, (x, y) => x + y);
@@ -61,7 +60,7 @@ public class CheckTests(ITestOutputHelper output)
         Assert_Associative(Gen.Long, (x, y) => x + y);
     }
 
-    [Fact]
+    [Test]
     public void Sample_Multiplication_Is_Associative()
     {
         Assert_Associative(Gen.UInt, (x, y) => x * y);
@@ -104,7 +103,7 @@ public class CheckTests(ITestOutputHelper output)
         return c;
     }
 
-    [Fact]
+    [Test]
     public void Faster_Matrix_Multiply_Fixed()
     {
         const int I = 30, J = 37, K = 29;
@@ -126,10 +125,10 @@ public class CheckTests(ITestOutputHelper output)
         Check.Faster(
             () => MulIKJ(a, b),
             () => MulIJK(a, b),
-            writeLine: output.WriteLine);
+            writeLine: TUnitX.WriteLine);
     }
 
-    [Fact]
+    [Test]
     public void Faster_Matrix_Multiply_Range()
     {
         var genDim = Gen.Int[5, 30];
@@ -138,10 +137,10 @@ public class CheckTests(ITestOutputHelper output)
         .Faster(
             MulIKJ,
             MulIJK,
-            writeLine: output.WriteLine);
+            writeLine: TUnitX.WriteLine);
     }
 
-    [Fact]
+    [Test]
     public void Faster_Linq_Random()
     {
         Gen.Byte.Array[100, 1000]
@@ -153,10 +152,10 @@ public class CheckTests(ITestOutputHelper output)
                 return s;
             },
             data => data.Aggregate(0.0, (t, b) => t + b),
-            writeLine: output.WriteLine);
+            writeLine: TUnitX.WriteLine);
     }
 
-    [Fact]
+    [Test]
     public void Faster_CustomCriterion()
     {
         var successCriterion = (double output1, double output2) => output1 >= 0.7 * output2;
@@ -170,70 +169,70 @@ public class CheckTests(ITestOutputHelper output)
                     return d;
                 },
                 equal: successCriterion,
-                writeLine: output.WriteLine);
+                writeLine: TUnitX.WriteLine);
     }
 
-    [Fact]
-    public void Equal_Dictionary()
+    [Test]
+    public async Task Equal_Dictionary()
     {
-        Assert.True(Check.Equal(
+        await Assert.That(Check.Equal(
             new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } },
             new Dictionary<int, byte> { { 3, 4 }, { 1, 2 } }
-        ));
+        )).IsTrue();
     }
 
-    [Fact]
-    public void Equal_List()
+    [Test]
+    public async Task Equal_List()
     {
-        Assert.True(Check.Equal<List<int>>([1, 2, 3, 4], [1, 2, 3, 4]));
-        Assert.False(Check.Equal<List<int>>([1, 2, 3, 4], [1, 2, 4, 3]));
+        await Assert.That(Check.Equal<List<int>>([1, 2, 3, 4], [1, 2, 3, 4])).IsTrue();
+        await Assert.That(Check.Equal<List<int>>([1, 2, 3, 4], [1, 2, 4, 3])).IsFalse();
     }
 
-    [Fact]
-    public void Equal_Array()
+    [Test]
+    public async Task Equal_Array()
     {
-        Assert.True(Check.Equal<int[]>([1, 2, 3, 4], [1, 2, 3, 4]));
-        Assert.False(Check.Equal<int[]>([1, 2, 3, 4], [1, 2, 4, 3]));
+        await Assert.That(Check.Equal<int[]>([1, 2, 3, 4], [1, 2, 3, 4])).IsTrue();
+        await Assert.That(Check.Equal<int[]>([1, 2, 3, 4], [1, 2, 4, 3])).IsFalse();
     }
 
-    [Fact]
-    public void Equal_Array2D()
+    [Test]
+    public async Task Equal_Array2D()
     {
-        Assert.True(Check.Equal(
+        await Assert.That(Check.Equal(
             new int[,] { { 1, 2 }, { 3, 4 } },
             new int[,] { { 1, 2 }, { 3, 4 } }
-        ));
-        Assert.False(Check.Equal(
+        )).IsTrue();
+        await Assert.That(Check.Equal(
             new int[,] { { 1, 2 }, { 3, 4 } },
             new int[,] { { 1, 2 }, { 4, 3 } }
-        ));
+        )).IsFalse();
     }
 
-    [Fact]
-    public void ModelEqual_HashSet()
+    [Test]
+    public async Task ModelEqual_HashSet()
     {
-        Assert.True(Check.ModelEqual(
+        await Assert.That(Check.ModelEqual(
             new HashSet<int> { 1, 2, 3, 4 },
             new List<int> { 4, 3, 2, 1 }
-        ));
+        )).IsTrue();
     }
 
-    [Fact]
-    public void ModelEqual_List()
+    [Test]
+    public async Task ModelEqual_List()
     {
 #pragma warning disable CA1861 // Avoid constant arrays as arguments
-        Assert.True(Check.ModelEqual(
+        await Assert.That(Check.ModelEqual(
             new List<int> { 1, 2, 3, 4 },
             new int[] { 1, 2, 3, 4 }
-        ));
-        Assert.False(Check.ModelEqual(
+        )).IsTrue();
+        await Assert.That(Check.ModelEqual(
             new List<int> { 1, 2, 3, 4 },
             new int[] { 1, 2, 4, 3 }
-        ));
+        )).IsFalse();
 #pragma warning restore CA1861 // Avoid constant arrays as arguments
     }
 
-    [Fact]
+    [Test]
     public void SampleModelBased_ConcurrentBag()
     {
         Gen.Int[0, 5].List.Select(l => (new ConcurrentBag<int>(l), l))
@@ -244,7 +243,7 @@ public class CheckTests(ITestOutputHelper output)
         , threads: 1);
     }
 
-    [Fact]
+    [Test]
     public void SampleParallel_ConcurrentDictionary()
     {
         Gen.Dictionary(Gen.Int[0, 100], Gen.Byte)[0, 10].Select(l => new ConcurrentDictionary<int, byte>(l))
@@ -257,7 +256,7 @@ public class CheckTests(ITestOutputHelper output)
         );
     }
 
-    [Fact]
+    [Test]
     public void SampleParallel_ConcurrentQueue()
     {
         Gen.Const(() => new ConcurrentQueue<int>())
@@ -267,7 +266,7 @@ public class CheckTests(ITestOutputHelper output)
         );
     }
 
-    [Fact]
+    [Test]
     public void SampleParallelModel_ConcurrentQueue()
     {
         Gen.Const(() => (new ConcurrentQueue<int>(), new Queue<int>()))
@@ -277,7 +276,7 @@ public class CheckTests(ITestOutputHelper output)
         );
     }
 
-    [Fact]
+    [Test]
     public void SampleParallelModel_ConcurrentStack()
     {
         Gen.Const(() => (new ConcurrentStack<int>(), new Stack<int>()))
@@ -287,7 +286,7 @@ public class CheckTests(ITestOutputHelper output)
         );
     }
 
-    [Fact]
+    [Test]
     public void SampleParallelModel_ConcurrentDictionary()
     {
         Gen.Const(() => (new ConcurrentDictionary<int, int>(), new Dictionary<int, int>()))
@@ -297,7 +296,7 @@ public class CheckTests(ITestOutputHelper output)
         );
     }
 
-    [Fact]
+    [Test]
     public void Equality()
     {
         Check.Equality(Gen.Int);
@@ -305,7 +304,7 @@ public class CheckTests(ITestOutputHelper output)
         Check.Equality(Gen.String);
     }
 
-    [Fact]
+    [Test]
     public void Enqueue_Faster_Than_Median()
     {
         Gen.Double.OneTwo.Array[10].Select(Gen.Double.OneTwo, (a, s) =>
@@ -319,6 +318,6 @@ public class CheckTests(ITestOutputHelper output)
             (m, q, s) => q.Enqueue(s),
             (m, q, s) => m.Add(s),
             repeat: 100,
-            writeLine: output.WriteLine);
+            writeLine: TUnitX.WriteLine);
     }
 }

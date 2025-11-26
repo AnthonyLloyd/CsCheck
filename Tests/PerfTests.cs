@@ -1,11 +1,10 @@
 ﻿namespace Tests;
 
 using CsCheck;
-using Xunit;
 
-public class PerfTests(ITestOutputHelper output)
+public class PerfTests()
 {
-    [Fact]
+    [Test]
     public void ValueTuple_Vs_Out()
     {
         static (double sum, double err) TwoSum_T(double a, double b)
@@ -24,9 +23,10 @@ public class PerfTests(ITestOutputHelper output)
         Check.Faster(
             () => { var sum = TwoSum_O(2, 1e50, out var err); },
             () => { var (sum, err) = TwoSum_T(2, 1e50); }
-        , repeat: 100, writeLine: output.WriteLine);
+        , repeat: 100, writeLine: TUnitX.WriteLine);
     }
-    [Fact(Skip = "They are equal")]
+
+    [Test][Skip("They are equal")]
     public void TryChecked_Vs_If()
     {
         static ulong TryChecked(ulong a, ulong b)
@@ -54,7 +54,7 @@ public class PerfTests(ITestOutputHelper output)
             If
         , repeat: 100);
     }
-    [Fact(Skip = "If is a lot faster")]
+    [Test, Skip("If is a lot faster")]
     public void TryChecked_Vs_If_Overflow()
     {
         static ulong TryChecked(ulong a, ulong b)

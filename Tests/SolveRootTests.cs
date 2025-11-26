@@ -4,12 +4,9 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using CsCheck;
-using Xunit;
 
-public class SolveRootTests(ITestOutputHelper output)
+public class SolveRootTests
 {
-    readonly Action<string> writeLine = output.WriteLine;
-
     public static bool BoundsZero(double a, double b) => (a < 0.0 && b > 0.0) || (b < 0.0 && a > 0.0);
 
     public static double LinearRoot(double a, double fa, double b, double fb)
@@ -138,7 +135,7 @@ public class SolveRootTests(ITestOutputHelper output)
         }
     }
 
-    [Fact]
+    [Test]
     public void LinearRoot_Bound()
     {
         var genD = Gen.Double[-10_000, 10_000];
@@ -148,21 +145,21 @@ public class SolveRootTests(ITestOutputHelper output)
         .Sample((a, _, b, _, x) => a <= x && x <= b);
     }
 
-    [Fact]
-    public void QuadraticRoot_Increasing()
+    [Test]
+    public async Task QuadraticRoot_Increasing()
     {
         static double f(double x) => x * x - 100.0;
-        Assert.Equal(10.0, QuadraticRoot(9.4, f(9.4), 11.7, f(11.7), 20.11, f(20.11)));
+        await Assert.That(QuadraticRoot(9.4, f(9.4), 11.7, f(11.7), 20.11, f(20.11))).IsEqualTo(10.0);
     }
 
-    [Fact]
-    public void QuadraticRoot_Decreasing()
+    [Test]
+    public async Task QuadraticRoot_Decreasing()
     {
         static double f(double x) => x * x - 100.0;
-        Assert.Equal(-10.0, QuadraticRoot(-11.0, f(-11.0), -8.7, f(-8.7), -20.0, f(-20.0)));
+        await Assert.That(QuadraticRoot(-11.0, f(-11.0), -8.7, f(-8.7), -20.0, f(-20.0))).IsEqualTo(-10.0);
     }
 
-    [Fact]
+    [Test]
     public void QuadraticRoot_Bound()
     {
         var genD = Gen.Double[-10_000, 10_000];
@@ -172,7 +169,7 @@ public class SolveRootTests(ITestOutputHelper output)
         .Sample((a, _, b, _, _, _, x) => a <= x && x <= b);
     }
 
-    [Fact]
+    [Test]
     public void QuadraticRoot_Correct()
     {
         static bool AreClose(double a, double b) => Check.AreClose(1e-7, 1e-7, a, b);
@@ -193,7 +190,7 @@ public class SolveRootTests(ITestOutputHelper output)
     static (int, int[]) TestSolver(double tol, Func<double, Func<double, double>, double, double, double> solver)
     {
         var problems = TestProblems().ToArray();
-        Assert.Equal(154, problems.Length);
+        if (problems.Length != 154) throw new();
         var counts = new int[problems.Length];
         var count = 0;
         for (int i = 0; i < problems.Length; i++)
@@ -202,43 +199,43 @@ public class SolveRootTests(ITestOutputHelper output)
             counts[i] = -count;
             var x = solver(tol, x => { count++; return F(x); }, Min, Max);
             counts[i] += count;
-            Assert.True(BoundsZero(F(x - tol), F(x + tol)) || F(x) == 0.0);
+            if (!BoundsZero(F(x - tol), F(x + tol)) && F(x) != 0.0) throw new();
         }
         return (count, counts);
     }
 
-    [Fact]
-    public void Root_TestProblems_4() => Assert.Equal(1937, TestSolver(1e-4, Root).Item1);
+    [Test]
+    public async Task Root_TestProblems_4() => await Assert.That(TestSolver(1e-4, Root).Item1).IsEqualTo(1937);
 
-    [Fact]
-    public void Root_TestProblems_5() => Assert.Equal(2063, TestSolver(1e-5, Root).Item1);
+    [Test]
+    public async Task Root_TestProblems_5() => await Assert.That(TestSolver(1e-5, Root).Item1).IsEqualTo(2063);
 
-    [Fact]
-    public void Brent_TestProblems_6() => Assert.Equal(2763, TestSolver(1e-6, Brent).Item1);
+    [Test]
+    public async Task Brent_TestProblems_6() => await Assert.That(TestSolver(1e-6, Brent).Item1).IsEqualTo(2763);
 
-    [Fact]
-    public void Root_TestProblems_6() => Assert.Equal(2144, TestSolver(1e-6, Root).Item1);
+    [Test]
+    public async Task Root_TestProblems_6() => await Assert.That(TestSolver(1e-6, Root).Item1).IsEqualTo(2144);
 
-    [Fact]
-    public void Brent_TestProblems_7() => Assert.Equal(2816, TestSolver(1e-7, Brent).Item1);
+    [Test]
+    public async Task Brent_TestProblems_7() => await Assert.That(TestSolver(1e-7, Brent).Item1).IsEqualTo(2816);
 
-    [Fact]
-    public void Root_TestProblems_7() => Assert.Equal(2237, TestSolver(1e-7, Root).Item1);
+    [Test]
+    public async Task Root_TestProblems_7() => await Assert.That(TestSolver(1e-7, Root).Item1).IsEqualTo(2237);
 
-    [Fact]
-    public void Brent_TestProblems_9() => Assert.Equal(2889, TestSolver(1e-9, Brent).Item1);
+    [Test]
+    public async Task Brent_TestProblems_9() => await Assert.That(TestSolver(1e-9, Brent).Item1).IsEqualTo(2889);
 
-    [Fact]
-    public void Root_TestProblems_9() => Assert.InRange(TestSolver(1e-9, Root).Item1, 2292, 2293);
+    [Test]
+    public async Task Root_TestProblems_9() => await Assert.That(TestSolver(1e-9, Root).Item1).IsBetween(2292, 2293);
 
-    [Fact]
-    public void Brent_TestProblems_11() => Assert.Equal(2935, TestSolver(1e-11, Brent).Item1);
+    [Test]
+    public async Task Brent_TestProblems_11() => await Assert.That(TestSolver(1e-11, Brent).Item1).IsEqualTo(2935);
 
-    [Fact]
-    public void Root_TestProblems_11() => Assert.InRange(TestSolver(1e-11, Root).Item1, 2328, 2330);
+    [Test]
+    public async Task Root_TestProblems_11() => await Assert.That(TestSolver(1e-11, Root).Item1).IsBetween(2328, 2330);
 
-    [Fact]
-    public void Root_TestProblems_Compare()
+    [Test]
+    public async Task Root_TestProblems_Compare()
     {
         var rootCounts = TestSolver(1e-11, Root).Item2;
         var brentCounts = TestSolver(1e-11, Brent).Item2;
@@ -249,7 +246,7 @@ public class SolveRootTests(ITestOutputHelper output)
             .OrderBy(t => t.Second - t.First)
             .ThenBy(t => ((double)(t.Second - t.First)) / t.Second)
             .Select(t => t.i + ": " + t.First + " - " + t.Second);
-        foreach (var s in check) writeLine(s);
+        foreach (var s in check) TUnitX.WriteLine(s);
     }
 
     public static double Brent(double tol, Func<double, double> f, double a, double b)
@@ -331,8 +328,8 @@ public class SolveRootTests(ITestOutputHelper output)
         }
     }
 
-    [Fact]
-    public void BondSpreadProblem()
+    [Test]
+    public async Task BondSpreadProblem()
     {
         const double tol = 1e-6, coupon = 0.075, interestRate = 0.035;
         const int years = 20;
@@ -350,15 +347,15 @@ public class SolveRootTests(ITestOutputHelper output)
         var spreadRoot = Root(tol, x => { countRoot++; return 0.9 - BondPrice(x); }, -0.1, 1);
         var countRoot2 = 0;
         var spreadRoot2 = Root(tol, x => { countRoot2++; return 0.9 - BondPrice(x); }, -0.1, 1, 0.0423, 0.0623);
-        Assert.True(Math.Abs(spreadRoot - spreadBrent) < tol * 2);
-        Assert.True(Math.Abs(spreadRoot2 - spreadBrent) < tol * 2);
-        Assert.Equal(12, countBrent);
-        Assert.Equal(10, countRoot);
-        Assert.Equal(6, countRoot2);
+        await Assert.That(Math.Abs(spreadRoot - spreadBrent) < tol * 2).IsTrue();
+        await Assert.That(Math.Abs(spreadRoot2 - spreadBrent) < tol * 2).IsTrue();
+        await Assert.That(countBrent).IsEqualTo(12);
+        await Assert.That(countRoot).IsEqualTo(10);
+        await Assert.That(countRoot2).IsEqualTo(6);
     }
 
-    [Fact]
-    public void OptionVolatilityProblem()
+    [Test]
+    public async Task OptionVolatilityProblem()
     {
         const double tol = 1e-6;
         static double CND(double x)
@@ -382,11 +379,11 @@ public class SolveRootTests(ITestOutputHelper output)
         var volatilityRoot = Root(tol, x => { countRoot++; return BlackScholes(true, 9, 10, 2, 0.02, x) - 1; }, 0, 1);
         var countRoot2 = 0;
         var volatilityRoot2 = Root(tol, x => { countRoot2++; return BlackScholes(true, 9, 10, 2, 0.02, x) - 1; }, 0, 1, 0.145, 0.345);
-        Assert.True(Math.Abs(volatilityRoot - volatilityBrent) < tol * 2);
-        Assert.True(Math.Abs(volatilityRoot2 - volatilityBrent) < tol * 2);
-        Assert.Equal(7, countBrent);
-        Assert.Equal(6, countRoot);
-        Assert.Equal(5, countRoot2);
+        await Assert.That(Math.Abs(volatilityRoot - volatilityBrent) < tol * 2).IsTrue();
+        await Assert.That(Math.Abs(volatilityRoot2 - volatilityBrent) < tol * 2).IsTrue();
+        await Assert.That(countBrent).IsEqualTo(7);
+        await Assert.That(countRoot).IsEqualTo(6);
+        await Assert.That(countRoot2).IsEqualTo(5);
     }
 
     static IEnumerable<(Func<double, double> F, double Min, double Max)> TestProblems()

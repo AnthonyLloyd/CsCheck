@@ -3,11 +3,10 @@
 using System;
 using System.Linq;
 using CsCheck;
-using Xunit;
 
-public class AllocatorMany_Tests(ITestOutputHelper output)
+public class AllocatorMany_Tests
 {
-    [Fact]
+    [Test]
     public void RoundingSolutionTest()
     {
         Gen.Select(
@@ -21,7 +20,7 @@ public class AllocatorMany_Tests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
+    [Test]
     public void GroupUngroup()
     {
         Gen.Select(Gen.Int[2, 10], Gen.Int[2, 10]).SelectMany((I, J) =>
@@ -77,8 +76,8 @@ public class AllocatorMany_Tests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
-    public void AllocatorMany_Classify()
+    [Test]
+    public async Task AllocatorMany_Classify()
     {
         Gen.Select(Gen.Int[3, 30], Gen.Int[3, 15]).SelectMany((rows, cols) =>
             Gen.Select(
@@ -95,55 +94,55 @@ public class AllocatorMany_Tests(ITestOutputHelper output)
             if (!TotalsCorrectly(rowTotal, colTotal, allocation.Solution))
                 throw new Exception("Does not total correctly");
             return $"{(allocation.KnownGlobal ? "Global" : "Local")}/{allocation.SolutionType}";
-        }, time: 10, writeLine: output.WriteLine);
+        }, time: 10, writeLine: TUnitX.WriteLine);
     }
 
-    [Fact]
-    public void Simple()
+    [Test]
+    public async Task Simple()
     {
         var actual = AllocatorMany.Allocate([9, 2, 1], [1, 20, 20], [21, 0, 10, 0, 10], new(), 100);
-        Assert.True(actual.KnownGlobal);
-        Assert.Equal(AllocatorMany.SolutionType.RoundingMinimum, actual.SolutionType);
-        Assert.Equal([[1, 0, 0, 0, 0], [6, 0, 7, 0, 7], [14, 0, 3, 0, 3]], actual.Solution);
+        await Assert.That(actual.KnownGlobal).IsTrue();
+        await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.RoundingMinimum);
+        await Assert.That(actual.Solution).IsEquivalentTo((int[][])[[1, 0, 0, 0, 0], [6, 0, 7, 0, 7], [14, 0, 3, 0, 3]]);
     }
 
-    [Fact]
-    public void Example01()
+    [Test]
+    public async Task Example01()
     {
         var actual = AllocatorMany.Allocate([96625, 96620], [4, 6], [4, 1, 1, 1, 1, 1, 1], new(), 100);
-        Assert.True(actual.KnownGlobal);
-        Assert.Equal(AllocatorMany.SolutionType.EveryCombination, actual.SolutionType);
-        Assert.Equal([[3, 1, 0, 0, 0, 0, 0], [1, 0, 1, 1, 1, 1, 1]], actual.Solution);
+        await Assert.That(actual.KnownGlobal).IsTrue();
+        await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.EveryCombination);
+        await Assert.That(actual.Solution).IsEquivalentTo((int[][])[[3, 1, 0, 0, 0, 0, 0], [1, 0, 1, 1, 1, 1, 1]]);
     }
 
-    [Fact]
-    public void Example02()
+    [Test]
+    public async Task Example02()
     {
         var actual = AllocatorMany.Allocate([12, 11], [50, 30], [20, 60], new(), 100);
-        Assert.True(actual.KnownGlobal);
-        Assert.Equal(AllocatorMany.SolutionType.RoundingMinimum, actual.SolutionType);
-        Assert.Equal([[12, 38], [8, 22]], actual.Solution);
+        await Assert.That(actual.KnownGlobal).IsTrue();
+        await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.RoundingMinimum);
+        await Assert.That(actual.Solution).IsEquivalentTo((int[][])[[12, 38], [8, 22]]);
     }
 
-    [Fact]
-    public void Example03()
+    [Test]
+    public async Task Example03()
     {
         var actual = AllocatorMany.Allocate([12, 11, 15], [56, 42, 14], [28, 63, 21], new(), 100);
-        Assert.True(actual.KnownGlobal);
-        Assert.Equal(AllocatorMany.SolutionType.RoundingMinimum, actual.SolutionType);
-        Assert.Equal([[16, 31, 9], [9, 24, 9], [3, 8, 3]], actual.Solution);
+        await Assert.That(actual.KnownGlobal).IsTrue();
+        await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.RoundingMinimum);
+        await Assert.That(actual.Solution).IsEquivalentTo((int[][])[[16, 31, 9], [9, 24, 9], [3, 8, 3]]);
     }
 
-    [Fact]
-    public void Example04()
+    [Test]
+    public async Task Example04()
     {
         var actual = AllocatorMany.Allocate(
             [3175, 3174, 3173, 3170, 3169, 3168, 3167],
             [2, 3, 1, 1, 1, 2, 1],
             [4, 1, 1, 1, 1, 1, 1, 1], new(), 100);
-        Assert.True(actual.KnownGlobal);
-        Assert.Equal(AllocatorMany.SolutionType.EveryCombination, actual.SolutionType);
-        Assert.Equal([
+        await Assert.That(actual.KnownGlobal).IsTrue();
+        await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.EveryCombination);
+        await Assert.That(actual.Solution).IsEquivalentTo((int[][])[
             [2, 0, 0, 0, 0, 0, 0, 0],
             [0, 1, 1, 1, 0, 0, 0, 0],
             [0, 0, 0, 0, 1, 0, 0, 0],
@@ -151,62 +150,62 @@ public class AllocatorMany_Tests(ITestOutputHelper output)
             [0, 0, 0, 0, 0, 0, 1, 0],
             [1, 0, 0, 0, 0, 0, 0, 1],
             [1, 0, 0, 0, 0, 0, 0, 0],
-        ], actual.Solution);
+        ]);
     }
 
-    [Fact(Skip ="Takes too long")]
-    public void Example05()
+    [Test][Skip("Takes too long")]
+    public async Task Example05()
     {
         var actual = AllocatorMany.Allocate(
             [37060, 37073, 37748, 38051],
             [586, 1055, 7183, 5560],
             [2744, 413, 524, 10582, 121], new(123), 100);
-        Assert.True(actual.KnownGlobal);
-        Assert.Equal(AllocatorMany.SolutionType.RandomChange, actual.SolutionType);
+        await Assert.That(actual.KnownGlobal).IsTrue();
+        await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.RandomChange);
     }
 
-    [Fact]
-    public void Example06()
+    [Test]
+    public async Task Example06()
     {
         var actual = AllocatorMany.Allocate(
             [127584, 127678, 128097, 128157, 128483],
             [1, 1, 1, 1, 1],
             [0, 1, 1, 0, 0, 1, 0, 1, 1, 0], new(), 100);
-        Assert.True(actual.KnownGlobal);
-        Assert.Equal(AllocatorMany.SolutionType.OnesColumn, actual.SolutionType);
+        await Assert.That(actual.KnownGlobal).IsTrue();
+        await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.OnesColumn);
     }
 
-    [Fact]
-    public void Example07()
+    [Test]
+    public async Task Example07()
     {
         var actual = AllocatorMany.Allocate(
             [34378, 34506, 34535],
             [3900, 800, 400],
             [900, 400, 3800], new(123), 100);
-        Assert.True(actual.KnownGlobal);
+        await Assert.That(actual.KnownGlobal).IsTrue();
     }
 
-    [Fact(Skip = "fails in parallel")]
-    public void Example08()
+    [Test][Skip("fails in parallel")]
+    public async Task Example08()
     {
         var actual = AllocatorMany.Allocate(
             [18880, 18916, 18920],
             [1861271, 61527, 67534],
             [381549, 56645, 69287, 1466297, 16554], new(123), 2);
-        Assert.False(actual.KnownGlobal);
-        Assert.Equal(AllocatorMany.SolutionType.RandomChange, actual.SolutionType);
+        await Assert.That(actual.KnownGlobal).IsTrue();
+        await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.RandomChange);
     }
 
-    [Fact]
-    public void Example09()
+    [Test]
+    public async Task Example09()
     {
         var actual = AllocatorMany.Allocate(
             [96030, 96050, 96040, 95055, 96040, 96035, 96035, 96035],
             [1, 1, 1, 1, 1, 1, 1, 1],
             [1, 5, 2], new(123), 100);
-        Assert.True(actual.KnownGlobal);
-        Assert.Equal(AllocatorMany.SolutionType.EveryCombination, actual.SolutionType);
-        Assert.Equal([
+        await Assert.That(actual.KnownGlobal).IsTrue();
+        await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.EveryCombination);
+        await Assert.That(actual.Solution).IsEquivalentTo((int[][])[
             [1, 0, 0],
             [0, 1, 0],
             [0, 1, 0],
@@ -215,11 +214,11 @@ public class AllocatorMany_Tests(ITestOutputHelper output)
             [0, 1, 0],
             [0, 0, 1],
             [0, 0, 1],
-        ], actual.Solution);
+        ]);
     }
 
-    [Fact(Skip ="fails in parallel")]
-    public void Example10()
+    [Test][Skip("fails in parallel")]
+    public async Task Example10()
     {
         Gen.Int[2, 20].SelectMany(rows =>
             Gen.Select(
@@ -252,8 +251,8 @@ public class AllocatorMany_Tests(ITestOutputHelper output)
         }, seed: "0001n4MP9UR1", iter: 1);
     }
 
-    [Fact]
-    public void Example_139x19()
+    [Test]
+    public async Task Example_139x19()
     {
         var fills = new[] {
             (331,1), (350,2), (357,1), (360,3), (366,2), (371,1), (373,1), (375,3), (376,1), (377,2), (378,2), (379,2), (381,2),
@@ -261,17 +260,17 @@ public class AllocatorMany_Tests(ITestOutputHelper output)
             (397,6), (398,2), (399,5), (400,3), (401,1), (403,4), (404,4), (405,3), (406,2), (407,3), (408,5), (409,3), (410,2),
             (411,1), (415,1), (419,7), (421,1), (424,2), (425,2), (426,2), (436,3), (437,2), (438,1), (446,1), (447,2)
         };
-        Assert.Equal(139, fills.Sum(i => i.Item2));
-        Assert.Equal(fills.Select(i => i.Item1), fills.Select(i => i.Item1).Distinct());
+        await Assert.That(fills.Sum(i => i.Item2)).IsEqualTo(139);
+        await Assert.That(fills.Select(i => i.Item1).Distinct()).IsEquivalentTo(fills.Select(i => i.Item1));
         var accounts = new int[] { 2, 2, 2, 2, 2, 3, 5, 5, 6, 7, 11, 12, 13, 17, 50 };
-        Assert.Equal(139, accounts.Sum());
+        await Assert.That(accounts.Sum()).IsEqualTo(139);
         var p = Array.ConvertAll(fills, i => i.Item1);
         var q = Array.ConvertAll(fills, i => i.Item2);
         var actual = AllocatorMany.Allocate(p, q, accounts, new Random(123), 10);
     }
 
-    [Fact(Skip = "remove?")]
-    public void AllocateTest()
+    [Test][Skip("remove?")]
+    public async Task AllocateTest()
     {
         Gen.Int[2, 20].SelectMany(rows =>
             Gen.Select(

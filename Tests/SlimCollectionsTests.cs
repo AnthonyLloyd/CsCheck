@@ -6,11 +6,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using CsCheck;
-using Xunit;
 
-public class SlimCollectionsTests(ITestOutputHelper output)
+public class SlimCollectionsTests()
 {
-    [Fact]
+    [Test]
     public void ListSlim_ModelBased()
     {
         Gen.Int.Array.Select(a => (new ListSlim<int>(a), new List<int>(a)))
@@ -21,7 +20,7 @@ public class SlimCollectionsTests(ITestOutputHelper output)
         );
     }
 
-    [Fact]
+    [Test]
     public void ListSlim_Parallel()
     {
         Gen.Byte.Array.Select(a => new ListSlim<byte>(a))
@@ -33,7 +32,7 @@ public class SlimCollectionsTests(ITestOutputHelper output)
         );
     }
 
-    [Fact]
+    [Test]
     public void SetSlim_ModelBased()
     {
         Gen.Int.Array.Select(a => (new SetSlim<int>(a), new HashSet<int>(a)))
@@ -45,7 +44,7 @@ public class SlimCollectionsTests(ITestOutputHelper output)
         );
     }
 
-    [Fact]
+    [Test]
     public void SetSlim_Parallel()
     {
         Gen.Byte.Array.Select(a => new SetSlim<byte>(a))
@@ -57,7 +56,7 @@ public class SlimCollectionsTests(ITestOutputHelper output)
         );
     }
 
-    [Fact]
+    [Test]
     public void SetSlim_Performance_Add()
     {
         Gen.Int.Array
@@ -72,10 +71,10 @@ public class SlimCollectionsTests(ITestOutputHelper output)
                 var s = new HashSet<int>();
                 foreach (var i in a) s.Add(i);
             },
-            repeat: 100, raiseexception: false, writeLine: output.WriteLine);
+            repeat: 100, raiseexception: false, writeLine: TUnitX.WriteLine);
     }
 
-    [Fact(Skip = "fails")]
+    [Test, Skip("fails")]
     public void SetSlim_Performance_Contains()
     {
         Gen.Int.Array.Select(a => (a, new SetSlim<int>(a), new HashSet<int>(a)))
@@ -88,10 +87,10 @@ public class SlimCollectionsTests(ITestOutputHelper output)
             {
                 foreach (var i in items) hashset.Contains(i);
             },
-            repeat: 1000, writeLine: output.WriteLine);
+            repeat: 1000, writeLine: TUnitX.WriteLine);
     }
 
-    [Fact]
+    [Test]
     public void MapSlim_ModelBased()
     {
         Gen.Dictionary(Gen.Int, Gen.Byte)
@@ -103,7 +102,7 @@ public class SlimCollectionsTests(ITestOutputHelper output)
         );
     }
 
-    [Fact]
+    [Test]
     public void MapSlim_Metamorphic()
     {
         Gen.Dictionary(Gen.Int, Gen.Byte).Select(d => new MapSlim<int, byte>(d))
@@ -115,7 +114,7 @@ public class SlimCollectionsTests(ITestOutputHelper output)
         );
     }
 
-    [Fact]
+    [Test]
     public void MapSlim_Parallel()
     {
         Gen.Dictionary(Gen.Int, Gen.Byte).Select(d => new MapSlim<int, byte>(d))
@@ -127,7 +126,7 @@ public class SlimCollectionsTests(ITestOutputHelper output)
         );
     }
 
-    [Fact]
+    [Test]
     public void MapSlim_Performance_Add()
     {
         Gen.Int.Select(Gen.Byte).Array
@@ -142,10 +141,10 @@ public class SlimCollectionsTests(ITestOutputHelper output)
                 var m = new Dictionary<int, byte>();
                 foreach (var (k, v) in items) m[k] = v;
             },
-            repeat: 100, raiseexception: false, writeLine: output.WriteLine);
+            repeat: 100, raiseexception: false, writeLine: TUnitX.WriteLine);
     }
 
-    [Fact(Skip = "fails")]
+    [Test, Skip("fails")]
     public void MapSlim_Performance_IndexOf()
     {
         Gen.Dictionary(Gen.Int, Gen.Byte)
@@ -159,10 +158,10 @@ public class SlimCollectionsTests(ITestOutputHelper output)
             {
                 foreach (var (k, _) in items) dict.ContainsKey(k);
             },
-            repeat: 100, writeLine: output.WriteLine);
+            repeat: 100, writeLine: TUnitX.WriteLine);
     }
 
-    [Fact(Skip = "fails")]
+    [Test, Skip("fails")]
     public void MapSlim_Performance_Increment()
     {
         Gen.Int[0, 255].Array
@@ -181,12 +180,11 @@ public class SlimCollectionsTests(ITestOutputHelper output)
                     dict[b] = c + 1;
                 }
             },
-            repeat: 1000, sigma: 10, writeLine: output.WriteLine);
+            repeat: 1000, sigma: 10, writeLine: TUnitX.WriteLine);
     }
 }
 
-public class ListSlim<T> : IReadOnlyList<T>
-{
+public class ListSlim<T> : System.Collections.Generic.IReadOnlyList<T>, System.Collections.Generic.IReadOnlyCollection<T>, System.Collections.Generic.IEnumerable<T>, System.Collections.IEnumerable{
     static class Holder { internal static T[] Initial = []; }
     T[] entries;
     int count;

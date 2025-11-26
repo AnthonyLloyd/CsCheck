@@ -49,7 +49,7 @@ Property.print <| property {
 
 
 ```csharp
-[Fact]
+[Test]
 public void Version_Same()
 {
     Gen.Select(Gen.Byte, Gen.Byte, Gen.Byte)

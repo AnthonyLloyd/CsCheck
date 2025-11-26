@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
         <LangVersion>preview</LangVersion>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -12,13 +11,11 @@
         <SignAssembly>true</SignAssembly>
         <DelaySign>false</DelaySign>
         <AssemblyOriginatorKeyFile>../SigningKey.snk</AssemblyOriginatorKeyFile>
-        <NoWarn>xUnit1004</NoWarn>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="xunit.v3.mtp-v2" Version="3.2.0" />
+        <PackageReference Include="TUnit" Version="1.2.11" />
         <PackageReference Include="BenchmarkDotNet" Version="0.15.6" />
         <PackageReference Include="Rationals" Version="2.3.0" />
         <ProjectReference Include="..\CsCheck\CsCheck.csproj" />
-        <Using Include="Xunit" />
     </ItemGroup>
 </Project>
