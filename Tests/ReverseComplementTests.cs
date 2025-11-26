@@ -7,14 +7,12 @@
 
 namespace Tests
 {
-    using System;
     using System.IO;
     using CsCheck;
-    using Xunit;
 
-    public class ReverseComplementTests(ITestOutputHelper output)
+    public class ReverseComplementTests()
     {
-        [Fact(Skip = "Long running test.")]
+        [Test][Skip("Long running test.")]
         public void ReverseComplement_Faster()
         {
             if (!File.Exists(FastaUtils.Fasta.Filename)) FastaUtils.Fasta.NotMain(25_000_000, FastaUtils.Fasta.Filename);
@@ -22,19 +20,16 @@ namespace Tests
             Check.Faster(
                 ReverseComplementNew.RevComp.NotMain,
             ReverseComplementOld.RevComp.NotMain,
-                sigma: 6, threads: 1, timeout: 600_000, writeLine: output.WriteLine);
+                sigma: 6, threads: 1, timeout: 600_000, writeLine: TUnitX.WriteLine);
         }
     }
 
     public class CausalTests
     {
-        readonly Action<string> writeLine;
-        public CausalTests(ITestOutputHelper output) => writeLine = output.WriteLine;
-
-        [Fact(Skip = "Long running test.")]
+        [Test][Skip("Long running test.")]
         public void Fasta()
         {
-            Causal.Profile(() => FastaUtils.Fasta.NotMain(10_000_000, null)).Output(writeLine);
+            Causal.Profile(() => FastaUtils.Fasta.NotMain(10_000_000, null)).Output(TUnitX.WriteLine);
         }
     }
 }

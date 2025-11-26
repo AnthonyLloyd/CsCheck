@@ -31,7 +31,7 @@ CsCheck also has functionality to make multiple types of testing simple and fast
 - [Configuration](#Configuration)
 - [Development](#Development)
 
-The following tests are in xUnit but could equally be used in any testing framework.
+The following tests are in ~~xUnit~~ TUnit but could equally be used in any testing framework.
 
 More to see in the [Tests](https://github.com/AnthonyLloyd/CsCheck/tree/master/Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
 
@@ -81,7 +81,7 @@ Setting these from the command line can be a good way to run your tests in diffe
 
 ### Unit Single
 ```csharp
-[Fact]
+[Test]
 public void Single_Unit_Range()
 {
     Gen.Single.Unit.Sample(f => Assert.InRange(f, 0f, 0.9999999f));
@@ -90,7 +90,7 @@ public void Single_Unit_Range()
 
 ### Long Range
 ```csharp
-[Fact]
+[Test]
 public void Long_Range()
 {
     (from t in Gen.Select(Gen.Long, Gen.Long)
@@ -104,7 +104,7 @@ public void Long_Range()
 
 ### Int Distribution
 ```csharp
-[Fact]
+[Test]
 public void Int_Distribution()
 {
     int buckets = 70;
@@ -128,17 +128,17 @@ static void TestRoundtrip<T>(Gen<T> gen, Action<Stream, T> serialize, Func<Strea
         return deserialize(ms).Equals(t);
     });
 }
-[Fact]
+[Test]
 public void Varint()
 {
     TestRoundtrip(Gen.UInt, StreamSerializer.WriteVarint, StreamSerializer.ReadVarint);
 }
-[Fact]
+[Test]
 public void Double()
 {
     TestRoundtrip(Gen.Double, StreamSerializer.WriteDouble, StreamSerializer.ReadDouble);
 }
-[Fact]
+[Test]
 public void DateTime()
 {
     TestRoundtrip(Gen.DateTime, StreamSerializer.WriteDateTime, StreamSerializer.ReadDateTime);
@@ -147,7 +147,7 @@ public void DateTime()
 
 ### Shrinking Challenge
 ```csharp
-[Fact]
+[Test]
 public void No2_LargeUnionList()
 {
     Gen.Int.Array.Array
@@ -168,7 +168,7 @@ public void No2_LargeUnionList()
 ```csharp
 record MyObj(int Id, MyObj[] Children);
 
-[Fact]
+[Test]
 public void RecursiveDepth()
 {
     int maxDepth = 4;
@@ -189,7 +189,7 @@ Change the return in **Sample** to a string to produce a summary classification 
 All other optional parameters work the same but writeLine: is now mandatory.
 
 ```csharp
-[Fact]
+[Test]
 public void AllocatorMany_Classify()
 {
     Gen.Select(Gen.Int[3, 30], Gen.Int[3, 15]).SelectMany((rows, cols) =>
@@ -207,7 +207,7 @@ public void AllocatorMany_Classify()
         if (!TotalsCorrectly(rowTotal, colTotal, allocation.Solution))
             throw new Exception("Does not total correctly");
         return $"{(allocation.KnownGlobal ? "Global" : "Local")}/{allocation.SolutionType}";
-    }, output.WriteLine, time: 900);
+    }, TUnitX.WriteLine, time: 900);
 }
 ```
 
@@ -230,7 +230,7 @@ SampleModelBased generates an initial actual and model and then applies a random
 
 ### SetSlim Add
 ```csharp
-[Fact]
+[Test]
 public void
 SetSlim_ModelBased()
 {
@@ -255,7 +255,7 @@ More about how useful metamorphic tests can be here: [How to specify it!](https:
 
 ### MapSlim Update
 ```csharp
-[Fact]
+[Test]
 public void MapSlim_Metamorphic()
 {
     Gen.Dictionary(Gen.Int, Gen.Byte)
@@ -278,7 +278,7 @@ At least one of these must be equal to the parallel result.
 Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603) and [paper](https://github.com/AnthonyLloyd/AnthonyLloyd.github.io/raw/master/public/cscheck/finding-race-conditions.pdf). This is easier to implement with CsCheck than QuickCheck because the random shrinking does not need to repeat each step as QuickCheck does (10 times by default) to make shrinking deterministic.
 
 ```csharp
-[Fact]
+[Test]
 public void SampleParallel_ConcurrentQueue()
 {
     Gen.Const(() => new ConcurrentQueue<int>())
@@ -292,7 +292,7 @@ public void SampleParallel_ConcurrentQueue()
 Can also be tested against a model (which doesn't need to be thread-safe):
 
 ```csharp
-[Fact]
+[Test]
 public void SampleParallelModel_ConcurrentQueue()
 {
     Gen.Const(() => (new ConcurrentQueue<int>(), new Queue<int>()))
@@ -311,7 +311,7 @@ It shows which regions are the bottleneck and what overall performance gain coul
 Idea from Emery Berger. My blog posts on this [here](http://anthonylloyd.github.io/blog/2019/10/11/causal-profiling).
 
 ```csharp
-[Fact]
+[Test]
 public void Fasta()
 {
     Causal.Profile(() => FastaUtils.Fasta.NotMain(10_000_000, null)).Output(writeLine);
@@ -349,7 +349,7 @@ It saves a temp cache of the results on a successful hash check and each subsequ
 Together **Single** and **Hash** eliminate the need to commit data files in regression testing while also giving detailed information of any change.
 
 ```csharp
-[Fact]
+[Test]
 public void Portfolio_Small_Mixed_Example()
 {
     var portfolio = ModelGen.Portfolio.Single(p =>
@@ -379,14 +379,14 @@ It's fast because it runs in parallel and knows when to stop.
 It's just what you need to iteratively improve performance while making sure it still produces the correct results.
 
 ```csharp
-[Fact]
+[Test]
 public void Faster_Linq_Random()
 {
     Gen.Byte.Array[100, 1000]
     .Faster(
         data => data.Aggregate(0.0, (t, b) => t + b),
         data => data.Select(i => (double)i).Sum(),
-        writeLine: output.WriteLine
+        writeLine: TUnitX.WriteLine
     );
 }
 ```
@@ -407,7 +407,7 @@ Standard Output Messages:
 ### Matrix Multiply
 
 ```csharp
-[Fact]
+[Test]
 public void Faster_Matrix_Multiply_Range()
 {
     var genDim = Gen.Int[5, 30];
@@ -423,7 +423,7 @@ public void Faster_Matrix_Multiply_Range()
 ### MapSlim Increment
 
 ```csharp
-[Fact]
+[Test]
 public void MapSlim_Performance_Increment()
 {
     Gen.Byte.Array
@@ -443,7 +443,7 @@ public void MapSlim_Performance_Increment()
             }
         },
         repeat: 100,
-        writeLine: output.WriteLine);
+        writeLine: TUnitX.WriteLine);
 }
 ```
 
@@ -455,7 +455,7 @@ Standard Output Messages:
 
 ### Benchmarks Game
 ```csharp
-[Fact]
+[Test]
 public void ReverseComplement_Faster()
 {
     if (!File.Exists(Utils.Fasta.Filename)) Utils.Fasta.NotMain(new[] { "25000000" });
@@ -464,7 +464,7 @@ public void ReverseComplement_Faster()
         ReverseComplementNew.RevComp.NotMain,
         ReverseComplementOld.RevComp.NotMain,
         threads: 1, timeout: 600_000, sigma: 6
-        writeLine: output.WriteLine);
+        writeLine: TUnitX.WriteLine);
 }
 ```
 
@@ -477,7 +477,7 @@ Standard Output Messages:
 ### Varint
 Repeat is used as the functions are very quick.
 ```csharp
-[Fact]
+[Test]
 public void Varint_Faster()
 {
     Gen.Select(Gen.UInt, Gen.Const(() => new byte[8]))
@@ -495,7 +495,7 @@ public void Varint_Faster()
             ArraySerializer.WritePrefixVarint(bytes, ref pos, i);
             pos = 0;
             return ArraySerializer.ReadPrefixVarint(bytes, ref pos);
-        }, sigma: 10, repeat: 200, writeLine: output.WriteLine);
+        }, sigma: 10, repeat: 200, writeLine: TUnitX.WriteLine);
 }
 ```
 
@@ -527,7 +527,7 @@ public void Normal_Code(int z)
     });
 }
 
-[Fact]
+[Test]
 public void Test()
 {
     Dbg.CallAdd("helpful", () =>
@@ -554,7 +554,7 @@ public double[] Calculation(InputData input)
     return CalcFinal(partN).DbgTee(Dbg.Regression.Add);
 }
 
-[Fact]
+[Test]
 public void Test()
 {
     // Remove any previously saved regression data.
@@ -601,7 +601,7 @@ public void LongProcess()
     return CalcFinal(partN);
 }
 
-[Fact]
+[Test]
 public void Test()
 {
     LongProcess();

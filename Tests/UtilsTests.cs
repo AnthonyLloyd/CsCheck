@@ -5,119 +5,118 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using CsCheck;
-using Xunit;
 
 public class UtilsTests
 {
-    [Fact]
-    public void Equal()
+    [Test]
+    public async Task Equal()
     {
-        Assert.True(Check.Equal(new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } }, new Dictionary<int, byte> { { 3, 4 }, { 1, 2 } }));
-        Assert.True(Check.Equal([(1, 2), (3, 4)], new[] { (1, 2), (3, 4) }));
-        Assert.False(Check.Equal([(1, 2), (3, 4)], new[] { (3, 4), (1, 2) }));
+        await Assert.That(Check.Equal(new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } }, new Dictionary<int, byte> { { 3, 4 }, { 1, 2 } })).IsTrue();
+        await Assert.That(Check.Equal([(1, 2), (3, 4)], new[] { (1, 2), (3, 4) })).IsTrue();
+        await Assert.That(Check.Equal([(1, 2), (3, 4)], new[] { (3, 4), (1, 2) })).IsFalse();
     }
 
-    [Fact]
-    public void ModelEqual()
+    [Test]
+    public async Task ModelEqual()
     {
-        Assert.True(Check.ModelEqual(new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } }, new KeyValuePair<int, byte>[] { new(3, 4), new(1, 2) }));
-        Assert.True(Check.ModelEqual(new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }, new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }));
-        Assert.False(Check.ModelEqual(new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }, new KeyValuePair<int, byte>[] { new(3, 4), new(1, 2) }));
+        await Assert.That(Check.ModelEqual(new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } }, new KeyValuePair<int, byte>[] { new(3, 4), new(1, 2) })).IsTrue();
+        await Assert.That(Check.ModelEqual(new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }, new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) })).IsTrue();
+        await Assert.That(Check.ModelEqual(new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }, new KeyValuePair<int, byte>[] { new(3, 4), new(1, 2) })).IsFalse();
     }
 
-    [Fact]
-    public void Print()
+    [Test]
+    public async Task Print()
     {
-        Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new KeyValuePair<int, int>[] { new(1, 2), new(3, 4) }));
-        Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new Tuple<int, int>[] { new(1, 2), new(3, 4) }));
-        Assert.Equal("[(1, 2), (3, 4)]", Check.Print(new[] { (1, 2), (3, 4) }));
+        await Assert.That(Check.Print(new KeyValuePair<int, int>[] { new(1, 2), new(3, 4) })).IsEqualTo("[(1, 2), (3, 4)]");
+        await Assert.That(Check.Print(new Tuple<int, int>[] { new(1, 2), new(3, 4) })).IsEqualTo("[(1, 2), (3, 4)]");
+        await Assert.That(Check.Print(new[] { (1, 2), (3, 4) })).IsEqualTo("[(1, 2), (3, 4)]");
     }
 
-    [Fact]
-    public void PrintDouble()
+    [Test]
+    public async Task PrintDouble()
     {
-        Assert.Equal("0", Check.Print(0d));
-        Assert.Equal("1", Check.Print(1d));
-        Assert.Equal("1d/3", Check.Print(1d / 3));
-        Assert.Equal("4d/3", Check.Print(4d / 3));
-        Assert.Equal("17d/13", Check.Print(17d / 13));
-        Assert.Equal("1E-20", Check.Print(1E-20));
-        Assert.Equal("1234E20", Check.Print(1234E20));
+        await Assert.That(Check.Print(0d)).IsEqualTo("0");
+        await Assert.That(Check.Print(1d)).IsEqualTo("1");
+        await Assert.That(Check.Print(1d / 3)).IsEqualTo("1d/3");
+        await Assert.That(Check.Print(4d / 3)).IsEqualTo("4d/3");
+        await Assert.That(Check.Print(17d / 13)).IsEqualTo("17d/13");
+        await Assert.That(Check.Print(1E-20)).IsEqualTo("1E-20");
+        await Assert.That(Check.Print(1234E20)).IsEqualTo("1234E20");
     }
 
-    [Fact]
-    public void PrintFloat()
+    [Test]
+    public async Task PrintFloat()
     {
-        Assert.Equal("0", Check.Print(0f));
-        Assert.Equal("1", Check.Print(1f));
-        Assert.Equal("1f/3", Check.Print(1f / 3));
-        Assert.Equal("4f/3", Check.Print(4f / 3));
-        Assert.Equal("17f/13", Check.Print(17f / 13));
-        Assert.Equal("1234E20", Check.Print(1234E20f));
+        await Assert.That(Check.Print(0f)).IsEqualTo("0");
+        await Assert.That(Check.Print(1f)).IsEqualTo("1");
+        await Assert.That(Check.Print(1f / 3)).IsEqualTo("1f/3");
+        await Assert.That(Check.Print(4f / 3)).IsEqualTo("4f/3");
+        await Assert.That(Check.Print(17f / 13)).IsEqualTo("17f/13");
+        await Assert.That(Check.Print(1234E20f)).IsEqualTo("1234E20");
     }
 
-    [Fact]
-    public void PrintDecimal()
+    [Test]
+    public async Task PrintDecimal()
     {
-        Assert.Equal("0", Check.Print(0m));
-        Assert.Equal("1", Check.Print(1m));
-        Assert.Equal("1m/3", Check.Print(1m / 3));
-        Assert.Equal("4m/3", Check.Print(4m / 3));
-        Assert.Equal("17m/13", Check.Print(17m / 13));
-        Assert.Equal("1E-20", Check.Print(1E-20m));
-        Assert.Equal("1234E20", Check.Print(1234E20m));
+        await Assert.That(Check.Print(0m)).IsEqualTo("0");
+        await Assert.That(Check.Print(1m)).IsEqualTo("1");
+        await Assert.That(Check.Print(1m / 3)).IsEqualTo("1m/3");
+        await Assert.That(Check.Print(4m / 3)).IsEqualTo("4m/3");
+        await Assert.That(Check.Print(17m / 13)).IsEqualTo("17m/13");
+        await Assert.That(Check.Print(1E-20m)).IsEqualTo("1E-20");
+        await Assert.That(Check.Print(1234E20m)).IsEqualTo("1234E20");
     }
 }
 
 public class ThreadStatsTests
 {
-    static void Test(int[] ids, IEnumerable<int[]> expected)
+    static async Task Test(int[] ids, IEnumerable<int[]> expected)
     {
         var seq = new int[ids.Length];
         Array.Copy(ids, seq, ids.Length);
-        Assert.Equal(expected, Check.Permutations(ids, seq), IntArrayComparer.Default);
+        await Assert.That(Check.Permutations(ids, seq)).IsEquivalentTo(expected);
     }
 
-    [Fact]
-    public void Permutations_11()
+    [Test]
+    public async Task Permutations_11()
     {
-        Test([1, 1], [
+        await Test([1, 1], [
             [1, 1],
         ]);
     }
 
-    [Fact]
-    public void Permutations_12()
+    [Test]
+    public async Task Permutations_12()
     {
-        Test([1, 2], [
+        await Test([1, 2], [
             [1, 2],
             [2, 1],
         ]);
     }
 
-    [Fact]
-    public void Permutations_112()
+    [Test]
+    public async Task Permutations_112()
     {
-        Test([1, 1, 2], [
+        await Test([1, 1, 2], [
             [1, 1, 2],
             [1, 2, 1],
         ]);
     }
 
-    [Fact]
-    public void Permutations_121()
+    [Test]
+    public async Task Permutations_121()
     {
-        Test([1, 2, 1], [
+        await Test([1, 2, 1], [
             [1, 2, 1],
             [2, 1, 1],
             [1, 1, 2],
         ]);
     }
 
-    [Fact]
-    public void Permutations_123()
+    [Test]
+    public async Task Permutations_123()
     {
-        Test([1, 2, 3], [
+        await Test([1, 2, 3], [
             [1, 2, 3],
             [2, 1, 3],
             [1, 3, 2],
@@ -127,10 +126,10 @@ public class ThreadStatsTests
         ]);
     }
 
-    [Fact]
-    public void Permutations_1212()
+    [Test]
+    public async Task Permutations_1212()
     {
-        Test([1, 2, 1, 2], [
+        await Test([1, 2, 1, 2], [
             [1, 2, 1, 2],
             [2, 1, 1, 2],
             [1, 1, 2, 2],
@@ -139,10 +138,10 @@ public class ThreadStatsTests
         ]);
     }
 
-    [Fact]
-    public void Permutations_1231()
+    [Test]
+    public async Task Permutations_1231()
     {
-        Test([1, 2, 3, 1], [
+        await Test([1, 2, 3, 1], [
             [1, 2, 3, 1],
             [2, 1, 3, 1],
             [1, 3, 2, 1],
@@ -158,10 +157,10 @@ public class ThreadStatsTests
         ]);
     }
 
-    [Fact]
-    public void Permutations_1232()
+    [Test]
+    public async Task Permutations_1232()
     {
-        Test([1, 2, 3, 2], [
+        await Test([1, 2, 3, 2], [
             [1, 2, 3, 2],
             [2, 1, 3, 2],
             [1, 3, 2, 2],
@@ -177,7 +176,7 @@ public class ThreadStatsTests
         ]);
     }
 
-    [Fact]
+    [Test]
     public void Permutations_Should_Be_Unique()
     {
         Gen.Int[0, 5].Array[0, 10]
@@ -187,20 +186,20 @@ public class ThreadStatsTests
             Array.Copy(a, a2, a.Length);
             var ps = Check.Permutations(a, a2).ToList();
             var ss = new HashSet<int[]>(ps, IntArrayComparer.Default);
-            Assert.Equal(ss.Count, ps.Count);
+            return ss.Count == ps.Count;
         });
     }
 
-    [Fact]
-    public void BigO_Exact_Examples()
+    [Test]
+    public async Task BigO_Exact_Examples()
     {
-        Assert.Equal(BigO.Constant, Check.BigO([1, 2, 3], [5, 5, 5]));
-        Assert.Equal(BigO.Linear, Check.BigO([1, 2, 3], [5, 6, 7]));
-        Assert.Equal(BigO.Quadratic, Check.BigO([1, 2, 3], [5, 8, 13]));
-        Assert.Equal(BigO.Cubic, Check.BigO([1, 2, 3], [1, 8, 27]));
-        Assert.Equal(BigO.Logarithmic, Check.BigO([1, 2, 3], [1, 1 + Math.Log(2), 1 + Math.Log(3)]));
-        Assert.Equal(BigO.Linearithmic, Check.BigO([1, 2, 3], [1, 1 + 2 * Math.Log(2), 1 + 3 * Math.Log(3)]));
-        Assert.Equal(BigO.Exponential, Check.BigO([1, 2, 3], [4, 8, 16]));
+        await Assert.That(Check.BigO([1, 2, 3], [5, 5, 5])).IsEqualTo(BigO.Constant);
+        await Assert.That(Check.BigO([1, 2, 3], [5, 6, 7])).IsEqualTo(BigO.Linear);
+        await Assert.That(Check.BigO([1, 2, 3], [5, 8, 13])).IsEqualTo(BigO.Quadratic);
+        await Assert.That(Check.BigO([1, 2, 3], [1, 8, 27])).IsEqualTo(BigO.Cubic);
+        await Assert.That(Check.BigO([1, 2, 3], [1, 1 + Math.Log(2), 1 + Math.Log(3)])).IsEqualTo(BigO.Logarithmic);
+        await Assert.That(Check.BigO([1, 2, 3], [1, 1 + 2 * Math.Log(2), 1 + 3 * Math.Log(3)])).IsEqualTo(BigO.Linearithmic);
+        await Assert.That(Check.BigO([1, 2, 3], [4, 8, 16])).IsEqualTo(BigO.Exponential);
     }
 }
 

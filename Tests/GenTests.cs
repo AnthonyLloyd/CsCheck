@@ -4,7 +4,6 @@ using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using CsCheck;
-using Xunit;
 
 public class GenTests
 {
@@ -15,7 +14,7 @@ public class GenTests
         return a;
     }
 
-    [Fact]
+    [Test]
     public void Bool_Distribution()
     {
         const int frequency = 10;
@@ -25,7 +24,7 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void SByte_Range()
     {
         (from t in Gen.Select(Gen.SByte, Gen.SByte)
@@ -36,7 +35,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void SByte_Distribution()
     {
         const int buckets = 70;
@@ -48,7 +47,7 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void Byte_Range()
     {
         (from t in Gen.Byte.Select(Gen.Byte)
@@ -59,7 +58,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void Byte_Distribution()
     {
         const int buckets = 70;
@@ -71,13 +70,13 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void Short_Zigzag_Roundtrip()
     {
         Gen.Short.Sample(i => GenShort.Unzigzag(GenShort.Zigzag(i)) == i);
     }
 
-    [Fact]
+    [Test]
     public void Short_Range()
     {
         (from t in Gen.Short.Select(Gen.Short)
@@ -88,7 +87,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void Short_Distribution()
     {
         const int buckets = 70;
@@ -100,7 +99,7 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void UShort_Range()
     {
         (from t in Gen.UShort.Select(Gen.UShort)
@@ -111,7 +110,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void UShort_Distribution()
     {
         const int buckets = 70;
@@ -123,7 +122,7 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void Int_Range()
     {
         (from t in Gen.Int.Select(Gen.Int)
@@ -134,14 +133,14 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void Int_Positive()
     {
         Gen.Int.Positive.Sample(i => i > 0);
     }
 
-    [Fact]
-    public void Int_Positive_Gen_Method()
+    [Test]
+    public async Task Int_Positive_Gen_Method()
     {
         static (int, ulong) Method(uint s, uint v)
         {
@@ -150,13 +149,13 @@ public class GenTests
             var size = s << 27 | (ulong)i & 0x7FF_FFFFUL;
             return (i, size);
         }
-        Assert.Equal((1, 1UL), Method(0U, uint.MaxValue));
-        Assert.Equal((1, 1UL), Method(0U, 57686U));
-        Assert.Equal((int.MaxValue, 0xF7FF_FFFFUL), Method(30U, uint.MaxValue));
+        await Assert.That(Method(0U, uint.MaxValue)).IsEqualTo((1, 1UL));
+        await Assert.That(Method(0U, 57686U)).IsEqualTo((1, 1UL));
+        await Assert.That(Method(30U, uint.MaxValue)).IsEqualTo((int.MaxValue, 0xF7FF_FFFFUL));
     }
 
-    [Fact]
-    public void Short_Gen_Method()
+    [Test]
+    public async Task Short_Gen_Method()
     {
         static (short, ulong) Method(uint s, uint v)
         {
@@ -165,16 +164,16 @@ public class GenTests
             var size = s << 11 | i & 0x7FFUL;
             return ((short)-GenShort.Unzigzag(i), size);
         }
-        Assert.Equal((0, 0UL), Method(0U, uint.MaxValue));
-        Assert.Equal((0, 0UL), Method(0U, 7686U));
-        Assert.Equal((1, 0x801UL), Method(1U, uint.MaxValue - 1));
-        Assert.Equal((-1, 0x802UL), Method(1U, uint.MaxValue));
-        Assert.Equal((short.MaxValue, 0x7FFDUL), Method(15U, uint.MaxValue - 1));
-        Assert.Equal((-short.MaxValue, 0x7FFEUL), Method(15U, uint.MaxValue));
+        await Assert.That(Method(0U, uint.MaxValue)).IsEqualTo(((short)0, 0UL));
+        await Assert.That(Method(0U, 7686U)).IsEqualTo(((short)0, 0UL));
+        await Assert.That(Method(1U, uint.MaxValue - 1)).IsEqualTo(((short)1, 0x801UL));
+        await Assert.That(Method(1U, uint.MaxValue)).IsEqualTo(((short)-1, 0x802UL));
+        await Assert.That(Method(15U, uint.MaxValue - 1)).IsEqualTo((short.MaxValue, 0x7FFDUL));
+        await Assert.That(Method(15U, uint.MaxValue)).IsEqualTo(((short)-short.MaxValue, 0x7FFEUL));
     }
 
-    [Fact]
-    public void Int_Gen_Method()
+    [Test]
+    public async Task Int_Gen_Method()
     {
         static (int, ulong) Method(uint s, uint v)
         {
@@ -183,15 +182,15 @@ public class GenTests
             var size = s << 27 | i & 0x7FF_FFFFUL;
             return (-GenInt.Unzigzag(i), size);
         }
-        Assert.Equal((0, 0UL), Method(0U, uint.MaxValue));
-        Assert.Equal((0, 0UL), Method(0U, 57686U));
-        Assert.Equal((1, 0x800_0001UL), Method(1U, uint.MaxValue-1));
-        Assert.Equal((-1, 0x800_0002UL), Method(1U, uint.MaxValue));
-        Assert.Equal((int.MaxValue, 0xFFFF_FFFDUL), Method(31U, uint.MaxValue-1));
-        Assert.Equal((-int.MaxValue, 0xFFFF_FFFEUL), Method(31U, uint.MaxValue));
+        await Assert.That(Method(0U, uint.MaxValue)).IsEqualTo((0, 0UL));
+        await Assert.That(Method(0U, 57686U)).IsEqualTo((0, 0UL));
+        await Assert.That(Method(1U, uint.MaxValue - 1)).IsEqualTo((1, 0x800_0001UL));
+        await Assert.That(Method(1U, uint.MaxValue)).IsEqualTo((-1, 0x800_0002UL));
+        await Assert.That(Method(31U, uint.MaxValue - 1)).IsEqualTo((int.MaxValue, 0xFFFF_FFFDUL));
+        await Assert.That(Method(31U, uint.MaxValue)).IsEqualTo((-int.MaxValue, 0xFFFF_FFFEUL));
     }
 
-    [Fact]
+    [Test]
     public void Int_Distribution()
     {
         const int buckets = 70;
@@ -202,23 +201,23 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void Int_Zigzag_Roundtrip()
     {
         Gen.Int.Sample(i => GenInt.Unzigzag(GenInt.Zigzag(i)) == i);
     }
 
-    [Fact]
-    public void Zigzag()
+    [Test]
+    public async Task Zigzag()
     {
-        Assert.Equal(0, GenInt.Unzigzag(0U));
-        Assert.Equal(-1, GenInt.Unzigzag(1U));
-        Assert.Equal(1, GenInt.Unzigzag(2U));
-        Assert.Equal(int.MaxValue, GenInt.Unzigzag(0xFFFFFFFEU));
-        Assert.Equal(int.MinValue, GenInt.Unzigzag(0xFFFFFFFFU));
+        await Assert.That(GenInt.Unzigzag(0U)).IsEqualTo(0);
+        await Assert.That(GenInt.Unzigzag(1U)).IsEqualTo(-1);
+        await Assert.That(GenInt.Unzigzag(2U)).IsEqualTo(1);
+        await Assert.That(GenInt.Unzigzag(0xFFFFFFFEU)).IsEqualTo(int.MaxValue);
+        await Assert.That(GenInt.Unzigzag(0xFFFFFFFFU)).IsEqualTo(int.MinValue);
     }
 
-    [Fact]
+    [Test]
     public void UInt_Range()
     {
         (from t in Gen.UInt.Select(Gen.UInt)
@@ -229,7 +228,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void UInt_Distribution()
     {
         const int buckets = 70;
@@ -241,14 +240,14 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void Long_Zigzag_Roundtrip()
     {
         Gen.Long.Sample(i => GenLong.Unzigzag(GenLong.Zigzag(i)) == i);
     }
 
-    [Fact]
-    public void Long_Gen_Method()
+    [Test]
+    public async Task Long_Gen_Method()
     {
         static (long, ulong) Method(uint s, ulong v)
         {
@@ -257,13 +256,13 @@ public class GenTests
             var size = (ulong)s << 46 | i & 0x3FFF_FFFF_FFFFU;
             return (-GenLong.Unzigzag(i), size);
         }
-        Assert.Equal((0, 0UL), Method(0, ulong.MaxValue));
-        Assert.Equal((0, 0UL), Method(0, 57686));
-        Assert.Equal((long.MaxValue, 0xF_FFFF_FFFF_FFFDUL), Method(63U, ulong.MaxValue - 1));
-        Assert.Equal((-long.MaxValue, 0xF_FFFF_FFFF_FFFEUL), Method(63U, ulong.MaxValue));
+        await Assert.That(Method(0, ulong.MaxValue)).IsEqualTo((0, 0UL));
+        await Assert.That(Method(0, 57686)).IsEqualTo((0, 0UL));
+        await Assert.That(Method(63U, ulong.MaxValue - 1)).IsEqualTo((long.MaxValue, 0xF_FFFF_FFFF_FFFDUL));
+        await Assert.That(Method(63U, ulong.MaxValue)).IsEqualTo((-long.MaxValue, 0xF_FFFF_FFFF_FFFEUL));
     }
 
-    [Fact]
+    [Test]
     public void Long_Range()
     {
         (from t in Gen.Long.Select(Gen.Long)
@@ -274,7 +273,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void Long_Distribution()
     {
         const int buckets = 70;
@@ -286,7 +285,7 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void ULong_Range()
     {
         (from t in Gen.ULong.Select(Gen.ULong)
@@ -297,7 +296,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void ULong_Distribution()
     {
         const int buckets = 70;
@@ -309,19 +308,19 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void Single()
     {
         Gen.Single.Sample(i => i <= float.PositiveInfinity || float.IsNaN(i));
     }
 
-    [Fact]
+    [Test]
     public void Single_Unit_Range()
     {
         Gen.Single.Unit.Sample(f => f is >= 0f and <= 0.9999999f);
     }
 
-    [Fact]
+    [Test]
     public void Single_Range()
     {
         (from t in Gen.Single.Unit.Select(Gen.Single.Unit)
@@ -332,7 +331,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void Single_Distribution()
     {
         const int buckets = 70;
@@ -345,13 +344,13 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void Double_Unit_Range()
     {
         Gen.Double.Unit.Sample(f => f is >= 0.0 and <= 0.99999999999999978);
     }
 
-    [Fact]
+    [Test]
     public void Double_Range()
     {
         (from t in Gen.Double.Unit.Select(Gen.Double.Unit)
@@ -362,7 +361,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish, seed: "89rtRQWk16go", iter: 1);
     }
 
-    [Fact]
+    [Test]
     public void Double_Distribution()
     {
         const int buckets = 70;
@@ -375,7 +374,7 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void Decimal()
     {
         Gen.Decimal.Sample(i => {
@@ -384,13 +383,13 @@ public class GenTests
         });
     }
 
-    [Fact]
+    [Test]
     public void Decimal_Unit_Range()
     {
         Gen.Decimal.Unit.Sample(i => i is >= 0.0M and <= 0.99999999999999978M);
     }
 
-    [Fact]
+    [Test]
     public void Decimal_Range()
     {
         (from t in Gen.Decimal.Unit.Select(Gen.Decimal.Unit)
@@ -401,7 +400,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void Decimal_Distribution()
     {
         const int buckets = 70;
@@ -414,7 +413,7 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void Date_Range()
     {
         (from t in Gen.Date.Select(Gen.Date)
@@ -425,7 +424,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void DateOnly_Range()
     {
         (from t in Gen.DateOnly.Select(Gen.DateOnly)
@@ -436,7 +435,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void DateTime_Range()
     {
         (from t in Gen.DateTime.Select(Gen.DateTime)
@@ -447,7 +446,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void TimeOnly_Range()
     {
         (from t in Gen.TimeOnly.Select(Gen.TimeOnly)
@@ -458,7 +457,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void TimeSpan_Range()
     {
         (from t in Gen.TimeSpan.Select(Gen.TimeSpan)
@@ -469,19 +468,19 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void DateTimeOffset()
     {
         Gen.DateTimeOffset.Sample(_ => { });
     }
 
-    [Fact]
+    [Test]
     public void Guid()
     {
         Gen.Guid.Sample(_ => { });
     }
 
-    [Fact]
+    [Test]
     public void Char_Range()
     {
         (from t in Gen.Char.Select(Gen.Char)
@@ -492,7 +491,7 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
-    [Fact]
+    [Test]
     public void Char_Distribution()
     {
         const int buckets = 70;
@@ -504,14 +503,14 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void Char_Array()
     {
         const string chars = "abcdefghijklmopqrstuvwxyz0123456789_/";
         Gen.Char[chars].Sample(chars.Contains);
     }
 
-    [Fact]
+    [Test]
     public void List()
     {
         Gen.UShort[1, 1000]
@@ -520,7 +519,7 @@ public class GenTests
                   && l.All(i => i is >= 1 and <= 1000));
     }
 
-    [Fact]
+    [Test]
     public void HashSet()
     {
         Gen.ULong[1, 1000]
@@ -529,7 +528,7 @@ public class GenTests
                   && i.All(j => j is >= 1 and <= 1000));
     }
 
-    [Fact]
+    [Test]
     public void Dictionary()
     {
         Gen.Dictionary(Gen.UInt[1, 1000], Gen.Bool)[10, 100]
@@ -537,7 +536,7 @@ public class GenTests
                   && i.All(j => j.Key is >= 1 and <= 1000));
     }
 
-    [Fact]
+    [Test]
     public void SortedDictionary()
     {
         Gen.SortedDictionary(Gen.UInt[1, 1000], Gen.Bool)[10, 100]
@@ -545,19 +544,19 @@ public class GenTests
                   && i.All(j => j.Key is >= 1 and <= 1000));
     }
 
-    [Fact]
+    [Test]
     public void OneOfConst()
     {
         Gen.OneOfConst(0, 1, 2).Sample(i => i is >= 0 and <= 2);
     }
 
-    [Fact]
+    [Test]
     public void OneOf()
     {
         Gen.OneOf(Gen.Const(0), Gen.Const(1), Gen.Const(2)).Sample(i => i is >= 0 and <= 2);
     }
 
-    [Fact]
+    [Test]
     public void Frequency()
     {
         const int frequency = 10;
@@ -570,7 +569,7 @@ public class GenTests
         .Sample(t => Check.ChiSquared(t.expected, t.actual, 10), iter: 1, time: -2);
     }
 
-    [Fact]
+    [Test]
     public void Shuffle()
     {
         Gen.Int.Array.SelectMany(a1 => Gen.Shuffle(a1).Select(a2 => (a1, a2)))
@@ -578,13 +577,13 @@ public class GenTests
         {
             Array.Sort(a1);
             Array.Sort(a2);
-            Assert.Equal(a1, a2);
+            return Check.Equal(a1, a2);
         });
     }
 
     record MyObj(int Id, MyObj[] Children);
 
-    [Fact]
+    [Test]
     public void RecursiveDepth()
     {
         const int maxDepth = 4;
@@ -598,7 +597,7 @@ public class GenTests
         });
     }
 
-    [Fact]
+    [Test]
     public void FastMod()
     {
         Gen.Select(Gen.UInt[0, int.MaxValue], Gen.UInt[1, 2_000_000_000])

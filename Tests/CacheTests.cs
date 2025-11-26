@@ -1,6 +1,5 @@
 ﻿namespace Tests;
 
-using Xunit;
 using CsCheck;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -13,7 +12,7 @@ public class CacheTests
         public void Set(K key, V value) => this[key] = value;
     }
 
-    [Fact]
+    [Test]
     public void GetOrAddAtomicAsync_SampleParallel()
     {
         Check.SampleParallel(
@@ -24,19 +23,19 @@ public class CacheTests
         );
     }
 
-    [Fact]
+    [Test]
     public async Task GetOrAddAtomicAsync_Exception()
     {
         var cache = new ConcurrentDictionaryCache<int, int>();
         var exception = await Assert.ThrowsAsync<CsCheckException>(() => cache.GetOrAddAtomicAsync(1, _ => Task.Run(int () => throw new CsCheckException("no"))).AsTask());
-        Assert.Equal("no", exception.Message);
+        await Assert.That(exception!.Message).IsEqualTo("no");
     }
 
-    [Fact]
+    [Test]
     public async Task GetOrAddAtomicAsync_ExceptionSync()
     {
         var cache = new ConcurrentDictionaryCache<int, int>();
         var exception = await Assert.ThrowsAsync<CsCheckException>(() => cache.GetOrAddAtomicAsync(1, _ => throw new CsCheckException("no")).AsTask());
-        Assert.Equal("no", exception.Message);
+        await Assert.That(exception!.Message).IsEqualTo("no");
     }
 }

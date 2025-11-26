@@ -9,7 +9,6 @@
 using System;
 using System.Collections.Generic;
 using ImTools.Experimental;
-using Xunit;
 using CsCheck;
 using System.Linq;
 using ImTools;
@@ -20,19 +19,19 @@ namespace Tests
 {
     public class IMToolsTests
     {
-        [Fact]
-        public void ModelEqual_ImHashMap234()
+        [Test]
+        public async Task ModelEqual_ImHashMap234()
         {
-            Assert.True(Check.ModelEqual(
+            await Assert.That(Check.ModelEqual(
                 ImHashMap234<int, int>.Empty.AddOrUpdate(1, 2).AddOrUpdate(3, 4)
                 .Enumerate().Select(kv => ImTools.KeyValuePair.Pair(kv.Key, kv.Value)),
                 new Dictionary<int, int> { {3, 4}, {1, 2 } }
-            ));
+            )).IsTrue();
         }
 
 
-        [Fact(Skip = "Experiment")]
-        public void AddOrUpdate_random_items_and_randomly_checking()
+        [Test][Skip("Experiment")]
+        public async Task AddOrUpdate_random_items_and_randomly_checking()
         {
             const int upperBound = 100000;
             var savedSeed = new Random().Next(0, upperBound);
@@ -43,16 +42,16 @@ namespace Tests
             {
                 var n = rnd.Next(0, upperBound);
                 m = m.AddOrUpdate(n, n);
-                Assert.Equal(n, m.GetValueOrDefault(n));
+                await Assert.That(m.GetValueOrDefault(n)).IsEqualTo(n);
             }
 
-            // non-existing keys 
-            Assert.Equal(0, m.GetValueOrDefault(upperBound + 1));
-            Assert.Equal(0, m.GetValueOrDefault(-1));
+            // non-existing keys
+            await Assert.That(m.GetValueOrDefault(upperBound + 1)).IsEqualTo(0);
+            await Assert.That(m.GetValueOrDefault(-1)).IsEqualTo(0);
         }
 
-        [Fact(Skip = "Experiment")]
-        public void AddOrUpdate_random_items_and_randomly_checking_CsCheck()
+        [Test][Skip("Experiment")]
+        public async Task AddOrUpdate_random_items_and_randomly_checking_CsCheck()
         {
             const int upperBound = 11966;
             Gen.Int[0, upperBound].Array[1, 12].Sample(ints =>
@@ -61,10 +60,14 @@ namespace Tests
                 foreach (var n in ints)
                 {
                     m = m.AddOrUpdate(n, n);
-                    Assert.Equal(n, m.GetValueOrDefault(n));
+                    if (m.GetValueOrDefault(n) != n)
+                        return false;
                 }
-                Assert.Equal(0, m.GetValueOrDefault(upperBound + 1));
-                Assert.Equal(0, m.GetValueOrDefault(-1));
+                if (m.GetValueOrDefault(upperBound + 1) != 0)
+                    return false;
+                if (m.GetValueOrDefault(-1) != 0)
+                    return false;
+                return true;
             }, iter: 1_000/*, seed: "2Tt3UJ9PI4Hs3"*/);
         }
 
@@ -80,7 +83,7 @@ namespace Tests
 
         class ImHolder<T> { public T Im; }
 
-        [Fact(Skip = "Experiment")]
+        [Test][Skip("Experiment")]
         public void AddOrUpdate_Metamorphic()
         {
             const int upperBound = 100000;
@@ -96,7 +99,7 @@ namespace Tests
             );
         }
 
-        [Fact(Skip = "Experiment")]
+        [Test][Skip("Experiment")]
         public void AddOrUpdate_ModelBased()
         {
             const int upperBound = 100000;

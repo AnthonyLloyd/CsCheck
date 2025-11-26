@@ -4,9 +4,9 @@ using System;
 using System.Diagnostics;
 using CsCheck;
 
-public class StressTests(ITestOutputHelper output)
+public class StressTests()
 {
-    [Fact(Skip = "don't normally run the stress test")]
+    [Test, Skip("don't normally run the stress test")]
     public async Task Stress_Test()
     {
         const long oneMB = 1024 * 1024;
@@ -57,9 +57,9 @@ public class StressTests(ITestOutputHelper output)
         }
         finally
         {
-            output.WriteLine($"MaxMemory: {(double)maxMemory / oneMB:n2} MB");
-            output.WriteLine($"Total Processes: {totalProcesses}");
-            output.WriteLine($"Hung Processes: {hungProcesses}");
+            Console.WriteLine($"MaxMemory: {(double)maxMemory / oneMB:n2} MB");
+            Console.WriteLine($"Total Processes: {totalProcesses}");
+            Console.WriteLine($"Hung Processes: {hungProcesses}");
         }
     }
 

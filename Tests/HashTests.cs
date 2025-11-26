@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using CsCheck;
-using Xunit;
 
 public class StreamSerializerTests
 {
@@ -19,101 +18,101 @@ public class StreamSerializerTests
             return deserialize(ms)!.Equals(t);
         });
     }
-    [Fact]
+    [Test]
     public void Bool()
     {
         TestRoundtrip(Gen.Bool, Hash.StreamSerializer.WriteBool, Hash.StreamSerializer.ReadBool);
     }
-    [Fact]
+    [Test]
     public void SByte()
     {
         TestRoundtrip(Gen.SByte, Hash.StreamSerializer.WriteSByte, Hash.StreamSerializer.ReadSByte);
     }
-    [Fact]
+    [Test]
     public void Byte()
     {
         TestRoundtrip(Gen.Byte, Hash.StreamSerializer.WriteByte, Hash.StreamSerializer.ReadByte);
     }
-    [Fact]
+    [Test]
     public void Short()
     {
         TestRoundtrip(Gen.Short, Hash.StreamSerializer.WriteShort, Hash.StreamSerializer.ReadShort);
     }
-    [Fact]
+    [Test]
     public void UShort()
     {
         TestRoundtrip(Gen.UShort, Hash.StreamSerializer.WriteUShort, Hash.StreamSerializer.ReadUShort);
     }
-    [Fact]
+    [Test]
     public void Int()
     {
         TestRoundtrip(Gen.Int, Hash.StreamSerializer.WriteInt, Hash.StreamSerializer.ReadInt);
     }
-    [Fact]
+    [Test]
     public void UInt()
     {
         TestRoundtrip(Gen.UInt, Hash.StreamSerializer.WriteUInt, Hash.StreamSerializer.ReadUInt);
     }
-    [Fact]
+    [Test]
     public void Long()
     {
         TestRoundtrip(Gen.Long, Hash.StreamSerializer.WriteLong, Hash.StreamSerializer.ReadLong);
     }
-    [Fact]
+    [Test]
     public void ULong()
     {
         TestRoundtrip(Gen.ULong, Hash.StreamSerializer.WriteULong, Hash.StreamSerializer.ReadULong);
     }
-    [Fact]
+    [Test]
     public void Float()
     {
         TestRoundtrip(Gen.Float, Hash.StreamSerializer.WriteFloat, Hash.StreamSerializer.ReadFloat);
     }
-    [Fact]
+    [Test]
     public void Double()
     {
         TestRoundtrip(Gen.Double, Hash.StreamSerializer.WriteDouble, Hash.StreamSerializer.ReadDouble);
     }
-    [Fact]
+    [Test]
     public void DateTime()
     {
         TestRoundtrip(Gen.DateTime, Hash.StreamSerializer.WriteDateTime, Hash.StreamSerializer.ReadDateTime);
     }
-    [Fact]
+    [Test]
     public void TimeSpan()
     {
         TestRoundtrip(Gen.TimeSpan, Hash.StreamSerializer.WriteTimeSpan, Hash.StreamSerializer.ReadTimeSpan);
     }
-    [Fact]
+    [Test]
     public void DateTimeOffset()
     {
         TestRoundtrip(Gen.DateTimeOffset, Hash.StreamSerializer.WriteDateTimeOffset, Hash.StreamSerializer.ReadDateTimeOffset);
     }
-    [Fact]
+    [Test]
     public void Guid()
     {
         TestRoundtrip(Gen.Guid, Hash.StreamSerializer.WriteGuid, Hash.StreamSerializer.ReadGuid);
     }
-    [Fact]
+    [Test]
     public void Char()
     {
         TestRoundtrip(Gen.Char, Hash.StreamSerializer.WriteChar, Hash.StreamSerializer.ReadChar);
     }
-    [Fact]
+    [Test]
     public void String()
     {
         TestRoundtrip(Gen.String, Hash.StreamSerializer.WriteString, Hash.StreamSerializer.ReadString);
     }
-    [Fact]
+    [Test]
     public void Varint()
     {
         TestRoundtrip(Gen.UInt, Hash.StreamSerializer.WriteVarint, Hash.StreamSerializer.ReadVarint);
     }
 }
 
-public class HashTests(ITestOutputHelper output)
+public class HashTests
 {
-    [Fact]
+    [Test]
     public void Hash_Example()
     {
         Check.Hash(hash =>
@@ -143,7 +142,7 @@ public class HashTests(ITestOutputHelper output)
         }, 4696400775);
     }
 
-    [Fact]
+    [Test]
     public void HashStream_Parts()
     {
         Gen.Byte.Array[0, 31].Array[3, 10]
@@ -155,116 +154,115 @@ public class HashTests(ITestOutputHelper output)
             expected.Write(bs[0]);
             for (int i = 1; i < bs.Length; i++) actual.Write(bs[i]);
             expected.Write(bs.Skip(1).SelectMany(i => i).ToArray());
-            Assert.Equal(expected.GetHashCode(), actual.GetHashCode());
+            return expected.GetHashCode() == actual.GetHashCode();
         });
     }
 
-    [Fact]
+    [Test]
     public void Hash_Offset_No_Rounding()
     {
         var h = new Hash(null, -1);
         Assert.Null(h.BestOffset());
     }
 
-    [Fact]
-    public void Hash_Offset_DP_Bottom()
+    [Test]
+    public async Task Hash_Offset_DP_Bottom()
     {
         var h = new Hash(null, -1, decimalPlaces: 1);
         h.Add(1.04);
         h.Add(1.06);
         h.Add(1.09);
-        Assert.Equal(425000000, h.BestOffset());
+        await Assert.That(h.BestOffset()).IsEqualTo(425000000);
     }
 
-    [Fact]
-    public void Hash_Offset_DP_Inner()
+    [Test]
+    public async Task Hash_Offset_DP_Inner()
     {
         var h = new Hash(null, -1, decimalPlaces: 1);
         h.Add(1.01);
         h.Add(1.03);
         h.Add(1.09);
-        Assert.Equal(200000000, h.BestOffset());
+        await Assert.That(h.BestOffset()).IsEqualTo(200000000);
     }
 
-    [Fact]
-    public void Hash_Offset_DP_Top()
+    [Test]
+    public async Task Hash_Offset_DP_Top()
     {
         var h = new Hash(null, -1, decimalPlaces: 1);
         h.Add(1.01);
         h.Add(1.03);
         h.Add(1.05);
-        Assert.Equal(100000001, h.BestOffset());
+        await Assert.That(h.BestOffset()).IsEqualTo(100000001);
     }
 
-    [Fact]
-    public void Hash_Offset_SF_Bottom()
+    [Test]
+    public async Task Hash_Offset_SF_Bottom()
     {
         var h = new Hash(null, -1, significantFigures: 2);
         h.Add(1.04e-7);
         h.Add(1.06e-7);
         h.Add(1.09e-7);
-        Assert.Equal(425000000, h.BestOffset());
+        await Assert.That(h.BestOffset()).IsEqualTo(425000000);
     }
 
-    [Fact]
-    public void Hash_Offset_SF_Inner()
+    [Test]
+    public async Task Hash_Offset_SF_Inner()
     {
         var h = new Hash(null, -1, significantFigures: 2);
         h.Add(1.01e5);
         h.Add(1.03e3);
         h.Add(1.09e-4);
-        Assert.Equal(200000000, h.BestOffset());
+        await Assert.That(h.BestOffset()).IsEqualTo(200000000);
     }
 
-    [Fact]
-    public void Hash_Offset_SF_Top()
+    [Test]
+    public async Task Hash_Offset_SF_Top()
     {
         var h = new Hash(null, -1, significantFigures: 2);
         h.Add(1.01);
         h.Add(1.03);
         h.Add(1.05);
-        Assert.Equal(100000001, h.BestOffset());
+        await Assert.That(h.BestOffset()).IsEqualTo(100000001);
     }
 
-    [Fact]
-    public void Hash_Offset_SF_Zero()
+    [Test]
+    public async Task Hash_Offset_SF_Zero()
     {
         var h = new Hash(null, -1, significantFigures: 2);
         h.Add(0.0);
-        Assert.Equal(250000000, h.BestOffset());
+        await Assert.That(h.BestOffset()).IsEqualTo(250000000);
     }
 
-    [Fact]
-    public void Hash_No_Offset_Short()
+    [Test]
+    public async Task Hash_No_Offset_Short()
     {
-        Assert.Equal(0x100000000, Hash.FullHash(null, 0));
+        await Assert.That(Hash.FullHash(null, 0)).IsEqualTo(0x100000000);
     }
 
-    [Fact]
-    public void Hash_Roundtrip_Offset()
+    [Test]
+    public async Task Hash_Roundtrip_Offset()
     {
         Gen.Int[0, Hash.OFFSET_SIZE - 1].Select(Gen.Int)
         .Sample((offset, hash) =>
         {
             var (offset2, hash2) = Hash.OffsetHash(Hash.FullHash(offset, hash));
-            Assert.Equal(offset, offset2);
-            Assert.Equal(hash, hash2);
+            return offset == offset2 && hash == hash2;
         });
     }
 
-    [Fact]
-    public void Hash_Roundtrip_No_Offset()
+    [Test]
+    public async Task Hash_Roundtrip_No_Offset()
     {
         Gen.Int
         .Sample(expectedHash =>
         {
             var (offset, hash) = Hash.OffsetHash(Hash.FullHash(null, expectedHash));
             Assert.Null(offset);
-            Assert.Equal(expectedHash, hash);
+            return expectedHash == hash;
         });
     }
 
-    [Fact]
+    [Test]
     public void Pow10_Double()
     {
         static double Sqr(double x) => x * x;
@@ -292,11 +290,11 @@ public class HashTests(ITestOutputHelper output)
             1e19, 1e20, 1e21, 1e22, 1e23, 1e24, 1e25, 1e26, 1e27, 1e28, 1e29, 1e30, 1e31 ];
         double Pow3(int n) => powCache[n];
         var genInt = Gen.UInt32.Select(i => (int)i);
-        genInt.Faster(Pow1, Pow2, Check.EqualSkip, repeat: 100, writeLine: output.WriteLine);
-        genInt.Faster(Pow3, Pow1, Check.EqualSkip, repeat: 100, writeLine: output.WriteLine);
-        genInt.Faster(Pow3, i => Math.Pow(10, i), Check.EqualSkip, repeat: 100, writeLine: output.WriteLine);
-        genInt.Faster<Pow2Struct, Pow1Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 100, writeLine: output.WriteLine);
-        genInt.Faster<Pow3Struct, Pow2Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 100, writeLine: output.WriteLine);
+        genInt.Faster(Pow1, Pow2, Check.EqualSkip, repeat: 100, writeLine: TUnitX.WriteLine);
+        genInt.Faster(Pow3, Pow1, Check.EqualSkip, repeat: 100, writeLine: TUnitX.WriteLine);
+        genInt.Faster(Pow3, i => Math.Pow(10, i), Check.EqualSkip, repeat: 100, writeLine: TUnitX.WriteLine);
+        genInt.Faster<Pow2Struct, Pow1Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 100, writeLine: TUnitX.WriteLine);
+        genInt.Faster<Pow3Struct, Pow2Struct, int, double>(new(), new(), Check.EqualSkip, repeat: 100, writeLine: TUnitX.WriteLine);
     }
 
     public readonly struct Pow1Struct : IInvoke<int, double>

@@ -1,7 +1,6 @@
 ﻿namespace Tests;
 
 using CsCheck;
-using Xunit;
 
 public class FizzBuzzTests
 {
@@ -11,18 +10,18 @@ public class FizzBuzzTests
         : i % 5 == 0 ? "Buzz"
         : i.ToString();
 
-    [Fact]
-    public void Induction_Initial()
+    [Test]
+    public async Task Induction_Initial()
     {
-        Assert.Equal("FizzBuzz", FizzBuzz(0));
-        Assert.Equal("1", FizzBuzz(1));
-        Assert.Equal("2", FizzBuzz(2));
-        Assert.Equal("Fizz", FizzBuzz(3));
-        Assert.Equal("4", FizzBuzz(4));
-        Assert.Equal("Buzz", FizzBuzz(5));
+        await Assert.That(FizzBuzz(0)).IsEqualTo("FizzBuzz");
+        await Assert.That(FizzBuzz(1)).IsEqualTo("1");
+        await Assert.That(FizzBuzz(2)).IsEqualTo("2");
+        await Assert.That(FizzBuzz(3)).IsEqualTo("Fizz");
+        await Assert.That(FizzBuzz(4)).IsEqualTo("4");
+        await Assert.That(FizzBuzz(5)).IsEqualTo("Buzz");
     }
 
-    [Fact]
+    [Test]
     public void Induction_Random()
     {
         Gen.Int[0, 1_000_000].Sample(i => FizzBuzz(i) switch
