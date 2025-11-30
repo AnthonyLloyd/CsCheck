@@ -25,6 +25,9 @@ using System.Threading;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Collections.Frozen;
+using System.Collections.ObjectModel;
 
 public sealed class CsCheckException : Exception
 {
@@ -90,60 +93,14 @@ public static partial class Check
         return sb.ToString();
     }
 
-    static bool IsPropertyType(object o)
-    {
-        var t = o.GetType();
-        if (!t.IsGenericType) return false;
-        var gt = t.GetGenericTypeDefinition();
-        return gt == typeof(KeyValuePair<,>)
-            || gt == typeof(Tuple<>)
-            || gt == typeof(Tuple<,>)
-            || gt == typeof(Tuple<,,>)
-            || gt == typeof(Tuple<,,,>)
-            || gt == typeof(Tuple<,,,,>)
-            || gt == typeof(Tuple<,,,,,>)
-            || gt == typeof(Tuple<,,,,,,>)
-            || gt == typeof(Tuple<,,,,,,,>);
-    }
-
-    static string PrintProperties(object o)
+    static string PrintTuple(ITuple tuple)
     {
         var sb = new StringBuilder("(");
-        var fields = o.GetType().GetProperties();
-        sb.Append(Print(fields[0].GetValue(o)));
-        for (int i = 1; i < fields.Length; i++)
+        sb.Append(Print(tuple[0]));
+        for (int i = 1; i < tuple.Length; i++)
         {
             sb.Append(", ");
-            sb.Append(Print(fields[i].GetValue(o)));
-        }
-        sb.Append(')');
-        return sb.ToString();
-    }
-
-    static bool IsFieldType(object o)
-    {
-        var t = o.GetType();
-        if (!t.IsGenericType) return false;
-        var gt = t.GetGenericTypeDefinition();
-        return gt == typeof(ValueTuple<>)
-            || gt == typeof(ValueTuple<,>)
-            || gt == typeof(ValueTuple<,,>)
-            || gt == typeof(ValueTuple<,,,>)
-            || gt == typeof(ValueTuple<,,,,>)
-            || gt == typeof(ValueTuple<,,,,,>)
-            || gt == typeof(ValueTuple<,,,,,,>)
-            || gt == typeof(ValueTuple<,,,,,,,>);
-    }
-
-    static string PrintFields(object o)
-    {
-        var sb = new StringBuilder("(");
-        var fields = o.GetType().GetFields();
-        sb.Append(Print(fields[0].GetValue(o)));
-        for (int i = 1; i < fields.Length; i++)
-        {
-            sb.Append(", ");
-            sb.Append(Print(fields[i].GetValue(o)));
+            sb.Append(Print(tuple[i]));
         }
         sb.Append(')');
         return sb.ToString();
@@ -364,22 +321,21 @@ public static partial class Check
     {
         null => "null",
         string s => s,
+        double d => Print(d),
+        float f => Print(f),
+        decimal d => Print(d),
         Array { Rank: 2 } a => PrintArray2D(a),
         IList { Count: <= 12 } l => "[" + string.Join(", ", l.Cast<object>().Select(Print)) + "]",
         IList l => $"L={l.Count} [{Print(l[0])}, {Print(l[1])}, {Print(l[2])}, {Print(l[3])}, {Print(l[4])}, {Print(l[5])} ... {Print(l[l.Count - 6])}, {Print(l[l.Count - 5])}, {Print(l[l.Count - 4])}, {Print(l[l.Count - 3])}, {Print(l[l.Count - 2])}, {Print(l[l.Count - 1])}]",
+        ITuple tuple => PrintTuple(tuple),
         IEnumerable<object> e when !e.Skip(12).Any() => "{" + string.Join(", ", e.Select(Print)) + "}",
         IEnumerable<object> e when !e.Skip(999).Any() => "L=" + e.Count() + " {" + string.Join(", ", e.Select(Print)) + "}",
         IEnumerable<object> e => "L>999 {" + string.Join(", ", e.Take(6).Select(Print)) + " ... }",
         IEnumerable e => Print(e.Cast<object>()),
-        T pt when IsPropertyType(pt) => PrintProperties(pt),
-        T ft when IsFieldType(ft) => PrintFields(ft),
-        double d => Print(d),
-        float f => Print(f),
-        decimal d => Print(d),
         _ => t.ToString()!,
     };
 
-    /// <summary>Default equal implementation. Handles most collections ordered for IList like or unordered for ICollection based.</summary>
+    /// <summary>Default equal implementation. Handles most collections ordered unless the type is well known Set or Dictionary or elements are KeyValuePairs.</summary>
     public static bool Equal<T>(T a, T b)
     {
         if (a is null && b is null)
@@ -393,52 +349,69 @@ public static partial class Check
             int I = aa2.GetLength(0), J = aa2.GetLength(1);
             if (I != ba2.GetLength(0) || J != ba2.GetLength(1)) return false;
             for (int i = 0; i < I; i++)
-            {
                 for (int j = 0; j < J; j++)
-                {
                     if (!Equals(aa2.GetValue(i, j), ba2.GetValue(i, j)))
                         return false;
-                }
-            }
             return true;
         }
         if (a is IList ail && b is IList bil)
         {
             if (ail.Count != bil.Count) return false;
             for (int i = 0; i < ail.Count; i++)
-            {
-                if (!ail[i]!.Equals(bil[i]))
+                if (!Equal(ail[i], bil[i]))
                     return false;
-            }
             return true;
         }
-        if (a.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null)
-        {
-            var e1 = ((IEnumerable)a).GetEnumerator();
-            var e2 = ((IEnumerable)b).GetEnumerator();
-            while (true)
-            {
-                var e1MoveNext = e1.MoveNext();
-                if (e1MoveNext != e2.MoveNext()) return false;
-                if (!e1MoveNext) return true;
-                if (!Equal(e1.Current, e2.Current)) return false;
-            }
-        }
-        if (a is ICollection aic && b is ICollection bic)
-            return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
         if (a is IEnumerable aie && b is IEnumerable bie)
         {
-            var aieo = aie.Cast<object>().ToList();
-            var bieo = bie.Cast<object>().ToList();
-            return aieo.Count == bieo.Count && !aieo.Except(bieo).Any();
+            var count = aie.Cast<object>().Count();
+            if (bie.Cast<object>().Take(count + 1).Count() != count) return false;
+            if (count == 0) return true;
+            if (count == 1) return Equal(aie.Cast<object>().First(), bie.Cast<object>().First());
+            if (IsUnorderedCollection(a.GetType()) || IsUnorderedCollection(b.GetType())
+             || aie.Cast<object>().First()?.GetType() is { IsGenericType: true } aelementType && aelementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
+             || bie.Cast<object>().First()?.GetType() is { IsGenericType: true } belementType && belementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
+                return !aie.Cast<object>().Except(bie.Cast<object>(), EqualComparer.Instance).Any();
+            var ae = aie.GetEnumerator();
+            var be = bie.GetEnumerator();
+            while (ae.MoveNext() && be.MoveNext())
+                if (!Equal(ae.Current, be.Current))
+                    return false;
+            return true;
         }
         return a.Equals(b);
+    }
+
+    private static bool IsUnorderedCollection(Type type)
+    {
+        if (type.IsGenericType)
+        {
+            var genericType = type.GetGenericTypeDefinition();
+            if (genericType == typeof(Dictionary<,>)
+             || genericType == typeof(HashSet<>)
+             || genericType == typeof(ConcurrentDictionary<,>)
+             || genericType == typeof(ImmutableDictionary<,>)
+             || genericType == typeof(ImmutableHashSet<>)
+             || genericType == typeof(FrozenDictionary<,>)
+             || genericType == typeof(ReadOnlyDictionary<,>)
+             || genericType == typeof(ConcurrentBag<>)
+             || genericType == typeof(FrozenSet<>))
+                return true;
+        }
+        return false;
+    }
+
+    private sealed class EqualComparer : IEqualityComparer<object>
+    {
+        internal static readonly EqualComparer Instance = new();
+        public new bool Equals(object? x, object? y) => Equal(x, y);
+        public int GetHashCode([DisallowNull] object obj) => 0;
     }
 
     /// <summary>Don't check equality just return true.</summary>
     public static bool EqualSkip<T>(T _, T __) => true;
 
-    /// <summary>Default model equal implementation. Handles most collections ordered when actual is IList like or unordered when actual is ICollection based.</summary>
+    /// <summary>Default model equal implementation. Handles most collections ordered unless the type is well known Set or Dictionary or elements are KeyValuePairs.</summary>
     public static bool ModelEqual<T, M>(T actual, M model)
     {
         if (actual is null && model is null) return true;
@@ -453,28 +426,22 @@ public static partial class Check
             }
             return true;
         }
-        if (actual.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null
-              && model.GetType().GetInterface(typeof(IReadOnlyList<>).Name) is not null)
-        {
-            var e1 = ((IEnumerable)actual).GetEnumerator();
-            var e2 = ((IEnumerable)model).GetEnumerator();
-            while (true)
-            {
-                var e1MoveNext = e1.MoveNext();
-                if (e1MoveNext != e2.MoveNext()) return false;
-                if (!e1MoveNext) return true;
-                if (!Equal(e1.Current, e2.Current)) return false;
-            }
-        }
-        if (actual is ICollection aic && model is ICollection bic)
-        {
-            return aic.Count == bic.Count && !aic.Cast<object>().Except(bic.Cast<object>()).Any();
-        }
         if (actual is IEnumerable aie && model is IEnumerable bie)
         {
-            var aieo = aie.Cast<object>().ToList();
-            var bieo = bie.Cast<object>().ToList();
-            return aieo.Count == bieo.Count && !aieo.Except(bieo).Any();
+            var count = aie.Cast<object>().Count();
+            if (bie.Cast<object>().Take(count + 1).Count() != count) return false;
+            if (count == 0) return true;
+            if (count == 1) return Equal(aie.Cast<object>().First(), bie.Cast<object>().First());
+            if (IsUnorderedCollection(actual.GetType()) || IsUnorderedCollection(model.GetType())
+             || aie.Cast<object>().First()?.GetType() is { IsGenericType: true } aelementType && aelementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
+             || bie.Cast<object>().First()?.GetType() is { IsGenericType: true } belementType && belementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
+                return !aie.Cast<object>().Except(bie.Cast<object>(), EqualComparer.Instance).Any();
+            var ae = aie.GetEnumerator();
+            var be = bie.GetEnumerator();
+            while (ae.MoveNext() && be.MoveNext())
+                if (!Equal(ae.Current, be.Current))
+                    return false;
+            return true;
         }
         return actual.Equals(model);
     }
@@ -490,7 +457,7 @@ public static partial class Check
             while (Hold) { }
             while ((i = Interlocked.Increment(ref opId)) < parallelOperations.Length)
             {
-                if (threadIds is not null) threadIds[i] = tid;
+                threadIds?[i] = tid;
                 try { parallelOperations[i].Item2(state); }
                 catch (Exception e)
                 {

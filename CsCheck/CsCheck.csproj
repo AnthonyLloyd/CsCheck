@@ -44,6 +44,8 @@ Added Big O regression, may change a little and no documentation yet.
         <NoWarn>CS1591,MA0143</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <AnalysisMode>All</AnalysisMode>
+        <!--<IsAotCompatible>true</IsAotCompatible>-->
+        <PublishAot>true</PublishAot>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />

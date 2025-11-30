@@ -47,10 +47,10 @@ public class LoggingTests
             json = reader.ReadToEnd();
         }
 
-        var tycheData = JsonSerializer.Deserialize<TycheData>(json);
+        var tycheData = JsonSerializer.Deserialize(json, TycheJsonSerializerContext.Default.TycheData);
 
-        await Assert.That(tycheData != null && LogCheck(tycheData, generatedIntUponTrue)).IsTrue();
-        await Assert.That(JsonSerializer.Deserialize<int[]>(tycheData!.representation)?.Sum()).IsEqualTo(20);
+        await Assert.That(tycheData is not null && LogCheck(tycheData, generatedIntUponTrue)).IsTrue();
+        await Assert.That(tycheData!.representation[1..^1].Split(',', StringSplitOptions.TrimEntries).Sum(int.Parse)).IsEqualTo(20);
 
         static bool LogCheck(TycheData td, int generatedIntUponTrue)
         {

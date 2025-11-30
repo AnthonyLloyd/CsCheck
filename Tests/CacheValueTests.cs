@@ -6,7 +6,7 @@ using CsCheck;
 
 public class CacheValue<T>
 {
-    private long _timestamp; // 0 not set, -1 setting, +ive value timestamp, -ive error timestamp
+    private long _timestamp; // 0 not run, -1 running, +ive value timestamp + 2, -ive error -(timestamp + 2)
     private Exception _exception = null!;
     private T _value = default!;
 
@@ -16,40 +16,49 @@ public class CacheValue<T>
     private async ValueTask<T> CreateOrException<K>(Func<K, Task<T>> factory, K key)
     {
         if (Interlocked.CompareExchange(ref _timestamp, -1, 0) == 0)
-        {
-            try
-            {
-                _value = await factory(key);
-                Volatile.Write(ref _timestamp, Stopwatch.GetTimestamp());
-                return _value;
-            }
-            catch (Exception e)
-            {
-                _exception = e;
-                Volatile.Write(ref _timestamp, Math.Min(-Stopwatch.GetTimestamp(), -2));
-                throw;
-            }
-        }
+            return await UpdateAsync(factory, key);
         while (Volatile.Read(ref _timestamp) == -1) await Task.Yield();
         return Volatile.Read(ref _timestamp) > 0 ? _value : throw _exception;
     }
 
+    public async Task<T> UpdateAsync<K>(Func<K, Task<T>> factory, K key)
+    {
+        // What if we are already running?
+        try
+        {
+            _value = await factory(key);
+            Volatile.Write(ref _timestamp, Stopwatch.GetTimestamp() + 2);
+            return _value;
+        }
+        catch (Exception e)
+        {
+            _exception = e;
+            Volatile.Write(ref _timestamp, -(Stopwatch.GetTimestamp() + 2));
+            throw;
+        }
+    }
+
+    /// <summary>Sets back to not run. Next GetAsync will refetch. Can call before UpdateAsync</summary>
+    public void Reset() => Volatile.Write(ref _timestamp, 0); // What if we are running?
+
+    /// <summary>-1 = not run, -2 = running, else a real Timestamp.</summary>
     public long Timestamp
     {
         get
         {
             var t = Volatile.Read(ref _timestamp);
-            return t > 0 ? t
-                : t < -1 ? -t
-                : t;
+            return t > 0 ? t - 2
+                : t < -1 ? -t - 2
+                : t - 1;
         }
         set
         {
+            if (value < 0) throw new ArgumentException("Timestamp can't be set negative");
             var t = Volatile.Read(ref _timestamp);
             if (t > 0)
-                _timestamp = value;
+                _timestamp = value + 2;
             else if (t < -1)
-                _timestamp = -value;
+                _timestamp = -(value + 2);
         }
     }
 }

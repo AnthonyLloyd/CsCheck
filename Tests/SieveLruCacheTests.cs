@@ -2,6 +2,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using CsCheck;
+using TUnit.Assertions.Extensions;
 
 public class SieveLruCacheTests
 {
@@ -15,12 +16,11 @@ public class SieveLruCacheTests
         cache.GetOrAdd('B', UsedFactory);
         cache.GetOrAdd('C', UsedFactory);
         cache.GetOrAdd('D', UsedFactory);
-        await Assert.That(cache.Keys.ToDictionary(k => k, k => cache.TryGetValue(k, out var v) ? v : 999)).IsEquivalentTo(
-            new Dictionary<char, int>{
-                {'B', 1},
-                {'C', 2},
-                {'D', 3},
-        });
+        await Assert.That(cache.Keys.ToDictionary(k => k, k => cache.TryGetValue(k, out var v) ? v : 999))
+            .Contains(KeyValuePair.Create('B', 1))
+            .Contains(KeyValuePair.Create('C', 2))
+            .Contains(KeyValuePair.Create('D', 3))
+            .Count().IsEqualTo(3);
     }
 
     [Test]
@@ -40,13 +40,12 @@ public class SieveLruCacheTests
         cache.GetOrAdd(5, UsedFactory);
         cache.GetOrAdd(1, NotUsedFactory);
         cache.GetOrAdd(2, UsedFactory);
-        await Assert.That(cache.Keys.ToDictionary(k => k, k => cache.TryGetValue(k, out var v) ? v : 999)).IsEquivalentTo(
-            new Dictionary<int, int>{
-                {1, 0},
-                {2, 5},
-                {3, 2},
-                {5, 4},
-        });
+        await Assert.That(cache.Keys.ToDictionary(k => k, k => cache.TryGetValue(k, out var v) ? v : 999))
+            .Contains(KeyValuePair.Create(1, 0))
+            .Contains(KeyValuePair.Create(2, 5))
+            .Contains(KeyValuePair.Create(3, 2))
+            .Contains(KeyValuePair.Create(5, 4))
+            .Count().IsEqualTo(4);
     }
 
     [Test]
@@ -74,16 +73,15 @@ public class SieveLruCacheTests
         cache.GetOrAdd('I', UsedFactory);
         cache.GetOrAdd('B', NotUsedFactory);
         cache.GetOrAdd('J', UsedFactory);
-        await Assert.That(cache.Keys.ToDictionary(k => k, k => cache.TryGetValue(k, out var v) ? v : 999)).IsEquivalentTo(
-            new Dictionary<char, int>{
-                {'A', 0},
-                {'B', 1},
-                {'D', 3},
-                {'G', 6},
-                {'H', 7},
-                {'I', 8},
-                {'J', 9},
-        });
+        await Assert.That(cache.Keys.ToDictionary(k => k, k => cache.TryGetValue(k, out var v) ? v : 999))
+            .Contains(KeyValuePair.Create('A', 0))
+            .Contains(KeyValuePair.Create('B', 1))
+            .Contains(KeyValuePair.Create('D', 3))
+            .Contains(KeyValuePair.Create('G', 6))
+            .Contains(KeyValuePair.Create('H', 7))
+            .Contains(KeyValuePair.Create('I', 8))
+            .Contains(KeyValuePair.Create('J', 9))
+            .Count().IsEqualTo(7);
     }
 
     [Test]

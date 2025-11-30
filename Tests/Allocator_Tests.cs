@@ -362,49 +362,49 @@ public class Allocator_Tests
     public async Task Allocate_BalinskiYoung_MinErrorExample()
     {
         var actual = Allocator.Allocate_BalinskiYoung(10L, [10.0, 20.0, 30.0]);
-        await Assert.That(actual).IsEquivalentTo((long[])[2, 3, 5]);
+        await Assert.That(Check.Equal(actual, [2, 3, 5])).IsTrue();
     }
 
     [Test]
     public async Task Allocate_Twitter()
     {
         var actual = Allocator.Allocate(100L, [406.0, 348.0, 246.0, 0.0]);
-        await Assert.That(actual).IsEquivalentTo((long[])[40, 35, 25, 0]);
+        await Assert.That(Check.Equal(actual, [40, 35, 25, 0])).IsTrue();
     }
 
     [Test]
     public async Task Allocate_TwitterZero()
     {
         var actual = Allocator.Allocate(0L, [406.0, 348.0, 246.0, 0.0]);
-        await Assert.That(actual).IsEquivalentTo((long[])[0, 0, 0, 0]);
+        await Assert.That(Check.Equal(actual, [0, 0, 0, 0])).IsTrue();
     }
 
     [Test]
     public async Task Allocate_TwitterTotalNegative()
     {
         var actual = Allocator.Allocate(-100L, [406.0, 348.0, 246.0, 0.0]);
-        await Assert.That(actual).IsEquivalentTo((long[])[-40, -35, -25, -0]);
+        await Assert.That(Check.Equal(actual, [-40, -35, -25, -0])).IsTrue();
     }
 
     [Test]
     public async Task Allocate_TwitterWeightsNegative()
     {
         var actual = Allocator.Allocate(100L, [-406.0, -348.0, -246.0, -0.0]);
-        await Assert.That(actual).IsEquivalentTo((long[])[40, 35, 25, 0]);
+        await Assert.That(Check.Equal(actual, [40, 35, 25, 0])).IsTrue();
     }
 
     [Test]
     public async Task Allocate_TwitterBothNegative()
     {
         var actual = Allocator.Allocate(-100L, [-406.0, -348.0, -246.0, -0.0]);
-        await Assert.That(actual).IsEquivalentTo((long[])[-40, -35, -25, -0]);
+        await Assert.That(Check.Equal(actual, [-40, -35, -25, -0])).IsTrue();
     }
 
     [Test]
     public async Task Allocate_TwitterTricky()
     {
         var actual = Allocator.Allocate(100L, [404.0, 397.0, 57.0, 57.0, 57.0, 28.0]);
-        await Assert.That(actual).IsEquivalentTo((long[])[40, 39, 6, 6, 6, 3]);
+        await Assert.That(Check.Equal(actual, [40, 39, 6, 6, 6, 3])).IsTrue();
     }
 
     [Test]
@@ -412,7 +412,7 @@ public class Allocator_Tests
     {
         var positive = Allocator.Allocate(42, [1.5, 1.0, 39.5, -1.0, 1.0]);
         var negative = Allocator.Allocate(-42, [1.5, 1.0, 39.5, -1.0, 1.0]);
-        await Assert.That(Array.ConvertAll(negative, i => -i)).IsEquivalentTo(positive);
+        await Assert.That(Check.Equal(Array.ConvertAll(negative, i => -i), positive)).IsTrue();
     }
 
     [Test][Skip("Different behaviour on a mac, need to resolve")]
@@ -425,10 +425,10 @@ public class Allocator_Tests
     [Test]
     public async Task Allocate_Integer()
     {
-        await Assert.That(Allocator.Allocate(-1L, [-24.0, 6.0, 8.0])).IsEquivalentTo((long[])[-3, 1, 1]);
-        await Assert.That(Allocator.Allocate(-1L, [-2.0, -4.0, 16.0])).IsEquivalentTo((long[])[0, 0, -1]);
-        await Assert.That(Allocator.Allocate(-1L, [31.0, 19.0, -38.0])).IsEquivalentTo((long[])[-2, -2, 3]);
-        await Assert.That(Allocator.Allocate(5L, [1.0, 9.0])).IsEquivalentTo((long[])[1, 4]);
+        await Assert.That(Check.Equal(Allocator.Allocate(-1L, [-24.0, 6.0, 8.0]), [-3, 1, 1])).IsTrue();
+        await Assert.That(Check.Equal(Allocator.Allocate(-1L, [-2.0, -4.0, 16.0]), [0, 0, -1])).IsTrue();
+        await Assert.That(Check.Equal(Allocator.Allocate(-1L, [31.0, 19.0, -38.0]), [-2, -2, 3])).IsTrue();
+        await Assert.That(Check.Equal(Allocator.Allocate(5L, [1.0, 9.0]), [1, 4])).IsTrue();
     }
 
     [Test]
