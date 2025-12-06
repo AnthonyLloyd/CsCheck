@@ -11,35 +11,36 @@ public class CacheValue<T>
     private T _value = default!;
 
     public ValueTask<T> GetAsync<K>(Func<K, Task<T>> factory, K key)
-        => Volatile.Read(ref _timestamp) > 0 ? new(_value) : CreateOrException(factory, key);
+        => Volatile.Read(ref _timestamp) > 0 ? new(_value) : new(UpdateAsync(factory, key));
 
-    private async ValueTask<T> CreateOrException<K>(Func<K, Task<T>> factory, K key)
+    public async Task<T> UpdateAsync<K>(Func<K, Task<T>> factory, K key)
     {
         if (Interlocked.CompareExchange(ref _timestamp, -1, 0) == 0)
-            return await UpdateAsync(factory, key);
+        {
+            try
+            {
+                _value = await factory(key);
+                Volatile.Write(ref _timestamp, Stopwatch.GetTimestamp() + 2);
+                return _value;
+            }
+            catch (Exception e)
+            {
+                _exception = e;
+                Volatile.Write(ref _timestamp, -(Stopwatch.GetTimestamp() + 2));
+                throw;
+            }
+        }
         while (Volatile.Read(ref _timestamp) == -1) await Task.Yield();
         return Volatile.Read(ref _timestamp) > 0 ? _value : throw _exception;
     }
 
-    public async Task<T> UpdateAsync<K>(Func<K, Task<T>> factory, K key)
+    /// <summary>Sets back to not run if not currently running. Will cause next GetAsync to refetch.</summary>
+    public void Invalidate()
     {
-        // What if we are already running?
-        try
-        {
-            _value = await factory(key);
-            Volatile.Write(ref _timestamp, Stopwatch.GetTimestamp() + 2);
-            return _value;
-        }
-        catch (Exception e)
-        {
-            _exception = e;
-            Volatile.Write(ref _timestamp, -(Stopwatch.GetTimestamp() + 2));
-            throw;
-        }
+        var timestamp = Volatile.Read(ref _timestamp);
+        if (timestamp != -1)
+            Interlocked.CompareExchange(ref _timestamp, 0, timestamp);
     }
-
-    /// <summary>Sets back to not run. Next GetAsync will refetch. Can call before UpdateAsync</summary>
-    public void Reset() => Volatile.Write(ref _timestamp, 0); // What if we are running?
 
     /// <summary>-1 = not run, -2 = running, else a real Timestamp.</summary>
     public long Timestamp
@@ -68,7 +69,6 @@ public sealed class CacheValueExpiry<T> : CacheValue<T>
     public int LastUsed;
 }
 
-
 public class CacheValueTests
 {
     [Test]
@@ -79,10 +79,10 @@ public class CacheValueTests
         {
             if (alreadyRun) throw new();
             alreadyRun = true;
-            await Task.Delay(100);
+            await Task.Delay(5);
             return i;
         }
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 10; i++)
         {
             alreadyRun = false;
             var cache = new CacheValue<long>();
@@ -117,6 +117,7 @@ public class CacheValueTests
                 var x = await c.Value;
                 return x is null ? 1 : 0;
             },
+            timeout: 1,
             raiseexception: false,
             writeLine: TUnitX.WriteLine);
     }

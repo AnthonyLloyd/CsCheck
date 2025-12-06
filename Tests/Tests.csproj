@@ -9,14 +9,15 @@
         <WarningLevel>9999</WarningLevel>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <Optimize>true</Optimize>
+        <TieredCompilation>false</TieredCompilation>
         <IsPackable>false</IsPackable>
         <SignAssembly>true</SignAssembly>
         <DelaySign>false</DelaySign>
         <AssemblyOriginatorKeyFile>../SigningKey.snk</AssemblyOriginatorKeyFile>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="TUnit" Version="1.2.11" />
-        <PackageReference Include="Rationals" Version="2.3.0" />
+        <PackageReference Include="TUnit" Version="1.5.0" />
         <ProjectReference Include="..\CsCheck\CsCheck.csproj" />
         <Using Include="TUnit.Assertions.Enums" />
     </ItemGroup>
