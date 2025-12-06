@@ -3,9 +3,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 using CsCheck;
 using ImTools;
-using Rationals;
 
 public class Allocator_Tests
 {
@@ -298,17 +299,17 @@ public class Allocator_Tests
     [Test]
     public void Allocate_Long_HasSmallestAllocationError()
     {
-        static (long, Rational) Error(long[] allocations, long quantity, long[] weights, long sumWeights)
+        static (long, BigRational) Error(long[] allocations, long quantity, long[] weights, long sumWeights)
         {
             long errorAbs = 0L;
-            var errorRel = Rational.Zero;
+            var errorRel = new BigRational(0, 1);
             for (int i = 0; i < allocations.Length; i++)
             {
                 var weight = weights[i];
                 var error = Math.Abs(allocations[i] * sumWeights - quantity * weight);
                 if (error == 0) continue;
                 errorAbs += error;
-                errorRel += weight == 0 ? new Rational(10_000_000_000) : new Rational(error, Math.Abs(weight));
+                errorRel += weight == 0 ? new BigRational(10_000_000_000, 1) : new BigRational(error, Math.Abs(weight));
             }
             return (errorAbs, errorRel);
         }
@@ -440,5 +441,22 @@ public class Allocator_Tests
         var allocations = Allocator.Allocate(quantity, weights);
         var shuffledAllocations = Allocator.Allocate(quantity, shuffled);
         await Assert.That(weights.Zip(allocations).Order().Zip(shuffled.Zip(shuffledAllocations).Order()).All(i => i.First == i.Second)).IsTrue();
+    }
+
+    private readonly record struct BigRational(BigInteger Numerator, BigInteger Denominator)
+    {
+        public static bool operator >=(BigRational left, BigRational right)
+            => left.Numerator * right.Denominator >= right.Numerator * left.Denominator; // Our denominators are always positive
+
+        public static bool operator <=(BigRational left, BigRational right)
+            => left.Numerator * right.Denominator <= right.Numerator * left.Denominator; // Our denominators are always positive
+
+        public static BigRational operator +(BigRational r1, BigRational r2)
+        {
+            var n = r1.Numerator + r1.Numerator;
+            var d = r1.Denominator * r2.Denominator;
+            var gcd = BigInteger.GreatestCommonDivisor(n, d);
+            return new(n / gcd, d / gcd);
+        }
     }
 }
