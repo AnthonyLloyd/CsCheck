@@ -103,7 +103,7 @@ public class AllocatorMany_Tests
         var actual = AllocatorMany.Allocate([9, 2, 1], [1, 20, 20], [21, 0, 10, 0, 10], new(), 100);
         await Assert.That(actual.KnownGlobal).IsTrue();
         await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.RoundingMinimum);
-        await Assert.That(actual.Solution).IsEquivalentTo((int[][])[[1, 0, 0, 0, 0], [6, 0, 7, 0, 7], [14, 0, 3, 0, 3]]);
+        await Assert.That(Check.Equal(actual.Solution, [[1, 0, 0, 0, 0], [6, 0, 7, 0, 7], [14, 0, 3, 0, 3]])).IsTrue();
     }
 
     [Test]
@@ -112,7 +112,7 @@ public class AllocatorMany_Tests
         var actual = AllocatorMany.Allocate([96625, 96620], [4, 6], [4, 1, 1, 1, 1, 1, 1], new(), 100);
         await Assert.That(actual.KnownGlobal).IsTrue();
         await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.EveryCombination);
-        await Assert.That(actual.Solution).IsEquivalentTo((int[][])[[3, 1, 0, 0, 0, 0, 0], [1, 0, 1, 1, 1, 1, 1]]);
+        await Assert.That(Check.Equal(actual.Solution, [[3, 1, 0, 0, 0, 0, 0], [1, 0, 1, 1, 1, 1, 1]])).IsTrue();
     }
 
     [Test]
@@ -121,7 +121,7 @@ public class AllocatorMany_Tests
         var actual = AllocatorMany.Allocate([12, 11], [50, 30], [20, 60], new(), 100);
         await Assert.That(actual.KnownGlobal).IsTrue();
         await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.RoundingMinimum);
-        await Assert.That(actual.Solution).IsEquivalentTo((int[][])[[12, 38], [8, 22]]);
+        await Assert.That(Check.Equal(actual.Solution, [[12, 38], [8, 22]])).IsTrue();
     }
 
     [Test]
@@ -130,7 +130,7 @@ public class AllocatorMany_Tests
         var actual = AllocatorMany.Allocate([12, 11, 15], [56, 42, 14], [28, 63, 21], new(), 100);
         await Assert.That(actual.KnownGlobal).IsTrue();
         await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.RoundingMinimum);
-        await Assert.That(actual.Solution).IsEquivalentTo((int[][])[[16, 31, 9], [9, 24, 9], [3, 8, 3]]);
+        await Assert.That(Check.Equal(actual.Solution, [[16, 31, 9], [9, 24, 9], [3, 8, 3]])).IsTrue();
     }
 
     [Test]
@@ -142,7 +142,7 @@ public class AllocatorMany_Tests
             [4, 1, 1, 1, 1, 1, 1, 1], new(), 100);
         await Assert.That(actual.KnownGlobal).IsTrue();
         await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.EveryCombination);
-        await Assert.That(actual.Solution).IsEquivalentTo((int[][])[
+        await Assert.That(Check.Equal(actual.Solution, [
             [2, 0, 0, 0, 0, 0, 0, 0],
             [0, 1, 1, 1, 0, 0, 0, 0],
             [0, 0, 0, 0, 1, 0, 0, 0],
@@ -150,7 +150,7 @@ public class AllocatorMany_Tests
             [0, 0, 0, 0, 0, 0, 1, 0],
             [1, 0, 0, 0, 0, 0, 0, 1],
             [1, 0, 0, 0, 0, 0, 0, 0],
-        ]);
+        ])).IsTrue();
     }
 
     [Test][Skip("Takes too long")]
@@ -205,7 +205,7 @@ public class AllocatorMany_Tests
             [1, 5, 2], new(123), 100);
         await Assert.That(actual.KnownGlobal).IsTrue();
         await Assert.That(actual.SolutionType).IsEqualTo(AllocatorMany.SolutionType.EveryCombination);
-        await Assert.That(actual.Solution).IsEquivalentTo((int[][])[
+        await Assert.That(Check.Equal(actual.Solution, [
             [1, 0, 0],
             [0, 1, 0],
             [0, 1, 0],
@@ -214,7 +214,7 @@ public class AllocatorMany_Tests
             [0, 1, 0],
             [0, 0, 1],
             [0, 0, 1],
-        ]);
+        ])).IsTrue();
     }
 
     [Test][Skip("fails in parallel")]
@@ -261,7 +261,7 @@ public class AllocatorMany_Tests
             (411,1), (415,1), (419,7), (421,1), (424,2), (425,2), (426,2), (436,3), (437,2), (438,1), (446,1), (447,2)
         };
         await Assert.That(fills.Sum(i => i.Item2)).IsEqualTo(139);
-        await Assert.That(fills.Select(i => i.Item1).Distinct()).IsEquivalentTo(fills.Select(i => i.Item1));
+        await Assert.That(Check.Equal(fills.Select(i => i.Item1).Distinct(), fills.Select(i => i.Item1))).IsTrue();
         var accounts = new int[] { 2, 2, 2, 2, 2, 3, 5, 5, 6, 7, 11, 12, 13, 17, 50 };
         await Assert.That(accounts.Sum()).IsEqualTo(139);
         var p = Array.ConvertAll(fills, i => i.Item1);
@@ -299,3 +299,4 @@ public class AllocatorMany_Tests
         return true;
     }
 }
+    

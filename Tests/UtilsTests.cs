@@ -27,7 +27,7 @@ public class UtilsTests
     [Test]
     public async Task Print()
     {
-        await Assert.That(Check.Print(new KeyValuePair<int, int>[] { new(1, 2), new(3, 4) })).IsEqualTo("[(1, 2), (3, 4)]");
+        await Assert.That(Check.Print(new KeyValuePair<int, int>[] { new(1, 2), new(3, 4) })).IsEqualTo("[[1, 2], [3, 4]]");
         await Assert.That(Check.Print(new Tuple<int, int>[] { new(1, 2), new(3, 4) })).IsEqualTo("[(1, 2), (3, 4)]");
         await Assert.That(Check.Print(new[] { (1, 2), (3, 4) })).IsEqualTo("[(1, 2), (3, 4)]");
     }
@@ -74,7 +74,7 @@ public class ThreadStatsTests
     {
         var seq = new int[ids.Length];
         Array.Copy(ids, seq, ids.Length);
-        await Assert.That(Check.Permutations(ids, seq)).IsEquivalentTo(expected);
+        await Assert.That(Check.Equal(Check.Permutations(ids, seq), expected)).IsTrue();
     }
 
     [Test]

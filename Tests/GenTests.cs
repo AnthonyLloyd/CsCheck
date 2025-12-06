@@ -270,7 +270,7 @@ public class GenTests
          let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.Long[start, finish]
          select (value, start, finish))
-        .Sample(i => i.value >= i.start && i.value <= i.finish);
+        .Sample(i => i.start <= i.value && i.value <= i.finish);
     }
 
     [Test]
