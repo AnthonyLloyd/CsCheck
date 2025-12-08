@@ -84,7 +84,7 @@ Setting these from the command line can be a good way to run your tests in diffe
 [Test]
 public void Single_Unit_Range()
 {
-    Gen.Single.Unit.Sample(f => Assert.InRange(f, 0f, 0.9999999f));
+    Gen.Single.Unit.Sample(f => f is >= 0f and <= 0.9999999f);
 }
 ```
 
@@ -98,7 +98,7 @@ public void Long_Range()
      let finish = Math.Max(t.V0, t.V1)
      from value in Gen.Long[start, finish]
      select (value, start, finish))
-    .Sample(i => Assert.InRange(i.value, i.start, i.finish));
+    .Sample(i => i.start <= i.value && i.value <= i.finish);
 }
 ```
 

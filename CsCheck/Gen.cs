@@ -1154,8 +1154,8 @@ public static class Gen
     }
 
     /// <summary>Create a generator for an enum.</summary>
-    public static Gen<T> Enum<T>() where T : Enum
-        => OneOfConst((T[])System.Enum.GetValues(typeof(T)));
+    public static Gen<T> Enum<T>() where T : struct, Enum
+        => OneOfConst(System.Enum.GetValues<T>());
 
     sealed class GenFrequencyConst<T>(uint total, params (int Frequency, T Constant)[] constants) : Gen<T>
     {

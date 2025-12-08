@@ -194,7 +194,7 @@ public static class Causal
 
     public sealed class Result(Result.Row[] rows)
     {
-        public class Row(string region)
+        public sealed class Row(string region)
         {
             public string Region = region; public int Count; public double Time; public MedianEstimate P10, P5, N5, N10, N15, N20;
         }
