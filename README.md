@@ -35,7 +35,7 @@ The following tests are in ~~xUnit~~ TUnit but could equally be used in any test
 
 More to see in the [Tests](https://github.com/AnthonyLloyd/CsCheck/tree/master/Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
 
-No Reflection was used in the making of this product.
+No Reflection was used in the making of this product. CsCheck is close to being AOT compatible but as someone put it 'generic recursion is AOT kryptonite'.
 
 ## Generator Creation Example
 
@@ -395,7 +395,7 @@ The performance is raised in an exception if it fails but can also be output if 
 ```
 Tests.CheckTests.Faster_Linq_Random [27ms]
 Standard Output Messages:
-32.29%[29.47%..36.51%] 1.48x[1.42x..1.58x] faster, sigma=50.0 (2,551 vs 17)
+32.29%[29.47%..36.51%] 1.48x[1.42x..1.58x] faster, sigma = 50.0 (2,551 vs 17), min = 208ns vs 375ns
 ```
 
  The first number is the estimated percentage median performance improvement with the interquartile range in the square brackets.
@@ -450,7 +450,7 @@ public void MapSlim_Performance_Increment()
 ```
 Tests.SlimCollectionsTests.MapSlim_Performance_Increment [27 s]
 Standard Output Messages:
-66.02%[56.48%..74.81%] 2.94x[2.30x..3.97x] faster, sigma=200.0 (72,690 vs 13,853)
+66.02%[56.48%..74.81%] 2.94x[2.30x..3.97x] faster, sigma = 200.0 (72,690 vs 13,853), min = 11.983ns vs 34.996ns
 ```
 
 ### Benchmarks Game
@@ -471,7 +471,7 @@ public void ReverseComplement_Faster()
 ```
 Tests.ReverseComplementTests.ReverseComplement_Faster [27s 870ms]
 Standard Output Messages:
-25.15%[20.58%..31.60%] 1.34x[1.26x..1.46x] faster, sigma=6.0 (36 vs 0)
+25.15%[20.58%..31.60%] 1.34x[1.26x..1.46x] faster, sigma = 6.0 (36 vs 0), min = 1,453ms vs 1,942ms
 ```
 
 ### Varint
@@ -502,7 +502,7 @@ public void Varint_Faster()
 ```
 Tests.ArraySerializerTests.Varint_Faster [45 ms]
 Standard Output Messages:
-10.94%[-3.27%..25.81%] 1.12x[0.97x..1.35x] faster, sigma=10.0 (442 vs 190)
+10.94%[-3.27%..25.81%] 1.12x[0.97x..1.35x] faster, sigma = 10.0 (442 vs 190), min = 7.082ns vs 7.332ns
 ```
 
 ## Debug utilities

@@ -3664,18 +3664,18 @@ internal sealed class FasterResult(double sigma, int repeat)
     }
 
     private static (Func<double, string>, string) TimeFormat(double maxValue) =>
-        (maxValue * 1000.0 / Stopwatch.Frequency) switch
+        (maxValue * 1000 / Stopwatch.Frequency) switch
         {
             >= 1000000 => (d => (d / Stopwatch.Frequency).ToString("###0"), "s"),
             >= 100000 => (d => (d / Stopwatch.Frequency).ToString("###0.#"), "s"),
             >= 10000 => (d => (d / Stopwatch.Frequency).ToString("###0.##"), "s"),
-            >= 1000 => (d => (d / Stopwatch.Frequency).ToString("###0.###"), "s"),
-            >= 100 => (d => (d * 1_000 / Stopwatch.Frequency).ToString("###0.#"), "ms"),
-            >= 10 => (d => (d * 1_000 / Stopwatch.Frequency).ToString("###0.##"), "ms"),
-            >= 1 => (d => (d * 1_000 / Stopwatch.Frequency).ToString("###0.###"), "ms"),
+            >= 1000 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0"), "ms"),
+            >= 100 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.#"), "ms"),
+            >= 10 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.##"), "ms"),
+            >= 1 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.###"), "ms"),
             >= 0.1 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.#"), "μs"),
             >= 0.01 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.##"), "μs"),
-            >= 0.001 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.###"), "μs"),
+            >= 0.001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0"), "ns"),
             >= 0.0001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.#"), "ns"),
             >= 0.00001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.##"), "ns"),
             >= 0.000001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.###"), "ns"),

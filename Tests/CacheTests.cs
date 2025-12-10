@@ -27,15 +27,15 @@ public class CacheTests
     public async Task GetOrAddAtomicAsync_Exception()
     {
         var cache = new ConcurrentDictionaryCache<int, int>();
-        var exception = await Assert.ThrowsAsync<CsCheckException>(() => cache.GetOrAddAtomicAsync(1, _ => Task.Run(int () => throw new CsCheckException("no"))).AsTask());
-        await Assert.That(exception!.Message).IsEqualTo("no");
+        await Assert.ThrowsAsync<CsCheckException>(() => cache.GetOrAddAtomicAsync(1, _ => Task.Run(int () => throw new CsCheckException("no1"))).AsTask())
+            .WithMessage("no1");
     }
 
     [Test]
     public async Task GetOrAddAtomicAsync_ExceptionSync()
     {
         var cache = new ConcurrentDictionaryCache<int, int>();
-        var exception = await Assert.ThrowsAsync<CsCheckException>(() => cache.GetOrAddAtomicAsync(1, _ => throw new CsCheckException("no")).AsTask());
-        await Assert.That(exception!.Message).IsEqualTo("no");
+        await Assert.ThrowsAsync<CsCheckException>(() => cache.GetOrAddAtomicAsync(1, _ => throw new CsCheckException("no2")).AsTask())
+            .WithMessage("no2");
     }
 }

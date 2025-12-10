@@ -9,7 +9,6 @@
         <WarningLevel>9999</WarningLevel>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Optimize>true</Optimize>
         <TieredCompilation>false</TieredCompilation>
         <IsPackable>false</IsPackable>
         <SignAssembly>true</SignAssembly>
