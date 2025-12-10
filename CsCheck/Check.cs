@@ -2301,7 +2301,7 @@ public static partial class Check
     public static void Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true,
         Action<string>? writeLine = null)
     {
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
         var worker = new FasterActionWorker(
             Timer.Create(faster, repeat),
             Timer.Create(slower, repeat),
@@ -2328,7 +2328,7 @@ public static partial class Check
     public static void Faster<I1, I2>(I1 faster, I2 slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true,
         Action<string>? writeLine = null) where I1 : IInvoke where I2 : IInvoke
     {
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
         var worker = new FasterActionWorker(
             Timer.Create(faster, repeat),
             Timer.Create(slower, repeat),
@@ -2398,7 +2398,7 @@ public static partial class Check
     public static void Faster<T>(Func<T> faster, Func<T> slower, Func<T, T, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true, Action<string>? writeLine = null)
     {
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
         var worker = new FasterFuncWorker<T>(
             Timer.Create(faster, repeat),
             Timer.Create(slower, repeat),
@@ -2430,7 +2430,7 @@ public static partial class Check
     {
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
         var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
         var running = true;
         async Task Worker()
@@ -2485,7 +2485,7 @@ public static partial class Check
         equal ??= Equal;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
         var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
         var running = true;
         async Task Worker()
@@ -2589,7 +2589,7 @@ public static partial class Check
     public static void Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1,
         string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
     {
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
         var worker = new FasterActionWorker<T>(
             gen,
             Timer.Create(faster, repeat),
@@ -2741,7 +2741,7 @@ public static partial class Check
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
         var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
         var running = true;
         async Task Worker()
         {
@@ -2966,7 +2966,7 @@ public static partial class Check
     public static void Faster<T, R>(this Gen<T> gen, Func<T, R> faster, Func<T, R> slower, Func<R, R, bool>? equal = null, double sigma = -1.0, int threads = -1,
         int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
     {
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
         var worker = new FasterFuncWorker<T, R>(
             gen,
             Timer.Create(faster, repeat),
@@ -3000,7 +3000,7 @@ public static partial class Check
         int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
             where I1 : IInvoke<T, R> where I2 : IInvoke<T, R>
     {
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
         var worker = new FasterFuncWorker<T, R>(
             gen,
             Timer.Create<I1, T, R>(faster, repeat),
@@ -3162,7 +3162,7 @@ public static partial class Check
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
         var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
         var running = true;
         async Task Worker()
         {
@@ -3489,17 +3489,18 @@ public static partial class Check
     }
 }
 
-internal sealed class FasterResult(double sigma)
+internal sealed class FasterResult(double sigma, int repeat)
 {
     const byte STATE_PROCESSING = 0, STATE_QUEUED = 1, STATE_BLOCKED = 2;
     static readonly int capacity = Environment.ProcessorCount;
     readonly double Limit = sigma * sigma;
     public Exception? Exception;
     public int Faster, Slower;
+    public long FasterMin = long.MaxValue, SlowerMin = long.MaxValue;
     public MedianEstimator Median = new();
     readonly Queue<double> queue = new(capacity);
     SpinLock spinLock;
-    bool processing;
+    volatile bool processing;
 
     public float SigmaSquared
     {
@@ -3541,6 +3542,8 @@ internal sealed class FasterResult(double sigma)
                 myState = STATE_PROCESSING;
             }
             Faster++;
+            if (faster < FasterMin) FasterMin = faster;
+            if (slower < SlowerMin) SlowerMin = slower;
             if (lockTaken) spinLock.Exit();
         }
         else if (slower < faster)
@@ -3566,6 +3569,8 @@ internal sealed class FasterResult(double sigma)
                 myState = STATE_PROCESSING;
             }
             Slower++;
+            if (faster < FasterMin) FasterMin = faster;
+            if (slower < SlowerMin) SlowerMin = slower;
             if (lockTaken) spinLock.Exit();
         }
         else
@@ -3590,6 +3595,8 @@ internal sealed class FasterResult(double sigma)
                 processing = true;
                 myState = STATE_PROCESSING;
             }
+            if (faster < FasterMin) FasterMin = faster;
+            if (slower < SlowerMin) SlowerMin = slower;
             if (lockTaken) spinLock.Exit();
         }
         if (myState == STATE_PROCESSING)
@@ -3643,10 +3650,11 @@ internal sealed class FasterResult(double sigma)
                     times = 1 / times;
                     (q1Times, q3Times) = (1 / q3Times, 1 / q1Times);
                 }
+                var (timeString, timeUnit) = TimeFormat((double)Math.Min(FasterMin, SlowerMin) / repeat);
                 var result = $"{Median.Median:P2}[{Median.Q1:P2}..{Median.Q3:P2}] {times:#0.00}x[{q1Times:#0.00}x..{q3Times:#0.00}x] {faster}";
                 if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
                 else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
-                result = $"{result}, sigma={Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0})";
+                result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / repeat)}{timeUnit} vs {timeString((double)SlowerMin / repeat)}{timeUnit}";
                 if (lockTaken) spinLock.Exit();
                 if (Check.IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
                 return result;
@@ -3654,5 +3662,25 @@ internal sealed class FasterResult(double sigma)
             if (lockTaken) spinLock.Exit();
         }
     }
+
+    private static (Func<double, string>, string) TimeFormat(double maxValue) =>
+        (maxValue * 1000.0 / Stopwatch.Frequency) switch
+        {
+            >= 1000000 => (d => (d / Stopwatch.Frequency).ToString("###0"), "s"),
+            >= 100000 => (d => (d / Stopwatch.Frequency).ToString("###0.#"), "s"),
+            >= 10000 => (d => (d / Stopwatch.Frequency).ToString("###0.##"), "s"),
+            >= 1000 => (d => (d / Stopwatch.Frequency).ToString("###0.###"), "s"),
+            >= 100 => (d => (d * 1_000 / Stopwatch.Frequency).ToString("###0.#"), "ms"),
+            >= 10 => (d => (d * 1_000 / Stopwatch.Frequency).ToString("###0.##"), "ms"),
+            >= 1 => (d => (d * 1_000 / Stopwatch.Frequency).ToString("###0.###"), "ms"),
+            >= 0.1 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.#"), "μs"),
+            >= 0.01 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.##"), "μs"),
+            >= 0.001 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.###"), "μs"),
+            >= 0.0001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.#"), "ns"),
+            >= 0.00001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.##"), "ns"),
+            >= 0.000001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.###"), "ns"),
+            _ => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.####"), "ns"),
+        };
+
     public void Output(Action<string> output) => output(ToString());
 }
