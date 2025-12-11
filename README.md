@@ -35,7 +35,7 @@ The following tests are in ~~xUnit~~ TUnit but could equally be used in any test
 
 More to see in the [Tests](https://github.com/AnthonyLloyd/CsCheck/tree/master/Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
 
-No Reflection was used in the making of this product. CsCheck is close to being AOT compatible but as someone put it 'generic recursion is AOT kryptonite'.
+No Reflection was used in the making of this product. CsCheck is close to being AOT compatible but 'generic recursion is AOT kryptonite'.
 
 ## Generator Creation Example
 

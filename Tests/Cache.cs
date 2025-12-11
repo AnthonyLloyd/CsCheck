@@ -30,12 +30,12 @@ public static class CacheExtensions
             if (!cache.TryGetValue(key, out value))
                 cache.Set(key, value = await factory(key));
             myTcs.SetResult(value);
-            return value;
+            return await myTcs.Task;
         }
         catch (Exception ex)
         {
             myTcs.SetException(ex);
-            throw;
+            return await myTcs.Task;
         }
         finally
         {
