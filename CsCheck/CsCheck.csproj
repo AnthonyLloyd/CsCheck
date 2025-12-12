@@ -22,9 +22,9 @@ CsCheck also makes parallel, performance and regression testing simple and fast.
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;parallel;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>4.4.1</Version>
+        <Version>4.5.0</Version>
         <PackageReleaseNotes>
-Added Big O regression, may change a little and no documentation yet.
+Added minimum time to Faster output as an idea of timing and for additional diagnostics.
         </PackageReleaseNotes>
         <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>

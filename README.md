@@ -400,9 +400,10 @@ Standard Output Messages:
 
  The first number is the estimated percentage median performance improvement with the interquartile range in the square brackets.
  The second number is the estimated times median performance improvement with the interquartile range in the square brackets.
- 33⅓% faster = 1.5x faster and 90% faster = 10x faster take your pick.
+ 33⅓% faster = 1.5x faster and 90% faster = 10x faster, take your pick.
  The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
  distribution for the null hypothesis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
+ Finally the minimum time taken for faster vs slower is shown as an idea of timing and for additional diagnostics of the result (machine dependent).
 
 ### Matrix Multiply
 
@@ -630,15 +631,15 @@ replay - The number of times to retry the seed to reproduce a SampleParallel fai
 Global defaults can also be set via environment variables:
 
 ```powershell
-dotnet test -c Release -e CsCheck_Iter=10000 --filter Multithreading
+$env:CsCheck_Iter=10000;dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/GenTests/*;rm env:CsCheck*
 
-dotnet test -c Release -e CsCheck_Time=60 --filter Multithreading
+$env:CsCheck_Time=10;dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/FloatingPointTests/*;rm env:CsCheck*
 
-dotnet test -c Release -e CsCheck_Seed=0N0XIzNsQ0O2 --filter List
+$env:CsCheck_Seed="0N0XIzNsQ0O2";dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/NSum_Shuffle_Check;rm env:CsCheck*
 
-dotnet test -c Release -e CsCheck_Sigma=50 -l 'console;verbosity=detailed' --filter Faster
+$env:CsCheck_Sigma=50;dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/*_Faster;rm env:CsCheck*
 
-dotnet test -c Release -e CsCheck_Threads=1 -l 'console;verbosity=detailed' --filter Perf
+$env:CsCheck_Threads=1;dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/*_Perf;rm env:CsCheck*
 ```
 
 ## Development
