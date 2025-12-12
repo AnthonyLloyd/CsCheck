@@ -25,6 +25,7 @@ CsCheck also makes parallel, performance and regression testing simple and fast.
         <Version>4.5.0</Version>
         <PackageReleaseNotes>
 Added minimum time to Faster output as an idea of timing and for additional diagnostics.
+Added Check.EqualUnordered.
         </PackageReleaseNotes>
         <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>

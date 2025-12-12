@@ -370,8 +370,8 @@ public static partial class Check
             if (ao.Length == 0) return true;
             if (ao.Length == 1) return Equal(ao[0], bo[0]);
             if (IsUnorderedCollection(a.GetType()) || IsUnorderedCollection(b.GetType())
-             || ao[0]?.GetType() is { IsGenericType: true } aelementType && aelementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
-             || bo[0]?.GetType() is { IsGenericType: true } belementType && belementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
+             || ao[0]?.GetType() is { IsGenericType: true } atype && atype.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
+             || bo[0]?.GetType() is { IsGenericType: true } btype && btype.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
                 return !ao.Except(bo, EqualComparer.Instance).Any();
             for (int i = 0; i < ao.Length; i++)
                 if (!Equal(ao[i], bo[i]))
