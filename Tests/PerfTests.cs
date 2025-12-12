@@ -22,7 +22,7 @@ public class PerfTests()
         }
         Check.Faster(
             () => { var sum = TwoSum_O(2, 1e50, out var err); },
-            () => { var (sum, err) = TwoSum_T(2, 1e50); }
+            () => TwoSum_T(2, 1e50)
         , repeat: 100, raiseexception: false, writeLine: TUnitX.WriteLine);
     }
 

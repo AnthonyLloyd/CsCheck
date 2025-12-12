@@ -158,17 +158,17 @@ public class CheckTests
     [Test]
     public void Faster_CustomCriterion()
     {
-        var successCriterion = (double output1, double output2) => output1 >= 0.7 * output2;
+        static bool SuccessCriterion(double output1, double output2) => output1 >= 0.7 * output2;
 
         Gen.Double[100, 1000]
             .Faster(
-                d => d*0.8,
+                d => d * 0.8,
                 d =>
                 {
                     Thread.Sleep(1);
                     return d;
                 },
-                equal: successCriterion,
+                equal: SuccessCriterion,
                 writeLine: TUnitX.WriteLine);
     }
 
@@ -315,8 +315,8 @@ public class CheckTests
             return (median, queue, s);
         })
         .Faster(
-            (m, q, s) => q.Enqueue(s),
-            (m, q, s) => m.Add(s),
+            (_, q, s) => q.Enqueue(s),
+            (m, _, s) => m.Add(s),
             repeat: 100,
             writeLine: TUnitX.WriteLine);
     }
