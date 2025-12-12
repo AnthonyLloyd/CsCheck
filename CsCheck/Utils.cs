@@ -364,22 +364,34 @@ public static partial class Check
         }
         if (a is IEnumerable aie && b is IEnumerable bie)
         {
-            var count = aie.Cast<object>().Count();
-            if (bie.Cast<object>().Take(count + 1).Count() != count) return false;
-            if (count == 0) return true;
-            if (count == 1) return Equal(aie.Cast<object>().First(), bie.Cast<object>().First());
+            var ao = aie.Cast<object>().ToArray();
+            var bo = bie.Cast<object>().Take(ao.Length + 1).ToArray();
+            if (ao.Length != bo.Length) return false;
+            if (ao.Length == 0) return true;
+            if (ao.Length == 1) return Equal(ao[0], bo[0]);
             if (IsUnorderedCollection(a.GetType()) || IsUnorderedCollection(b.GetType())
-             || aie.Cast<object>().First()?.GetType() is { IsGenericType: true } aelementType && aelementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
-             || bie.Cast<object>().First()?.GetType() is { IsGenericType: true } belementType && belementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
-                return !aie.Cast<object>().Except(bie.Cast<object>(), EqualComparer.Instance).Any();
-            var ae = aie.GetEnumerator();
-            var be = bie.GetEnumerator();
-            while (ae.MoveNext() && be.MoveNext())
-                if (!Equal(ae.Current, be.Current))
+             || ao[0]?.GetType() is { IsGenericType: true } aelementType && aelementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
+             || bo[0]?.GetType() is { IsGenericType: true } belementType && belementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
+                return !ao.Except(bo, EqualComparer.Instance).Any();
+            for (int i = 0; i < ao.Length; i++)
+                if (!Equal(ao[i], bo[i]))
                     return false;
             return true;
         }
         return a.Equals(b);
+    }
+
+    /// <summary>Equal check unordered.</summary>
+    public static bool EqualUnordered(IEnumerable a, IEnumerable b)
+    {
+        if (a is null && b is null) return true;
+        if (a is null || b is null) return false;
+        var ao = a.Cast<object>().ToArray();
+        var bo = b.Cast<object>().Take(ao.Length + 1).ToArray();
+        if (ao.Length != bo.Length) return false;
+        if (ao.Length == 0) return true;
+        if (ao.Length == 1) return Equal(ao[0], bo[0]);
+        return !ao.Except(bo, EqualComparer.Instance).Any();
     }
 
     private static bool IsUnorderedCollection(Type type)
