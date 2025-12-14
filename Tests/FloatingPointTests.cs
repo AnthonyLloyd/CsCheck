@@ -25,16 +25,6 @@ public class FloatingPointTests()
         }, writeLine: TUnitX.WriteLine);
     }
 
-    [Test]
-    public void X()
-    {
-        var quantity = 1000;
-        var price = 99.99;
-        var fxRate = 1.2345;
-        var localValue = MathX.TwoMul(quantity, price, out double lo1);
-        var usdValue = MathX.TwoMul(localValue, fxRate, out double lo2);
-    }
-
     private static void DoubleSumPrecision(int significantFigures, int maxLength)
     {
         const double scaling = 0.01;

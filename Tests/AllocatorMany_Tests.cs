@@ -94,7 +94,7 @@ public class AllocatorMany_Tests
             if (!TotalsCorrectly(rowTotal, colTotal, allocation.Solution))
                 throw new Exception("Does not total correctly");
             return $"{(allocation.KnownGlobal ? "Global" : "Local")}/{allocation.SolutionType}";
-        }, time: 10, writeLine: TUnitX.WriteLine);
+        }, writeLine: TUnitX.WriteLine, time: 10);
     }
 
     [Test]
@@ -299,4 +299,3 @@ public class AllocatorMany_Tests
         return true;
     }
 }
-    

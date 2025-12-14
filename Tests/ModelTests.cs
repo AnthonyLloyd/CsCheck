@@ -41,7 +41,7 @@ public class ModelTests
     {
         public string Name { get; } = name; public Currency Currency { get; } = currency; public IReadOnlyCollection<Position> Positions { get; } = positions;
         public double Profit(Func<Currency, double> fxRate) => Positions.Sum(i => i.Profit * fxRate(i.Instrument.Currency));
-        public double[] RiskByPosition(Func<Currency, double> fxRate) => Positions.Select(i => i.Profit * fxRate(i.Instrument.Currency)).ToArray();
+        public double[] RiskByPosition(Func<Currency, double> fxRate) => [.. Positions.Select(i => i.Profit * fxRate(i.Instrument.Currency))];
     }
 
     public static class ModelGen

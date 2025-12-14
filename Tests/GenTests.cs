@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using CsCheck;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 public class GenTests
 {
@@ -195,7 +196,8 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        int[] expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
         Gen.Int[0, buckets - 1].Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
