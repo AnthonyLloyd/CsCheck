@@ -1764,7 +1764,7 @@ public sealed class GenUShort : Gen<ushort>
         get
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-            return new Range(start, (ushort)(finish - start + 1));
+            return start == ushort.MinValue && finish == ushort.MaxValue ? this : new Range(start, (ushort)(finish - start + 1));
         }
     }
 }
@@ -1835,7 +1835,7 @@ public sealed class GenInt : Gen<int>
         get
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-            return new Range(start, (uint)(finish - start + 1));
+            return start == int.MinValue && finish == int.MaxValue ? Uniform : new Range(start, (uint)(finish - start + 1));
         }
     }
 }
@@ -1865,7 +1865,7 @@ public sealed class GenUInt : Gen<uint>
         get
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-            return new Range(start, finish - start + 1U);
+            return start == uint.MinValue && finish == uint.MaxValue ? Uniform : new Range(start, finish - start + 1U);
         }
     }
     sealed class GenUniform : Gen<uint>
@@ -1999,7 +1999,7 @@ public sealed class GenLong : Gen<long>
         get
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-            return new Range(start, (ulong)(finish - start + 1));
+            return start == long.MinValue && finish == long.MaxValue ? Uniform : new Range(start, (ulong)(finish - start + 1));
         }
     }
     sealed class GenUniform : Gen<long>
@@ -2039,7 +2039,7 @@ public sealed class GenULong : Gen<ulong>
         get
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-            return new Range(start, finish - start + 1UL);
+            return start == ulong.MinValue && finish == ulong.MaxValue ? Uniform : new Range(start, finish - start + 1UL);
         }
     }
     sealed class GenUniform : Gen<ulong>
@@ -2091,12 +2091,11 @@ public sealed class GenFloat : Gen<float>
             const int denominator = 99;
             const int minExp = -99;
             static Gen<int> GenInt(float start, float finish)
-                => start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
-                 : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue + 1), (int)Math.Min(Math.Floor(finish), int.MaxValue - 1)];
+                => Gen.Int[(int)Math.Clamp(Math.Ceiling(start), int.MinValue, int.MaxValue), (int)Math.Clamp(Math.Floor(finish), int.MinValue, int.MaxValue)];
             var myGens = new (int, IGen<float>)[4];
-            if (Math.Ceiling(start) <= Math.Floor(start))
+            if (start <= int.MaxValue && finish >= int.MinValue && (int)Math.Ceiling(start) <= (int)Math.Floor(start))
                 myGens[0] = (1, GenInt(start, finish).Select(i => (float)i));
-            if (Math.Ceiling(start * denominator) <= Math.Floor(finish * denominator))
+            if (start * denominator <= int.MaxValue && finish * denominator >= int.MinValue && (int)Math.Ceiling(start * denominator) <= (int)Math.Floor(finish * denominator))
             {
                 var lower = denominator - 1;
                 while (Math.Ceiling(start * lower) <= Math.Floor(finish * lower) && lower > 1)
@@ -2224,12 +2223,11 @@ public sealed class GenDouble : Gen<double>
             const int denominator = 99;
             const int minExp = -99;
             static Gen<int> GenInt(double start, double finish)
-                => start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
-                 : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue + 1), (int)Math.Min(Math.Floor(finish), int.MaxValue - 1)];
+                => Gen.Int[(int)Math.Clamp(Math.Ceiling(start), int.MinValue, int.MaxValue), (int)Math.Clamp(Math.Floor(finish), int.MinValue, int.MaxValue)];
             var myGens = new (int, IGen<double>)[4];
-            if (Math.Ceiling(start) <= Math.Floor(start))
+            if (start <= int.MaxValue && finish >= int.MinValue && (int)Math.Ceiling(start) <= (int)Math.Floor(start))
                 myGens[0] = (1, GenInt(start, finish).Select(i => (double)i));
-            if (Math.Ceiling(start * denominator) <= Math.Floor(finish * denominator))
+            if (start * denominator <= int.MaxValue && finish * denominator >= int.MinValue && (int)Math.Ceiling(start * denominator) <= (int)Math.Floor(finish * denominator))
             {
                 var lower = denominator - 1;
                 while (Math.Ceiling(start * lower) <= Math.Floor(finish * lower) && lower > 1)
@@ -2332,20 +2330,17 @@ public sealed class GenDecimal : Gen<decimal>
     readonly static Gen<decimal> DefaultDecimal = Gen.Decimal[-1e25m, 1e25m];
     public override decimal Generate(PCG pcg, Size? min, out Size size)
         => DefaultDecimal.Generate(pcg, min, out size);
-    sealed class GenEvenlyDistributed(decimal start, decimal length) : Gen<decimal>
+    sealed class GenEvenlyDistributed(decimal start, decimal finish) : Gen<decimal>
     {
         public override decimal Generate(PCG pcg, Size? min, out Size size)
         {
             var i = pcg.Next64() >> 12;
             size = new Size(i);
-            return (decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * length + start;
+            var onetwo = ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000));
+            return (2 - onetwo) * start + (onetwo - 1) * finish;
         }
     }
-    private static Gen<decimal> EvenlyDistributed(decimal start, decimal finish)
-    {
-        finish -= start;
-        return new GenEvenlyDistributed(start - finish, finish);
-    }
+    private static Gen<decimal> EvenlyDistributed(decimal start, decimal finish) => new GenEvenlyDistributed(start, finish);
     /// <summary>Generate decimal in the range <paramref name="start"/> to <paramref name="finish"/>.</summary>
     public Gen<decimal> this[decimal start, decimal finish]
     {
@@ -2354,19 +2349,18 @@ public sealed class GenDecimal : Gen<decimal>
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
             const int denominator = 99;
             const int minExp = -99;
-            static Gen<int> GenInt(decimal start, decimal finish)
-                => start <= int.MinValue && finish >= int.MaxValue ? Gen.Int
-                 : Gen.Int[(int)Math.Max(Math.Ceiling(start), int.MinValue + 1), (int)Math.Min(Math.Floor(finish), int.MaxValue - 1)];
+            static Gen<int> GenInt(double start, double finish)
+                => Gen.Int[(int)Math.Clamp(Math.Ceiling(start), int.MinValue, int.MaxValue), (int)Math.Clamp(Math.Floor(finish), int.MinValue, int.MaxValue)];
             var myGens = new (int, IGen<decimal>)[4];
-            if (Math.Ceiling(start) <= Math.Floor(start))
-                myGens[0] = (1, GenInt(start, finish).Select(i => (decimal)i));
-            if (Math.Ceiling(start * denominator) <= Math.Floor(finish * denominator))
+            if (start <= int.MaxValue && finish >= int.MinValue && (int)Math.Clamp(Math.Ceiling((double)start), int.MinValue, int.MaxValue) <= (int)Math.Clamp(Math.Floor((double)finish), int.MinValue, int.MaxValue))
+                myGens[0] = (1, GenInt((double)start, (double)finish).Select(i => (decimal)i));
+            if ((double)start * denominator <= int.MaxValue && (double)finish * denominator >= int.MinValue && (int)Math.Clamp(Math.Ceiling((double)start * denominator), int.MinValue, int.MaxValue) <= (int)Math.Clamp(Math.Floor((double)finish * denominator), int.MinValue, int.MaxValue))
             {
                 var lower = denominator - 1;
-                while (Math.Ceiling(start * lower) <= Math.Floor(finish * lower) && lower > 1)
+                while (Math.Ceiling((double)start * lower) <= Math.Floor((double)finish * lower) && lower > 1)
                     lower--;
                 var rational = Gen.Int[lower + 1, denominator]
-                    .SelectMany(den => GenInt(start * den, finish * den)
+                    .SelectMany(den => GenInt((double)start * den, (double)finish * den)
                     .Select(num => (decimal)num / den));
                 myGens[1] = (1, rational);
             }

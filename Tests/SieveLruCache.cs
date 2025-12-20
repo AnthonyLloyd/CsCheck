@@ -3,6 +3,14 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
+public interface ICache<K, V>
+{
+    void Set(K key, V value);
+    bool TryGetValue(K key, [MaybeNullWhen(false)] out V value);
+    int Count { get; }
+    IEnumerable<K> Keys { get; }
+}
+
 public class SieveLruCache<K, V>(int capacity) : ICache<K, V> where K : notnull
 {
     class Node(K key, V value)

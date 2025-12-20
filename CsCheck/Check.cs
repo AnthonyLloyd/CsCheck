@@ -3491,14 +3491,13 @@ public static partial class Check
 
 internal sealed class FasterResult(double sigma, int repeat)
 {
-    const byte STATE_PROCESSING = 0, STATE_QUEUED = 1, STATE_BLOCKED = 2;
-    static readonly int capacity = Environment.ProcessorCount;
+    const byte STATE_PROCESSING = 0, STATE_QUEUED = 1;
     readonly double Limit = sigma * sigma;
     public Exception? Exception;
     public int Faster, Slower;
     public long FasterMin = long.MaxValue, SlowerMin = long.MaxValue;
     public MedianEstimator Median = new();
-    readonly Queue<double> queue = new(capacity);
+    readonly Queue<double> queue = new(Environment.ProcessorCount);
     SpinLock spinLock;
     volatile bool processing;
 
@@ -3526,15 +3525,8 @@ internal sealed class FasterResult(double sigma, int repeat)
             spinLock.Enter(ref lockTaken);
             if (processing)
             {
-                if (queue.Count == capacity)
-                {
-                    myState = STATE_BLOCKED;
-                }
-                else
-                {
-                    queue.Enqueue(ratio);
-                    myState = STATE_QUEUED;
-                }
+                queue.Enqueue(ratio);
+                myState = STATE_QUEUED;
             }
             else
             {
@@ -3553,15 +3545,8 @@ internal sealed class FasterResult(double sigma, int repeat)
             spinLock.Enter(ref lockTaken);
             if (processing)
             {
-                if (queue.Count == capacity)
-                {
-                    myState = STATE_BLOCKED;
-                }
-                else
-                {
-                    queue.Enqueue(ratio);
-                    myState = STATE_QUEUED;
-                }
+                queue.Enqueue(ratio);
+                myState = STATE_QUEUED;
             }
             else
             {
@@ -3580,15 +3565,8 @@ internal sealed class FasterResult(double sigma, int repeat)
             spinLock.Enter(ref lockTaken);
             if (processing)
             {
-                if (queue.Count == capacity)
-                {
-                    myState = STATE_BLOCKED;
-                }
-                else
-                {
-                    queue.Enqueue(ratio);
-                    myState = STATE_QUEUED;
-                }
+                queue.Enqueue(ratio);
+                myState = STATE_QUEUED;
             }
             else
             {
@@ -3599,68 +3577,45 @@ internal sealed class FasterResult(double sigma, int repeat)
             if (slower < SlowerMin) SlowerMin = slower;
             if (lockTaken) spinLock.Exit();
         }
-        if (myState == STATE_PROCESSING)
+        if (myState == STATE_QUEUED)
+            return false;
+        while (true)
         {
-            while (true)
+            Median.Add(ratio);
+            if (SigmaSquared >= Limit)
+                return true;
+            bool lockTaken = false;
+            spinLock.Enter(ref lockTaken);
+            if (queue.TryDequeue(out ratio))
             {
-                Median.Add(ratio);
-                bool lockTaken = false;
-                spinLock.Enter(ref lockTaken);
-                if (queue.Count == 0)
-                {
-                    processing = false;
-                    if (lockTaken) spinLock.Exit();
-                    break;
-                }
-                ratio = queue.Dequeue();
                 if (lockTaken) spinLock.Exit();
             }
-        }
-        else if (myState == STATE_BLOCKED)
-        {
-            while (true)
+            else
             {
-                bool lockTaken = false;
-                spinLock.Enter(ref lockTaken);
-                if (queue.Count != capacity)
-                {
-                    queue.Enqueue(ratio);
-                    if (lockTaken) spinLock.Exit();
-                    break;
-                }
+                processing = false;
                 if (lockTaken) spinLock.Exit();
+                return false;
             }
         }
-        return SigmaSquared >= Limit;
     }
     public override string ToString()
     {
-        while (true)
+        var times = Median.Median >= 0.0 ? 1 / (1 - Median.Median) : 1 + Median.Median;
+        var q1Times = Median.Q1 >= 0.0 ? 1 / (1 - Median.Q1) : 1 + Median.Q1;
+        var q3Times = Median.Q3 >= 0.0 ? 1 / (1 - Median.Q3) : 1 + Median.Q3;
+        var faster = Median.Median >= 0.0 ? "faster" : "slower";
+        if (Median.Median < 0.0)
         {
-            bool lockTaken = false;
-            spinLock.Enter(ref lockTaken);
-            if (!processing)
-            {
-                var times = Median.Median >= 0.0 ? 1 / (1 - Median.Median) : 1 + Median.Median;
-                var q1Times = Median.Q1 >= 0.0 ? 1 / (1 - Median.Q1) : 1 + Median.Q1;
-                var q3Times = Median.Q3 >= 0.0 ? 1 / (1 - Median.Q3) : 1 + Median.Q3;
-                var faster = Median.Median >= 0.0 ? "faster" : "slower";
-                if (Median.Median < 0.0)
-                {
-                    times = 1 / times;
-                    (q1Times, q3Times) = (1 / q3Times, 1 / q1Times);
-                }
-                var (timeString, timeUnit) = TimeFormat((double)Math.Min(FasterMin, SlowerMin) / repeat);
-                var result = $"{Median.Median:P2}[{Median.Q1:P2}..{Median.Q3:P2}] {times:#0.00}x[{q1Times:#0.00}x..{q3Times:#0.00}x] {faster}";
-                if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
-                else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
-                result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / repeat)}{timeUnit} vs {timeString((double)SlowerMin / repeat)}{timeUnit}";
-                if (lockTaken) spinLock.Exit();
-                if (Check.IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
-                return result;
-            }
-            if (lockTaken) spinLock.Exit();
+            times = 1 / times;
+            (q1Times, q3Times) = (1 / q3Times, 1 / q1Times);
         }
+        var (timeString, timeUnit) = TimeFormat((double)Math.Min(FasterMin, SlowerMin) / repeat);
+        var result = $"{Median.Median:P2}[{Median.Q1:P2}..{Median.Q3:P2}] {times:#0.00}x[{q1Times:#0.00}x..{q3Times:#0.00}x] {faster}";
+        if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
+        else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
+        result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / repeat)}{timeUnit} vs {timeString((double)SlowerMin / repeat)}{timeUnit}";
+        if (Check.IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
+        return result;
     }
 
     private static (Func<double, string>, string) TimeFormat(double maxValue) =>

@@ -1,10 +1,8 @@
 ﻿namespace Tests;
 
 using System;
-using System.Linq;
 using System.Runtime.InteropServices;
 using CsCheck;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 public class GenTests
 {
@@ -19,10 +17,16 @@ public class GenTests
     public void Bool_Distribution()
     {
         const int frequency = 10;
-        var expected = Enumerable.Repeat(frequency, 2).ToArray();
+        var expected = new int[] { frequency, frequency};
         Gen.Bool.Select(i => i ? 1 : 0).Array[2 * frequency]
         .Select(sample => Tally(2, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+    }
+
+    [Test]
+    public void SByte_MinMax()
+    {
+        Gen.SByte[sbyte.MinValue, sbyte.MaxValue].Single();
     }
 
     [Test]
@@ -41,11 +45,18 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
         Gen.SByte[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+    }
+
+    [Test]
+    public void Byte_MinMax()
+    {
+        Gen.Byte[byte.MinValue, byte.MaxValue].Single();
     }
 
     [Test]
@@ -64,7 +75,8 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
         Gen.Byte[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
@@ -75,6 +87,12 @@ public class GenTests
     public void Short_Zigzag_Roundtrip()
     {
         Gen.Short.Sample(i => GenShort.Unzigzag(GenShort.Zigzag(i)) == i);
+    }
+
+    [Test]
+    public void Short_MinMax()
+    {
+        Gen.Short[short.MinValue, short.MaxValue].Single();
     }
 
     [Test]
@@ -93,11 +111,18 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
         Gen.Short[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+    }
+
+    [Test]
+    public void UShort_MinMax()
+    {
+        Gen.UShort[ushort.MinValue, ushort.MaxValue].Single();
     }
 
     [Test]
@@ -116,11 +141,18 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
         Gen.UShort[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+    }
+
+    [Test]
+    public void Int_MinMax()
+    {
+        Gen.Int[int.MinValue, int.MaxValue].Single();
     }
 
     [Test]
@@ -220,6 +252,12 @@ public class GenTests
     }
 
     [Test]
+    public void UInt_MinMax()
+    {
+        Gen.UInt[uint.MinValue, uint.MaxValue].Single();
+    }
+
+    [Test]
     public void UInt_Range()
     {
         (from t in Gen.UInt.Select(Gen.UInt)
@@ -235,7 +273,8 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
         Gen.UInt[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
@@ -265,6 +304,12 @@ public class GenTests
     }
 
     [Test]
+    public void Long_MinMax()
+    {
+        Gen.Long[long.MinValue, long.MaxValue].Single();
+    }
+
+    [Test]
     public void Long_Range()
     {
         (from t in Gen.Long.Select(Gen.Long)
@@ -280,11 +325,18 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
         Gen.Long[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+    }
+
+    [Test]
+    public void ULong_MinMax()
+    {
+        Gen.ULong[ulong.MinValue, ulong.MaxValue].Single();
     }
 
     [Test]
@@ -303,7 +355,8 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
         Gen.ULong[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
@@ -323,6 +376,18 @@ public class GenTests
     }
 
     [Test]
+    public void Single_MinMax()
+    {
+        Gen.Single[float.MinValue, float.MaxValue].Single();
+    }
+
+    [Test]
+    public void Single_RangeLarge()
+    {
+        Gen.Single[10e14f, 10e15f].Single();
+    }
+
+    [Test]
     public void Single_Range()
     {
         (from t in Gen.Single.Unit.Select(Gen.Single.Unit)
@@ -338,7 +403,8 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
         Gen.Single.Unit
         .Select(i => (int)(i * buckets))
         .Array[frequency * buckets]
@@ -350,6 +416,18 @@ public class GenTests
     public void Double_Unit_Range()
     {
         Gen.Double.Unit.Sample(f => f is >= 0.0 and <= 0.99999999999999978);
+    }
+
+    [Test]
+    public void Double_MinMax()
+    {
+        Gen.Double[double.MinValue, double.MaxValue].Single();
+    }
+
+    [Test]
+    public void Double_RangeLarge()
+    {
+        Gen.Double[10e14, 10e15].Single();
     }
 
     [Test]
@@ -368,7 +446,8 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
         Gen.Double.Unit
         .Select(i => (int)(i * buckets))
         .Array[frequency * buckets]
@@ -389,6 +468,18 @@ public class GenTests
     public void Decimal_Unit_Range()
     {
         Gen.Decimal.Unit.Sample(i => i is >= 0.0M and <= 0.99999999999999978M);
+    }
+
+    [Test]
+    public void Decimal_MinMax()
+    {
+        Gen.Decimal[decimal.MinValue, decimal.MaxValue].Single();
+    }
+
+    [Test]
+    public void Decimal_RangeLarge()
+    {
+        Gen.Decimal[10e14M, 10e15M].Single();
     }
 
     [Test]
@@ -416,6 +507,12 @@ public class GenTests
     }
 
     [Test]
+    public void Date_MinMax()
+    {
+        Gen.Date[DateTime.MinValue.Date, DateTime.MaxValue.Date].Single();
+    }
+
+    [Test]
     public void Date_Range()
     {
         (from t in Gen.Date.Select(Gen.Date)
@@ -424,6 +521,12 @@ public class GenTests
          from value in Gen.Date[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
+    }
+
+    [Test]
+    public void DateOnly_MinMax()
+    {
+        Gen.DateOnly[DateOnly.MinValue, DateOnly.MaxValue].Single();
     }
 
     [Test]
@@ -438,6 +541,12 @@ public class GenTests
     }
 
     [Test]
+    public void DateTime_MinMax()
+    {
+        Gen.DateTime[DateTime.MinValue, DateTime.MaxValue].Single();
+    }
+
+    [Test]
     public void DateTime_Range()
     {
         (from t in Gen.DateTime.Select(Gen.DateTime)
@@ -446,6 +555,12 @@ public class GenTests
          from value in Gen.DateTime[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
+    }
+
+    [Test]
+    public void TimeOnly_MinMax()
+    {
+        Gen.TimeOnly[TimeOnly.MinValue, TimeOnly.MaxValue].Single();
     }
 
     [Test]
@@ -483,6 +598,12 @@ public class GenTests
     }
 
     [Test]
+    public void Char_MinMax()
+    {
+        Gen.Char[char.MinValue, char.MaxValue].Single();
+    }
+
+    [Test]
     public void Char_Range()
     {
         (from t in Gen.Char.Select(Gen.Char)
@@ -498,7 +619,8 @@ public class GenTests
     {
         const int buckets = 70;
         const int frequency = 10;
-        var expected = Enumerable.Repeat(frequency, buckets).ToArray();
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
         Gen.Char[(char)0, (char)(buckets - 1)]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
