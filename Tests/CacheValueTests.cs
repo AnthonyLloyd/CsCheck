@@ -74,24 +74,23 @@ public class CacheValueTests
     [Test]
     public async Task StampedeFree()
     {
-        var alreadyRun = false;
-        async Task<long> Function(int i)
+        await Gen.Int.SampleAsync(async i =>
         {
-            if (alreadyRun) throw new();
-            alreadyRun = true;
-            await Task.Delay(5);
-            return i;
-        }
-        for (int i = 0; i < 10; i++)
-        {
-            alreadyRun = false;
+            var alreadyRun = false;
+            async Task<long> Function(int i)
+            {
+                if (alreadyRun) throw new();
+                alreadyRun = true;
+                await Task.Delay(1);
+                return i;
+            }
             var cache = new CacheValue<long>();
-            var t1 = cache.GetAsync(Function, 1);
-            var t2 = cache.GetAsync(Function, 2);
+            var t1 = cache.GetAsync(Function, -i);
+            var t2 = cache.GetAsync(Function, i);
             var r1 = await t1;
             var r2 = await t2;
-            await Assert.That(r1).IsEqualTo(r2);
-        }
+            return r1 == r2;
+        });
     }
 
     private async Task<object> SlowFunction(object i)
@@ -109,15 +108,14 @@ public class CacheValueTests
             {
                 var c = new CacheValue<object>();
                 var x = await c.GetAsync(SlowFunction, input);
-                return x is null ? 1 : 0;
+                return x == input ? 1 : 0;
             },
             async () =>
             {
                 var c = new Lazy<Task<object>>(() => SlowFunction(input));
                 var x = await c.Value;
-                return x is null ? 1 : 0;
+                return x == input ? 1 : 0;
             },
-            timeout: 1,
             raiseexception: false,
             writeLine: TUnitX.WriteLine);
     }
@@ -134,12 +132,20 @@ public class CacheValueTests
             async () =>
             {
                 var x = await c.GetOrAdd(input, _ => new()).GetAsync(SlowFunction, input);
-                return x is null ? 1 : 0;
+                x = await c.GetOrAdd(input, _ => new()).GetAsync(SlowFunction, input);
+                x = await c.GetOrAdd(input, _ => new()).GetAsync(SlowFunction, input);
+                x = await c.GetOrAdd(input, _ => new()).GetAsync(SlowFunction, input);
+                x = await c.GetOrAdd(input, _ => new()).GetAsync(SlowFunction, input);
+                return x == input ? 1 : 0;
             },
             async () =>
             {
                 var x = await l.GetOrAdd(input, (input, f) => new Lazy<Task<object>>(() => f(input)), SlowFunction).Value;
-                return x is null ? 1 : 0;
+                x = await l.GetOrAdd(input, (input, f) => new Lazy<Task<object>>(() => f(input)), SlowFunction).Value;
+                x = await l.GetOrAdd(input, (input, f) => new Lazy<Task<object>>(() => f(input)), SlowFunction).Value;
+                x = await l.GetOrAdd(input, (input, f) => new Lazy<Task<object>>(() => f(input)), SlowFunction).Value;
+                x = await l.GetOrAdd(input, (input, f) => new Lazy<Task<object>>(() => f(input)), SlowFunction).Value;
+                return x == input ? 1 : 0;
             },
             repeat: 100,
             raiseexception: false,
