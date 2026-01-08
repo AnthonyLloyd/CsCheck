@@ -180,7 +180,7 @@ public class SlimCollectionsTests()
                     dict[b] = c + 1;
                 }
             },
-            repeat: 1000, sigma: 10, writeLine: TUnitX.WriteLine);
+            sigma: 10, repeat: 1000, writeLine: TUnitX.WriteLine);
     }
 }
 
@@ -199,7 +199,7 @@ public class ListSlim<T> : System.Collections.Generic.IReadOnlyList<T>, System.C
         }
         else
         {
-            entries = items.ToArray();
+            entries = [.. items];
         }
 
         count = entries.Length;

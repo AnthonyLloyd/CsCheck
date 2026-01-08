@@ -92,7 +92,7 @@ public class SieveLruCacheTests
             Gen.Int[1, 5].Operation<SieveLruCache<int, int>, SieveModel<int, int>>(
                 (a, i) => a.GetOrAdd(i, i => i),
                 (m, i) => m.GetOrAdd(i, i => i)),
-            equal: (a, m) => Check.Equal(a.Keys.ToHashSet(), m.Keys.ToHashSet()),
+            equal: (a, m) => Check.Equal(a.Keys.ToHashSet(), [.. m.Keys]),
             printActual: a => Check.Print(a.Keys),
             printModel: m => Check.Print(m.Keys)
         );
@@ -153,8 +153,7 @@ public class SieveModel<K, V>(int capacity) : ICache<K, V> where K : notnull
     private void AddToHead(Node node)
     {
         node.Next = head;
-        if (head is not null)
-            head.Prev = node;
+        head?.Prev = node;
         head = node;
         tail ??= node;
     }
