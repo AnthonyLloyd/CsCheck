@@ -1,4 +1,4 @@
-﻿// Copyright 2025 Anthony Lloyd
+﻿// Copyright 2026 Anthony Lloyd
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -2101,8 +2101,7 @@ public sealed class GenFloat : Gen<float>
                 while (Math.Ceiling(start * lower) <= Math.Floor(finish * lower) && lower > 1)
                     lower--;
                 var rational = Gen.Int[lower + 1, denominator]
-                    .SelectMany(den => GenInt(start * den, finish * den)
-                    .Select(num => (float)num / den))
+                    .SelectMany(den => GenInt(start * den, finish * den).Select(num => (float)num / den))
                     .Where(r => r >= start && r <= finish);
                 myGens[1] = (1, rational);
             }
@@ -2233,8 +2232,7 @@ public sealed class GenDouble : Gen<double>
                 while (Math.Ceiling(start * lower) <= Math.Floor(finish * lower) && lower > 1)
                     lower--;
                 var rational = Gen.Int[lower + 1, denominator]
-                    .SelectMany(den => GenInt(start * den, finish * den)
-                    .Select(num => (double)num / den))
+                    .SelectMany(den => GenInt(start * den, finish * den).Select(num => (double)num / den))
                     .Where(r => r >= start && r <= finish);
                 myGens[1] = (1, rational);
             }
@@ -2361,8 +2359,7 @@ public sealed class GenDecimal : Gen<decimal>
                 while (Math.Ceiling((double)start * lower) <= Math.Floor((double)finish * lower) && lower > 1)
                     lower--;
                 var rational = Gen.Int[lower + 1, denominator]
-                    .SelectMany(den => GenInt((double)start * den, (double)finish * den)
-                    .Select(num => (decimal)num / den))
+                    .SelectMany(den => GenInt((double)start * den, (double)finish * den).Select(num => (decimal)num / den))
                     .Where(r => r >= start && r <= finish);
                 myGens[1] = (1, rational);
             }
