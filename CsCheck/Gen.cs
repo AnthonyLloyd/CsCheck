@@ -2093,7 +2093,7 @@ public sealed class GenFloat : Gen<float>
             static Gen<int> GenInt(float start, float finish)
                 => Gen.Int[(int)Math.Clamp(Math.Ceiling(start), int.MinValue, int.MaxValue), (int)Math.Clamp(Math.Floor(finish), int.MinValue, int.MaxValue)];
             var myGens = new (int, IGen<float>)[4];
-            if (start <= int.MaxValue && finish >= int.MinValue && (int)Math.Ceiling(start) <= (int)Math.Floor(start))
+            if (start <= int.MaxValue && finish >= int.MinValue && (int)Math.Ceiling(start) <= (int)Math.Floor(finish))
                 myGens[0] = (1, GenInt(start, finish).Select(i => (float)i));
             if (start * denominator <= int.MaxValue && finish * denominator >= int.MinValue && (int)Math.Ceiling(start * denominator) <= (int)Math.Floor(finish * denominator))
             {
@@ -2225,7 +2225,7 @@ public sealed class GenDouble : Gen<double>
             static Gen<int> GenInt(double start, double finish)
                 => Gen.Int[(int)Math.Clamp(Math.Ceiling(start), int.MinValue, int.MaxValue), (int)Math.Clamp(Math.Floor(finish), int.MinValue, int.MaxValue)];
             var myGens = new (int, IGen<double>)[4];
-            if (start <= int.MaxValue && finish >= int.MinValue && (int)Math.Ceiling(start) <= (int)Math.Floor(start))
+            if (start <= int.MaxValue && finish >= int.MinValue && (int)Math.Ceiling(start) <= (int)Math.Floor(finish))
                 myGens[0] = (1, GenInt(start, finish).Select(i => (double)i));
             if (start * denominator <= int.MaxValue && finish * denominator >= int.MinValue && (int)Math.Ceiling(start * denominator) <= (int)Math.Floor(finish * denominator))
             {
@@ -2234,7 +2234,8 @@ public sealed class GenDouble : Gen<double>
                     lower--;
                 var rational = Gen.Int[lower + 1, denominator]
                     .SelectMany(den => GenInt(start * den, finish * den)
-                    .Select(num => (double)num / den));
+                    .Select(num => (double)num / den))
+                    .Where(r => r >= start && r <= finish);
                 myGens[1] = (1, rational);
             }
             Gen<double>? exponential = null;
@@ -2361,7 +2362,8 @@ public sealed class GenDecimal : Gen<decimal>
                     lower--;
                 var rational = Gen.Int[lower + 1, denominator]
                     .SelectMany(den => GenInt((double)start * den, (double)finish * den)
-                    .Select(num => (decimal)num / den));
+                    .Select(num => (decimal)num / den))
+                    .Where(r => r >= start && r <= finish);
                 myGens[1] = (1, rational);
             }
             Gen<decimal>? exponential = null;
