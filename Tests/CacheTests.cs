@@ -5,10 +5,29 @@ using System.Collections.Concurrent;
 
 public class CacheTests
 {
-    private async Task<object> SlowFunction(int i)
+    [Test]
+    public void GetOrAdd_ModelBased()
     {
-        await Task.Delay(1);
-        return Random.Shared;
+        static void CacheTryAdd(Cache<int, byte> cache, int key, byte value)
+            => cache.GetOrAdd(key, _ => Task.FromResult(value)).GetAwaiter().GetResult();
+
+        Gen.Select(Gen.Int, Gen.Byte).Array
+        .Select(kvs =>
+        {
+            var cache = new Cache<int, byte>();
+            var dictionary = new Dictionary<int, byte>();
+            foreach (var (key, value) in kvs)
+            {
+                CacheTryAdd(cache, key, value);
+                dictionary.TryAdd(key, value);
+            }
+            return (cache, dictionary);
+        })
+        .SampleModelBased(
+            Gen.Select(Gen.Int, Gen.Byte).Operation<Cache<int, byte>, Dictionary<int, byte>>(
+                (cache, kv) => CacheTryAdd(cache, kv.Item1, kv.Item2),
+                (dictionary, kv) => dictionary.TryAdd(kv.Item1, kv.Item2))
+        );
     }
 
     [Test]
@@ -35,6 +54,12 @@ public class CacheTests
                     return false;
             return true;
         });
+    }
+
+    private static async Task<object> SlowFunction(int i)
+    {
+        await Task.Delay(1);
+        return Random.Shared;
     }
 
     [Test]

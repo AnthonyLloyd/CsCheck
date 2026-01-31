@@ -31,21 +31,21 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             var hashCode = key.GetHashCode();
             lock (_entriesLock)
             {
-                var ent = _entries;
-                var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
-                while (i >= 0 && !key.Equals(ent[i].Key)) i = ent[i].Next;
+                var entries = _entries;
+                var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+                while (i >= 0 && !key.Equals(entries[i].Key)) i = entries[i].Next;
                 if (i >= 0)
                 {
-                    ent[i].Value = value;
+                    entries[i].Value = value;
                     return;
                 }
                 i = _count;
-                if (ent.Length == i) ent = Resize();
-                var bucketIndex = hashCode & (ent.Length - 1);
-                ent[i].Next = ent[bucketIndex].Bucket - 1;
-                ent[i].Key = key;
-                ent[i].Value = value;
-                ent[bucketIndex].Bucket = ++_count;
+                if (entries.Length == i) entries = Resize();
+                var bucketIndex = hashCode & (entries.Length - 1);
+                entries[i].Next = entries[bucketIndex].Bucket - 1;
+                entries[i].Key = key;
+                entries[i].Value = value;
+                entries[bucketIndex].Bucket = ++_count;
             }
         }
     }
@@ -68,25 +68,25 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
 
     public ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
     {
-        var hashCode = key.GetHashCode();
         var count = _count;
-        var ent = _entries;
-        var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
+        var entries = _entries;
+        var hashCode = key.GetHashCode();
+        var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
         while (i >= 0)
         {
-            if (key.Equals(ent[i].Key)) return new(ent[i].Value);
-            i = ent[i].Next;
+            if (key.Equals(entries[i].Key)) return new(entries[i].Value);
+            i = entries[i].Next;
         }
         lock (_pendingLock)
         {
             if (_count != count)
             {
-                ent = _entries;
-                i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
+                entries = _entries;
+                i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
                 while (i >= 0)
                 {
-                    if (key.Equals(ent[i].Key)) return new(ent[i].Value);
-                    i = ent[i].Next;
+                    if (key.Equals(entries[i].Key)) return new(entries[i].Value);
+                    i = entries[i].Next;
                 }
             }
             return new(GetOrAddPending(key, factory).Value);
@@ -129,9 +129,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
         {
             var pending = _pending;
             if (ReferenceEquals(pending, remove))
-            {
-                _pending = null;
-            }
+                _pending = remove.Next;
             else
             {
                 while (!ReferenceEquals(pending!.Next, remove))
