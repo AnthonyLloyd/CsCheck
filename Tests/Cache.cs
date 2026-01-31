@@ -5,7 +5,6 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 
 // Remove where a predicate is true for expiry.
-// Kick off a pending for refresh.
 
 public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
 {
@@ -80,33 +79,39 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             if (key.Equals(ent[i].Key)) return new(ent[i].Value);
             i = ent[i].Next;
         }
-        return AddPending(key, factory, hashCode, count);
-    }
-
-    private ValueTask<V> AddPending(K key, Func<K, Task<V>> factory, int hashCode, int count)
-    {
         lock (_pendingLock)
         {
             if (_count != count)
             {
-                var ent = _entries;
-                var i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
+                ent = _entries;
+                i = ent[hashCode & (ent.Length - 1)].Bucket - 1;
                 while (i >= 0)
                 {
                     if (key.Equals(ent[i].Key)) return new(ent[i].Value);
                     i = ent[i].Next;
                 }
             }
-            var pending = _pending;
-            if (pending is null)
-                return new((_pending = new(key)).Start(factory, this));
-            while (true)
-            {
-                if (key.Equals(pending.Key)) return new(pending.Value);
-                if (pending.Next is null)
-                    return new((pending.Next = new(key)).Start(factory, this));
-                pending = pending.Next;
-            }
+            return new(GetOrAddPending(key, factory).Value);
+        }
+    }
+
+    public Task<V> Update(K key, Func<K, Task<V>> factory)
+    {
+        lock (_pendingLock)
+            return GetOrAddPending(key, factory).Value;
+    }
+
+    private Pending GetOrAddPending(K key, Func<K, Task<V>> factory)
+    {
+        var pending = _pending;
+        if (pending is null)
+            return _pending = new Pending(this, key, factory);
+        while (true)
+        {
+            if (key.Equals(pending.Key)) return pending;
+            if (pending.Next is null)
+                return pending.Next = new Pending(this, key, factory);
+            pending = pending.Next;
         }
     }
 
@@ -130,30 +135,27 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
 
     private sealed class Pending
     {
-        public readonly K Key;
+        internal K Key;
         internal Task<V> Value;
-        public Pending? Next;
+        internal Pending? Next;
 
-        internal Pending(K key)
+        internal Pending(Cache<K, V> cache, K key, Func<K, Task<V>> factory)
         {
             Key = key;
-            Value = null!;
-        }
-
-        internal Task<V> Start(Func<K, Task<V>> factory, Cache<K, V> cache) =>
             Value = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            var value = await factory(Key);
-                            cache[Key] = value;
-                            return value;
-                        }
-                        finally
-                        {
-                            cache.RemovePending(this);
-                        }
-                    });
+            {
+                try
+                {
+                    var value = await factory(key);
+                    cache[key] = value;
+                    return value;
+                }
+                finally
+                {
+                    cache.RemovePending(this);
+                }
+            });
+        }
     }
 
     public IEnumerator<KeyValuePair<K, V>> GetEnumerator()
