@@ -12,7 +12,7 @@ public class CacheTests
     }
 
     [Test]
-    public async Task StampedeFree()
+    public async Task GetOrAdd_StampedeFree()
     {
         await Gen.Int.HashSet[1, 10].SampleAsync(async ks =>
         {
@@ -38,7 +38,7 @@ public class CacheTests
     }
 
     [Test]
-    public async Task Add_Faster()
+    public async Task GetOrAdd_Add_Faster()
     {
         const int input = 1;
         await Gen.Const(() => (new Cache<int, object>(), new ConcurrentDictionary<int, Lazy<Task<object>>>()))
@@ -58,7 +58,7 @@ public class CacheTests
     }
 
     [Test]
-    public async Task Get_Faster()
+    public async Task GetOrAdd_Get_Faster()
     {
         const int input = 1;
         var c = new Cache<int, object>();
@@ -94,33 +94,29 @@ public class CacheTests
     {
         var cache = new Cache<int, int>();
         var callCount = 0;
-        var key = 1;
+        const int key = 1;
 
-        async Task<int> Factory(int k)
+        async Task<int> Factory(int _)
         {
             await Task.Delay(1);
             return Interlocked.Increment(ref callCount);
         }
 
         // Initial call should invoke factory
-        var value1 = await cache.GetOrAdd(key, Factory);
-        if (value1 != 1 || callCount != 1)
-            throw new Exception("Initial GetOrAdd failed");
+        await Assert.That(await cache.GetOrAdd(key, Factory)).IsEqualTo(1);
+        await Assert.That(callCount).IsEqualTo(1);
 
         // GetOrAdd should return cached value without invoking factory
-        var value2 = await cache.GetOrAdd(key, Factory);
-        if (value2 != 1 || callCount != 1)
-            throw new Exception("GetOrAdd should return cached value");
+        await Assert.That(await cache.GetOrAdd(key, Factory)).IsEqualTo(1);
+        await Assert.That(callCount).IsEqualTo(1);
 
         // Update should force a refresh and invoke factory again
-        var value3 = await cache.Update(key, Factory);
-        if (value3 != 2 || callCount != 2)
-            throw new Exception("Update should force refresh");
+        await Assert.That(await cache.Update(key, Factory)).IsEqualTo(2);
+        await Assert.That(callCount).IsEqualTo(2);
 
         // GetOrAdd should now return the updated value
-        var value4 = await cache.GetOrAdd(key, Factory);
-        if (value4 != 2 || callCount != 2)
-            throw new Exception("GetOrAdd should return updated value");
+        await Assert.That(await cache.GetOrAdd(key, Factory)).IsEqualTo(2);
+        await Assert.That(callCount).IsEqualTo(2);
     }
 
     [Test]
@@ -128,41 +124,28 @@ public class CacheTests
     {
         await Gen.Int.HashSet[1, 10].SampleAsync(async ks =>
         {
+            var alreadyRun = 0;
             var callCount = 0;
-            var testKey = ks.First();
+            var ks0 = ks.First();
             async Task<long> Factory(int i)
             {
                 Interlocked.Increment(ref callCount);
-                await Task.Delay(10); // Longer delay to ensure concurrent calls overlap
+                if (Interlocked.CompareExchange(ref alreadyRun, 1, 0) != 0) throw new("Stampede!");
+                await Task.Delay(1);
+                Interlocked.Decrement(ref alreadyRun);
                 return i;
             }
             var cache = new Cache<int, long>();
-            
-            // Pre-populate cache
             foreach (var k in ks)
                 await cache.GetOrAdd(k, Factory);
-            
-            var initialCallCount = callCount;
-            
-            // Multiple concurrent Update calls should result in fewer factory calls than the number of Update calls
-            // due to stampede protection (but not necessarily just one call due to timing of pending removal)
             var tasks = new Task<long>[10];
             for (int i = 0; i < tasks.Length; i++)
-                tasks[i] = Task.Run(async () => await cache.Update(testKey, Factory));
-            
+                tasks[i] = Task.Run(async () => await cache.Update(ks0, Factory));
             for (int i = 0; i < tasks.Length; i++)
-                if (await tasks[i] != testKey)
+                if (await tasks[i] != ks0)
                     return false;
-            
-            // Should have fewer calls than the number of concurrent Update calls
-            // (stampede protection reduces duplicates)
-            var additionalCalls = callCount - initialCallCount;
-            if (additionalCalls >= 10)
-                throw new Exception($"No stampede protection: got {additionalCalls} calls for 10 concurrent Updates");
-            
-            if (additionalCalls < 1)
-                throw new Exception($"Update didn't trigger any factory calls");
-            
+            if (callCount == ks.Count)
+                throw new("Update didn't trigger any factory calls");
             return true;
         });
     }
