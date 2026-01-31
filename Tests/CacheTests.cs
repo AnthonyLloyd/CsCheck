@@ -129,8 +129,8 @@ public class CacheTests
         await Gen.Int.HashSet[1, 10].SampleAsync(async ks =>
         {
             var callCount = 0;
-            var ks0 = ks.First();
-            async Task<long> Function(int i)
+            var testKey = ks.First();
+            async Task<long> Factory(int i)
             {
                 Interlocked.Increment(ref callCount);
                 await Task.Delay(10); // Longer delay to ensure concurrent calls overlap
@@ -140,7 +140,7 @@ public class CacheTests
             
             // Pre-populate cache
             foreach (var k in ks)
-                await cache.GetOrAdd(k, Function);
+                await cache.GetOrAdd(k, Factory);
             
             var initialCallCount = callCount;
             
@@ -148,10 +148,10 @@ public class CacheTests
             // due to stampede protection (but not necessarily just one call due to timing of pending removal)
             var tasks = new Task<long>[10];
             for (int i = 0; i < tasks.Length; i++)
-                tasks[i] = Task.Run(async () => await cache.Update(ks0, Function));
+                tasks[i] = Task.Run(async () => await cache.Update(testKey, Factory));
             
             for (int i = 0; i < tasks.Length; i++)
-                if (await tasks[i] != ks0)
+                if (await tasks[i] != testKey)
                     return false;
             
             // Should have fewer calls than the number of concurrent Update calls
