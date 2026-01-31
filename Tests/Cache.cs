@@ -4,8 +4,6 @@ using System.Collections;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-// Remove where a predicate is true for expiry.
-
 public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
 {
     private struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
@@ -25,22 +23,6 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     }
 
     public int Count => _count;
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private Entry[] Resize()
-    {
-        var oldEntries = _entries;
-        var newEntries = new Entry[oldEntries.Length * 2];
-        for (int i = 0; i < oldEntries.Length;)
-        {
-            var bucketIndex = oldEntries[i].Key.GetHashCode() & (newEntries.Length - 1);
-            newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
-            newEntries[i].Key = oldEntries[i].Key;
-            newEntries[i].Value = oldEntries[i].Value;
-            newEntries[bucketIndex].Bucket = ++i;
-        }
-        return _entries = newEntries;
-    }
 
     public V this[K key]
     {
@@ -66,6 +48,22 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
                 ent[bucketIndex].Bucket = ++_count;
             }
         }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private Entry[] Resize()
+    {
+        var oldEntries = _entries;
+        var newEntries = new Entry[oldEntries.Length * 2];
+        for (int i = 0; i < oldEntries.Length;)
+        {
+            var bucketIndex = oldEntries[i].Key.GetHashCode() & (newEntries.Length - 1);
+            newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
+            newEntries[i].Key = oldEntries[i].Key;
+            newEntries[i].Value = oldEntries[i].Value;
+            newEntries[bucketIndex].Bucket = ++i;
+        }
+        return _entries = newEntries;
     }
 
     public ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
@@ -99,6 +97,16 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     {
         lock (_pendingLock)
             return GetOrAddPending(key, factory).Value;
+    }
+
+    public async ValueTask WaitPending()
+    {
+        var pending = _pending;
+        while (pending is not null)
+        {
+            try { _ = await pending.Value; } catch { }
+            pending = pending.Next;
+        }
     }
 
     private Pending GetOrAddPending(K key, Func<K, Task<V>> factory)
