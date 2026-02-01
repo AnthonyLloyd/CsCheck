@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
 {
     private struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
+    private sealed class Pending { internal required K Key; internal required Task<V> Value; internal Pending? Next; }
     private int _count;
     private Entry[] _entries;
     private Pending? _pending;
@@ -17,33 +18,30 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     public Cache(IEnumerable<KeyValuePair<K, V>> items)
     {
         _entries = new Entry[2];
-        foreach (var (k, v) in items) this[k] = v;
+        foreach (var (k, v) in items) AddOrUpdate(k, v);
     }
 
     public int Count => _count;
 
-    private V this[K key]
+    private void AddOrUpdate(K key, V value)
     {
-        set
+        var hashCode = key.GetHashCode();
+        var entries = _entries;
+        var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+        while (i >= 0 && !key.Equals(entries[i].Key)) i = entries[i].Next;
+        if (i >= 0)
         {
-            var hashCode = key.GetHashCode();
-            var entries = _entries;
-            var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
-            while (i >= 0 && !key.Equals(entries[i].Key)) i = entries[i].Next;
-            if (i >= 0)
-            {
-                entries[i].Value = value;
-                return;
-            }
-            i = _count;
-            if (entries.Length == i) entries = Resize();
-            var bucketIndex = hashCode & (entries.Length - 1);
-            entries[i].Next = entries[bucketIndex].Bucket - 1;
-            entries[i].Key = key;
             entries[i].Value = value;
-            entries[bucketIndex].Bucket = ++_count;
-            _entries = entries;
+            return;
         }
+        i = _count;
+        if (entries.Length == i) entries = Resize();
+        var bucketIndex = hashCode & (entries.Length - 1);
+        entries[i].Next = entries[bucketIndex].Bucket - 1;
+        entries[i].Key = key;
+        entries[i].Value = value;
+        entries[bucketIndex].Bucket = ++_count;
+        _entries = entries;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -109,14 +107,43 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     {
         var pending = _pending;
         if (pending is null)
-            return _pending = new Pending(this, key, factory);
+            return _pending = CreatePending(key, factory);
         while (true)
         {
             if (key.Equals(pending.Key)) return pending;
             if (pending.Next is null)
-                return pending.Next = new Pending(this, key, factory);
+                return pending.Next = CreatePending(key, factory);
             pending = pending.Next;
         }
+    }
+
+    private Pending CreatePending(K key, Func<K, Task<V>> factory)
+    {
+        Pending pending = null!;
+        pending = new Pending
+        {
+            Key = key,
+            Value = Task.Run(async () =>
+            {
+                try
+                {
+                    var value = await factory(key);
+                    lock (_entries)
+                    {
+                        RemovePending(pending);
+                        AddOrUpdate(key, value);
+                    }
+                    return value;
+                }
+                catch
+                {
+                    lock (_entries)
+                        RemovePending(pending);
+                    throw;
+                }
+            }),
+        };
+        return pending;
     }
 
     private void RemovePending(Pending remove)
@@ -129,37 +156,6 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             while (!ReferenceEquals(pending!.Next, remove))
                 pending = pending.Next;
             pending.Next = remove.Next;
-        }
-    }
-
-    private sealed class Pending
-    {
-        internal readonly K Key;
-        internal readonly Task<V> Value;
-        internal Pending? Next;
-
-        internal Pending(Cache<K, V> cache, K key, Func<K, Task<V>> factory)
-        {
-            Key = key;
-            Value = Task.Run(async () =>
-            {
-                try
-                {
-                    var value = await factory(key);
-                    lock (cache._entries)
-                    {
-                        cache.RemovePending(this);
-                        cache[key] = value;
-                    }
-                    return value;
-                }
-                catch
-                {
-                    lock (cache._entries)
-                        cache.RemovePending(this);
-                    throw;
-                }
-            });
         }
     }
 

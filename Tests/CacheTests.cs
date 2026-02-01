@@ -6,7 +6,7 @@ using System.Collections.Concurrent;
 public class CacheTests
 {
     [Test]
-    public void GetOrAdd_ModelBased()
+    public void Cache_GetOrAdd_ModelBased()
     {
         static void CacheTryAdd(Cache<int, byte> cache, int key, byte value)
             => cache.GetOrAdd(key, _ => Task.FromResult(value)).AsTask().GetAwaiter().GetResult();
@@ -31,7 +31,7 @@ public class CacheTests
     }
 
     [Test]
-    public async Task GetOrAdd_StampedeFree()
+    public async Task Cache_GetOrAdd_StampedeFree()
     {
         await Gen.Int.HashSet[1, 10].SampleAsync(async ks =>
         {
@@ -63,7 +63,7 @@ public class CacheTests
     }
 
     [Test]
-    public async Task GetOrAdd_Add_Faster()
+    public async Task Cache_GetOrAdd_Add_Faster()
     {
         const int input = 1;
         await Gen.Const(() => (new Cache<int, object>(), new ConcurrentDictionary<int, Lazy<Task<object>>>()))
@@ -83,7 +83,7 @@ public class CacheTests
     }
 
     [Test]
-    public async Task GetOrAdd_Get_Faster()
+    public async Task Cache_GetOrAdd_Get_Faster()
     {
         const int input = 1;
         var c = new Cache<int, object>();
@@ -115,7 +115,7 @@ public class CacheTests
     }
 
     [Test]
-    public async Task Update_ForcesRefresh()
+    public async Task Cache_Update_ForcesRefresh()
     {
         var cache = new Cache<int, int>();
         var callCount = 0;
@@ -145,7 +145,7 @@ public class CacheTests
     }
 
     [Test]
-    public async Task Update_StampedeFree()
+    public async Task Cache_Update_StampedeFree()
     {
         await Gen.Int.HashSet[1, 10].SampleAsync(async ks =>
         {
