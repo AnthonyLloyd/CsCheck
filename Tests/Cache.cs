@@ -10,7 +10,6 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     private int _count;
     private Entry[] _entries;
     private Pending? _pending;
-    private readonly Lock _pendingLock = new();
 
     public Cache() => _entries = new Entry[2];
     public Cache(int capacity) => _entries = new Entry[capacity < 2 ? 2 : BitOperations.RoundUpToPowerOf2((uint)capacity)];
@@ -23,30 +22,27 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
 
     public int Count => _count;
 
-    public V this[K key]
+    private V this[K key]
     {
         set
         {
             var hashCode = key.GetHashCode();
-            lock (_entries)
+            var entries = _entries;
+            var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+            while (i >= 0 && !key.Equals(entries[i].Key)) i = entries[i].Next;
+            if (i >= 0)
             {
-                var entries = _entries;
-                var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
-                while (i >= 0 && !key.Equals(entries[i].Key)) i = entries[i].Next;
-                if (i >= 0)
-                {
-                    entries[i].Value = value;
-                    return;
-                }
-                i = _count;
-                if (entries.Length == i) entries = Resize();
-                var bucketIndex = hashCode & (entries.Length - 1);
-                entries[i].Next = entries[bucketIndex].Bucket - 1;
-                entries[i].Key = key;
                 entries[i].Value = value;
-                entries[bucketIndex].Bucket = ++_count;
-                _entries = entries;
+                return;
             }
+            i = _count;
+            if (entries.Length == i) entries = Resize();
+            var bucketIndex = hashCode & (entries.Length - 1);
+            entries[i].Next = entries[bucketIndex].Bucket - 1;
+            entries[i].Key = key;
+            entries[i].Value = value;
+            entries[bucketIndex].Bucket = ++_count;
+            _entries = entries;
         }
     }
 
@@ -77,7 +73,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             if (key.Equals(entries[i].Key)) return new(entries[i].Value);
             i = entries[i].Next;
         }
-        lock (_pendingLock)
+        lock (_entries)
         {
             if (_count != count)
             {
@@ -95,7 +91,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
 
     public Task<V> Update(K key, Func<K, Task<V>> factory)
     {
-        lock (_pendingLock)
+        lock (_entries)
             return GetOrAddPending(key, factory).Value;
     }
 
@@ -125,17 +121,14 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
 
     private void RemovePending(Pending remove)
     {
-        lock (_pendingLock)
+        var pending = _pending;
+        if (ReferenceEquals(pending, remove))
+            _pending = remove.Next;
+        else
         {
-            var pending = _pending;
-            if (ReferenceEquals(pending, remove))
-                _pending = remove.Next;
-            else
-            {
-                while (!ReferenceEquals(pending!.Next, remove))
-                    pending = pending.Next;
-                pending.Next = remove.Next;
-            }
+            while (!ReferenceEquals(pending!.Next, remove))
+                pending = pending.Next;
+            pending.Next = remove.Next;
         }
     }
 
@@ -152,11 +145,19 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             {
                 try
                 {
-                    return cache[key] = await factory(key);
+                    var value = await factory(key);
+                    lock (cache._entries)
+                    {
+                        cache.RemovePending(this);
+                        cache[key] = value;
+                    }
+                    return value;
                 }
-                finally
+                catch
                 {
-                    cache.RemovePending(this);
+                    lock (cache._entries)
+                        cache.RemovePending(this);
+                    throw;
                 }
             });
         }
