@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
 {
-    private struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
+    private struct Entry { internal int Bucket; internal int Next; internal uint HashCode; internal K Key; internal V Value; }
     private sealed class Pending { internal required K Key; internal required Task<V> Value; internal Pending? Next; }
     private int _count;
     private Entry[] _entries;
@@ -25,9 +25,10 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
 
     private void AddOrUpdate(K key, V value)
     {
-        var hashCode = key.GetHashCode();
+        var hashCode = (uint)key.GetHashCode();
         var entries = _entries;
-        var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+        var mask = entries.Length - 1;
+        var i = entries[(int)(hashCode & mask)].Bucket - 1;
         while (i >= 0 && !key.Equals(entries[i].Key)) i = entries[i].Next;
         if (i >= 0)
         {
@@ -36,7 +37,8 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
         }
         i = _count;
         if (entries.Length == i) entries = Resize();
-        var bucketIndex = hashCode & (entries.Length - 1);
+        var bucketIndex = (int)(hashCode & (entries.Length - 1));
+        entries[i].HashCode = hashCode;
         entries[i].Next = entries[bucketIndex].Bucket - 1;
         entries[i].Key = key;
         entries[i].Value = value;
@@ -49,9 +51,12 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     {
         var oldEntries = _entries;
         var newEntries = new Entry[oldEntries.Length * 2];
+        var newMask = newEntries.Length - 1;
         for (int i = 0; i < oldEntries.Length;)
         {
-            var bucketIndex = oldEntries[i].Key.GetHashCode() & (newEntries.Length - 1);
+            var hashCode = oldEntries[i].HashCode;
+            var bucketIndex = (int)(hashCode & newMask);
+            newEntries[i].HashCode = hashCode;
             newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
             newEntries[i].Key = oldEntries[i].Key;
             newEntries[i].Value = oldEntries[i].Value;
@@ -60,12 +65,14 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
         return newEntries;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
     {
         var count = _count;
         var entries = _entries;
-        var hashCode = key.GetHashCode();
-        var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+        var hashCode = (uint)key.GetHashCode();
+        var mask = entries.Length - 1;
+        var i = entries[(int)(hashCode & mask)].Bucket - 1;
         while (i >= 0)
         {
             if (key.Equals(entries[i].Key)) return new(entries[i].Value);
@@ -76,7 +83,8 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             if (_count != count)
             {
                 entries = _entries;
-                i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+                mask = entries.Length - 1;
+                i = entries[(int)(hashCode & mask)].Bucket - 1;
                 while (i >= 0)
                 {
                     if (key.Equals(entries[i].Key)) return new(entries[i].Value);
