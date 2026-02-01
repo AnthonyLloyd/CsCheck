@@ -7,11 +7,10 @@ using System.Runtime.CompilerServices;
 public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
 {
     private struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
+    private sealed class Pending { internal required K Key; internal required Task<V> Value; internal Pending? Next; }
     private int _count;
     private Entry[] _entries;
     private Pending? _pending;
-    private readonly Lock _entriesLock = new();
-    private readonly Lock _pendingLock = new();
 
     public Cache() => _entries = new Entry[2];
     public Cache(int capacity) => _entries = new Entry[capacity < 2 ? 2 : BitOperations.RoundUpToPowerOf2((uint)capacity)];
@@ -19,35 +18,30 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     public Cache(IEnumerable<KeyValuePair<K, V>> items)
     {
         _entries = new Entry[2];
-        foreach (var (k, v) in items) this[k] = v;
+        foreach (var (k, v) in items) AddOrUpdate(k, v);
     }
 
     public int Count => _count;
 
-    public V this[K key]
+    private void AddOrUpdate(K key, V value)
     {
-        set
+        var hashCode = key.GetHashCode();
+        var entries = _entries;
+        var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+        while (i >= 0 && !key.Equals(entries[i].Key)) i = entries[i].Next;
+        if (i >= 0)
         {
-            var hashCode = key.GetHashCode();
-            lock (_entriesLock)
-            {
-                var entries = _entries;
-                var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
-                while (i >= 0 && !key.Equals(entries[i].Key)) i = entries[i].Next;
-                if (i >= 0)
-                {
-                    entries[i].Value = value;
-                    return;
-                }
-                i = _count;
-                if (entries.Length == i) entries = Resize();
-                var bucketIndex = hashCode & (entries.Length - 1);
-                entries[i].Next = entries[bucketIndex].Bucket - 1;
-                entries[i].Key = key;
-                entries[i].Value = value;
-                entries[bucketIndex].Bucket = ++_count;
-            }
+            entries[i].Value = value;
+            return;
         }
+        i = _count;
+        if (entries.Length == i) entries = Resize();
+        var bucketIndex = hashCode & (entries.Length - 1);
+        entries[i].Next = entries[bucketIndex].Bucket - 1;
+        entries[i].Key = key;
+        entries[i].Value = value;
+        entries[bucketIndex].Bucket = ++_count;
+        _entries = entries;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -63,7 +57,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             newEntries[i].Value = oldEntries[i].Value;
             newEntries[bucketIndex].Bucket = ++i;
         }
-        return _entries = newEntries;
+        return newEntries;
     }
 
     public ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
@@ -77,7 +71,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             if (key.Equals(entries[i].Key)) return new(entries[i].Value);
             i = entries[i].Next;
         }
-        lock (_pendingLock)
+        lock (_entries)
         {
             if (_count != count)
             {
@@ -95,7 +89,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
 
     public Task<V> Update(K key, Func<K, Task<V>> factory)
     {
-        lock (_pendingLock)
+        lock (_entries)
             return GetOrAddPending(key, factory).Value;
     }
 
@@ -113,54 +107,55 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     {
         var pending = _pending;
         if (pending is null)
-            return _pending = new Pending(this, key, factory);
+            return _pending = CreatePending(key, factory);
         while (true)
         {
             if (key.Equals(pending.Key)) return pending;
             if (pending.Next is null)
-                return pending.Next = new Pending(this, key, factory);
+                return pending.Next = CreatePending(key, factory);
             pending = pending.Next;
         }
     }
 
-    private void RemovePending(Pending remove)
+    private Pending CreatePending(K key, Func<K, Task<V>> factory)
     {
-        lock (_pendingLock)
+        Pending pending = null!;
+        pending = new Pending
         {
-            var pending = _pending;
-            if (ReferenceEquals(pending, remove))
-                _pending = remove.Next;
-            else
-            {
-                while (!ReferenceEquals(pending!.Next, remove))
-                    pending = pending.Next;
-                pending.Next = remove.Next;
-            }
-        }
-    }
-
-    private sealed class Pending
-    {
-        internal readonly K Key;
-        internal readonly Task<V> Value;
-        internal Pending? Next;
-
-        internal Pending(Cache<K, V> cache, K key, Func<K, Task<V>> factory)
-        {
-            Key = key;
+            Key = key,
             Value = Task.Run(async () =>
             {
                 try
                 {
                     var value = await factory(key);
-                    cache[key] = value;
+                    lock (_entries)
+                    {
+                        RemovePending(pending);
+                        AddOrUpdate(key, value);
+                    }
                     return value;
                 }
-                finally
+                catch
                 {
-                    cache.RemovePending(this);
+                    lock (_entries)
+                        RemovePending(pending);
+                    throw;
                 }
-            });
+            }),
+        };
+        return pending;
+    }
+
+    private void RemovePending(Pending remove)
+    {
+        var pending = _pending;
+        if (ReferenceEquals(pending, remove))
+            _pending = remove.Next;
+        else
+        {
+            while (!ReferenceEquals(pending!.Next, remove))
+                pending = pending.Next;
+            pending.Next = remove.Next;
         }
     }
 
