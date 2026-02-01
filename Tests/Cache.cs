@@ -53,6 +53,8 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     [MethodImpl(MethodImplOptions.NoInlining)]
     private Entry[] Resize()
     {
+        // Resize is only called when _count == oldEntries.Length (array is full)
+        // so all entries from [0, oldEntries.Length) have valid HashCode values
         var oldEntries = _entries;
         var newEntries = new Entry[oldEntries.Length * 2];
         var newMask = newEntries.Length - 1;
