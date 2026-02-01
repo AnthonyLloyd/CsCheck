@@ -9,7 +9,7 @@ public class CacheTests
     public void GetOrAdd_ModelBased()
     {
         static void CacheTryAdd(Cache<int, byte> cache, int key, byte value)
-            => cache.GetOrAdd(key, _ => Task.FromResult(value)).GetAwaiter().GetResult();
+            => cache.GetOrAdd(key, _ => Task.FromResult(value)).AsTask().GetAwaiter().GetResult();
 
         Gen.Select(Gen.Int, Gen.Byte).Array
         .Select(kvs =>

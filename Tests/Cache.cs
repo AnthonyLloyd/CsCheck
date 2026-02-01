@@ -10,7 +10,6 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     private int _count;
     private Entry[] _entries;
     private Pending? _pending;
-    private readonly Lock _entriesLock = new();
     private readonly Lock _pendingLock = new();
 
     public Cache() => _entries = new Entry[2];
@@ -29,7 +28,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
         set
         {
             var hashCode = key.GetHashCode();
-            lock (_entriesLock)
+            lock (_entries)
             {
                 var entries = _entries;
                 var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
@@ -46,6 +45,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
                 entries[i].Key = key;
                 entries[i].Value = value;
                 entries[bucketIndex].Bucket = ++_count;
+                _entries = entries;
             }
         }
     }
@@ -63,7 +63,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             newEntries[i].Value = oldEntries[i].Value;
             newEntries[bucketIndex].Bucket = ++i;
         }
-        return _entries = newEntries;
+        return newEntries;
     }
 
     public ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
@@ -152,9 +152,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             {
                 try
                 {
-                    var value = await factory(key);
-                    cache[key] = value;
-                    return value;
+                    return cache[key] = await factory(key);
                 }
                 finally
                 {
