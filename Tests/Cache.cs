@@ -36,8 +36,12 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             return;
         }
         i = _count;
-        if (entries.Length == i) entries = Resize();
-        var bucketIndex = (int)(hashCode & (entries.Length - 1));
+        if (entries.Length == i)
+        {
+            entries = Resize();
+            mask = entries.Length - 1;
+        }
+        var bucketIndex = (int)(hashCode & mask);
         entries[i].HashCode = hashCode;
         entries[i].Next = entries[bucketIndex].Bucket - 1;
         entries[i].Key = key;
