@@ -65,6 +65,9 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
     }
 
     public ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
+        => GetOrAdd(key, factory, static (k, f) => f(k));
+
+    public ValueTask<V> GetOrAdd<TState>(K key, TState state, Func<K, TState, Task<V>> factory)
     {
         var version = Volatile.Read(ref _version);
         var entries = Volatile.Read(ref _entries);
@@ -87,14 +90,17 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
                     i = entries[i].Next;
                 }
             }
-            return new(GetOrAddPending(key, factory).Value);
+            return new(GetOrAddPending(key, state, factory).Value);
         }
     }
 
     public Task<V> Update(K key, Func<K, Task<V>> factory)
+        => Update(key, factory, static (k, f) => f(k));
+
+    public Task<V> Update<TState>(K key, TState state, Func<K, TState, Task<V>> factory)
     {
         lock (_lock)
-            return GetOrAddPending(key, factory).Value;
+            return GetOrAddPending(key, state, factory).Value;
     }
 
     public void Compact(Func<KeyValuePair<K, V>, bool> keep)
@@ -122,21 +128,21 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
         }
     }
 
-    private Pending GetOrAddPending(K key, Func<K, Task<V>> factory)
+    private Pending GetOrAddPending<TState>(K key, TState state, Func<K, TState, Task<V>> factory)
     {
         var pending = _pending;
         if (pending is null)
-            return _pending = CreatePending(key, factory);
+            return _pending = CreatePending(key, state, factory);
         while (true)
         {
             if (key.Equals(pending.Key)) return pending;
             if (pending.Next is null)
-                return pending.Next = CreatePending(key, factory);
+                return pending.Next = CreatePending(key, state, factory);
             pending = pending.Next;
         }
     }
 
-    private Pending CreatePending(K key, Func<K, Task<V>> factory)
+    private Pending CreatePending<TState>(K key, TState state, Func<K, TState, Task<V>> factory)
     {
         Pending pending = null!;
         pending = new Pending
@@ -146,7 +152,7 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
             {
                 try
                 {
-                    var value = await factory(key);
+                    var value = await factory(key, state);
                     lock (_lock)
                     {
                         RemovePending(pending);
@@ -213,18 +219,18 @@ public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
     public async ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
     {
         var now = Stopwatch.GetTimestamp();
-        var result = await _cache.GetOrAdd(key, k => CallFactory(k, factory));
+        var result = await _cache.GetOrAdd(key, factory, CallFactory);
         var age = now - result.Timestamp;
         if (age >= _durationTicks)
             result = await RefreshWithTimeout(key, factory, result);
         else if (age >= _eagerRefreshTicks)
-            _ = _cache.Update(key, k => CallFactory(k, factory));
+            _ = _cache.Update(key, factory, CallFactory);
         return result.Value;
     }
 
     private async Task<(long Timestamp, V Value)> RefreshWithTimeout(K key, Func<K, Task<V>> factory, (long Timestamp, V Value) stale)
     {
-        var updateTask = _cache.Update(key, k => CallFactory(k, factory));
+        var updateTask = _cache.Update(key, factory, CallFactory);
 
         if (_softTimeout > TimeSpan.Zero)
         {
