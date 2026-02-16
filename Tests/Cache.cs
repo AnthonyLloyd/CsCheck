@@ -5,11 +5,12 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
+public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
 {
     private struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
     private sealed class Pending { internal required K Key; internal required Task<V> Value; internal Pending? Next; }
     private int _count;
+    private int _version;
     private Entry[] _entries;
     private Pending? _pending;
 
@@ -42,6 +43,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
         entries[i].Key = key;
         entries[i].Value = value;
         entries[bucketIndex].Bucket = ++_count;
+        _version++;
         _entries = entries;
     }
 
@@ -63,7 +65,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
 
     public ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
     {
-        var count = _count;
+        var version = _version;
         var entries = _entries;
         var hashCode = key.GetHashCode();
         var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
@@ -74,7 +76,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
         }
         lock (_entries)
         {
-            if (_count != count)
+            if (_version != version)
             {
                 entries = _entries;
                 i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
@@ -94,13 +96,29 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             return GetOrAddPending(key, factory).Value;
     }
 
-    public async ValueTask WaitPending()
+    public void Compact(Func<KeyValuePair<K, V>, bool> keep)
     {
-        var pending = _pending;
-        while (pending is not null)
+        lock (_entries)
         {
-            try { _ = await pending.Value; } catch { }
-            pending = pending.Next;
+            var oldEntries = _entries;
+            var oldCount = _count;
+            if (oldCount == 0) return;
+            int newCount = 0;
+            var newEntries = new Entry[oldCount < 2 ? 2 : BitOperations.RoundUpToPowerOf2((uint)oldCount)];
+            for (int i = 0; i < oldCount; i++)
+            {
+                if (keep(new(oldEntries[i].Key, oldEntries[i].Value)))
+                {
+                    var bucketIndex = oldEntries[i].Key.GetHashCode() & (newEntries.Length - 1);
+                    newEntries[newCount].Next = newEntries[bucketIndex].Bucket - 1;
+                    newEntries[newCount].Key = oldEntries[i].Key;
+                    newEntries[newCount].Value = oldEntries[i].Value;
+                    newEntries[bucketIndex].Bucket = ++newCount;
+                }
+            }
+            _count = newCount;
+            _version++;
+            _entries = newEntries;
         }
     }
 
@@ -169,17 +187,27 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
 
-public class RefreshingCache<K, V> where K : IEquatable<K>
+public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
 {
     private readonly Cache<K, (long Timestamp, V Value)> _cache = new();
     private readonly long _durationTicks, _eagerRefreshTicks;
     private readonly TimeSpan _softTimeout;
+    private readonly Timer _timer;
 
-    public RefreshingCache(TimeSpan duration, double eagerRefreshRatio = 0.75, TimeSpan? softTimeout = null)
+    public RefreshingCache(TimeSpan duration, double eagerRefreshRatio = 0.75,
+        TimeSpan? softTimeout = null, TimeSpan? cleanupPeriod = null)
     {
         _durationTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency);
         _eagerRefreshTicks = (long)(_durationTicks * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
         _softTimeout = softTimeout ?? TimeSpan.Zero;
+        var period = cleanupPeriod ?? duration + duration;
+        _timer = new Timer(Cleanup, null, period, period);
+    }
+
+    private void Cleanup(object? _)
+    {
+        var now = Stopwatch.GetTimestamp();
+        _cache.Compact(e => now - e.Value.Timestamp < _durationTicks);
     }
 
     public async ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
@@ -188,15 +216,9 @@ public class RefreshingCache<K, V> where K : IEquatable<K>
         var result = await _cache.GetOrAdd(key, k => CallFactory(k, factory));
         var age = now - result.Timestamp;
         if (age >= _durationTicks)
-        {
-            // Expired: must refresh. Use soft timeout with failsafe.
             result = await RefreshWithTimeout(key, factory, result);
-        }
         else if (age >= _eagerRefreshTicks)
-        {
-            // Eager refresh: fire-and-forget, return current value.
             _ = _cache.Update(key, k => CallFactory(k, factory));
-        }
         return result.Value;
     }
 
@@ -210,14 +232,12 @@ public class RefreshingCache<K, V> where K : IEquatable<K>
             if (completed != updateTask)
                 return stale;
         }
-
         try
         {
             return await updateTask;
         }
         catch
         {
-            // Failsafe: return stale value on factory error.
             return stale;
         }
     }
@@ -228,5 +248,5 @@ public class RefreshingCache<K, V> where K : IEquatable<K>
         return (Stopwatch.GetTimestamp(), value);
     }
 
-    public async ValueTask WaitPending() => await _cache.WaitPending();
+    public void Dispose() => _timer.Dispose();
 }
