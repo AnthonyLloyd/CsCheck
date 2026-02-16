@@ -1,6 +1,7 @@
 ﻿namespace Tests;
 
 using System.Collections;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -166,4 +167,66 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+}
+
+public class RefreshingCache<K, V> where K : IEquatable<K>
+{
+    private readonly Cache<K, (long Timestamp, V Value)> _cache = new();
+    private readonly long _durationTicks, _eagerRefreshTicks;
+    private readonly TimeSpan _softTimeout;
+
+    public RefreshingCache(TimeSpan duration, double eagerRefreshRatio = 0.75, TimeSpan? softTimeout = null)
+    {
+        _durationTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency);
+        _eagerRefreshTicks = (long)(_durationTicks * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
+        _softTimeout = softTimeout ?? TimeSpan.Zero;
+    }
+
+    public async ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
+    {
+        var now = Stopwatch.GetTimestamp();
+        var result = await _cache.GetOrAdd(key, k => CallFactory(k, factory));
+        var age = now - result.Timestamp;
+        if (age >= _durationTicks)
+        {
+            // Expired: must refresh. Use soft timeout with failsafe.
+            result = await RefreshWithTimeout(key, factory, result);
+        }
+        else if (age >= _eagerRefreshTicks)
+        {
+            // Eager refresh: fire-and-forget, return current value.
+            _ = _cache.Update(key, k => CallFactory(k, factory));
+        }
+        return result.Value;
+    }
+
+    private async Task<(long Timestamp, V Value)> RefreshWithTimeout(K key, Func<K, Task<V>> factory, (long Timestamp, V Value) stale)
+    {
+        var updateTask = _cache.Update(key, k => CallFactory(k, factory));
+
+        if (_softTimeout > TimeSpan.Zero)
+        {
+            var completed = await Task.WhenAny(updateTask, Task.Delay(_softTimeout));
+            if (completed != updateTask)
+                return stale;
+        }
+
+        try
+        {
+            return await updateTask;
+        }
+        catch
+        {
+            // Failsafe: return stale value on factory error.
+            return stale;
+        }
+    }
+
+    private static async Task<(long, V)> CallFactory(K key, Func<K, Task<V>> factory)
+    {
+        var value = await factory(key);
+        return (Stopwatch.GetTimestamp(), value);
+    }
+
+    public async ValueTask WaitPending() => await _cache.WaitPending();
 }
