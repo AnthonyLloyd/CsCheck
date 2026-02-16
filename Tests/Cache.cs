@@ -9,6 +9,7 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
 {
     private struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
     private sealed class Pending { internal required K Key; internal required Task<V> Value; internal Pending? Next; }
+    private readonly Lock _lock = new();
     private int _count;
     private int _version;
     private Entry[] _entries;
@@ -65,8 +66,8 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
 
     public ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
     {
-        var version = _version;
-        var entries = _entries;
+        var version = Volatile.Read(ref _version);
+        var entries = Volatile.Read(ref _entries);
         var hashCode = key.GetHashCode();
         var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
         while (i >= 0)
@@ -74,7 +75,7 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
             if (key.Equals(entries[i].Key)) return new(entries[i].Value);
             i = entries[i].Next;
         }
-        lock (_entries)
+        lock (_lock)
         {
             if (_version != version)
             {
@@ -92,17 +93,16 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
 
     public Task<V> Update(K key, Func<K, Task<V>> factory)
     {
-        lock (_entries)
+        lock (_lock)
             return GetOrAddPending(key, factory).Value;
     }
 
     public void Compact(Func<KeyValuePair<K, V>, bool> keep)
     {
-        lock (_entries)
+        lock (_lock)
         {
             var oldEntries = _entries;
             var oldCount = _count;
-            if (oldCount == 0) return;
             int newCount = 0;
             var newEntries = new Entry[oldCount < 2 ? 2 : BitOperations.RoundUpToPowerOf2((uint)oldCount)];
             for (int i = 0; i < oldCount; i++)
@@ -147,7 +147,7 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
                 try
                 {
                     var value = await factory(key);
-                    lock (_entries)
+                    lock (_lock)
                     {
                         RemovePending(pending);
                         AddOrUpdate(key, value);
@@ -156,7 +156,7 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
                 }
                 catch
                 {
-                    lock (_entries)
+                    lock (_lock)
                         RemovePending(pending);
                     throw;
                 }
@@ -200,14 +200,14 @@ public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
         _durationTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency);
         _eagerRefreshTicks = (long)(_durationTicks * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
         _softTimeout = softTimeout ?? TimeSpan.Zero;
-        var period = cleanupPeriod ?? duration + duration;
+        var period = cleanupPeriod ?? duration * 5;
         _timer = new Timer(Cleanup, null, period, period);
     }
 
     private void Cleanup(object? _)
     {
         var now = Stopwatch.GetTimestamp();
-        _cache.Compact(e => now - e.Value.Timestamp < _durationTicks);
+        _cache.Compact(e => now - e.Value.Timestamp < _durationTicks * 2);
     }
 
     public async ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
