@@ -198,7 +198,7 @@ public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
     private readonly Cache<K, (long Timestamp, V Value)> _cache = new();
     private readonly long _durationTicks, _eagerRefreshTicks;
     private readonly TimeSpan _softTimeout;
-    private readonly Timer _timer;
+    private readonly Timer? _timer;
 
     public RefreshingCache(TimeSpan duration, double eagerRefreshRatio = 0.75,
         TimeSpan? softTimeout = null, TimeSpan? cleanupPeriod = null)
@@ -206,8 +206,7 @@ public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
         _durationTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency);
         _eagerRefreshTicks = (long)(_durationTicks * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
         _softTimeout = softTimeout ?? TimeSpan.Zero;
-        var period = cleanupPeriod ?? duration * 5;
-        _timer = new Timer(Cleanup, null, period, period);
+        if (cleanupPeriod.HasValue) _timer = new Timer(Cleanup, null, cleanupPeriod.Value, cleanupPeriod.Value);
     }
 
     private void Cleanup(object? _)
@@ -231,7 +230,6 @@ public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
     private async Task<(long Timestamp, V Value)> RefreshWithTimeout(K key, Func<K, Task<V>> factory, (long Timestamp, V Value) stale)
     {
         var updateTask = _cache.Update(key, factory, CallFactory);
-
         if (_softTimeout > TimeSpan.Zero)
         {
             var completed = await Task.WhenAny(updateTask, Task.Delay(_softTimeout));
@@ -254,5 +252,5 @@ public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
         return (Stopwatch.GetTimestamp(), value);
     }
 
-    public void Dispose() => _timer.Dispose();
+    public void Dispose() => _timer?.Dispose();
 }
