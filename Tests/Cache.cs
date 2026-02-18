@@ -1,14 +1,17 @@
 ﻿namespace Tests;
 
 using System.Collections;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
+public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
 {
     private struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
     private sealed class Pending { internal required K Key; internal required Task<V> Value; internal Pending? Next; }
+    private readonly Lock _lock = new();
     private int _count;
+    private int _version;
     private Entry[] _entries;
     private Pending? _pending;
 
@@ -41,6 +44,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
         entries[i].Key = key;
         entries[i].Value = value;
         entries[bucketIndex].Bucket = ++_count;
+        _version++;
         _entries = entries;
     }
 
@@ -61,9 +65,12 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     }
 
     public ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
+        => GetOrAdd(key, factory, static (k, f) => f(k));
+
+    public ValueTask<V> GetOrAdd<TState>(K key, TState state, Func<K, TState, Task<V>> factory)
     {
-        var count = _count;
-        var entries = _entries;
+        var version = Volatile.Read(ref _version);
+        var entries = Volatile.Read(ref _entries);
         var hashCode = key.GetHashCode();
         var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
         while (i >= 0)
@@ -71,9 +78,9 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             if (key.Equals(entries[i].Key)) return new(entries[i].Value);
             i = entries[i].Next;
         }
-        lock (_entries)
+        lock (_lock)
         {
-            if (_count != count)
+            if (_version != version)
             {
                 entries = _entries;
                 i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
@@ -83,41 +90,59 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
                     i = entries[i].Next;
                 }
             }
-            return new(GetOrAddPending(key, factory).Value);
+            return new(GetOrAddPending(key, state, factory).Value);
         }
     }
 
     public Task<V> Update(K key, Func<K, Task<V>> factory)
+        => Update(key, factory, static (k, f) => f(k));
+
+    public Task<V> Update<TState>(K key, TState state, Func<K, TState, Task<V>> factory)
     {
-        lock (_entries)
-            return GetOrAddPending(key, factory).Value;
+        lock (_lock)
+            return GetOrAddPending(key, state, factory).Value;
     }
 
-    public async ValueTask WaitPending()
+    public void Compact(Func<KeyValuePair<K, V>, bool> keep)
     {
-        var pending = _pending;
-        while (pending is not null)
+        lock (_lock)
         {
-            try { _ = await pending.Value; } catch { }
-            pending = pending.Next;
+            var oldEntries = _entries;
+            var oldCount = _count;
+            int newCount = 0;
+            var newEntries = new Entry[oldCount < 2 ? 2 : BitOperations.RoundUpToPowerOf2((uint)oldCount)];
+            for (int i = 0; i < oldCount; i++)
+            {
+                if (keep(new(oldEntries[i].Key, oldEntries[i].Value)))
+                {
+                    var bucketIndex = oldEntries[i].Key.GetHashCode() & (newEntries.Length - 1);
+                    newEntries[newCount].Next = newEntries[bucketIndex].Bucket - 1;
+                    newEntries[newCount].Key = oldEntries[i].Key;
+                    newEntries[newCount].Value = oldEntries[i].Value;
+                    newEntries[bucketIndex].Bucket = ++newCount;
+                }
+            }
+            _count = newCount;
+            _version++;
+            _entries = newEntries;
         }
     }
 
-    private Pending GetOrAddPending(K key, Func<K, Task<V>> factory)
+    private Pending GetOrAddPending<TState>(K key, TState state, Func<K, TState, Task<V>> factory)
     {
         var pending = _pending;
         if (pending is null)
-            return _pending = CreatePending(key, factory);
+            return _pending = CreatePending(key, state, factory);
         while (true)
         {
             if (key.Equals(pending.Key)) return pending;
             if (pending.Next is null)
-                return pending.Next = CreatePending(key, factory);
+                return pending.Next = CreatePending(key, state, factory);
             pending = pending.Next;
         }
     }
 
-    private Pending CreatePending(K key, Func<K, Task<V>> factory)
+    private Pending CreatePending<TState>(K key, TState state, Func<K, TState, Task<V>> factory)
     {
         Pending pending = null!;
         pending = new Pending
@@ -127,8 +152,8 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
             {
                 try
                 {
-                    var value = await factory(key);
-                    lock (_entries)
+                    var value = await factory(key, state);
+                    lock (_lock)
                     {
                         RemovePending(pending);
                         AddOrUpdate(key, value);
@@ -137,7 +162,7 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
                 }
                 catch
                 {
-                    lock (_entries)
+                    lock (_lock)
                         RemovePending(pending);
                     throw;
                 }
@@ -166,4 +191,66 @@ public class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEq
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+}
+
+public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
+{
+    private readonly Cache<K, (long Timestamp, V Value)> _cache = new();
+    private readonly long _durationTicks, _eagerRefreshTicks;
+    private readonly TimeSpan _softTimeout;
+    private readonly Timer? _timer;
+
+    public RefreshingCache(TimeSpan duration, double eagerRefreshRatio = 0.75,
+        TimeSpan? softTimeout = null, TimeSpan? cleanupPeriod = null)
+    {
+        _durationTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency);
+        _eagerRefreshTicks = (long)(_durationTicks * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
+        _softTimeout = softTimeout ?? TimeSpan.Zero;
+        if (cleanupPeriod.HasValue) _timer = new Timer(Cleanup, null, cleanupPeriod.Value, cleanupPeriod.Value);
+    }
+
+    private void Cleanup(object? _)
+    {
+        var now = Stopwatch.GetTimestamp();
+        _cache.Compact(e => now - e.Value.Timestamp < _durationTicks * 2);
+    }
+
+    public async ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
+    {
+        var now = Stopwatch.GetTimestamp();
+        var result = await _cache.GetOrAdd(key, factory, CallFactory);
+        var age = now - result.Timestamp;
+        if (age >= _durationTicks)
+            result = await RefreshWithTimeout(key, factory, result);
+        else if (age >= _eagerRefreshTicks)
+            _ = _cache.Update(key, factory, CallFactory);
+        return result.Value;
+    }
+
+    private async Task<(long Timestamp, V Value)> RefreshWithTimeout(K key, Func<K, Task<V>> factory, (long Timestamp, V Value) stale)
+    {
+        var updateTask = _cache.Update(key, factory, CallFactory);
+        if (_softTimeout > TimeSpan.Zero)
+        {
+            var completed = await Task.WhenAny(updateTask, Task.Delay(_softTimeout));
+            if (completed != updateTask)
+                return stale;
+        }
+        try
+        {
+            return await updateTask;
+        }
+        catch
+        {
+            return stale;
+        }
+    }
+
+    private static async Task<(long, V)> CallFactory(K key, Func<K, Task<V>> factory)
+    {
+        var value = await factory(key);
+        return (Stopwatch.GetTimestamp(), value);
+    }
+
+    public void Dispose() => _timer?.Dispose();
 }

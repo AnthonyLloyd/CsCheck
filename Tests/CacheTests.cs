@@ -174,4 +174,124 @@ public class CacheTests
             return true;
         });
     }
+
+    [Test]
+    public async Task Cache_Compact_RemovesEntries()
+    {
+        var cache = new Cache<int, int>();
+        for (int i = 0; i < 10; i++)
+            await cache.GetOrAdd(i, k => Task.FromResult(k * 10));
+        await Assert.That(cache.Count).IsEqualTo(10);
+        cache.Compact(e => e.Key % 2 == 0);
+        await Assert.That(cache.Count).IsEqualTo(5);
+        // Kept entries are still accessible
+        await Assert.That(await cache.GetOrAdd(0, _ => Task.FromResult(-1))).IsEqualTo(0);
+        await Assert.That(await cache.GetOrAdd(4, _ => Task.FromResult(-1))).IsEqualTo(40);
+        // Removed entries invoke factory again
+        await Assert.That(await cache.GetOrAdd(1, _ => Task.FromResult(-1))).IsEqualTo(-1);
+        await Assert.That(await cache.GetOrAdd(3, _ => Task.FromResult(-1))).IsEqualTo(-1);
+    }
+
+    [Test]
+    public async Task RefreshingCache_GetOrAdd_ReturnsCachedValue()
+    {
+        using var cache = new RefreshingCache<int, int>(TimeSpan.FromMinutes(10));
+        var callCount = 0;
+        Task<int> Factory(int _) => Task.FromResult(Interlocked.Increment(ref callCount));
+        var first = await cache.GetOrAdd(1, Factory);
+        var second = await cache.GetOrAdd(1, Factory);
+        await Assert.That(first).IsEqualTo(1);
+        await Assert.That(second).IsEqualTo(1);
+        await Assert.That(callCount).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task RefreshingCache_GetOrAdd_MultipleKeys()
+    {
+        using var cache = new RefreshingCache<int, int>(TimeSpan.FromMinutes(10));
+        static Task<int> Factory(int k) => Task.FromResult(k * 100);
+        var tasks = Enumerable.Range(0, 20)
+            .Select(k => cache.GetOrAdd(k, Factory).AsTask())
+            .ToArray();
+        var results = await Task.WhenAll(tasks);
+        for (int i = 0; i < 20; i++)
+            await Assert.That(results[i]).IsEqualTo(i * 100);
+    }
+
+    [Test]
+    public async Task RefreshingCache_GetOrAdd_ConcurrentSameKey()
+    {
+        using var cache = new RefreshingCache<int, int>(TimeSpan.FromMinutes(10));
+        var callCount = 0;
+        async Task<int> Factory(int k)
+        {
+            Interlocked.Increment(ref callCount);
+            await Task.Delay(10);
+            return k;
+        }
+        var tasks = Enumerable.Range(0, 20)
+            .Select(_ => Task.Run(async () => await cache.GetOrAdd(1, Factory)))
+            .ToArray();
+        var results = await Task.WhenAll(tasks);
+        foreach (var r in results)
+            await Assert.That(r).IsEqualTo(1);
+        await Assert.That(callCount).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task RefreshingCache_GetOrAdd_RefreshesAfterExpiry()
+    {
+        var duration = TimeSpan.FromMilliseconds(10);
+        using var cache = new RefreshingCache<int, int>(duration);
+        var callCount = 0;
+        Task<int> Factory(int _) => Task.FromResult(Interlocked.Increment(ref callCount));
+        await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
+        await Task.Delay(duration * 2);
+        await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(2);
+        await Assert.That(callCount).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task RefreshingCache_GetOrAdd_EagerRefresh()
+    {
+        var duration = TimeSpan.FromMilliseconds(50_000);
+        using var cache = new RefreshingCache<int, int>(duration, eagerRefreshRatio: 0.0001);
+        var callCount = 0;
+        Task<int> Factory(int _) => Task.FromResult(Interlocked.Increment(ref callCount));
+        await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
+        await Task.Delay(TimeSpan.FromMilliseconds(10));
+        await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
+        await Task.Delay(TimeSpan.FromMilliseconds(20));
+        await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task RefreshingCache_GetOrAdd_FailsafeReturnsStale()
+    {
+        var duration = TimeSpan.FromMilliseconds(10);
+        using var cache = new RefreshingCache<int, int>(duration);
+        var callCount = 0;
+        Task<int> Factory(int _) => Interlocked.Increment(ref callCount) == 1 ? Task.FromResult(1) : throw new("Factory failed");
+        await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
+        await Task.Delay(duration * 2);
+        await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
+        await Assert.That(callCount).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task RefreshingCache_GetOrAdd_SoftTimeoutReturnsStale()
+    {
+        var duration = TimeSpan.FromMilliseconds(10);
+        using var cache = new RefreshingCache<int, int>(duration, softTimeout: TimeSpan.FromMilliseconds(5));
+        var callCount = 0;
+        async Task<int> Factory(int _)
+        {
+            var c = Interlocked.Increment(ref callCount);
+            if (c > 1) await Task.Delay(10_000);
+            return c;
+        }
+        await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
+        await Task.Delay(duration * 2);
+        await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
+    }
 }
