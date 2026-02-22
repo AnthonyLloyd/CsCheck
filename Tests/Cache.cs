@@ -18,12 +18,10 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
     private Entry[] _entries;
     private Pending? _pending;
 
-    public Cache() => _entries = new Entry[2];
-    public Cache(int capacity) => _entries = new Entry[capacity < 2 ? 2 : BitOperations.RoundUpToPowerOf2((uint)capacity)];
+    public Cache(int capacity = 2) => _entries = new Entry[capacity <= 2 ? 2 : BitOperations.RoundUpToPowerOf2((uint)capacity)];
 
-    public Cache(IEnumerable<KeyValuePair<K, V>> items)
+    public Cache(IEnumerable<KeyValuePair<K, V>> items) : this()
     {
-        _entries = new Entry[2];
         foreach (var (k, v) in items) AddOrUpdate(k, v);
     }
 
@@ -46,9 +44,10 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
         entries[i].Next = entries[bucketIndex].Bucket - 1;
         entries[i].Key = key;
         entries[i].Value = value;
-        entries[bucketIndex].Bucket = ++_count;
-        _version++;
+        entries[bucketIndex].Bucket = _count + 1;
         _entries = entries;
+        _count++;
+        _version++;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -72,9 +71,9 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
 
     public ValueTask<V> GetOrAdd<TState>(K key, TState state, Func<K, TState, Task<V>> factory)
     {
+        var hashCode = key.GetHashCode();
         var version = Volatile.Read(ref _version);
         var entries = Volatile.Read(ref _entries);
-        var hashCode = key.GetHashCode();
         var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
         while (i >= 0)
         {
@@ -128,8 +127,8 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
                 }
             }
             _count = newIndex;
-            _version++;
             _entries = newEntries;
+            _version++;
         }
     }
 
@@ -191,8 +190,17 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
 
     public IEnumerator<KeyValuePair<K, V>> GetEnumerator()
     {
-        for (int i = 0; i < _count; i++)
-            yield return new(_entries[i].Key, _entries[i].Value);
+        var version = Volatile.Read(ref _version);
+        var count = _count;
+        var entries = _entries;
+        if (version != Volatile.Read(ref _version))
+            lock (_lock)
+            {
+                count = _count;
+                entries = _entries;
+            }
+        for (int i = 0; i < count; i++)
+            yield return new(entries[i].Key, entries[i].Value);
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
