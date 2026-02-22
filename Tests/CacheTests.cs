@@ -182,7 +182,7 @@ public class CacheTests
         for (int i = 0; i < 10; i++)
             await cache.GetOrAdd(i, k => Task.FromResult(k * 10));
         await Assert.That(cache.Count).IsEqualTo(10);
-        cache.Compact(e => e.Key % 2 == 0);
+        cache = await cache.Compact(e => e.Key % 2 == 0);
         await Assert.That(cache.Count).IsEqualTo(5);
         // Kept entries are still accessible
         await Assert.That(await cache.GetOrAdd(0, _ => Task.FromResult(-1))).IsEqualTo(0);
