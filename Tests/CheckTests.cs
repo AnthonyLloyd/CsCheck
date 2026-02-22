@@ -297,10 +297,20 @@ public class CheckTests
     }
 
     [Test]
-    public void Equality()
+    public void Equality_Int()
     {
         Check.Equality(Gen.Int);
+    }
+
+    [Test]
+    public void Equality_Double()
+    {
         Check.Equality(Gen.Double);
+    }
+
+    [Test]
+    public void Equality_String()
+    {
         Check.Equality(Gen.String);
     }
 
