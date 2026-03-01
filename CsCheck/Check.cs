@@ -3491,17 +3491,14 @@ public static partial class Check
 
 internal sealed class FasterResult(double sigma, int repeat)
 {
-    const byte STATE_PROCESSING = 0, STATE_QUEUED = 1;
     readonly double Limit = sigma * sigma;
     public Exception? Exception;
     public int Faster, Slower;
     public long FasterMin = long.MaxValue, SlowerMin = long.MaxValue;
     public MedianEstimator Median = new();
-    readonly Queue<double> queue = new(Environment.ProcessorCount);
-    SpinLock spinLock;
-    volatile bool processing;
+    bool completed;
 
-    public float SigmaSquared
+    private float SigmaSquared
     {
         // Binomial distribution: Mean = n p, Variance = n p q in this case H0 has n = Faster + Slower, p = 0.5, and q = 0.5
         // sigmas = Abs(Faster - Mean) / Sqrt(Variance) = Sqrt((Faster - Slower)^2/(Faster + Slower))
@@ -3516,88 +3513,33 @@ internal sealed class FasterResult(double sigma, int repeat)
 
     public bool Add(long faster, long slower)
     {
-        double ratio;
-        byte myState;
-        if (slower > faster)
+        lock (Median)
         {
-            ratio = ((double)(slower - faster)) / slower;
-            bool lockTaken = false;
-            spinLock.Enter(ref lockTaken);
-            if (processing)
+            if (completed) return false;
+            if (faster < FasterMin) FasterMin = faster;
+            if (slower < SlowerMin) SlowerMin = slower;
+            double ratio;
+            if (slower > faster)
             {
-                queue.Enqueue(ratio);
-                myState = STATE_QUEUED;
+                ratio = (double)(slower - faster) / slower;
+                Faster++;
+            }
+            else if (slower != faster)
+            {
+                ratio = (double)(slower - faster) / faster;
+                Slower++;
             }
             else
             {
-                processing = true;
-                myState = STATE_PROCESSING;
+                ratio = 0d;
             }
-            Faster++;
-            if (faster < FasterMin) FasterMin = faster;
-            if (slower < SlowerMin) SlowerMin = slower;
-            if (lockTaken) spinLock.Exit();
-        }
-        else if (slower < faster)
-        {
-            ratio = ((double)(slower - faster)) / faster;
-            bool lockTaken = false;
-            spinLock.Enter(ref lockTaken);
-            if (processing)
-            {
-                queue.Enqueue(ratio);
-                myState = STATE_QUEUED;
-            }
-            else
-            {
-                processing = true;
-                myState = STATE_PROCESSING;
-            }
-            Slower++;
-            if (faster < FasterMin) FasterMin = faster;
-            if (slower < SlowerMin) SlowerMin = slower;
-            if (lockTaken) spinLock.Exit();
-        }
-        else
-        {
-            ratio = 0d;
-            bool lockTaken = false;
-            spinLock.Enter(ref lockTaken);
-            if (processing)
-            {
-                queue.Enqueue(ratio);
-                myState = STATE_QUEUED;
-            }
-            else
-            {
-                processing = true;
-                myState = STATE_PROCESSING;
-            }
-            if (faster < FasterMin) FasterMin = faster;
-            if (slower < SlowerMin) SlowerMin = slower;
-            if (lockTaken) spinLock.Exit();
-        }
-        if (myState == STATE_QUEUED)
-            return false;
-        while (true)
-        {
             Median.Add(ratio);
-            if (SigmaSquared >= Limit)
-                return true;
-            bool lockTaken = false;
-            spinLock.Enter(ref lockTaken);
-            if (queue.TryDequeue(out ratio))
-            {
-                if (lockTaken) spinLock.Exit();
-            }
-            else
-            {
-                processing = false;
-                if (lockTaken) spinLock.Exit();
-                return false;
-            }
+            if (SigmaSquared < Limit) return false;
+            completed = true;
+            return true;
         }
     }
+
     public override string ToString()
     {
         var times = Median.Median >= 0.0 ? 1 / (1 - Median.Median) : 1 + Median.Median;
