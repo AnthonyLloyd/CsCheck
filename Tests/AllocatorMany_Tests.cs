@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Linq;
@@ -10,8 +10,8 @@ public class AllocatorMany_Tests
     public void RoundingSolutionTest()
     {
         Gen.Select(
-            Gen.Int[1, 1000].Array[2, 200],
-            Gen.Int[1, 1000].Select(i => (double)i).Array[2, 20])
+            Gen.Int[1, 1000].Array()[2, 200],
+            Gen.Int[1, 1000].Select(i => (double)i).Array()[2, 20])
         .Sample((rowTotal, colWeight) =>
         {
             var colTotal = Allocator.Allocate(rowTotal.Sum(), colWeight);
@@ -25,8 +25,8 @@ public class AllocatorMany_Tests
     {
         Gen.Select(Gen.Int[2, 10], Gen.Int[2, 10]).SelectMany((I, J) =>
             Gen.Select(
-                Gen.Int[0, 5].Array[J].Where(a => a.Sum() > 0).Array[I],
-                Gen.Int[0, 10].Array[I]))
+                Gen.Int[0, 5].Array()[J].Where(a => a.Sum() > 0).Array()[I],
+                Gen.Int[0, 10].Array()[I]))
         .Sample((solution,
                  rowPrice) =>
         {
@@ -81,8 +81,8 @@ public class AllocatorMany_Tests
     {
         Gen.Select(Gen.Int[3, 30], Gen.Int[3, 15]).SelectMany((rows, cols) =>
             Gen.Select(
-                Gen.Int[0, 5].Array[cols].Where(a => a.Sum() > 0).Array[rows],
-                Gen.Int[900, 1000].Array[rows],
+                Gen.Int[0, 5].Array()[cols].Where(a => a.Sum() > 0).Array()[rows],
+                Gen.Int[900, 1000].Array()[rows],
                 Gen.Int.Uniform))
         .Sample((solution,
                  rowPrice,
@@ -222,9 +222,9 @@ public class AllocatorMany_Tests
     {
         Gen.Int[2, 20].SelectMany(rows =>
             Gen.Select(
-                Gen.Int[1, 300].Array[rows],
-                Gen.Int[1, 100].Array[rows],
-                Gen.Int[1, 1000].Select(i => (double)i).Array[2, 10],
+                Gen.Int[1, 300].Array()[rows],
+                Gen.Int[1, 100].Array()[rows],
+                Gen.Int[1, 1000].Select(i => (double)i).Array()[2, 10],
                 Gen.Int.Uniform))
         .Sample((rowPrice, rowTotal, weight, seed) =>
         {
@@ -274,9 +274,9 @@ public class AllocatorMany_Tests
     {
         Gen.Int[2, 20].SelectMany(rows =>
             Gen.Select(
-                Gen.Int[1, 300].Array[rows],
-                Gen.Int[1, 100].Array[rows],
-                Gen.Int[1, 1000].Select(i => (double)i).Array[2, 10],
+                Gen.Int[1, 300].Array()[rows],
+                Gen.Int[1, 100].Array()[rows],
+                Gen.Int[1, 1000].Select(i => (double)i).Array()[2, 10],
                 Gen.Int.Uniform))
         .Sample((rowPrice, rowTotal, weight, seed) =>
         {

@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Linq;
@@ -105,7 +105,7 @@ public class MathXTests
     [Test]
     public void NSum_Shuffle_Check()
     {
-        genDouble.Array[3, 100]
+        genDouble.Array()[3, 100]
         .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
         .Sample((original, shuffled) =>
         {
@@ -118,7 +118,7 @@ public class MathXTests
     [Test]
     public void FSum_Shuffle_Check()
     {
-        genDouble.Array[3, 100]
+        genDouble.Array()[3, 100]
         .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
         .Sample((original, shuffled) =>
         {
@@ -131,7 +131,7 @@ public class MathXTests
     [Test]
     public void KSum_Shuffle_Error_Distribution()
     {
-        genDouble.Array[3, 100]
+        genDouble.Array()[3, 100]
         .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
         .Sample((original, shuffled) =>
         {
@@ -144,7 +144,7 @@ public class MathXTests
     [Test]
     public void NSum_Shuffle_Error_Distribution()
     {
-        genDouble.Array[3, 100]
+        genDouble.Array()[3, 100]
         .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
         .Sample((original, shuffled) =>
         {
@@ -157,7 +157,7 @@ public class MathXTests
     [Test]
     public void FSum_Shuffle_Error_Distribution()
     {
-        genDouble.Array[3, 100]
+        genDouble.Array()[3, 100]
         .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
         .Sample((original, shuffled) =>
         {
@@ -170,7 +170,7 @@ public class MathXTests
     [Test]
     public void FSum_Shuffle_Error_Distribution_Compress()
     {
-        genDouble.Array[3, 100]
+        genDouble.Array()[3, 100]
         .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
         .Sample((original, shuffled) =>
         {
@@ -196,7 +196,7 @@ public class MathXTests
     [Test]
     public void NSum_FSum_Error_Distribution()
     {
-        genDouble.Array[3, 100]
+        genDouble.Array()[3, 100]
         .Sample(values =>
         {
             var fsumSum = MathX.FSum(values);
@@ -223,7 +223,7 @@ public class MathXTests
     [Test]
     public void SSum_Shuffle_Check()
     {
-        genDouble.Array[2, 10]
+        genDouble.Array()[2, 10]
         .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
         .Sample((original, shuffled) =>
         {
@@ -236,7 +236,7 @@ public class MathXTests
     [Test]
     public void SSum_Negative_Check()
     {
-        genDouble.Array[2, 10]
+        genDouble.Array()[2, 10]
         .Sample(original =>
         {
             var originalSum = MathX.SSum(original);
@@ -250,7 +250,7 @@ public class MathXTests
     [Test]
     public void SSum_Shuffle_Negative_Check()
     {
-        genDouble.Array[2, 10]
+        genDouble.Array()[2, 10]
         .SelectMany(a => Gen.Shuffle(a).Select(s => (a, s)))
         .Sample((original, shuffled) =>
         {
@@ -265,7 +265,7 @@ public class MathXTests
     [Test]
     public void FSum_Vs_SSum_Perf()
     {
-        genDouble.Array[2, 100]
+        genDouble.Array()[2, 100]
         .Faster(
             values => values.FSum(),
             values => values.SSum(),

@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 using System.Text;
 using System.Text.Json;
 using CsCheck;
@@ -17,8 +17,8 @@ public class LoggingTests
     [Arguments(0)]
     public async Task Bool_Distribution_WithTycheLogs(int generatedIntUponTrue)
     {
-        using var memoryStream = new MemoryStream();
-        using var writer = new StreamWriter(memoryStream);
+        await using var memoryStream = new MemoryStream();
+        await using var writer = new StreamWriter(memoryStream);
         writer.AutoFlush = true;
         var logger = Logging.CreateTycheLogger(writer: writer);
 
@@ -29,7 +29,7 @@ public class LoggingTests
         //Try catch to suppress failing original test logic
         try
         {
-            Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array[2 * frequency]
+            Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array()[2 * frequency]
                 .Select(sample => Tally(2, sample))
                 .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2, logger: logger);
         }
@@ -74,7 +74,7 @@ public class LoggingTests
         //Try catch to suppress failing original test logic
         try
         {
-            Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array[2 * frequency]
+            Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array()[2 * frequency]
                 .Select(sample => Tally(2, sample))
                 .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2, logger: logger);
         }

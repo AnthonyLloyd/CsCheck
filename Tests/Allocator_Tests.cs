@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Collections.Generic;
@@ -11,16 +11,16 @@ using ImTools;
 public class Allocator_Tests
 {
     readonly static Gen<(long Quantity, double[] Weights)> genAllSigns =
-        Gen.Select(Gen.Long[-10_000, 10_000], Gen.Double[-10_000, 10_000].Array[2, 50].Where(ws => ws.Sum() > 1e-9));
+        Gen.Select(Gen.Long[-10_000, 10_000], Gen.Double[-10_000, 10_000].Array()[2, 50].Where(ws => ws.Sum() > 1e-9));
 
     readonly static Gen<(long Quantity, long[] Weights)> genAllSignsLong =
-        Gen.Select(Gen.Long[-10_000, 10_000], Gen.Long[-100_000, 100_000].Array[2, 50].Where(ws => ws.Sum() != 0));
+        Gen.Select(Gen.Long[-10_000, 10_000], Gen.Long[-100_000, 100_000].Array()[2, 50].Where(ws => ws.Sum() != 0));
 
     readonly static Gen<(long Quantity, double[] Weights)> genPositive =
-        Gen.Select(Gen.Long[1, 10_000], Gen.Double[0, 10_000].Array[2, 50].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
+        Gen.Select(Gen.Long[1, 10_000], Gen.Double[0, 10_000].Array()[2, 50].Where(ws => Math.Abs(ws.Sum()) > 1e-9));
 
     readonly static Gen<(long Quantity, long[] Weights)> genPositiveLong =
-        Gen.Select(Gen.Long[1, 10_000], Gen.Long[0, 100_000].Array[2, 50].Where(ws => ws.Sum() != 0));
+        Gen.Select(Gen.Long[1, 10_000], Gen.Long[0, 100_000].Array()[2, 50].Where(ws => ws.Sum() != 0));
 
     static bool TotalCorrectly<W>(long quantity, W[] weights, Func<long, W[], long[]> allocator)
         => allocator(quantity, weights).Sum() == quantity;
@@ -276,7 +276,7 @@ public class Allocator_Tests
             var genInt = Gen.Int[0, i - 1];
             return Gen.Select(genInt, genInt)
                 .Where((i, j) => i != j)
-                .HashSet[1, i];
+                .HashSet()[1, i];
         }
         genAllSigns.Where((_, ws) => ws.Length >= 2)
         .SelectMany((quantity, weights) => GenChanges(weights.Length).Select(i => (quantity, weights, i)))
@@ -318,7 +318,7 @@ public class Allocator_Tests
             var genInt = Gen.Int[0, i - 1];
             return Gen.Select(genInt, genInt)
                 .Where((i, j) => i != j)
-                .HashSet[1, i];
+                .HashSet()[1, i];
         }
         genAllSignsLong.Where((_, ws) => ws.Length >= 2)
         .SelectMany((quantity, weights) => GenChanges(weights.Length).Select(i => (quantity, weights, i)))

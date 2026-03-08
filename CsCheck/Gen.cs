@@ -1,4 +1,4 @@
-﻿// Copyright 2026 Anthony Lloyd
+// Copyright 2026 Anthony Lloyd
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -91,17 +91,6 @@ public abstract class Gen<T> : IGen<T>
     public GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, T> actual, Action<Model, T> model) => GenOperation.Create(this, actual, model);
     public GenMetamorphic<S> Metamorphic<S>(Func<T, string> name, Action<S, T> action1, Action<S, T> action2) => GenMetamorphic.Create(this, name, action1, action2);
     public GenMetamorphic<S> Metamorphic<S>(Action<S, T> action1, Action<S, T> action2) => GenMetamorphic.Create(this, Check.Print, action1, action2);
-
-    /// <summary>Generator for an array of <typeparamref name="T"/></summary>
-    public GenArray<T> Array => new(this);
-    /// <summary>Generator for a two dimensional array of <typeparamref name="T"/></summary>
-    public GenArray2D<T> Array2D => new(this);
-    /// <summary>Generator for a List of <typeparamref name="T"/></summary>
-    public GenList<T> List => new(this);
-    /// <summary>Generator for a HashSet of <typeparamref name="T"/></summary>
-    public GenHashSet<T> HashSet => new(this);
-    /// <summary>Generator for a unique array of <typeparamref name="T"/></summary>
-    public GenArrayUnique<T> ArrayUnique => new(this);
 }
 
 public delegate T GenMap<T>(T v, ref Size size);
@@ -109,6 +98,17 @@ public delegate T GenMap<T>(T v, ref Size size);
 /// <summary>Provides a set of static methods for composing generators.</summary>
 public static class Gen
 {
+    /// <summary>Generator for an array of <typeparamref name="T"/></summary>
+    public static GenArray<T> Array<T>(this Gen<T> gen) => new(gen);
+    /// <summary>Generator for a two dimensional array of <typeparamref name="T"/></summary>
+    public static GenArray2D<T> Array2D<T>(this Gen<T> gen) => new(gen);
+    /// <summary>Generator for a List of <typeparamref name="T"/></summary>
+    public static GenList<T> List<T>(this Gen<T> gen) => new(gen);
+    /// <summary>Generator for a HashSet of <typeparamref name="T"/></summary>
+    public static GenHashSet<T> HashSet<T>(this Gen<T> gen) => new(gen);
+    /// <summary>Generator for a unique array of <typeparamref name="T"/></summary>
+    public static GenArrayUnique<T> ArrayUnique<T>(this Gen<T> gen) => new(gen);
+
     sealed class GenConst<T>(T value) : Gen<T>
     {
         public override T Generate(PCG pcg, Size? min, out Size size)
@@ -2683,7 +2683,7 @@ public sealed class GenChar : Gen<char>
 
 public sealed class GenString : Gen<string>
 {
-    static readonly Gen<string> d = Gen.Char.Array.Select(i => new string(i));
+    static readonly Gen<string> d = Gen.Char.Array().Select(i => new string(i));
     public override string Generate(PCG pcg, Size? min, out Size size)
         => d.Generate(pcg, min, out size);
     /// <summary>Generate string with length in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
@@ -2692,7 +2692,7 @@ public sealed class GenString : Gen<string>
         get
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-            return Gen.Char.Array[start, finish].Select(i => new string(i));
+            return Gen.Char.Array()[start, finish].Select(i => new string(i));
         }
     }
 
@@ -2701,16 +2701,16 @@ public sealed class GenString : Gen<string>
         get
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-            return gen.Array[start, finish].Select(i => new string(i));
+            return gen.Array()[start, finish].Select(i => new string(i));
         }
     }
 
     public Gen<string> this[Gen<char> gen] =>
-        gen.Array.Select(i => new string(i));
+        gen.Array().Select(i => new string(i));
     /// <summary>Generate string from chars in the string.</summary>
     public Gen<string> this[string chars] =>
-        Gen.Char[chars].Array.Select(i => new string(i));
-    public readonly Gen<string> AlphaNumeric = Gen.Char.AlphaNumeric.Array.Select(i => new string(i));
+        Gen.Char[chars].Array().Select(i => new string(i));
+    public readonly Gen<string> AlphaNumeric = Gen.Char.AlphaNumeric.Array().Select(i => new string(i));
 }
 
 public sealed class GenSeed : Gen<string>

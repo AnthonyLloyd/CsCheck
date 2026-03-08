@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using CsCheck;
 using System.Collections.Concurrent;
@@ -11,7 +11,7 @@ public class CacheTests
         static void CacheTryAdd(Cache<int, byte> cache, int key, byte value)
             => cache.GetOrAdd(key, _ => Task.FromResult(value)).AsTask().GetAwaiter().GetResult();
 
-        Gen.Select(Gen.Int, Gen.Byte).Array
+        Gen.Select(Gen.Int, Gen.Byte).Array()
         .Select(kvs =>
         {
             var cache = new Cache<int, byte>();
@@ -33,7 +33,7 @@ public class CacheTests
     [Test]
     public async Task Cache_GetOrAdd_StampedeFree()
     {
-        await Gen.Int.HashSet[1, 10].SampleAsync(async ks =>
+        await Gen.Int.HashSet()[1, 10].SampleAsync(async ks =>
         {
             var alreadyRun = 0;
             var ks0 = ks.First();
@@ -147,7 +147,7 @@ public class CacheTests
     [Test]
     public async Task Cache_Update_StampedeFree()
     {
-        await Gen.Int.HashSet[1, 10].SampleAsync(async ks =>
+        await Gen.Int.HashSet()[1, 10].SampleAsync(async ks =>
         {
             var alreadyRun = 0;
             var callCount = 0;

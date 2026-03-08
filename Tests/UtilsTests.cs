@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Collections.Generic;
@@ -179,7 +179,7 @@ public class ThreadStatsTests
     [Test]
     public void Permutations_Should_Be_Unique()
     {
-        Gen.Int[0, 5].Array[0, 10]
+        Gen.Int[0, 5].Array()[0, 10]
         .Sample(a =>
         {
             var a2 = new int[a.Length];

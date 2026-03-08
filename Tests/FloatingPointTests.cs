@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using CsCheck;
 using System;
@@ -13,7 +13,7 @@ public class FloatingPointTests()
         var genDigit = Gen.Char['0', '9'];
         var genPriceIO = Gen.Int[1, 15]
             .SelectMany(p =>
-                genDigit.Array[p + 1].Select(Gen.Int[0, p], (cs, d) =>
+                genDigit.Array()[p + 1].Select(Gen.Int[0, p], (cs, d) =>
                 {
                     cs[d] = '.';
                     return new string(cs);
@@ -30,7 +30,7 @@ public class FloatingPointTests()
         const double scaling = 0.01;
         var lower = (long)Math.Pow(10, significantFigures - 1);
         var upper = (long)Math.Pow(10, significantFigures) - 1;
-        Gen.Long[lower, upper].Array[100, maxLength]
+        Gen.Long[lower, upper].Array()[100, maxLength]
         .Sample(longs =>
         {
             var longSum = longs.Sum();
@@ -44,7 +44,7 @@ public class FloatingPointTests()
         const double scaling = 0.01;
         var lower = (long)Math.Pow(10, significantFigures - 1);
         var upper = (long)Math.Pow(10, significantFigures) - 1;
-        Gen.Long[lower, upper].Array[100, maxLength]
+        Gen.Long[lower, upper].Array()[100, maxLength]
         .Sample(longs =>
         {
             var longSum = longs.Sum();

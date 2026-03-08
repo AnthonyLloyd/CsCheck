@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Runtime.InteropServices;
@@ -18,7 +18,7 @@ public class GenTests
     {
         const int frequency = 10;
         var expected = new int[] { frequency, frequency};
-        Gen.Bool.Select(i => i ? 1 : 0).Array[2 * frequency]
+        Gen.Bool.Select(i => i ? 1 : 0).Array()[2 * frequency]
         .Select(sample => Tally(2, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -48,7 +48,7 @@ public class GenTests
         var expected = new int[buckets];
         Array.Fill(expected, frequency);
         Gen.SByte[0, buckets - 1]
-        .Select(i => (int)i).Array[frequency * buckets]
+        .Select(i => (int)i).Array()[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -78,7 +78,7 @@ public class GenTests
         var expected = new int[buckets];
         Array.Fill(expected, frequency);
         Gen.Byte[0, buckets - 1]
-        .Select(i => (int)i).Array[frequency * buckets]
+        .Select(i => (int)i).Array()[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -114,7 +114,7 @@ public class GenTests
         var expected = new int[buckets];
         Array.Fill(expected, frequency);
         Gen.Short[0, buckets - 1]
-        .Select(i => (int)i).Array[frequency * buckets]
+        .Select(i => (int)i).Array()[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -144,7 +144,7 @@ public class GenTests
         var expected = new int[buckets];
         Array.Fill(expected, frequency);
         Gen.UShort[0, buckets - 1]
-        .Select(i => (int)i).Array[frequency * buckets]
+        .Select(i => (int)i).Array()[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -230,7 +230,7 @@ public class GenTests
         const int frequency = 10;
         var expected = new int[buckets];
         Array.Fill(expected, frequency);
-        Gen.Int[0, buckets - 1].Array[frequency * buckets]
+        Gen.Int[0, buckets - 1].Array()[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -276,7 +276,7 @@ public class GenTests
         var expected = new int[buckets];
         Array.Fill(expected, frequency);
         Gen.UInt[0, buckets - 1]
-        .Select(i => (int)i).Array[frequency * buckets]
+        .Select(i => (int)i).Array()[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -328,7 +328,7 @@ public class GenTests
         var expected = new int[buckets];
         Array.Fill(expected, frequency);
         Gen.Long[0, buckets - 1]
-        .Select(i => (int)i).Array[frequency * buckets]
+        .Select(i => (int)i).Array()[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -358,7 +358,7 @@ public class GenTests
         var expected = new int[buckets];
         Array.Fill(expected, frequency);
         Gen.ULong[0, buckets - 1]
-        .Select(i => (int)i).Array[frequency * buckets]
+        .Select(i => (int)i).Array()[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -407,7 +407,7 @@ public class GenTests
         Array.Fill(expected, frequency);
         Gen.Single.Unit
         .Select(i => (int)(i * buckets))
-        .Array[frequency * buckets]
+        .Array()[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -450,7 +450,7 @@ public class GenTests
         Array.Fill(expected, frequency);
         Gen.Double.Unit
         .Select(i => (int)(i * buckets))
-        .Array[frequency * buckets]
+        .Array()[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -501,7 +501,7 @@ public class GenTests
         var expected = Enumerable.Repeat(frequency, buckets).ToArray();
         Gen.Decimal.Unit
         .Select(i => (int)(i * buckets))
-        .Array[frequency * buckets]
+        .Array()[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -622,7 +622,7 @@ public class GenTests
         var expected = new int[buckets];
         Array.Fill(expected, frequency);
         Gen.Char[(char)0, (char)(buckets - 1)]
-        .Select(i => (int)i).Array[frequency * buckets]
+        .Select(i => (int)i).Array()[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
     }
@@ -638,7 +638,7 @@ public class GenTests
     public void List()
     {
         Gen.UShort[1, 1000]
-        .List[10, 100]
+        .List()[10, 100]
         .Sample(l => l.Count >= 10 && l.Count <= 100
                   && l.All(i => i is >= 1 and <= 1000));
     }
@@ -647,7 +647,7 @@ public class GenTests
     public void HashSet()
     {
         Gen.ULong[1, 1000]
-        .HashSet[10, 100]
+        .HashSet()[10, 100]
         .Sample(i => i.Count >= 10 && i.Count <= 100
                   && i.All(j => j is >= 1 and <= 1000));
     }
@@ -687,7 +687,7 @@ public class GenTests
         (from f in Gen.Select(Gen.Int[1, 5], Gen.Int[1, 5], Gen.Int[1, 5])
          let expected = new[] { f.Item1 * frequency, f.Item2 * frequency, f.Item3 * frequency }
          from actual in Gen.FrequencyConst((f.Item1, 0), (f.Item2, 1), (f.Item3, 2))
-                        .Array[frequency * (f.Item1 + f.Item2 + f.Item3)]
+                        .Array()[frequency * (f.Item1 + f.Item2 + f.Item3)]
                         .Select(sample => Tally(3, sample))
          select (expected, actual))
         .Sample(t => Check.ChiSquared(t.expected, t.actual, 10), iter: 1, time: -2);
@@ -696,7 +696,7 @@ public class GenTests
     [Test]
     public void Shuffle()
     {
-        Gen.Int.Array.SelectMany(a1 => Gen.Shuffle(a1).Select(a2 => (a1, a2)))
+        Gen.Int.Array().SelectMany(a1 => Gen.Shuffle(a1).Select(a2 => (a1, a2)))
         .Sample((a1, a2) =>
         {
             Array.Sort(a1);
@@ -712,7 +712,7 @@ public class GenTests
     {
         const int maxDepth = 4;
         Gen.Recursive<MyObj>((i, my) =>
-            Gen.Select(Gen.Int, my.Array[0, i < maxDepth ? 6 : 0], (i, a) => new MyObj(i, a))
+            Gen.Select(Gen.Int, my.Array()[0, i < maxDepth ? 6 : 0], (i, a) => new MyObj(i, a))
         )
         .Sample(i =>
         {

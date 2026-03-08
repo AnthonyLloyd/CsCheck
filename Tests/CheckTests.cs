@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Collections.Concurrent;
@@ -132,7 +132,7 @@ public class CheckTests
     public void Faster_Matrix_Multiply_Range()
     {
         var genDim = Gen.Int[5, 30];
-        var genArray = Gen.Double.Unit.Array2D;
+        var genArray = Gen.Double.Unit.Array2D();
         Gen.SelectMany(genDim, genDim, genDim, (i, j, k) => Gen.Select(genArray[i, j], genArray[j, k]))
         .Faster(
             MulIKJ,
@@ -143,7 +143,7 @@ public class CheckTests
     [Test]
     public void Faster_Linq_Random()
     {
-        Gen.Byte.Array[100, 1000]
+        Gen.Byte.Array()[100, 1000]
         .Faster(
             data =>
             {
@@ -235,7 +235,7 @@ public class CheckTests
     [Test]
     public void SampleModelBased_ConcurrentBag()
     {
-        Gen.Int[0, 5].List.Select(l => (new ConcurrentBag<int>(l), l))
+        Gen.Int[0, 5].List().Select(l => (new ConcurrentBag<int>(l), l))
         .SampleModelBased(
             Gen.Int.Operation<ConcurrentBag<int>, List<int>>((bag, i) => bag.Add(i), (list, i) => list.Add(i)),
             Gen.Operation<ConcurrentBag<int>, List<int>>(bag => bag.TryTake(out _), list => { if (list.Count > 0) list.RemoveAt(0); }),
@@ -317,7 +317,7 @@ public class CheckTests
     [Test]
     public void Enqueue_Faster_Than_Median()
     {
-        Gen.Double.OneTwo.Array[10].Select(Gen.Double.OneTwo, (a, s) =>
+        Gen.Double.OneTwo.Array()[10].Select(Gen.Double.OneTwo, (a, s) =>
         {
             var median = new MedianEstimator();
             foreach (var d in a) median.Add(d);

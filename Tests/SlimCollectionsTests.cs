@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Linq;
@@ -12,7 +12,7 @@ public class SlimCollectionsTests()
     [Test]
     public void ListSlim_ModelBased()
     {
-        Gen.Int.Array.Select(a => (new ListSlim<int>(a), new List<int>(a)))
+        Gen.Int.Array().Select(a => (new ListSlim<int>(a), new List<int>(a)))
         .SampleModelBased(
             Gen.Int.Operation<ListSlim<int>, List<int>>(
                 (ls, i) => ls.Add(i),
@@ -23,7 +23,7 @@ public class SlimCollectionsTests()
     [Test]
     public void ListSlim_Parallel()
     {
-        Gen.Byte.Array.Select(a => new ListSlim<byte>(a))
+        Gen.Byte.Array().Select(a => new ListSlim<byte>(a))
         .SampleParallel(
             Gen.Byte.Operation<ListSlim<byte>>(i =>  $"Add {i}", (l, i) => { lock (l) l.Add(i); }),
             Gen.Int.NonNegative.Operation<ListSlim<byte>>(i => $"Get {i}", (l, i) => { if (i < l.Count) { var _ = l[i]; } }),
@@ -35,7 +35,7 @@ public class SlimCollectionsTests()
     [Test]
     public void SetSlim_ModelBased()
     {
-        Gen.Int.Array.Select(a => (new SetSlim<int>(a), new HashSet<int>(a)))
+        Gen.Int.Array().Select(a => (new SetSlim<int>(a), new HashSet<int>(a)))
         .SampleModelBased(
             Gen.Int.Operation<SetSlim<int>, HashSet<int>>(
                 (ss, i) => ss.Add(i),
@@ -47,7 +47,7 @@ public class SlimCollectionsTests()
     [Test]
     public void SetSlim_Parallel()
     {
-        Gen.Byte.Array.Select(a => new SetSlim<byte>(a))
+        Gen.Byte.Array().Select(a => new SetSlim<byte>(a))
         .SampleParallel(
             Gen.Byte.Operation<SetSlim<byte>>((l, i) => { lock (l) l.Add(i); }),
             Gen.Int.NonNegative.Operation<SetSlim<byte>>((l, i) => { if (i < l.Count) { var _ = l[i]; } }),
@@ -59,7 +59,7 @@ public class SlimCollectionsTests()
     [Test]
     public void SetSlim_Performance_Add()
     {
-        Gen.Int.Array
+        Gen.Int.Array()
         .Faster(
             a =>
             {
@@ -77,7 +77,7 @@ public class SlimCollectionsTests()
     [Test, Skip("fails")]
     public void SetSlim_Performance_Contains()
     {
-        Gen.Int.Array.Select(a => (a, new SetSlim<int>(a), new HashSet<int>(a)))
+        Gen.Int.Array().Select(a => (a, new SetSlim<int>(a), new HashSet<int>(a)))
         .Faster(
             (items, setslim, _) =>
             {
@@ -129,7 +129,7 @@ public class SlimCollectionsTests()
     [Test]
     public void MapSlim_Performance_Add()
     {
-        Gen.Int.Select(Gen.Byte).Array
+        Gen.Int.Select(Gen.Byte).Array()
         .Faster(
             items =>
             {
@@ -164,7 +164,7 @@ public class SlimCollectionsTests()
     [Test, Skip("fails")]
     public void MapSlim_Performance_Increment()
     {
-        Gen.Int[0, 255].Array
+        Gen.Int[0, 255].Array()
         .Select(a => (a, new MapSlim<int, int>(), new Dictionary<int, int>()))
         .Faster(
             (items, mapslim, _) =>
