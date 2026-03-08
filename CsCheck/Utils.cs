@@ -1027,29 +1027,30 @@ public sealed class Classifier
         writeLine($"| {new string(' ', maxLength)} | {"Count".PadLeft(nLength)} |       % |   {"Median".PadLeft(medianLength)} |   {"Lower Q".PadLeft(lowerLength)} |   {"Upper Q".PadLeft(upperLength)} |   {"Minimum".PadLeft(minimumLength)} |   {"Maximum".PadLeft(maximumLength)} |");
         writeLine($"|-{new string('-', maxLength)}-|-{new string('-', nLength)}:|--------:|-{new string('-', medianLength)}--:|-{new string('-', lowerLength)}--:|-{new string('-', upperLength)}--:|-{new string('-', minimumLength)}--:|-{new string('-', maximumLength)}--:|");
         foreach (var kv in estimators.OrderByDescending(kv =>
-        {
-            var a = kv.Key.Split('/');
-            var r = new int[a.Length];
-            for (int i = 0; i < a.Length - 1; i++)
-                r[i] = estimators[string.Join('/', a.Take(i + 1))].N;
-            r[^1] = kv.Value.N;
-            return (r, kv.Key);
-        }, Comparer<(int[], string)>.Create((xb, yb) =>
-        {
-            var (x, xs) = xb;
-            var (y, ys) = yb;
-            int c;
-            for (int i = 0; i < Math.Min(x.Length, y.Length); i++)
-            {
-                c = x[i].CompareTo(y[i]);
-                if (c != 0)
-                    return c;
-            }
-            c = -x.Length.CompareTo(y.Length);
-            if (c != 0)
-                return c;
-            return -string.CompareOrdinal(xs, ys);
-        })))
+                            {
+                                var a = kv.Key.Split('/');
+                                var r = new (int, string)[a.Length];
+                                for (int i = 0; i < a.Length - 1; i++)
+                                {
+                                    var prefix = string.Join('/', a.Take(i + 1));
+                                    r[i] = (estimators[prefix].N, prefix);
+                                }
+                                r[^1] = (kv.Value.N, kv.Key);
+                                return r;
+                            }, Comparer<(int, string)[]>.Create((x, y) =>
+                                {
+                                    int c;
+                                    for (int i = 0; i < Math.Min(x.Length, y.Length); i++)
+                                    {
+                                        c = x[i].Item1.CompareTo(y[i].Item1);
+                                        if (c != 0)
+                                            return c;
+                                        c = -string.CompareOrdinal(x[i].Item2, y[i].Item2);
+                                        if (c != 0)
+                                            return c;
+                                    }
+                                    return -x.Length.CompareTo(y.Length);
+                                })))
         {
             var a = kv.Key.Split('/');
             var name = (new string((char)160, 2 * (a.Length - 1)) + a[^1]).PadRight(maxLength);
