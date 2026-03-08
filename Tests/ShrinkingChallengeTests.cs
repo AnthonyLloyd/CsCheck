@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Linq;
@@ -16,7 +16,7 @@ public class ShrinkingChallengeTests
             for (int i = 0; i < l.Length; i++) s += l[i];
             return s;
         }
-        var sGen = Gen.Short.Array[0, 10].Where(i => Sum(i) < 256);
+        var sGen = Gen.Short.Array()[0, 10].Where(i => Sum(i) < 256);
         Gen.Select(sGen, sGen, sGen, sGen, sGen)
         .Sample((a1, a2, a3, a4, a5) =>
         {
@@ -28,7 +28,7 @@ public class ShrinkingChallengeTests
     [Test, Skip("fails")]
     public void No2_LargeUnionList()
     {
-        Gen.Int.Array.Array
+        Gen.Int.Array().Array()
         .Sample(aa =>
         {
             var hs = new HashSet<int>();
@@ -44,7 +44,7 @@ public class ShrinkingChallengeTests
     [Test, Skip("fails")]
     public void No3_Reverse()
     {
-        Gen.Int.Array
+        Gen.Int.Array()
         .Sample(a =>
         {
             var c = new int[a.Length];
@@ -91,7 +91,7 @@ public class ShrinkingChallengeTests
     [Test, Skip("fails")]
     public void No5_LengthList()
     {
-        Gen.Int.Array
+        Gen.Int.Array()
         .Sample(a =>
         {
             foreach (var i in a)
@@ -188,7 +188,7 @@ public class ShrinkingChallengeTests
     [Test, Skip("fails")]
     public void No8_Coupling()
     {
-        Gen.Int[0, 100].SelectMany(l => Gen.Int[0, l - 1].Array[l])
+        Gen.Int[0, 100].SelectMany(l => Gen.Int[0, l - 1].Array()[l])
         .Sample(a =>
         {
             for (int i = 0; i < a.Length; i++)
@@ -203,7 +203,7 @@ public class ShrinkingChallengeTests
     [Test, Skip("fails")]
     public void No9_Deletion()
     {
-        Gen.Int.List[1, 100].SelectMany(l => Gen.Int[0, l.Count - 1].Select(i => (l, i)))
+        Gen.Int.List()[1, 100].SelectMany(l => Gen.Int[0, l.Count - 1].Select(i => (l, i)))
         .Sample((list, i) =>
         {
             var l = new List<int>(list);
@@ -216,14 +216,14 @@ public class ShrinkingChallengeTests
     [Test, Skip("fails")]
     public void No10_Distinct()
     {
-        Gen.Int.Array
+        Gen.Int.Array()
         .Sample(a => a.ToHashSet().Count < 3);
     }
 
     [Test, Skip("fails")]
     public void No11_NestedLists()
     {
-        Gen.Int.Array.Array
+        Gen.Int.Array().Array()
         .Sample(aa =>
         {
             int l = 0;

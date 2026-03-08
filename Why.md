@@ -29,7 +29,7 @@ Instead of coming up with examples we need to create a generator `Gen<T>` for th
 This may sound like a pain, but actually it's really simple with the composable fluent `Gen` classes in CsCheck, and can be done in one or two lines of code.
 The generators created for domain types can be composed and reused across a number of tests e.g. serialization and domain logic.
 
-We start with a highly defaulted generator `Gen.Double.Array.List` say but may want to be more specific `Gen.Double[0.0, 100.0].Array[5].List[1, 10]` about the range of values. 
+We start with a highly defaulted generator `Gen.Double.Array().List` say but may want to be more specific `Gen.Double[0.0, 100.0].Array()[5].List()[1, 10]` about the range of values. 
 
 Some testing libraries can create the generator for you automatically using reflection but this can lead to a number of bugs for the library author and a lack of control and insight for the library user.
 Fluent style composition similar to LINQ is a much more robust and extensible option.

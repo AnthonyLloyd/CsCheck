@@ -1,4 +1,4 @@
-﻿// Copyright 2026 Anthony Lloyd
+// Copyright 2026 Anthony Lloyd
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,7 +40,6 @@ public static partial class Check
     public static int Ulps = ParseEnvironmentVariableToInt("CsCheck_Ulps", 4);
     /// <summary>The number of Where Gne iterations before throwing an exception.</summary>
     public static int WhereLimit = ParseEnvironmentVariableToInt("CsCheck_WhereLimit", 100);
-    internal static bool IsDebug = Assembly.GetCallingAssembly().GetCustomAttribute<DebuggableAttribute>()?.IsJITTrackingEnabled ?? false;
 
     sealed class SampleActionWorker<T>(Gen<T> gen, Action<T> assert, CountdownEvent cde, string? seed, long target, bool isIter) : IThreadPoolWorkItem
     {
@@ -1408,7 +1407,7 @@ public static partial class Check
         }
 
         new GenInitial<Actual, Model>(initial)
-        .Select(Gen.OneOf(opNameActions).Array, (a, b) => new ModelBasedData<Actual, Model>(a.Actual, a.Model, a.Stream, a.Seed, b))
+        .Select(Gen.OneOf(opNameActions).Array(), (a, b) => new ModelBasedData<Actual, Model>(a.Actual, a.Model, a.Stream, a.Seed, b))
         .Sample(d =>
         {
             try
@@ -1754,7 +1753,7 @@ public static partial class Check
         Gen.Int[2, maxParallelOperations]
         .SelectMany(np => Gen.Int[2, Math.Min(threads, np)].Select(nt => (nt, np)))
         .SelectMany((nt, np) => Gen.Int[0, maxSequentialOperations].Select(ns => (ns, nt, np)))
-        .SelectMany((ns, nt, np) => new GenSampleParallel<T>(initial).Select(genOps.Array[ns], genOps.Array[np])
+        .SelectMany((ns, nt, np) => new GenSampleParallel<T>(initial).Select(genOps.Array()[ns], genOps.Array()[np])
                                     .Select((initial, sequential, parallel) => (initial, sequential, nt, parallel)))
         .Select((initial, sequential, threads, parallel) => new SampleParallelData<T>(initial.Value, initial.Stream, initial.Seed, sequential, parallel, threads))
         .Sample(spd =>
@@ -2018,7 +2017,7 @@ public static partial class Check
         Gen.Int[2, maxParallelOperations]
         .SelectMany(np => Gen.Int[2, Math.Min(threads, np)].Select(nt => (nt, np)))
         .SelectMany((nt, np) => Gen.Int[0, maxSequentialOperations].Select(ns => (ns, nt, np)))
-        .SelectMany((ns, nt, np) => new GenSampleParallel<Actual, Model>(initial).Select(genOps.Array[ns], genOps.Array[np])
+        .SelectMany((ns, nt, np) => new GenSampleParallel<Actual, Model>(initial).Select(genOps.Array()[ns], genOps.Array()[np])
                                     .Select((initial, sequential, parallel) => (initial, sequential, nt, parallel)))
         .Select((initial, sequential, threads, parallel) => new SampleParallelData<Actual, Model>(initial.Actual, initial.Model, initial.Stream, initial.Seed, sequential, parallel, threads))
         .Sample(spd =>
@@ -2268,7 +2267,7 @@ public static partial class Check
                 {
                     if (result.Add(fasterTimer.Time(), slowerTimer.Time()))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2354,7 +2353,7 @@ public static partial class Check
                 {
                     if (result.Add(fasterTimer.Time(out var fasterValue), slowerTimer.Time(out var slowerValue)))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2410,7 +2409,7 @@ public static partial class Check
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
-        if (raiseexception && result.NotFaster && !IsDebug)
+        if (raiseexception && result.NotFaster)
             throw new CsCheckException(result.ToString());
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null) result.Output(writeLine);
@@ -2441,7 +2440,7 @@ public static partial class Check
                 {
                     if (result.Add(await fasterTimer.Time().ConfigureAwait(false), await slowerTimer.Time().ConfigureAwait(false)))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2498,7 +2497,7 @@ public static partial class Check
                     var (slowerTime, slowerValue) = await slowerTimer.Time().ConfigureAwait(false);
                     if (result.Add(fasterTime, slowerTime))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2552,7 +2551,7 @@ public static partial class Check
                     t = gen.Generate(pcg, null, out _);
                     if (running && result.Add(fasterTimer.Time(t), slowerTimer.Time(t)))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2757,7 +2756,7 @@ public static partial class Check
                     if (!running) return;
                     if (result.Add(await fasterTimer.Time(t).ConfigureAwait(false), await slowerTimer.Time(t).ConfigureAwait(false)))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2918,7 +2917,7 @@ public static partial class Check
                     t = gen.Generate(pcg, null, out _);
                     if (result.Add(fasterTimer.Time(t, out var fasterValue), slowerTimer.Time(t, out var slowerValue)))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -3180,7 +3179,7 @@ public static partial class Check
                     var (slowerTime, slowerValue) = await slowerTimer.Time(t).ConfigureAwait(false);
                     if (result.Add(fasterTime, slowerTime))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -3555,9 +3554,7 @@ internal sealed class FasterResult(double sigma, int repeat)
         var result = $"{Median.Median:P2}[{Median.Q1:P2}..{Median.Q3:P2}] {times:#0.00}x[{q1Times:#0.00}x..{q3Times:#0.00}x] {faster}";
         if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
         else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
-        result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / repeat)}{timeUnit} vs {timeString((double)SlowerMin / repeat)}{timeUnit}";
-        if (Check.IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
-        return result;
+        return $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / repeat)}{timeUnit} vs {timeString((double)SlowerMin / repeat)}{timeUnit}";
     }
 
     private static (Func<double, string>, string) TimeFormat(double maxValue) =>

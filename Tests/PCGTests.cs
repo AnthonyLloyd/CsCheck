@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Diagnostics;
@@ -117,7 +117,7 @@ public class PCGTests
     {
         genPCG
         .Select(i => i.Next())
-        .Array[20]
+        .Array()[20]
         .Sample(t =>
         {
             var expected = Enumerable.Repeat(10, 32).ToArray();
@@ -140,7 +140,7 @@ public class PCGTests
     {
         genPCG
         .Select(i => i.Next64())
-        .Array[20]
+        .Array()[20]
         .Sample(t =>
         {
             var expected = Enumerable.Repeat(10, 64).ToArray();

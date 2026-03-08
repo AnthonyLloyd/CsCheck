@@ -35,7 +35,7 @@ The following tests are in ~~xUnit~~ TUnit but could equally be used in any test
 
 More to see in the [Tests](https://github.com/AnthonyLloyd/CsCheck/tree/master/Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
 
-No Reflection was used in the making of this product. CsCheck is close to being AOT compatible but 'generic recursion is AOT kryptonite'.
+No Reflection was used in the making of this product. CsCheck is AOT compatible.
 
 ## Generator Creation Example
 
@@ -67,7 +67,7 @@ static readonly Gen<JsonNode> genJsonNode = Gen.Recursive<JsonNode>((depth, genJ
 {
     if (depth == 5) return genJsonValue;
     var genJsonObject = Gen.Dictionary(genString, genJsonNode.Null())[0, 5].Select(d => new JsonObject(d));
-    var genJsonArray = genJsonNode.Null().Array[0, 5].Select(i => new JsonArray(i));
+    var genJsonArray = genJsonNode.Null().Array()[0, 5].Select(i => new JsonArray(i));
     return Gen.OneOf(genJsonObject, genJsonArray, genJsonValue);
 });
 ```
@@ -110,7 +110,7 @@ public void Int_Distribution()
     int buckets = 70;
     int frequency = 10;
     int[] expected = Enumerable.Repeat(frequency, buckets).ToArray();
-    Gen.Int[0, buckets - 1].Array[frequency * buckets]
+    Gen.Int[0, buckets - 1].Array()[frequency * buckets]
     .Select(sample => Tally(buckets, sample))
     .Sample(actual => Check.ChiSquared(expected, actual));
 }
@@ -150,7 +150,7 @@ public void DateTime()
 [Test]
 public void No2_LargeUnionList()
 {
-    Gen.Int.Array.Array
+    Gen.Int.Array().Array()
     .Sample(aa =>
     {
         var hs = new HashSet<int>();
@@ -173,7 +173,7 @@ public void RecursiveDepth()
 {
     int maxDepth = 4;
     Gen.Recursive<MyObj>((i, my) =>
-        Gen.Select(Gen.Int, my.Array[0, i < maxDepth ? 6 : 0], (i, a) => new MyObj(i, a))
+        Gen.Select(Gen.Int, my.Array()[0, i < maxDepth ? 6 : 0], (i, a) => new MyObj(i, a))
     )
     .Sample(i =>
     {
@@ -194,8 +194,8 @@ public void AllocatorMany_Classify()
 {
     Gen.Select(Gen.Int[3, 30], Gen.Int[3, 15]).SelectMany((rows, cols) =>
         Gen.Select(
-            Gen.Int[0, 5].Array[cols].Where(a => a.Sum() > 0).Array[rows],
-            Gen.Int[900, 1000].Array[rows],
+            Gen.Int[0, 5].Array()[cols].Where(a => a.Sum() > 0).Array()[rows],
+            Gen.Int[900, 1000].Array()[rows],
             Gen.Int.Uniform))
     .Sample((solution,
              rowPrice,
@@ -234,7 +234,7 @@ SampleModelBased generates an initial actual and model and then applies a random
 public void
 SetSlim_ModelBased()
 {
-    Gen.Int.Array.Select(a => (new SetSlim<int>(a), new HashSet<int>(a)))
+    Gen.Int.Array().Select(a => (new SetSlim<int>(a), new HashSet<int>(a)))
     .SampleModelBased(
         Gen.Int.Operation<SetSlim<int>, HashSet<int>>(
             (ss, i) => ss.Add(i),
@@ -358,7 +358,7 @@ public void Portfolio_Small_Mixed_Example()
         && p.Positions.Any(p => p.Instrument is Equity)
     , "0N0XIzNsQ0O2");
     var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
-    var fxRates = ModelGen.Price.Array[currencies.Length].Single(a =>
+    var fxRates = ModelGen.Price.Array()[currencies.Length].Single(a =>
         a.All(p => pp is > 0.75 and < 1.5)
     , "ftXKwKhS6ec4");
     double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
@@ -382,7 +382,7 @@ It's just what you need to iteratively improve performance while making sure it 
 [Test]
 public void Faster_Linq_Random()
 {
-    Gen.Byte.Array[100, 1000]
+    Gen.Byte.Array()[100, 1000]
     .Faster(
         data => data.Aggregate(0.0, (t, b) => t + b),
         data => data.Select(i => (double)i).Sum(),
@@ -412,7 +412,7 @@ Standard Output Messages:
 public void Faster_Matrix_Multiply_Range()
 {
     var genDim = Gen.Int[5, 30];
-    var genArray = Gen.Double.Unit.Array2D;
+    var genArray = Gen.Double.Unit.Array2D();
     Gen.SelectMany(genDim, genDim, genDim, (i, j, k) => Gen.Select(genArray[i, j], genArray[j, k]))
     .Faster(
         MulIKJ,
@@ -427,7 +427,7 @@ public void Faster_Matrix_Multiply_Range()
 [Test]
 public void MapSlim_Performance_Increment()
 {
-    Gen.Byte.Array
+    Gen.Byte.Array()
     .Select(a => (a, new MapSlim<byte, int>(), new Dictionary<int, int>()))
     .Faster(
         (items, mapslim, _) =>

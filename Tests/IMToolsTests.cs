@@ -1,4 +1,4 @@
-﻿#if !NET35 && !PCL
+#if !NET35 && !PCL
 #define SUPPORTS_SPIN_WAIT
 #endif
 
@@ -54,7 +54,7 @@ namespace Tests
         public async Task AddOrUpdate_random_items_and_randomly_checking_CsCheck()
         {
             const int upperBound = 11966;
-            Gen.Int[0, upperBound].Array[1, 12].Sample(ints =>
+            Gen.Int[0, upperBound].Array()[1, 12].Sample(ints =>
             {
                 var m = ImHashMap234<int, int>.Empty;
                 foreach (var n in ints)
@@ -72,8 +72,8 @@ namespace Tests
         }
 
         static Gen<ImHashMap234<int, int>> GenMap(int upperBound) =>
-            Gen.Int[0, upperBound].ArrayUnique.SelectMany(ks =>
-                Gen.Int.Array[ks.Length].Select(vs =>
+            Gen.Int[0, upperBound].ArrayUnique().SelectMany(ks =>
+                Gen.Int.Array()[ks.Length].Select(vs =>
                 {
                     var m = ImHashMap234<int, int>.Empty;
                     for (int i = 0; i < ks.Length; i++)

@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.IO;
@@ -145,7 +145,7 @@ public class HashTests
     [Test]
     public void HashStream_Parts()
     {
-        Gen.Byte.Array[0, 31].Array[3, 10]
+        Gen.Byte.Array()[0, 31].Array()[3, 10]
         .Sample(bs =>
         {
             var actual = new HashStream();

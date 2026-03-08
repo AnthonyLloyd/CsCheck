@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Collections.Generic;
@@ -53,14 +53,14 @@ public class ModelTests
         public readonly static Gen<double> Coupon = Gen.Int[0, 100].Select(i => 0.125 * i);
         public readonly static Gen<double> Price = Gen.Int[0001, 9999].Select(i => 0.01 * i);
         public readonly static Gen<DateTime> Date = Gen.Date[new DateTime(2000, 1, 1), new DateTime(2040, 1, 1)];
-        public readonly static Gen<Equity> Equity = Gen.Select(Name, Country, Currency, Gen.Enum<Exchange>().HashSet[1, 3],
+        public readonly static Gen<Equity> Equity = Gen.Select(Name, Country, Currency, Gen.Enum<Exchange>().HashSet()[1, 3],
                                                     (n, co, cu, e) => new Equity(n, co, cu, e));
         public readonly static Gen<Bond> Bond = Gen.Select(Name, Country, Currency, Gen.SortedDictionary(Date, Coupon),
                                                     (n, co, cu, c) => new Bond(n, co, cu, c));
         public readonly static Gen<Instrument> Instrument = Gen.OneOf<Instrument>(Equity, Bond);
         public readonly static Gen<Trade> Trade = Gen.Select(Date, Quantity, Price, (dt, q, p) => new Trade(dt, q, q * p));
-        public readonly static Gen<Position> Position = Gen.Select(Instrument, Trade.List, Price, (i, t, p) => new Position(i, t, p));
-        public readonly static Gen<Portfolio> Portfolio = Gen.Select(Name, Currency, Position.Array, (n, c, p) => new Portfolio(n, c, p));
+        public readonly static Gen<Position> Position = Gen.Select(Instrument, Trade.List(), Price, (i, t, p) => new Position(i, t, p));
+        public readonly static Gen<Portfolio> Portfolio = Gen.Select(Name, Currency, Position.Array(), (n, c, p) => new Portfolio(n, c, p));
     }
 
     [Test]
@@ -72,7 +72,7 @@ public class ModelTests
             && p.Positions.Any(p => p.Instrument is Equity)
         , "e2v0jI554Uya");
         var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
-        var fxRates = ModelGen.Price.Array[currencies.Length].Single(a =>
+        var fxRates = ModelGen.Price.Array()[currencies.Length].Single(a =>
             a.All(p => p is > 0.75 and < 1.5)
         , "ftXKwKhS6ec4");
         double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
