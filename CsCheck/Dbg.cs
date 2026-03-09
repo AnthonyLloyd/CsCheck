@@ -91,7 +91,7 @@ public static class Dbg
         lock (stats)
         {
             var now = Stopwatch.GetTimestamp();
-            return stats.Select(i =>
+            return [.. stats.Select(i =>
             {
                 var (completed, starts) = i.Value;
                 lock (starts)
@@ -101,7 +101,7 @@ public static class Dbg
                         running.Add(now - start);
                     return KeyValuePair.Create(i.Key, (completed, running));
                 }
-            }).ToArray();
+            })];
         }
     }
 
@@ -120,11 +120,8 @@ public static class Dbg
         objects = new();
         functions = new();
         times = new();
-        if (regressionStream is not null)
-        {
-            regressionStream.Dispose();
-            regressionStream = null;
-        }
+        regressionStream?.Dispose();
+        regressionStream = null;
     }
 
     /// <summary>Save object by name.</summary>
@@ -363,20 +360,14 @@ public static class Dbg
                 _cache.Add(current);
                 yield return current;
             }
-            if (_enumerator is not null)
-            {
-                _enumerator.Dispose();
-                _enumerator = null;
-            }
+            _enumerator?.Dispose();
+            _enumerator = null;
             for (; index < _cache.Count; index++) yield return _cache[index];
         }
         public void Dispose()
         {
-            if (_enumerator is not null)
-            {
-                _enumerator.Dispose();
-                _enumerator = null;
-            }
+            _enumerator?.Dispose();
+            _enumerator = null;
         }
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
@@ -841,7 +832,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<bool> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<bool> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<bool> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -849,7 +840,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<byte> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<byte> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<byte> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -857,7 +848,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<char> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<char> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<char> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -865,7 +856,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<DateTime> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<DateTime> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<DateTime> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -873,7 +864,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<DateTimeOffset> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<DateTimeOffset> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<DateTimeOffset> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -881,7 +872,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<decimal> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<decimal> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<decimal> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -889,7 +880,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<double> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<double> ?? val.ToArray();
+        var col = val as ICollection<double> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -897,7 +888,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<float> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<float> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<float> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -905,7 +896,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<Guid> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<Guid> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<Guid> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -913,7 +904,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<int> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<int> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<int> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -921,7 +912,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<long> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<long> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<long> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -929,7 +920,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<sbyte> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<sbyte> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<sbyte> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -937,7 +928,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<short> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<short> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<short> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -945,7 +936,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<string> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<string> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<string> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -953,7 +944,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<TimeSpan> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<TimeSpan> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<TimeSpan> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -961,7 +952,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<uint> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<uint> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<uint> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -969,7 +960,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<ulong> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<ulong> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<ulong> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }
@@ -977,7 +968,7 @@ public static class RegressionExtensions
     public static void Add(this IRegression r, IEnumerable<ushort> val)
     {
         if (val is null) { r.Add(NULL); return; }
-        var col = val as ICollection<ushort> ?? val.ToArray();
+        var col = val as IReadOnlyCollection<ushort> ?? [.. val];
         r.Add((uint)col.Count);
         foreach (var v in col) r.Add(v);
     }

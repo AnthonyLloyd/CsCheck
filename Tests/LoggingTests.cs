@@ -17,8 +17,8 @@ public class LoggingTests
     [Arguments(0)]
     public async Task Bool_Distribution_WithTycheLogs(int generatedIntUponTrue)
     {
-        using var memoryStream = new MemoryStream();
-        using var writer = new StreamWriter(memoryStream);
+        await using var memoryStream = new MemoryStream();
+        await using var writer = new StreamWriter(memoryStream);
         writer.AutoFlush = true;
         var logger = Logging.CreateTycheLogger(writer: writer);
 
