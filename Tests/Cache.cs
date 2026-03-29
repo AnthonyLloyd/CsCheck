@@ -216,7 +216,7 @@ public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
     {
         _durationTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency);
         _eagerRefreshTicks = (long)(_durationTicks * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
-        _softTimeout = softTimeout ?? TimeSpan.Zero;
+        _softTimeout = softTimeout ?? Timeout.InfiniteTimeSpan;
         if (remove is { } r) _timer = new Timer(Cleanup, (long)(r.TotalSeconds * Stopwatch.Frequency), r * 1.25, r * 0.25);
     }
 
@@ -243,8 +243,14 @@ public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
         if (age >= _eagerRefreshTicks)
         {
             var updateTask = _cache.Update(key, factory, CallFactory);
-            if (age >= _durationTicks && (_softTimeout == TimeSpan.Zero || await Task.WhenAny(updateTask, Task.Delay(_softTimeout)) == updateTask))
-                try { result = await updateTask; } catch { }
+            if (age >= _durationTicks)
+            {
+                try
+                {
+                    result = _softTimeout == Timeout.InfiniteTimeSpan ? await updateTask : await updateTask.WithDefault(result, _softTimeout);
+                }
+                catch { }
+            }
             else
                 _ = updateTask.ContinueWith(static t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
         }
@@ -252,4 +258,39 @@ public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
     }
 
     public void Dispose() => _timer?.Dispose();
+}
+
+public static class WithDefaultAwaiter
+{
+    /// <summary>Awaits a task returning a default value if it errors or times out.</summary>
+    public static WithDefaultAwaiter<T> WithDefault<T>(this Task<T> task, T defaultValue, TimeSpan timeout) => new(task, defaultValue, timeout);
+}
+
+public sealed class WithDefaultAwaiter<T>(Task<T> task, T defaultValue, TimeSpan timeout) : ICriticalNotifyCompletion
+{
+    private Action? _continuation;
+    private Timer? _timer;
+    public WithDefaultAwaiter<T> GetAwaiter() => this;
+    public bool IsCompleted => task.IsCompleted;
+    public T GetResult() => task.IsCompletedSuccessfully ? task.Result : defaultValue;
+    public void OnCompleted(Action continuation) => UnsafeOnCompleted(continuation);
+    public void UnsafeOnCompleted(Action continuation)
+    {
+        _continuation = continuation;
+        _timer = new Timer(static s => ((WithDefaultAwaiter<T>)s!).Complete(), this, timeout, Timeout.InfiniteTimeSpan);
+        task.ContinueWith(static (t, s) =>
+        {
+            ((WithDefaultAwaiter<T>)s!).Complete();
+            if (t.IsFaulted) _ = t.Exception;
+        }, this, TaskContinuationOptions.ExecuteSynchronously);
+    }
+    private void Complete()
+    {
+        if (Interlocked.Exchange(ref _continuation, null) is { } continuation)
+        {
+            try { continuation(); }
+            catch { }
+            _timer?.Dispose();
+        }
+    }
 }
