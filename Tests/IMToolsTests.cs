@@ -6,11 +6,8 @@
 #define SUPPORTS_LAZY
 #endif
 
-using System;
-using System.Collections.Generic;
 using ImTools.Experimental;
 using CsCheck;
-using System.Linq;
 using ImTools;
 
 #pragma warning disable
