@@ -25,6 +25,7 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
     }
 
     public int Count => _count;
+    public bool IsEmpty => _pending is null && _count == 0;
 
     private void AddOrUpdate(K key, V value)
     {
@@ -183,66 +184,74 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
 
-/// <summary><para>
-/// With <paramref name="duration"/> = 1 min and <paramref name="eagerRefreshRatio"/> = 0.5:
+/// <summary>Lightweight cache with refresh-ahead, single-flight, Dispose free, and fail-safe semantics. Features match FusionCache and similar to web <see href="https://www.debugbear.com/docs/stale-while-revalidate">stale-while-revalidate</see>.</summary>
+/// <param name="duration">How long a value stays fresh. After this, the next access waits for a refresh.</param>
+/// <param name="eagerRefreshRatio">Fraction of <paramref name="duration"/> after which an access triggers a background refresh while still returning the current value.</param>
+/// <param name="softTimeout">If a synchronous refresh takes longer than this, return the current (stale) value while the refresh continues in the background.</param>
+/// <param name="remove">Items not refreshed within this duration become eligible for removal and are removed by periodic cleanup.</param>
+/// <remarks>
+/// <para>With <paramref name="duration"/> = 1 min and <paramref name="eagerRefreshRatio"/> = 0.5:
 /// <list type="bullet">
 ///     <item>Any access after 30 sec triggers a background refresh (caller gets the current value immediately).</item>
-///     <item>Any access after 1 min waits for the refresh possibly with a <paramref name="softTimeout"/> to return the current value if it's taking too long.</item>
+///     <item>Any access after 1 min waits for the refresh, possibly with a <paramref name="softTimeout"/> to return the current value if it's taking too long.</item>
 ///     <item>Popular items get accessed in the 30 sec – 1 min window, so they refresh eagerly at 30 sec. Unpopular items are never accessed in that window, so they only refresh after the <paramref name="duration"/> (1 min).</item>
 ///     <item>If the factory errors or takes too long the current item is returned as a failsafe. Items are removed after the given <paramref name="remove"/> time since last refresh.</item>
-/// </list>
-/// </para>
-/// <para>The core insight is: popularity correlates with the value of freshness. Here are concrete use cases:</para>
-/// <list type="number">
-///     <item>Stock/pricing tickers — AAPL is viewed by thousands of users per second; a stale price is seen by many people and noticed quickly. A penny stock viewed once an hour can tolerate twice the staleness because almost nobody sees it.</item>
-///     <item>E-commerce inventory/pricing — A trending product's stock count matters enormously (overselling risk scales with traffic). A long-tail product with 2 views/day can show a slightly older stock count with negligible business impact.</item>
-///     <item>CDN origin-shield / API gateway caching — High-traffic API endpoints (e.g. homepage feed) benefit from proactive refresh so no user ever sees a cache-miss latency spike. Low-traffic endpoints (e.g. an obscure settings page) can tolerate the occasional blocking refresh because few users are affected.</item>
-///     <item>DNS / service discovery — A hot service endpoint that receives 10k req/s should detect failovers and IP changes faster. A rarely-called internal tool can lag behind without anyone noticing.</item>
-///     <item>Permissions / feature-flag caching — An active user's permissions are checked constantly; fresher data means revocations or new grants take effect sooner. A dormant user's cached permissions can be staler since they're rarely evaluated.</item>
-///     <item>Social metrics (likes, comments, share counts) — A viral post's counters are seen by millions; keeping them fresher is worth the extra backend call. An old post with 3 views/day doesn't need that.</item>
-/// </list>
-/// <para>
-/// The unifying principle: the cost of staleness is proportional to the number of people who observe it. Eager refresh naturally directs your refresh budget toward the items
-/// where staleness hurts the most, without any explicit popularity tracking — the access pattern itself is the signal. This is a very efficient way to implement a refreshing cache.
-/// </para></summary>
-public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
+/// </list></para>
+/// <para>The core insight: popularity correlates with the value of freshness. Eager refresh naturally directs the refresh budget toward the items where staleness hurts the most,
+/// without any explicit popularity tracking, the access pattern itself is the signal.</para>
+/// </remarks>
+public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefreshRatio = 0.5, TimeSpan? softTimeout = null, TimeSpan? remove = null) where K : IEquatable<K>
 {
     private Cache<K, (long Timestamp, V Value)> _cache = new();
-    private readonly long _durationTicks, _eagerRefreshTicks;
-    private readonly TimeSpan _softTimeout;
-    private readonly Timer? _timer;
+    private readonly long _durationTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency);
+    private readonly long _eagerRefreshTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
+    private readonly TimeSpan _softTimeout = softTimeout ?? Timeout.InfiniteTimeSpan;
+    private readonly long _removeTicks = remove.HasValue ? (long)(remove.Value.TotalSeconds * Stopwatch.Frequency) : 0;
+    private Timer? _timer;
 
-    public RefreshingCache(TimeSpan duration, double eagerRefreshRatio = 0.5, TimeSpan? softTimeout = null, TimeSpan? remove = null)
+    private static void Cleanup(object? state)
     {
-        _durationTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency);
-        _eagerRefreshTicks = (long)(_durationTicks * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
-        _softTimeout = softTimeout ?? Timeout.InfiniteTimeSpan;
-        if (remove is { } r) _timer = new Timer(Cleanup, (long)(r.TotalSeconds * Stopwatch.Frequency), r * 1.25, r * 0.25);
+        if (((WeakReference<RefreshingCache<K, V>>)state!).TryGetTarget(out var self))
+            _ = Task.Run(async () =>
+            {
+                var removeTimestamp = Stopwatch.GetTimestamp() - self._removeTicks;
+                self._cache = await self._cache.Compact(e => e.Value.Timestamp >= removeTimestamp);
+                if (self._cache.IsEmpty)
+                {
+                    Interlocked.Exchange(ref self._timer, null)?.Dispose();
+                    if (!self._cache.IsEmpty) self.EnsureTimerRunning();
+                }
+            });
     }
 
-    private void Cleanup(object? removeTicks)
+    private void EnsureTimerRunning()
     {
-        _ = Task.Run(async () =>
+        if (_removeTicks == 0 || Volatile.Read(ref _timer) is not null) return;
+        var newTimer = new Timer(Cleanup, new WeakReference<RefreshingCache<K, V>>(this), Timeout.Infinite, Timeout.Infinite);
+        if (Interlocked.CompareExchange(ref _timer, newTimer, null) is null)
         {
-            var removeTimestamp = Stopwatch.GetTimestamp() - (long)removeTicks!;
-            _cache = await _cache.Compact(e => e.Value.Timestamp >= removeTimestamp);
-        });
+            var removeMs = (uint)(_removeTicks * 1000 / Stopwatch.Frequency);
+            newTimer.Change(removeMs, removeMs);
+        }
+        else newTimer.Dispose();
     }
 
-    private static async Task<(long, V)> CallFactory(K key, Func<K, Task<V>> factory)
+    private static async Task<(long, V)> CallFactory<S>(K key, (Func<K, S, Task<V>> Factory, S State, RefreshingCache<K, V> Self) state)
     {
-        var value = await factory(key);
-        return (Stopwatch.GetTimestamp(), value);
+        var value = await state.Factory(key, state.State);
+        var timestamp = Stopwatch.GetTimestamp();
+        state.Self.EnsureTimerRunning();
+        return (timestamp, value);
     }
 
-    public async ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
+    public async ValueTask<V> GetOrAdd<S>(K key, S state, Func<K, S, Task<V>> factory)
     {
         var now = Stopwatch.GetTimestamp();
-        var result = await _cache.GetOrAdd(key, factory, CallFactory);
+        var result = await _cache.GetOrAdd(key, (factory, state, this), CallFactory);
         var age = now - result.Timestamp;
         if (age >= _eagerRefreshTicks)
         {
-            var updateTask = _cache.Update(key, factory, CallFactory);
+            var updateTask = _cache.Update(key, (factory, state, this), CallFactory);
             if (age >= _durationTicks)
             {
                 try
@@ -257,7 +266,14 @@ public sealed class RefreshingCache<K, V> : IDisposable where K : IEquatable<K>
         return result.Value;
     }
 
-    public void Dispose() => _timer?.Dispose();
+    public ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory)
+        => GetOrAdd(key, factory, static (k, f) => f(k));
+
+    public async ValueTask<V> Update<S>(K key, S state, Func<K, S, Task<V>> factory)
+        => (await _cache.Update(key, (factory, state, this), CallFactory)).Value;
+
+    public ValueTask<V> Update(K key, Func<K, Task<V>> factory)
+        => Update(key, factory, static (k, f) => f(k));
 }
 
 public static class WithDefaultAwaiter

@@ -195,7 +195,7 @@ public class CacheTests
     [Test]
     public async Task RefreshingCache_GetOrAdd_ReturnsCachedValue()
     {
-        using var cache = new RefreshingCache<int, int>(TimeSpan.FromMinutes(10));
+        var cache = new RefreshingCache<int, int>(TimeSpan.FromMinutes(10));
         var callCount = 0;
         Task<int> Factory(int _) => Task.FromResult(Interlocked.Increment(ref callCount));
         var first = await cache.GetOrAdd(1, Factory);
@@ -208,7 +208,7 @@ public class CacheTests
     [Test]
     public async Task RefreshingCache_GetOrAdd_MultipleKeys()
     {
-        using var cache = new RefreshingCache<int, int>(TimeSpan.FromMinutes(10));
+        var cache = new RefreshingCache<int, int>(TimeSpan.FromMinutes(10));
         static Task<int> Factory(int k) => Task.FromResult(k * 100);
         var tasks = Enumerable.Range(0, 20)
             .Select(k => cache.GetOrAdd(k, Factory).AsTask())
@@ -221,7 +221,7 @@ public class CacheTests
     [Test]
     public async Task RefreshingCache_GetOrAdd_ConcurrentSameKey()
     {
-        using var cache = new RefreshingCache<int, int>(TimeSpan.FromMinutes(10));
+        var cache = new RefreshingCache<int, int>(TimeSpan.FromMinutes(10));
         var callCount = 0;
         async Task<int> Factory(int k)
         {
@@ -242,7 +242,7 @@ public class CacheTests
     public async Task RefreshingCache_GetOrAdd_RefreshesAfterExpiry()
     {
         var duration = TimeSpan.FromMilliseconds(10);
-        using var cache = new RefreshingCache<int, int>(duration);
+        var cache = new RefreshingCache<int, int>(duration);
         var callCount = 0;
         Task<int> Factory(int _) => Task.FromResult(Interlocked.Increment(ref callCount));
         await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
@@ -255,7 +255,7 @@ public class CacheTests
     public async Task RefreshingCache_GetOrAdd_EagerRefresh()
     {
         var duration = TimeSpan.FromMilliseconds(50_000);
-        using var cache = new RefreshingCache<int, int>(duration, eagerRefreshRatio: 0.0001);
+        var cache = new RefreshingCache<int, int>(duration, eagerRefreshRatio: 0.0001);
         var callCount = 0;
         Task<int> Factory(int _) => Task.FromResult(Interlocked.Increment(ref callCount));
         await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
@@ -269,7 +269,7 @@ public class CacheTests
     public async Task RefreshingCache_GetOrAdd_FailsafeReturnsStale()
     {
         var duration = TimeSpan.FromMilliseconds(10);
-        using var cache = new RefreshingCache<int, int>(duration);
+        var cache = new RefreshingCache<int, int>(duration);
         var callCount = 0;
         Task<int> Factory(int _) => Interlocked.Increment(ref callCount) == 1 ? Task.FromResult(1) : throw new("Factory failed");
         await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
@@ -282,7 +282,7 @@ public class CacheTests
     public async Task RefreshingCache_GetOrAdd_SoftTimeoutReturnsStale()
     {
         var duration = TimeSpan.FromMilliseconds(10);
-        using var cache = new RefreshingCache<int, int>(duration, softTimeout: TimeSpan.FromMilliseconds(5));
+        var cache = new RefreshingCache<int, int>(duration, softTimeout: TimeSpan.FromMilliseconds(5));
         var callCount = 0;
         async Task<int> Factory(int _)
         {
@@ -293,5 +293,28 @@ public class CacheTests
         await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
         await Task.Delay(duration * 2);
         await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task RefreshingCache_GetOrAdd_RemovesExpiredEntries()
+    {
+        var remove = TimeSpan.FromMilliseconds(50);
+        var cache = new RefreshingCache<int, int>(TimeSpan.FromMinutes(10), remove: remove);
+        var callCount = 0;
+        Task<int> Factory(int _) => Task.FromResult(Interlocked.Increment(ref callCount));
+
+        await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
+
+        for (int i = 0; i < 9; i++)
+        {
+            await Task.Delay(remove);
+            if (await cache.GetOrAdd(1, Factory) == 2)
+            {
+                await Assert.That(callCount).IsEqualTo(2);
+                return;
+            }
+        }
+
+        throw new("Entry was not removed by periodic cleanup.");
     }
 }
