@@ -6,27 +6,24 @@ using System.Collections.Concurrent;
 public class CacheTests
 {
     [Test]
-    public void Cache_GetOrAdd_ModelBased()
+    public async Task Cache_GetOrAdd_ModelBased()
     {
-        static void CacheTryAdd(Cache<int, byte> cache, int key, byte value)
-            => cache.GetOrAdd(key, _ => Task.FromResult(value)).AsTask().GetAwaiter().GetResult();
-
-        Gen.Select(Gen.Int, Gen.Byte).Array
-        .Select(kvs =>
+        await Gen.Select(Gen.Int, Gen.Byte).Array
+        .Select(async kvs =>
         {
             var cache = new Cache<int, byte>();
             var dictionary = new Dictionary<int, byte>();
             foreach (var (key, value) in kvs)
             {
-                CacheTryAdd(cache, key, value);
+                await cache.GetOrAdd(key, _ => Task.FromResult(value));
                 dictionary.TryAdd(key, value);
             }
             return (cache, dictionary);
         })
-        .SampleModelBased(
+        .SampleModelBasedAsync(
             Gen.Select(Gen.Int, Gen.Byte).Operation<Cache<int, byte>, Dictionary<int, byte>>(
-                (cache, kv) => CacheTryAdd(cache, kv.Item1, kv.Item2),
-                (dictionary, kv) => dictionary.TryAdd(kv.Item1, kv.Item2))
+                async (cache, kv) => await cache.GetOrAdd(kv.Item1, _ => Task.FromResult(kv.Item2)),
+                (dictionary, kv) => { dictionary.TryAdd(kv.Item1, kv.Item2); return Task.CompletedTask; })
         );
     }
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2026 Anthony Lloyd
+// Copyright 2026 Anthony Lloyd
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1583,6 +1583,241 @@ public static partial class Check
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3, operation4, operation5, operation6],
+            equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+
+    sealed class ModelBasedDataAsync<Actual, Model>(Task<(Actual, Model)> initial, uint stream, ulong seed, (string, Func<Actual, Task>, Func<Model, Task>)[] operations)
+    {
+        public Task<(Actual, Model)> Initial = initial; public Actual InitialActual = default!; public Model InitialModel = default!; public bool InitialMaterialized;
+        public Actual ActualState = default!; public Model ModelState = default!; public uint Stream = stream; public ulong Seed = seed; public (string, Func<Actual, Task>, Func<Model, Task>)[] Operations = operations; public Exception? Exception;
+    }
+
+    sealed class GenInitialAsync<Actual, Model>(Gen<Task<(Actual, Model)>> initial) : Gen<(Task<(Actual, Model)> Task, uint Stream, ulong Seed)>
+    {
+        public override (Task<(Actual, Model)> Task, uint Stream, ulong Seed) Generate(PCG pcg, Size? min, out Size size)
+        {
+            var stream = pcg.Stream;
+            var seed = pcg.Seed;
+            var task = initial.Generate(pcg, null, out size);
+            return (task, stream, seed);
+        }
+    }
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial state generator.</param>
+    /// <param name="operations">The operation generators that can act on the state.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model>[] operations,
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+    {
+        equal ??= ModelEqual;
+        seed ??= Seed;
+        if (iter == -1) iter = Iter;
+        if (time == -1) time = Time;
+        if (threads == -1) threads = Threads;
+        printActual ??= Print;
+        printModel ??= Print;
+
+        var opNameActions = new Gen<(string, Func<Actual, Task>, Func<Model, Task>)>[operations.Length];
+        for (int i = 0; i < operations.Length; i++)
+        {
+            var op = operations[i];
+            var opName = "Op" + i;
+            opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2, t.Item3)) : op;
+        }
+
+        return new GenInitialAsync<Actual, Model>(initial)
+        .Select(Gen.OneOf(opNameActions).Array, (a, b) => new ModelBasedDataAsync<Actual, Model>(a.Task, a.Stream, a.Seed, b))
+        .SampleAsync(async d =>
+        {
+            try
+            {
+                var (actual, model) = await d.Initial.ConfigureAwait(false);
+                d.InitialActual = actual;
+                d.InitialModel = model;
+                d.InitialMaterialized = true;
+                d.ActualState = actual;
+                d.ModelState = model;
+                foreach (var operation in d.Operations)
+                {
+                    await operation.Item2(d.ActualState).ConfigureAwait(false);
+                    await operation.Item3(d.ModelState).ConfigureAwait(false);
+                }
+                return equal(d.ActualState, d.ModelState);
+            }
+            catch (Exception e)
+            {
+                d.Exception = e;
+                return false;
+            }
+        }, writeLine, seed, iter, time, threads,
+        p =>
+        {
+            if (p == null) return "";
+            var sb = new StringBuilder();
+            sb.Append("\n    Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
+            if (p.InitialMaterialized)
+            {
+                sb.Append("\nInitial Actual: ").Append(printActual(p.InitialActual));
+                sb.Append("\nInitial  Model: ").Append(printModel(p.InitialModel));
+            }
+            if (p.Exception is null)
+            {
+                sb.Append("\n  Final Actual: ").Append(printActual(p.ActualState));
+                sb.Append("\n  Final  Model: ").Append(printModel(p.ModelState));
+            }
+            else
+            {
+                sb.Append("\n     Exception: ").Append(p.Exception);
+            }
+            return sb.ToString();
+        }, logger);
+    }
+
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial state generator.</param>
+    /// <param name="operation">The operation generator that can act on the state.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation,
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBasedAsync(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial state generator.</param>
+    /// <param name="operation1">An operation generator that can act on the state.</param>
+    /// <param name="operation2">An operation generator that can act on the state.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation1,
+        GenOperationAsync<Actual, Model> operation2,
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBasedAsync(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial state generator.</param>
+    /// <param name="operation1">An operation generator that can act on the state.</param>
+    /// <param name="operation2">An operation generator that can act on the state.</param>
+    /// <param name="operation3">An operation generator that can act on the state.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation1,
+        GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3,
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBasedAsync(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial state generator.</param>
+    /// <param name="operation1">An operation generator that can act on the state.</param>
+    /// <param name="operation2">An operation generator that can act on the state.</param>
+    /// <param name="operation3">An operation generator that can act on the state.</param>
+    /// <param name="operation4">An operation generator that can act on the state.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation1,
+        GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3, GenOperationAsync<Actual, Model> operation4,
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial state generator.</param>
+    /// <param name="operation1">An operation generator that can act on the state.</param>
+    /// <param name="operation2">An operation generator that can act on the state.</param>
+    /// <param name="operation3">An operation generator that can act on the state.</param>
+    /// <param name="operation4">An operation generator that can act on the state.</param>
+    /// <param name="operation5">An operation generator that can act on the state.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation1,
+        GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3, GenOperationAsync<Actual, Model> operation4,
+        GenOperationAsync<Actual, Model> operation5,
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4, operation5],
+            equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
+    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <param name="initial">The initial state generator.</param>
+    /// <param name="operation1">An operation generator that can act on the state.</param>
+    /// <param name="operation2">An operation generator that can act on the state.</param>
+    /// <param name="operation3">An operation generator that can act on the state.</param>
+    /// <param name="operation4">An operation generator that can act on the state.</param>
+    /// <param name="operation5">An operation generator that can act on the state.</param>
+    /// <param name="operation6">An operation generator that can act on the state.</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
+    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation1,
+        GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3, GenOperationAsync<Actual, Model> operation4,
+        GenOperationAsync<Actual, Model> operation5, GenOperationAsync<Actual, Model> operation6,
+        Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4, operation5, operation6],
             equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
 
     sealed class MetamorphicData<T>(T state1, T state2, uint stream, ulong seed)

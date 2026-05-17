@@ -243,6 +243,17 @@ public class CheckTests
         , threads: 1);
     }
 
+    [Test]
+    public async Task SampleModelBasedAsync_ConcurrentBag()
+    {
+        await Gen.Int[0, 5].List.Select(l => Task.FromResult((new ConcurrentBag<int>(l), l)))
+        .SampleModelBasedAsync(
+            Gen.Int.Operation<ConcurrentBag<int>, List<int>>(async (bag, i) => { await Task.Yield(); bag.Add(i); }, async (list, i) => { await Task.Yield(); list.Add(i); }),
+            Gen.Operation<ConcurrentBag<int>, List<int>>(async bag => { await Task.Yield(); bag.TryTake(out _); }, async list => { await Task.Yield(); if (list.Count > 0) list.RemoveAt(0); }),
+            equal: (bag, list) => bag.Count == list.Count
+        , threads: 1);
+    }
+
     [Test, Skip("failing")]
     public void SampleParallel_ConcurrentDictionary()
     {

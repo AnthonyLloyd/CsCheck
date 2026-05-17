@@ -12,7 +12,7 @@ This gives the following advantages over tree based shrinking libraries:
 - Random testing and shrinking are parallelized. This and PCG make it very fast.
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be continued later to give simpler cases for high dimensional problems.
-- Parallel testing and random shrinking work well together. Repeat is not needed.
+- Parallel concurrency testing and random shrinking work well together. Repeat is not needed.
 
 See [why](https://github.com/AnthonyLloyd/CsCheck/blob/master/Why.md) you should use it, the [comparison](https://github.com/AnthonyLloyd/CsCheck/blob/master/Comparison.md) with other random testing libraries, or how CsCheck does in the [shrinking challenge](https://github.com/jlink/shrinking-challenge).
 In one [shrinking challenge test](https://github.com/jlink/shrinking-challenge/blob/main/challenges/binheap.md) CsCheck managed to shrink to a new smaller example than was thought possible and is not reached by any other testing library.

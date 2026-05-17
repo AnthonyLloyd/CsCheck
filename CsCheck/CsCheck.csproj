@@ -11,7 +11,7 @@ This gives the following advantages:
 - Random testing and shrinking are parallelized. This and PCG make it very fast.
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
 - Shrinking can be continued later to give simpler cases for high dimensional problems.
-- Parallel testing and random shrinking work well together.
+- Parallel concurrency testing and random shrinking work well together.
 
 CsCheck also makes parallel, performance and regression testing simple and fast.
         </Description>
@@ -22,9 +22,9 @@ CsCheck also makes parallel, performance and regression testing simple and fast.
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;parallel;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>4.6.2</Version>
+        <Version>4.7.0</Version>
         <PackageReleaseNotes>
-Fixed classify sort stability.
+Added SampleModelBasedAsync.
         </PackageReleaseNotes>
         <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>
