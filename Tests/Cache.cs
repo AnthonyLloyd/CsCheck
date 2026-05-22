@@ -244,25 +244,34 @@ public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefresh
         return (timestamp, value);
     }
 
-    public async ValueTask<V> GetOrAdd<S>(K key, S state, Func<K, S, Task<V>> factory)
+    public ValueTask<V> GetOrAdd<S>(K key, S state, Func<K, S, Task<V>> factory)
     {
-        var now = Stopwatch.GetTimestamp();
-        var result = await _cache.GetOrAdd(key, (factory, state, this), CallFactory);
-        var age = now - result.Timestamp;
-        if (age >= _eagerRefreshTicks)
+        var valueTask = _cache.GetOrAdd(key, (factory, state, this), CallFactory);
+        if (valueTask.IsCompletedSuccessfully)
         {
+            var result = valueTask.Result;
+            var age = Stopwatch.GetTimestamp() - result.Timestamp;
+            if (age < _eagerRefreshTicks) return new(result.Value);
             var updateTask = _cache.Update(key, (factory, state, this), CallFactory);
-            if (age >= _durationTicks)
+            if (age < _durationTicks)
             {
-                try
-                {
-                    result = _softTimeout == Timeout.InfiniteTimeSpan ? await updateTask : await updateTask.WithDefault(result, _softTimeout);
-                }
-                catch { }
-            }
-            else
                 _ = updateTask.ContinueWith(static t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+                return new(result.Value);
+            }
+            return GetOrAddRefresh(updateTask, result);
         }
+        return GetOrAddAwait(valueTask);
+    }
+
+    private static async ValueTask<V> GetOrAddAwait(ValueTask<(long Timestamp, V Value)> task) => (await task).Value;
+
+    private async ValueTask<V> GetOrAddRefresh(Task<(long Timestamp, V Value)> updateTask, (long Timestamp, V Value) result)
+    {
+        try
+        {
+            result = _softTimeout == Timeout.InfiniteTimeSpan ? await updateTask : await updateTask.WithDefault(result, _softTimeout);
+        }
+        catch { }
         return result.Value;
     }
 
