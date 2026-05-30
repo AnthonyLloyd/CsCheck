@@ -11,11 +11,11 @@ using System.Runtime.CompilerServices;
 public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
 {
     private struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
-    private sealed class Pending { internal required K Key; internal required Task<V> Value; internal Pending? Next; }
+    private sealed class Pending { internal required K Key; internal required Task<V> Value; internal volatile Pending? Next; }
+    private volatile int _count;
+    private volatile Entry[] _entries;
+    private volatile Pending? _pending;
     private readonly Lock _lock = new();
-    private int _count;
-    private Entry[] _entries;
-    private Pending? _pending;
 
     public Cache(int capacity = 2) => _entries = new Entry[capacity <= 2 ? 2 : BitOperations.RoundUpToPowerOf2((uint)capacity)];
 
@@ -69,7 +69,7 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
     {
         var hashCode = key.GetHashCode();
         var count = _count;
-        var entries = Volatile.Read(ref _entries);
+        var entries = _entries;
         var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
         while (i >= 0)
         {
@@ -90,6 +90,17 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
             }
             return new(GetOrAddPending(key, state, factory).Value);
         }
+    }
+
+    public Task<V>? TryGetPending(K key)
+    {
+        var pending = _pending;
+        while (pending is not null)
+        {
+            if (key.Equals(pending.Key)) return pending.Value;
+            pending = pending.Next;
+        }
+        return null;
     }
 
     public Task<V> Update(K key, Func<K, Task<V>> factory) => Update(key, factory, static (k, f) => f(k));
@@ -202,12 +213,12 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
 /// </remarks>
 public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefreshRatio = 0.5, TimeSpan? softTimeout = null, TimeSpan? remove = null) where K : IEquatable<K>
 {
-    private Cache<K, (long Timestamp, V Value)> _cache = new();
+    private volatile Cache<K, (long Timestamp, V Value)> _cache = new();
+    private volatile Timer? _timer;
     private readonly long _durationTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency);
     private readonly long _eagerRefreshTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
     private readonly TimeSpan _softTimeout = softTimeout ?? Timeout.InfiniteTimeSpan;
     private readonly long _removeTicks = remove.HasValue ? (long)(remove.Value.TotalSeconds * Stopwatch.Frequency) : 0;
-    private Timer? _timer;
 
     private static void Cleanup(object? state)
     {
@@ -228,7 +239,7 @@ public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefresh
 
     private void EnsureTimerRunning()
     {
-        if (_removeTicks == 0 || Volatile.Read(ref _timer) is not null) return;
+        if (_removeTicks == 0 || _timer is not null) return;
         var newTimer = new Timer(Cleanup, new WeakReference<RefreshingCache<K, V>>(this), Timeout.Infinite, Timeout.Infinite);
         if (Interlocked.CompareExchange(ref _timer, newTimer, null) is null)
             newTimer.Change(_removeTicks * 1000 / Stopwatch.Frequency, Timeout.Infinite);
@@ -251,7 +262,7 @@ public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefresh
             var result = valueTask.Result;
             var age = Stopwatch.GetTimestamp() - result.Timestamp;
             if (age < _eagerRefreshTicks) return new(result.Value);
-            var updateTask = _cache.Update(key, (factory, state, this), CallFactory);
+            var updateTask = _cache.TryGetPending(key) ?? _cache.Update(key, (factory, state, this), CallFactory);
             if (age < _durationTicks)
             {
                 _ = updateTask.ContinueWith(static t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
