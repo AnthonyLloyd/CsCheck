@@ -285,37 +285,45 @@ public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefresh
         => Update(key, factory, static (k, f) => f(k));
 }
 
-public static class WithDefaultAwaiter
+public static class TaskExtensions
 {
-    /// <summary>Awaits a task returning a default value if it errors or times out.</summary>
-    public static WithDefaultAwaiter<T> WithDefault<T>(this Task<T> task, T defaultValue, TimeSpan timeout) => new(task, defaultValue, timeout);
-}
-
-public sealed class WithDefaultAwaiter<T>(Task<T> task, T defaultValue, TimeSpan timeout) : ICriticalNotifyCompletion
-{
-    private Action? _continuation;
-    private Timer? _timer;
-    public WithDefaultAwaiter<T> GetAwaiter() => this;
-    public bool IsCompleted => task.IsCompleted;
-    public T GetResult() => task.IsCompletedSuccessfully ? task.Result : defaultValue;
-    public void OnCompleted(Action continuation) => UnsafeOnCompleted(continuation);
-    public void UnsafeOnCompleted(Action continuation)
+    public static Task<T> WithDefault<T>(this Task<T> task, T defaultValue, TimeSpan timeout)
     {
-        _continuation = continuation;
-        _timer = new Timer(static s => ((WithDefaultAwaiter<T>)s!).Complete(), this, timeout, Timeout.InfiniteTimeSpan);
+        if (task.IsCompletedSuccessfully) return task;
+        if (task.IsCompleted)
+        {
+            if (task.IsFaulted) _ = task.Exception;
+            return Task.FromResult(defaultValue);
+        }
+        return WithDefaultTask(task, defaultValue, timeout);
+    }
+
+    public static ValueTask<T> WithDefault<T>(this ValueTask<T> task, T defaultValue, TimeSpan timeout)
+    {
+        if (task.IsCompletedSuccessfully) return task;
+        if (task.IsCompleted)
+        {
+            if (task.IsFaulted) _ = task.AsTask().Exception;
+            return new(defaultValue);
+        }
+        return new(WithDefaultTask(task.AsTask(), defaultValue, timeout));
+    }
+
+    private static Task<T> WithDefaultTask<T>(Task<T> task, T defaultValue, TimeSpan timeout)
+    {
+        var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var timer = new Timer(static s =>
+        {
+            var (tcs, defaultValue) = ((TaskCompletionSource<T>, T))s!;
+            tcs.TrySetResult(defaultValue);
+        }, (tcs, defaultValue), timeout, Timeout.InfiniteTimeSpan);
         task.ContinueWith(static (t, s) =>
         {
-            ((WithDefaultAwaiter<T>)s!).Complete();
-            if (t.IsFaulted) _ = t.Exception;
-        }, this, TaskContinuationOptions.ExecuteSynchronously);
-    }
-    private void Complete()
-    {
-        if (Interlocked.Exchange(ref _continuation, null) is { } continuation)
-        {
-            try { continuation(); }
-            catch { }
-            _timer?.Dispose();
-        }
+            var (tcs, timer, defaultValue) = ((TaskCompletionSource<T>, Timer, T))s!;
+            timer.Dispose();
+            if (t.IsCompletedSuccessfully) tcs.TrySetResult(t.Result);
+            else { tcs.TrySetResult(defaultValue); _ = t.Exception; }
+        }, (tcs, timer, defaultValue), TaskContinuationOptions.ExecuteSynchronously);
+        return tcs.Task;
     }
 }
