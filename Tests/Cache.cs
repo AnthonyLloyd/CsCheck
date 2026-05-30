@@ -146,8 +146,8 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
                     var value = await factory(key, state);
                     lock (_lock)
                     {
-                        RemovePending(pending);
                         AddOrUpdate(key, value);
+                        RemovePending(pending);
                     }
                     return value;
                 }
@@ -221,6 +221,8 @@ public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefresh
                     Interlocked.Exchange(ref self._timer, null)?.Dispose();
                     if (!self._cache.IsEmpty) self.EnsureTimerRunning();
                 }
+                else
+                    self._timer!.Change(self._removeTicks * 1000 / Stopwatch.Frequency, Timeout.Infinite);
             });
     }
 
@@ -229,10 +231,7 @@ public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefresh
         if (_removeTicks == 0 || Volatile.Read(ref _timer) is not null) return;
         var newTimer = new Timer(Cleanup, new WeakReference<RefreshingCache<K, V>>(this), Timeout.Infinite, Timeout.Infinite);
         if (Interlocked.CompareExchange(ref _timer, newTimer, null) is null)
-        {
-            var removeMs = (uint)(_removeTicks * 1000 / Stopwatch.Frequency);
-            newTimer.Change(removeMs, removeMs);
-        }
+            newTimer.Change(_removeTicks * 1000 / Stopwatch.Frequency, Timeout.Infinite);
         else newTimer.Dispose();
     }
 
