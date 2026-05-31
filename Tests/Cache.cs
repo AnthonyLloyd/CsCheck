@@ -9,14 +9,25 @@ using System.Runtime.CompilerServices;
 /// Uses power-of-two sized buckets for efficient bitwise index calculation and cache-friendly array storage.</summary>
 public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
 {
-    private struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
+    private struct Entry { internal int Next; internal K Key; internal V Value; }
+    private sealed class Table(int[] buckets, Entry[] entries)
+    {
+        internal readonly int[] Buckets = buckets;
+        internal readonly Entry[] Entries = entries;
+        internal readonly int Mask = buckets.Length - 1;
+    }
     private sealed class Pending { internal required K Key; internal required Task<V> Value; internal volatile Pending? Next; }
+    private const int BucketMultiple = 2;
     private volatile int _count;
-    private volatile Entry[] _entries;
+    private volatile Table _table;
     private volatile Pending? _pending;
     private readonly Lock _lock = new();
 
-    public Cache(int capacity = 2) => _entries = new Entry[capacity <= 2 ? 2 : BitOperations.RoundUpToPowerOf2((uint)capacity)];
+    public Cache(int capacity = 2)
+    {
+        capacity = capacity <= 2 ? 2 : (int)BitOperations.RoundUpToPowerOf2((uint)capacity);
+        _table = new Table(new int[capacity * BucketMultiple], new Entry[capacity]);
+    }
 
     public Cache(IEnumerable<KeyValuePair<K, V>> items, int capacity = 2) : this(capacity)
     {
@@ -28,9 +39,11 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
 
     private void AddOrUpdate(K key, V value)
     {
+        var table = _table;
         var hashCode = key.GetHashCode();
-        var entries = _entries;
-        var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+        var buckets = table.Buckets;
+        var entries = table.Entries;
+        var i = buckets[hashCode & table.Mask] - 1;
         while (i >= 0 && !key.Equals(entries[i].Key)) i = entries[i].Next;
         if (i >= 0)
         {
@@ -38,28 +51,38 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
             return;
         }
         i = _count;
-        if (entries.Length == i) entries = Resize();
-        var bucketIndex = hashCode & (entries.Length - 1);
-        entries[i].Next = entries[bucketIndex].Bucket - 1;
+        if (entries.Length == i)
+        {
+            table = Resize();
+            buckets = table.Buckets;
+            entries = table.Entries;
+        }
+        var bucketIndex = hashCode & table.Mask;
+        entries[i].Next = buckets[bucketIndex] - 1;
         entries[i].Key = key;
         entries[i].Value = value;
-        _count = entries[bucketIndex].Bucket = _count + 1;
+        buckets[bucketIndex] = i + 1;
+        _count = i + 1;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private Entry[] Resize()
+    private Table Resize()
     {
-        var oldEntries = _entries;
+        var count = _count;
+        var oldEntries = _table.Entries;
         var newEntries = new Entry[oldEntries.Length * 2];
-        for (int i = 0; i < oldEntries.Length;)
+        Array.Copy(oldEntries, newEntries, count);
+        var newBuckets = new int[newEntries.Length * BucketMultiple];
+        var mask = newBuckets.Length - 1;
+        for (int i = 0; i < count;)
         {
-            var bucketIndex = oldEntries[i].Key.GetHashCode() & (newEntries.Length - 1);
-            newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
-            newEntries[i].Key = oldEntries[i].Key;
-            newEntries[i].Value = oldEntries[i].Value;
-            newEntries[bucketIndex].Bucket = ++i;
+            var bucketIndex = newEntries[i].Key.GetHashCode() & mask;
+            newEntries[i].Next = newBuckets[bucketIndex] - 1;
+            newBuckets[bucketIndex] = ++i;
         }
-        return _entries = newEntries;
+        var table = new Table(newBuckets, newEntries);
+        _table = table;
+        return table;
     }
 
     public ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory) => GetOrAdd(key, factory, static (k, f) => f(k));
@@ -67,8 +90,10 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
     public ValueTask<V> GetOrAdd<TState>(K key, TState state, Func<K, TState, Task<V>> factory)
     {
         var hashCode = key.GetHashCode();
-        var entries = _entries;
-        var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+        var table = _table;
+        var entries = table.Entries;
+        var buckets = table.Buckets;
+        var i = buckets[hashCode & table.Mask] - 1;
         while (i >= 0)
         {
             ref var e = ref entries[i];
@@ -77,8 +102,10 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
         }
         lock (_lock)
         {
-            entries = _entries;
-            i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+            table = _table;
+            entries = table.Entries;
+            buckets = table.Buckets;
+            i = buckets[hashCode & table.Mask] - 1;
             while (i >= 0)
             {
                 ref var e = ref entries[i];
@@ -91,9 +118,10 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
 
     public bool TryGetValue(K key, out V value)
     {
-        var hashCode = key.GetHashCode();
-        var entries = _entries;
-        var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+        var table = _table;
+        var entries = table.Entries;
+        var buckets = table.Buckets;
+        var i = buckets[key.GetHashCode() & table.Mask] - 1;
         while (i >= 0)
         {
             ref var e = ref entries[i];
@@ -200,8 +228,10 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
 
     public IEnumerator<KeyValuePair<K, V>> GetEnumerator()
     {
-        for (int i = 0; i < _count; i++)
-            yield return new(_entries[i].Key, _entries[i].Value);
+        var entries = _table.Entries;
+        var count = Math.Min(_count, entries.Length);
+        for (int i = 0; i < count; i++)
+            yield return new(entries[i].Key, entries[i].Value);
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
