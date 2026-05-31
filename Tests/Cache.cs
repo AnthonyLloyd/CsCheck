@@ -1,7 +1,6 @@
 ﻿namespace Tests;
 
 using System.Collections;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -68,28 +67,41 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
     public ValueTask<V> GetOrAdd<TState>(K key, TState state, Func<K, TState, Task<V>> factory)
     {
         var hashCode = key.GetHashCode();
-        var count = _count;
         var entries = _entries;
         var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
         while (i >= 0)
         {
-            if (key.Equals(entries[i].Key)) return new(entries[i].Value);
-            i = entries[i].Next;
+            ref var e = ref entries[i];
+            if (key.Equals(e.Key)) return new(e.Value);
+            i = e.Next;
         }
         lock (_lock)
         {
-            if (_count != count)
+            entries = _entries;
+            i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+            while (i >= 0)
             {
-                entries = _entries;
-                i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
-                while (i >= 0)
-                {
-                    if (key.Equals(entries[i].Key)) return new(entries[i].Value);
-                    i = entries[i].Next;
-                }
+                ref var e = ref entries[i];
+                if (key.Equals(e.Key)) return new(e.Value);
+                i = e.Next;
             }
             return new(GetOrAddPending(key, state, factory).Value);
         }
+    }
+
+    public bool TryGetValue(K key, out V value)
+    {
+        var hashCode = key.GetHashCode();
+        var entries = _entries;
+        var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
+        while (i >= 0)
+        {
+            ref var e = ref entries[i];
+            if (key.Equals(e.Key)) { value = e.Value; return true; }
+            i = e.Next;
+        }
+        value = default!;
+        return false;
     }
 
     public Task<V>? TryGetPending(K key)
@@ -215,17 +227,17 @@ public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefresh
 {
     private volatile Cache<K, (long Timestamp, V Value)> _cache = new();
     private volatile Timer? _timer;
-    private readonly long _durationTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency);
-    private readonly long _eagerRefreshTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
+    private readonly long _durationMs = (long)duration.TotalMilliseconds;
+    private readonly long _eagerRefreshMs = (long)(duration.TotalMilliseconds * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
     private readonly TimeSpan _softTimeout = softTimeout ?? Timeout.InfiniteTimeSpan;
-    private readonly long _removeTicks = remove.HasValue ? (long)(remove.Value.TotalSeconds * Stopwatch.Frequency) : 0;
+    private readonly long _removeMs = remove.HasValue ? (long)remove.Value.TotalMilliseconds : 0;
 
     private static void Cleanup(object? state)
     {
         if (((WeakReference<RefreshingCache<K, V>>)state!).TryGetTarget(out var self))
             _ = Task.Run(async () =>
             {
-                var removeTimestamp = Stopwatch.GetTimestamp() - self._removeTicks;
+                var removeTimestamp = Environment.TickCount64 - self._removeMs;
                 self._cache = await self._cache.Compact(e => e.Value.Timestamp >= removeTimestamp);
                 if (self._cache.IsEmpty)
                 {
@@ -233,44 +245,42 @@ public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefresh
                     if (!self._cache.IsEmpty) self.EnsureTimerRunning();
                 }
                 else
-                    self._timer!.Change(self._removeTicks * 1000 / Stopwatch.Frequency, Timeout.Infinite);
+                    self._timer!.Change(self._removeMs, Timeout.Infinite);
             });
     }
 
     private void EnsureTimerRunning()
     {
-        if (_removeTicks == 0 || _timer is not null) return;
+        if (_removeMs == 0 || _timer is not null) return;
         var newTimer = new Timer(Cleanup, new WeakReference<RefreshingCache<K, V>>(this), Timeout.Infinite, Timeout.Infinite);
         if (Interlocked.CompareExchange(ref _timer, newTimer, null) is null)
-            newTimer.Change(_removeTicks * 1000 / Stopwatch.Frequency, Timeout.Infinite);
+            newTimer.Change(_removeMs, Timeout.Infinite);
         else newTimer.Dispose();
     }
 
     private static async Task<(long, V)> CallFactory<S>(K key, (Func<K, S, Task<V>> Factory, S State, RefreshingCache<K, V> Self) state)
     {
         var value = await state.Factory(key, state.State);
-        var timestamp = Stopwatch.GetTimestamp();
+        var timestamp = Environment.TickCount64;
         state.Self.EnsureTimerRunning();
         return (timestamp, value);
     }
 
     public ValueTask<V> GetOrAdd<S>(K key, S state, Func<K, S, Task<V>> factory)
     {
-        var valueTask = _cache.GetOrAdd(key, (factory, state, this), CallFactory);
-        if (valueTask.IsCompletedSuccessfully)
+        if (_cache.TryGetValue(key, out var result))
         {
-            var result = valueTask.Result;
-            var age = Stopwatch.GetTimestamp() - result.Timestamp;
-            if (age < _eagerRefreshTicks) return new(result.Value);
+            var age = Environment.TickCount64 - result.Timestamp;
+            if (age < _eagerRefreshMs) return new(result.Value);
             var updateTask = _cache.TryGetPending(key) ?? _cache.Update(key, (factory, state, this), CallFactory);
-            if (age < _durationTicks)
+            if (age < _durationMs)
             {
                 _ = updateTask.ContinueWith(static t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
                 return new(result.Value);
             }
             return GetOrAddRefresh(updateTask, result);
         }
-        return GetOrAddAwait(valueTask);
+        return GetOrAddAwait(_cache.GetOrAdd(key, (factory, state, this), CallFactory));
     }
 
     private static async ValueTask<V> GetOrAddAwait(ValueTask<(long Timestamp, V Value)> task) => (await task).Value;
