@@ -44,7 +44,7 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
         var buckets = table.Buckets;
         var entries = table.Entries;
         var i = buckets[hashCode & table.Mask] - 1;
-        while (i >= 0 && !key.Equals(entries[i].Key)) i = entries[i].Next;
+        while ((uint)i < (uint)entries.Length && !key.Equals(entries[i].Key)) i = entries[i].Next;
         if (i >= 0)
         {
             entries[i].Value = value;
@@ -94,7 +94,7 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
         var entries = table.Entries;
         var buckets = table.Buckets;
         var i = buckets[hashCode & table.Mask] - 1;
-        while (i >= 0)
+        while ((uint)i < (uint)entries.Length)
         {
             ref var e = ref entries[i];
             if (key.Equals(e.Key)) return new(e.Value);
@@ -106,7 +106,7 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
             entries = table.Entries;
             buckets = table.Buckets;
             i = buckets[hashCode & table.Mask] - 1;
-            while (i >= 0)
+            while ((uint)i < (uint)entries.Length)
             {
                 ref var e = ref entries[i];
                 if (key.Equals(e.Key)) return new(e.Value);
@@ -122,7 +122,7 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
         var entries = table.Entries;
         var buckets = table.Buckets;
         var i = buckets[key.GetHashCode() & table.Mask] - 1;
-        while (i >= 0)
+        while ((uint)i < (uint)entries.Length)
         {
             ref var e = ref entries[i];
             if (key.Equals(e.Key)) { value = e.Value; return true; }
