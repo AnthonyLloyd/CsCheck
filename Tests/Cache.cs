@@ -297,6 +297,7 @@ public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefresh
         return (timestamp, value);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<V> GetOrAdd<S>(K key, S state, Func<K, S, Task<V>> factory)
     {
         if (_cache.TryGetValue(key, out var result))
