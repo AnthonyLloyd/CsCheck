@@ -36,6 +36,7 @@ dotnet_diagnostic.RCS1196.severity = none # Call extension method as instance me
 dotnet_diagnostic.RCS1154.severity = none # Sort enum members
 dotnet_diagnostic.RCS1001.severity = none # Add braces (when expression spans over multiple lines)
 dotnet_diagnostic.RCS1003.severity = none # Add braces to if-else (when expression spans over multiple lines).
+dotnet_diagnostic.RCS1210.severity = none # RCS1210: Return completed task instead of returning null
 
 dotnet_diagnostic.MA0011.severity = none # IFormatProvider is missing
 dotnet_diagnostic.MA0069.severity = none # Non-constant static fields should not be visible

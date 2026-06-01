@@ -1,7 +1,6 @@
 ﻿namespace Tests;
 
 using System.Collections;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -10,14 +9,25 @@ using System.Runtime.CompilerServices;
 /// Uses power-of-two sized buckets for efficient bitwise index calculation and cache-friendly array storage.</summary>
 public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where K : IEquatable<K>
 {
-    private struct Entry { internal int Bucket; internal int Next; internal K Key; internal V Value; }
-    private sealed class Pending { internal required K Key; internal required Task<V> Value; internal Pending? Next; }
+    private struct Entry { internal int Next; internal K Key; internal V Value; }
+    private sealed class Table(int[] buckets, Entry[] entries)
+    {
+        internal readonly int[] Buckets = buckets;
+        internal readonly Entry[] Entries = entries;
+        internal readonly int Mask = buckets.Length - 1;
+    }
+    private sealed class Pending { internal required K Key; internal required Task<V> Value; internal volatile Pending? Next; }
+    private const int BucketMultiple = 2;
+    private volatile int _count;
+    private volatile Table _table;
+    private volatile Pending? _pending;
     private readonly Lock _lock = new();
-    private int _count;
-    private Entry[] _entries;
-    private Pending? _pending;
 
-    public Cache(int capacity = 2) => _entries = new Entry[capacity <= 2 ? 2 : BitOperations.RoundUpToPowerOf2((uint)capacity)];
+    public Cache(int capacity = 2)
+    {
+        capacity = capacity <= 2 ? 2 : (int)BitOperations.RoundUpToPowerOf2((uint)capacity);
+        _table = new Table(new int[capacity * BucketMultiple], new Entry[capacity]);
+    }
 
     public Cache(IEnumerable<KeyValuePair<K, V>> items, int capacity = 2) : this(capacity)
     {
@@ -29,38 +39,50 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
 
     private void AddOrUpdate(K key, V value)
     {
+        var table = _table;
         var hashCode = key.GetHashCode();
-        var entries = _entries;
-        var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
-        while (i >= 0 && !key.Equals(entries[i].Key)) i = entries[i].Next;
+        var buckets = table.Buckets;
+        var entries = table.Entries;
+        var i = buckets[hashCode & table.Mask] - 1;
+        while ((uint)i < (uint)entries.Length && !key.Equals(entries[i].Key)) i = entries[i].Next;
         if (i >= 0)
         {
             entries[i].Value = value;
             return;
         }
         i = _count;
-        if (entries.Length == i) entries = Resize();
-        var bucketIndex = hashCode & (entries.Length - 1);
-        entries[i].Next = entries[bucketIndex].Bucket - 1;
+        if (entries.Length == i)
+        {
+            table = Resize();
+            buckets = table.Buckets;
+            entries = table.Entries;
+        }
+        var bucketIndex = hashCode & table.Mask;
+        entries[i].Next = buckets[bucketIndex] - 1;
         entries[i].Key = key;
         entries[i].Value = value;
-        _count = entries[bucketIndex].Bucket = _count + 1;
+        buckets[bucketIndex] = i + 1;
+        _count = i + 1;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private Entry[] Resize()
+    private Table Resize()
     {
-        var oldEntries = _entries;
+        var count = _count;
+        var oldEntries = _table.Entries;
         var newEntries = new Entry[oldEntries.Length * 2];
-        for (int i = 0; i < oldEntries.Length;)
+        Array.Copy(oldEntries, newEntries, count);
+        var newBuckets = new int[newEntries.Length * BucketMultiple];
+        var mask = newBuckets.Length - 1;
+        for (int i = 0; i < count;)
         {
-            var bucketIndex = oldEntries[i].Key.GetHashCode() & (newEntries.Length - 1);
-            newEntries[i].Next = newEntries[bucketIndex].Bucket - 1;
-            newEntries[i].Key = oldEntries[i].Key;
-            newEntries[i].Value = oldEntries[i].Value;
-            newEntries[bucketIndex].Bucket = ++i;
+            var bucketIndex = newEntries[i].Key.GetHashCode() & mask;
+            newEntries[i].Next = newBuckets[bucketIndex] - 1;
+            newBuckets[bucketIndex] = ++i;
         }
-        return _entries = newEntries;
+        var table = new Table(newBuckets, newEntries);
+        _table = table;
+        return table;
     }
 
     public ValueTask<V> GetOrAdd(K key, Func<K, Task<V>> factory) => GetOrAdd(key, factory, static (k, f) => f(k));
@@ -68,28 +90,58 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
     public ValueTask<V> GetOrAdd<TState>(K key, TState state, Func<K, TState, Task<V>> factory)
     {
         var hashCode = key.GetHashCode();
-        var count = _count;
-        var entries = Volatile.Read(ref _entries);
-        var i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
-        while (i >= 0)
+        var table = _table;
+        var entries = table.Entries;
+        var buckets = table.Buckets;
+        var i = buckets[hashCode & table.Mask] - 1;
+        while ((uint)i < (uint)entries.Length)
         {
-            if (key.Equals(entries[i].Key)) return new(entries[i].Value);
-            i = entries[i].Next;
+            ref var e = ref entries[i];
+            if (key.Equals(e.Key)) return new(e.Value);
+            i = e.Next;
         }
         lock (_lock)
         {
-            if (_count != count)
+            table = _table;
+            entries = table.Entries;
+            buckets = table.Buckets;
+            i = buckets[hashCode & table.Mask] - 1;
+            while ((uint)i < (uint)entries.Length)
             {
-                entries = _entries;
-                i = entries[hashCode & (entries.Length - 1)].Bucket - 1;
-                while (i >= 0)
-                {
-                    if (key.Equals(entries[i].Key)) return new(entries[i].Value);
-                    i = entries[i].Next;
-                }
+                ref var e = ref entries[i];
+                if (key.Equals(e.Key)) return new(e.Value);
+                i = e.Next;
             }
             return new(GetOrAddPending(key, state, factory).Value);
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryGetValue(K key, out V value)
+    {
+        var table = _table;
+        var entries = table.Entries;
+        var buckets = table.Buckets;
+        var i = buckets[key.GetHashCode() & table.Mask] - 1;
+        while ((uint)i < (uint)entries.Length)
+        {
+            ref var e = ref entries[i];
+            if (key.Equals(e.Key)) { value = e.Value; return true; }
+            i = e.Next;
+        }
+        value = default!;
+        return false;
+    }
+
+    public Task<V>? TryGetPending(K key)
+    {
+        var pending = _pending;
+        while (pending is not null)
+        {
+            if (key.Equals(pending.Key)) return pending.Value;
+            pending = pending.Next;
+        }
+        return null;
     }
 
     public Task<V> Update(K key, Func<K, Task<V>> factory) => Update(key, factory, static (k, f) => f(k));
@@ -146,8 +198,8 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
                     var value = await factory(key, state);
                     lock (_lock)
                     {
-                        RemovePending(pending);
                         AddOrUpdate(key, value);
+                        RemovePending(pending);
                     }
                     return value;
                 }
@@ -177,8 +229,10 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
 
     public IEnumerator<KeyValuePair<K, V>> GetEnumerator()
     {
-        for (int i = 0; i < _count; i++)
-            yield return new(_entries[i].Key, _entries[i].Value);
+        var entries = _table.Entries;
+        var count = Math.Min(_count, entries.Length);
+        for (int i = 0; i < count; i++)
+            yield return new(entries[i].Key, entries[i].Value);
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -202,65 +256,62 @@ public sealed class Cache<K, V> : IReadOnlyCollection<KeyValuePair<K, V>> where 
 /// </remarks>
 public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefreshRatio = 0.5, TimeSpan? softTimeout = null, TimeSpan? remove = null) where K : IEquatable<K>
 {
-    private Cache<K, (long Timestamp, V Value)> _cache = new();
-    private readonly long _durationTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency);
-    private readonly long _eagerRefreshTicks = (long)(duration.TotalSeconds * Stopwatch.Frequency * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
+    private volatile Cache<K, (long Timestamp, V Value)> _cache = new();
+    private volatile Timer? _timer;
+    private readonly long _durationMs = (long)duration.TotalMilliseconds;
+    private readonly long _eagerRefreshMs = (long)(duration.TotalMilliseconds * Math.Clamp(eagerRefreshRatio, 0.0, 1.0));
     private readonly TimeSpan _softTimeout = softTimeout ?? Timeout.InfiniteTimeSpan;
-    private readonly long _removeTicks = remove.HasValue ? (long)(remove.Value.TotalSeconds * Stopwatch.Frequency) : 0;
-    private Timer? _timer;
+    private readonly long _removeMs = remove.HasValue ? (long)remove.Value.TotalMilliseconds : 0;
 
     private static void Cleanup(object? state)
     {
         if (((WeakReference<RefreshingCache<K, V>>)state!).TryGetTarget(out var self))
             _ = Task.Run(async () =>
             {
-                var removeTimestamp = Stopwatch.GetTimestamp() - self._removeTicks;
+                var removeTimestamp = Environment.TickCount64 - self._removeMs;
                 self._cache = await self._cache.Compact(e => e.Value.Timestamp >= removeTimestamp);
                 if (self._cache.IsEmpty)
                 {
                     Interlocked.Exchange(ref self._timer, null)?.Dispose();
                     if (!self._cache.IsEmpty) self.EnsureTimerRunning();
                 }
+                else
+                    self._timer!.Change(self._removeMs, Timeout.Infinite);
             });
     }
 
     private void EnsureTimerRunning()
     {
-        if (_removeTicks == 0 || Volatile.Read(ref _timer) is not null) return;
+        if (_removeMs == 0 || _timer is not null) return;
         var newTimer = new Timer(Cleanup, new WeakReference<RefreshingCache<K, V>>(this), Timeout.Infinite, Timeout.Infinite);
         if (Interlocked.CompareExchange(ref _timer, newTimer, null) is null)
-        {
-            var removeMs = (uint)(_removeTicks * 1000 / Stopwatch.Frequency);
-            newTimer.Change(removeMs, removeMs);
-        }
+            newTimer.Change(_removeMs, Timeout.Infinite);
         else newTimer.Dispose();
     }
 
     private static async Task<(long, V)> CallFactory<S>(K key, (Func<K, S, Task<V>> Factory, S State, RefreshingCache<K, V> Self) state)
     {
         var value = await state.Factory(key, state.State);
-        var timestamp = Stopwatch.GetTimestamp();
+        var timestamp = Environment.TickCount64;
         state.Self.EnsureTimerRunning();
         return (timestamp, value);
     }
 
     public ValueTask<V> GetOrAdd<S>(K key, S state, Func<K, S, Task<V>> factory)
     {
-        var valueTask = _cache.GetOrAdd(key, (factory, state, this), CallFactory);
-        if (valueTask.IsCompletedSuccessfully)
+        if (_cache.TryGetValue(key, out var result))
         {
-            var result = valueTask.Result;
-            var age = Stopwatch.GetTimestamp() - result.Timestamp;
-            if (age < _eagerRefreshTicks) return new(result.Value);
-            var updateTask = _cache.Update(key, (factory, state, this), CallFactory);
-            if (age < _durationTicks)
+            var age = Environment.TickCount64 - result.Timestamp;
+            if (age < _eagerRefreshMs) return new(result.Value);
+            var updateTask = _cache.TryGetPending(key) ?? _cache.Update(key, (factory, state, this), CallFactory);
+            if (age < _durationMs)
             {
                 _ = updateTask.ContinueWith(static t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
                 return new(result.Value);
             }
             return GetOrAddRefresh(updateTask, result);
         }
-        return GetOrAddAwait(valueTask);
+        return GetOrAddAwait(_cache.GetOrAdd(key, (factory, state, this), CallFactory));
     }
 
     private static async ValueTask<V> GetOrAddAwait(ValueTask<(long Timestamp, V Value)> task) => (await task).Value;
@@ -285,37 +336,45 @@ public sealed class RefreshingCache<K, V>(TimeSpan duration, double eagerRefresh
         => Update(key, factory, static (k, f) => f(k));
 }
 
-public static class WithDefaultAwaiter
+public static class TaskExtensions
 {
-    /// <summary>Awaits a task returning a default value if it errors or times out.</summary>
-    public static WithDefaultAwaiter<T> WithDefault<T>(this Task<T> task, T defaultValue, TimeSpan timeout) => new(task, defaultValue, timeout);
-}
-
-public sealed class WithDefaultAwaiter<T>(Task<T> task, T defaultValue, TimeSpan timeout) : ICriticalNotifyCompletion
-{
-    private Action? _continuation;
-    private Timer? _timer;
-    public WithDefaultAwaiter<T> GetAwaiter() => this;
-    public bool IsCompleted => task.IsCompleted;
-    public T GetResult() => task.IsCompletedSuccessfully ? task.Result : defaultValue;
-    public void OnCompleted(Action continuation) => UnsafeOnCompleted(continuation);
-    public void UnsafeOnCompleted(Action continuation)
+    public static Task<T> WithDefault<T>(this Task<T> task, T defaultValue, TimeSpan timeout)
     {
-        _continuation = continuation;
-        _timer = new Timer(static s => ((WithDefaultAwaiter<T>)s!).Complete(), this, timeout, Timeout.InfiniteTimeSpan);
+        if (task.IsCompletedSuccessfully) return task;
+        if (task.IsCompleted)
+        {
+            if (task.IsFaulted) _ = task.Exception;
+            return Task.FromResult(defaultValue);
+        }
+        return WithDefaultTask(task, defaultValue, timeout);
+    }
+
+    public static ValueTask<T> WithDefault<T>(this ValueTask<T> task, T defaultValue, TimeSpan timeout)
+    {
+        if (task.IsCompletedSuccessfully) return task;
+        if (task.IsCompleted)
+        {
+            if (task.IsFaulted) _ = task.AsTask().Exception;
+            return new(defaultValue);
+        }
+        return new(WithDefaultTask(task.AsTask(), defaultValue, timeout));
+    }
+
+    private static Task<T> WithDefaultTask<T>(Task<T> task, T defaultValue, TimeSpan timeout)
+    {
+        var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var timer = new Timer(static s =>
+        {
+            var (tcs, defaultValue) = ((TaskCompletionSource<T>, T))s!;
+            tcs.TrySetResult(defaultValue);
+        }, (tcs, defaultValue), timeout, Timeout.InfiniteTimeSpan);
         task.ContinueWith(static (t, s) =>
         {
-            ((WithDefaultAwaiter<T>)s!).Complete();
-            if (t.IsFaulted) _ = t.Exception;
-        }, this, TaskContinuationOptions.ExecuteSynchronously);
-    }
-    private void Complete()
-    {
-        if (Interlocked.Exchange(ref _continuation, null) is { } continuation)
-        {
-            try { continuation(); }
-            catch { }
-            _timer?.Dispose();
-        }
+            var (tcs, timer, defaultValue) = ((TaskCompletionSource<T>, Timer, T))s!;
+            timer.Dispose();
+            if (t.IsCompletedSuccessfully) tcs.TrySetResult(t.Result);
+            else { tcs.TrySetResult(defaultValue); _ = t.Exception; }
+        }, (tcs, timer, defaultValue), TaskContinuationOptions.ExecuteSynchronously);
+        return tcs.Task;
     }
 }
