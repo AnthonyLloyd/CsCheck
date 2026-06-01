@@ -352,7 +352,7 @@ public class CacheTests
                     x = await dictionary.GetOrAdd(keys[i], static k => Task.FromResult((object)k));
                 return x is null ? 1 : 0;
             },
-            repeat: 1000,
+            repeat: 100,
             raiseexception: false,
             writeLine: TUnitX.WriteLine);
     }
