@@ -1,0 +1,68 @@
+# CsCheck
+
+> CsCheck is a C# property-based / random testing library (QuickCheck-style) for .NET. Generation and shrinking are both based on the PCG random number generator, so shrinking is automatic, parallelized, and reproducible from a seed. It supports random, model-based, metamorphic, parallel/concurrency, causal-profiling, regression, and performance testing.
+
+Key facts an assistant should know before generating CsCheck code:
+
+- You compose a `Gen<T>` and call a terminating method (`Sample`, `SampleModelBased`, `SampleMetamorphic`, `SampleParallel`, `Faster`, `Check.Hash`). There are **no `Arb` classes** and you **never write shrinkers** — shrinking is automatic.
+- A failing test shrinks to the simplest case and prints a **seed**; re-run with `seed:` to reproduce.
+- CsCheck is **test-framework agnostic**: it signals failure by throwing an exception (or `Sample` returning `false`), with no dependency on any test runner. Use it with xUnit, NUnit, MSTest, TUnit, or no framework at all. This repo's own tests happen to use TUnit + Microsoft.Testing.Platform, but that is not required.
+- The `Tests/` project is the canonical example collection.
+- Install: `dotnet add package CsCheck`. License: Apache-2.0.
+
+## API cheat sheet
+
+Generators (compose with LINQ: `Select`, `SelectMany`, `Where`, query syntax):
+
+- Primitives: `Gen.Int`, `Gen.Long`, `Gen.Double`, `Gen.Float`, `Gen.Byte`, `Gen.Bool`, `Gen.Char`, `Gen.String`, `Gen.Guid`, `Gen.DateTime`, `Gen.Decimal`, ...
+- Ranges: `Gen.Int[0, 9]`, `Gen.Long[start, finish]`.
+- Sub-ranges: `Gen.Single.Unit`, `Gen.Double.Unit`, `Gen.Char.AlphaNumeric`, `Gen.Int.Uniform`.
+- Collections: `gen.Array`, `gen.Array[n]`, `gen.Array[min, max]`, `gen.List`, `gen.Array2D`, `Gen.Dictionary(keyGen, valGen)`.
+- Combinators: `Gen.Select(...)` (tuple fields `.V0`, `.V1`, ...), `Gen.SelectMany`, `gen.Where(...)`, `Gen.OneOf(...)`, `Gen.Const(() => ...)`, `gen.Null()`, `Gen.Recursive<T>((depth, self) => ...)`.
+
+Terminating methods:
+
+- `gen.Sample(t => bool | throw)` — random testing.
+- `gen.SampleModelBased(Gen...Operation<Actual, Model>(...))` — apply random ops to actual + model, assert equal.
+- `gen.SampleMetamorphic(Gen...Metamorphic<T>(f1, f2))` — two routes, same result.
+- `gen.SampleParallel(Gen...Operation<State>(...))` — concurrency/linearizability testing.
+- `gen.Faster(fast, slow, writeLine: ...)` — statistical performance comparison.
+- `ModelGen.X.Single(predicate, "seed")` + `Check.Hash(h => h.Add(...), expectedHash)` — regression testing.
+
+Common optional parameters: `iter` (default 100), `time` (seconds), `seed`, `threads`, `timeout` (Faster, 60s), `sigma` (Faster, 6), `replay` (SampleParallel, 100), `print`, `equal`. Env-var defaults: `CsCheck_Iter`, `CsCheck_Time`, `CsCheck_Seed`, `CsCheck_Sigma`, `CsCheck_Threads`.
+
+Canonical example:
+
+```csharp
+[Test]
+public void Long_Range()
+{
+    (from t in Gen.Select(Gen.Long, Gen.Long)
+     let start = Math.Min(t.V0, t.V1)
+     let finish = Math.Max(t.V0, t.V1)
+     from value in Gen.Long[start, finish]
+     select (value, start, finish))
+    .Sample(i => i.start <= i.value && i.value <= i.finish);
+}
+```
+
+## Documentation
+
+- [README](https://github.com/AnthonyLloyd/CsCheck/blob/master/README.md): full guide with worked examples for every testing style.
+- [AGENTS.md](https://github.com/AnthonyLloyd/CsCheck/blob/master/AGENTS.md): conventions and build/test commands for coding agents.
+- [Why](https://github.com/AnthonyLloyd/CsCheck/blob/master/Why.md): rationale and motivation for the design.
+- [Comparison](https://github.com/AnthonyLloyd/CsCheck/blob/master/Comparison.md): comparison with other random testing libraries.
+
+## Examples
+
+- [Tests directory](https://github.com/AnthonyLloyd/CsCheck/tree/master/Tests): the maintained example suite (these tests double as samples).
+- [GenTests.cs](https://github.com/AnthonyLloyd/CsCheck/blob/master/Tests/GenTests.cs): generator composition examples.
+- [CheckTests.cs](https://github.com/AnthonyLloyd/CsCheck/blob/master/Tests/CheckTests.cs): Sample / Faster / Hash usage.
+- [ShrinkingChallengeTests.cs](https://github.com/AnthonyLloyd/CsCheck/blob/master/Tests/ShrinkingChallengeTests.cs): shrinking-challenge solutions.
+
+## Source
+
+- [Gen.cs](https://github.com/AnthonyLloyd/CsCheck/blob/master/CsCheck/Gen.cs): generators and combinators.
+- [Check.cs](https://github.com/AnthonyLloyd/CsCheck/blob/master/CsCheck/Check.cs): Sample, Faster, Hash and related entry points.
+- [Causal.cs](https://github.com/AnthonyLloyd/CsCheck/blob/master/CsCheck/Causal.cs): causal profiling.
+- [NuGet package](https://www.nuget.org/packages/CsCheck/)
