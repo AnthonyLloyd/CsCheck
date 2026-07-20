@@ -256,9 +256,9 @@ public class CacheTests
         var callCount = 0;
         Task<int> Factory(int _) => Task.FromResult(Interlocked.Increment(ref callCount));
         await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
-        await Task.Delay(TimeSpan.FromMilliseconds(10));
+        await Task.Delay(TimeSpan.FromMilliseconds(50));
         await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
-        await Task.Delay(TimeSpan.FromMilliseconds(20));
+        await Task.Delay(TimeSpan.FromMilliseconds(50));
         await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(2);
     }
 
