@@ -3922,10 +3922,12 @@ public static partial class Check
                     }
                     else
                     {
-                        bool hashEq = hash(a) == hash(bAlt);
-                        b = applies[i].SetPrimary(b); // restore for in-place (mutable) setters
-                        if (!eq || !hashEq)
-                            throw new CsCheckException($"Ignored field '{applies[i].Name}' affects equality: changing it made the instances unequal.");
+bool hashEq = hash(a) == hash(bAlt);
+b = applies[i].SetPrimary(b); // restore for in-place (mutable) setters
+if (!eq)
+    throw new CsCheckException($"Ignored field '{applies[i].Name}' affects equality: changing it made the instances unequal.");
+if (!hashEq)
+    throw new CsCheckException($"Ignored field '{applies[i].Name}' affects GetHashCode: changing it changed the hash code while the instances remained equal.");
                     }
                 }
                 return true;
