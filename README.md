@@ -519,16 +519,16 @@ You can pass an `IEqualityComparer<T>` as the first argument to test a comparer 
 
 ### Account Equality
 ```csharp
-record Account(int Id, string Note) // equality is on Id only, Note is ignored
-{
-    public virtual bool Equals(Account? other) => other is not null && Id == other.Id;
-    public override int GetHashCode() => Id.GetHashCode();
-}
-
 [Test]
 public void Equality_Int()
 {
     Check.Equality(Gen.Int);
+}
+
+record Account(int Id, string Note) // equality is on Id only, Note is ignored
+{
+    public virtual bool Equals(Account? other) => other is not null && Id == other.Id;
+    public override int GetHashCode() => Id.GetHashCode();
 }
 
 [Test]
