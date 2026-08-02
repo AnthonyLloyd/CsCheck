@@ -27,6 +27,7 @@ CsCheck also has functionality to make multiple types of testing simple and fast
 - [Causal profiling](#Causal-profiling)
 - [Regression testing](#Regression-testing)
 - [Performance testing](#Performance-testing)
+- [Equality testing](#Equality-testing)
 - [Debug utilities](#Debug-utilities)
 - [Configuration](#Configuration)
 - [Development](#Development)
@@ -504,6 +505,42 @@ public void Varint_Faster()
 Tests.ArraySerializerTests.Varint_Faster [45 ms]
 Standard Output Messages:
 10.94%[-3.27%..25.81%] 1.12x[0.97x..1.35x] faster, sigma = 10.0 (442 vs 190), min = 7.082ns vs 7.332ns
+```
+
+## Equality testing
+
+Equality checks that a type's `Equals`, `IEquatable<T>` and `GetHashCode` are consistent for generated values: equal values are equal both ways and share a hash code, and unequal values disagree.
+
+Optionally declare the fields that make up equality. Each **Compared** field must change equality and each **Ignored** field must not. It also checks the declared fields are **complete**: any field that affects equality but has not been declared as compared or ignored is detected as a failure. The setter can be a record `with` expression or an in-place `Action`. A field whose equality is normalized (rounding, tolerance, case) can be given a matching `IEqualityComparer` (or a generator that stays distinct once set). Failure messages name the field from the setter expression.
+
+An `IEqualityComparer<T>` can be passed as the first argument to test a comparer instead of the type's own equality.
+
+### Account Equality
+```csharp
+record Account(int Id, string Note) // equality is on Id only, Note is ignored
+{
+    public virtual bool Equals(Account? other) => other is not null && Id == other.Id;
+    public override int GetHashCode() => Id.GetHashCode();
+}
+
+[Test]
+public void Equality_Int()
+{
+    Check.Equality(Gen.Int);
+}
+
+[Test]
+public void Equality_Fields()
+{
+    var gen =
+        from id in Gen.Int
+        from note in Gen.String
+        select new Account(id, note);
+    gen.Equality(f => f
+        .Compared((a, v) => a with { Id = v }, Gen.Int)
+        .Ignored((a, v) => a with { Note = v }, Gen.String)
+    );
+}
 ```
 
 ## Debug utilities

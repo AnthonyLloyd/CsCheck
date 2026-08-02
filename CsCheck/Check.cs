@@ -3579,6 +3579,99 @@ public static partial class Check
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
             equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
+    internal sealed class FasterResult(double sigma, int repeat)
+    {
+        readonly double Limit = sigma * sigma;
+        public Exception? Exception;
+        public int Faster, Slower;
+        public long FasterMin = long.MaxValue, SlowerMin = long.MaxValue;
+        public MedianEstimator Median = new();
+        bool completed;
+
+        private float SigmaSquared
+        {
+            // Binomial distribution: Mean = n p, Variance = n p q in this case H0 has n = Faster + Slower, p = 0.5, and q = 0.5
+            // sigmas = Abs(Faster - Mean) / Sqrt(Variance) = Sqrt((Faster - Slower)^2/(Faster + Slower))
+            get
+            {
+                float d = Faster - Slower;
+                return d * d / (Faster + Slower);
+            }
+        }
+
+        public bool NotFaster => Slower > Faster || Median.Median < 0.0;
+
+        public bool Add(long faster, long slower)
+        {
+            lock (Median)
+            {
+                if (completed) return false;
+                if (faster < FasterMin) FasterMin = faster;
+                if (slower < SlowerMin) SlowerMin = slower;
+                double ratio;
+                if (slower > faster)
+                {
+                    ratio = (double)(slower - faster) / slower;
+                    Faster++;
+                }
+                else if (slower != faster)
+                {
+                    ratio = (double)(slower - faster) / faster;
+                    Slower++;
+                }
+                else
+                {
+                    ratio = 0d;
+                }
+                Median.Add(ratio);
+                if (SigmaSquared < Limit) return false;
+                completed = true;
+                return true;
+            }
+        }
+
+        public override string ToString()
+        {
+            var times = Median.Median >= 0.0 ? 1 / (1 - Median.Median) : 1 + Median.Median;
+            var q1Times = Median.Q1 >= 0.0 ? 1 / (1 - Median.Q1) : 1 + Median.Q1;
+            var q3Times = Median.Q3 >= 0.0 ? 1 / (1 - Median.Q3) : 1 + Median.Q3;
+            var faster = Median.Median >= 0.0 ? "faster" : "slower";
+            if (Median.Median < 0.0)
+            {
+                times = 1 / times;
+                (q1Times, q3Times) = (1 / q3Times, 1 / q1Times);
+            }
+            var (timeString, timeUnit) = TimeFormat((double)Math.Min(FasterMin, SlowerMin) / repeat);
+            var result = $"{Median.Median:P2}[{Median.Q1:P2}..{Median.Q3:P2}] {times:#0.00}x[{q1Times:#0.00}x..{q3Times:#0.00}x] {faster}";
+            if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
+            else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
+            result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / repeat)}{timeUnit} vs {timeString((double)SlowerMin / repeat)}{timeUnit}";
+            if (Check.IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
+            return result;
+        }
+
+        private static (Func<double, string>, string) TimeFormat(double maxValue) =>
+            (maxValue * 1000 / Stopwatch.Frequency) switch
+            {
+                >= 1000000 => (d => (d / Stopwatch.Frequency).ToString("###0"), "s"),
+                >= 100000 => (d => (d / Stopwatch.Frequency).ToString("###0.#"), "s"),
+                >= 10000 => (d => (d / Stopwatch.Frequency).ToString("###0.##"), "s"),
+                >= 1000 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0"), "ms"),
+                >= 100 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.#"), "ms"),
+                >= 10 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.##"), "ms"),
+                >= 1 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.###"), "ms"),
+                >= 0.1 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.#"), "μs"),
+                >= 0.01 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.##"), "μs"),
+                >= 0.001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0"), "ns"),
+                >= 0.0001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.#"), "ns"),
+                >= 0.00001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.##"), "ns"),
+                >= 0.000001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.###"), "ns"),
+                _ => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.####"), "ns"),
+            };
+
+        public void Output(Action<string> output) => output(ToString());
+    }
+
     /// <summary>Generate a single random example.</summary>
     /// <param name="gen">The data generator.</param>
     public static T Single<T>(this Gen<T> gen)
@@ -3621,37 +3714,6 @@ public static partial class Check
         var t = gen.Generate(PCG.Parse(seed), null, out _);
         if (predicate(t)) return t;
         throw new CsCheckException("predicate no longer satisfied");
-    }
-
-    /// <summary>Check Equals, <see cref="IEquatable{T}"/> and GetHashCode are consistent.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    public static void Equality<T>(this Gen<T> gen, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T, T), string>? print = null)
-    {
-        if (iter == -1) iter = Iter;
-        if (iter > 1) iter /= 2;
-        if (time == -1) time = Time;
-        if (time > 1) time /= 2;
-
-        gen.Clone().Sample((t1, t2) =>
-            t1!.Equals(t2) && t2!.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()
-            && (t1 is not IEquatable<T> e || (e.Equals(t2) && ((IEquatable<T>)t2).Equals(t1)))
-        , null, seed, iter, time, threads, print);
-
-        gen.Select(gen).Sample((t1, t2) =>
-        {
-            bool equal = t1!.Equals(t2);
-            return
-            (!equal && !t2!.Equals(t1) && !Equals(t1, t2)
-             && (t1 is not IEquatable<T> e2 || (!e2.Equals(t2) && !((IEquatable<T>)t2).Equals(t1))))
-            ||
-            (equal && t2!.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()
-             && (t1 is not IEquatable<T> e || (e.Equals(t2) && ((IEquatable<T>)t2).Equals(t1))));
-        }, null, seed, iter, time, threads, print);
     }
 
     /// <summary>Check a hash of a series of values. Cache values on a correct run and fail with stack trace at first difference.</summary>
@@ -3722,97 +3784,257 @@ public static partial class Check
                 y[i].Add(timer.Time(gens[i].Generate(pcg, null, out _)));
         return BigO(Array.ConvertAll(n, i => (double)i), Array.ConvertAll(y, m => m.Median), constantFactor);
     }
+
+    /// <summary>Check Equals, <see cref="IEquatable{T}"/> and GetHashCode are consistent.</summary>
+    /// <remarks>
+    /// When <paramref name="fields"/> is supplied the field contract is: a compared field is one where changing it to a
+    /// meaningfully-different value <em>always</em> breaks equality, independent of the other fields; an ignored field is one
+    /// where changing it <em>never</em> affects equality. Fields whose effect on equality is conditional or derived from a
+    /// combination of fields (e.g. equality on <c>Math.Max(A, B)</c>) do not fit this binary and should not be declared.
+    /// For a field whose equality is normalized (rounding, tolerance, case-insensitive, etc.) ensure the two values are
+    /// meaningfully different by either the <c>Gen</c> (generate values that stay distinct once set) or a matching comparer,
+    /// or both. A field that affects equality but is not declared is detected as a failure.
+    /// </remarks>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="fields">Optionally define compared and ignored fields to check equality includes/excludes them. Changing a compared field must make two equal instances unequal; changing an ignored field must keep them equal. A field that affects equality but is not declared is detected as a failure.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    public static void Equality<T>(this Gen<T> gen, Func<EqualityFields<T>, EqualityFields<T>>? fields = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<(T, T), string>? print = null)
+    {
+        if (iter == -1) iter = Iter;
+        if (iter > 1) iter /= 2;
+        if (time == -1) time = Time;
+        if (time > 1) time /= 2;
+
+        gen.Clone().Sample((t1, t2) =>
+            t1!.Equals(t2) && t2!.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()
+            && (t1 is not IEquatable<T> e || (e.Equals(t2) && ((IEquatable<T>)t2).Equals(t1)))
+        , null, seed, iter, time, threads, print);
+
+        gen.Select(gen).Sample((t1, t2) =>
+        {
+            bool equal = t1!.Equals(t2);
+            return
+            (!equal && !t2!.Equals(t1) && !Equals(t1, t2)
+             && (t1 is not IEquatable<T> e2 || (!e2.Equals(t2) && !((IEquatable<T>)t2).Equals(t1))))
+            ||
+            (equal && t2!.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()
+             && (t1 is not IEquatable<T> e || (e.Equals(t2) && ((IEquatable<T>)t2).Equals(t1))));
+        }, null, seed, iter, time, threads, print);
+
+        if (fields is not null)
+        {
+            var f = fields(new EqualityFields<T>());
+            if (f.ComparedFields.Count > 0 || f.IgnoredFields.Count > 0)
+                SampleEqualityFields(gen, static (a, b) => a!.Equals(b), static a => a!.GetHashCode(), f, seed, iter, time, threads, print);
+        }
+    }
+
+    /// <summary>Check an <see cref="IEqualityComparer{T}"/> Equals and GetHashCode are consistent.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="comparer">The equality comparer to test.</param>
+    /// <param name="fields">Optionally define compared and ignored fields to check equality includes/excludes them. Changing a compared field must make two equal instances unequal; changing an ignored field must keep them equal. A field that affects equality but is not declared is detected as a failure.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    public static void Equality<T>(this Gen<T> gen, IEqualityComparer<T> comparer, Func<EqualityFields<T>, EqualityFields<T>>? fields = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<(T, T), string>? print = null)
+    {
+        if (iter == -1) iter = Iter;
+        if (iter > 1) iter /= 2;
+        if (time == -1) time = Time;
+        if (time > 1) time /= 2;
+
+        gen.Clone().Sample((t1, t2) =>
+            comparer.Equals(t1, t2) && comparer.Equals(t2, t1) && comparer.GetHashCode(t1!) == comparer.GetHashCode(t2!)
+        , null, seed, iter, time, threads, print);
+
+        gen.Select(gen).Sample((t1, t2) =>
+        {
+            bool equal = comparer.Equals(t1, t2);
+            return (!equal && !comparer.Equals(t2, t1))
+                || (equal && comparer.Equals(t2, t1) && comparer.GetHashCode(t1!) == comparer.GetHashCode(t2!));
+        }, null, seed, iter, time, threads, print);
+
+        if (fields is not null)
+        {
+            var f = fields(new EqualityFields<T>());
+            if (f.ComparedFields.Count > 0 || f.IgnoredFields.Count > 0)
+                SampleEqualityFields(gen, comparer.Equals, t => comparer.GetHashCode(t!), f, seed, iter, time, threads, print);
+        }
+    }
+
+    sealed class GenFieldApplies<T>(Gen<FieldApply<T>>[] gens) : Gen<FieldApply<T>[]>
+    {
+        public override FieldApply<T>[] Generate(PCG pcg, Size? min, out Size size)
+        {
+            var array = new FieldApply<T>[gens.Length];
+            size = new Size(0);
+            for (int i = 0; i < gens.Length; i++)
+            {
+                array[i] = gens[i].Generate(pcg, min, out var s);
+                size.Add(s);
+                if (Size.IsLessThan(min, size)) return array;
+            }
+            return array;
+        }
+    }
+
+    static void SampleEqualityFields<T>(Gen<T> gen, Func<T, T, bool> equals, Func<T, int> hash, EqualityFields<T> fields,
+        string? seed, long iter, int time, int threads, Func<(T, T), string>? print)
+    {
+        int comparedCount = fields.ComparedFields.Count, ignoredCount = fields.IgnoredFields.Count;
+        var all = new EqualityField<T>[comparedCount + ignoredCount];
+        for (int i = 0; i < comparedCount; i++) all[i] = fields.ComparedFields[i];
+        for (int i = 0; i < ignoredCount; i++) all[comparedCount + i] = fields.IgnoredFields[i];
+        var applyGens = Array.ConvertAll(all, static f => f.ApplyGen());
+        Func<(T, T), string> basePrint = print ?? Print;
+        string Print2((T, T, FieldApply<T>[]) x) => basePrint((x.Item1, x.Item2));
+        Gen.Select(gen.Select(gen), new GenFieldApplies<T>(applyGens), static (pair, applies) => (pair.Item1, pair.Item2, applies))
+            .Sample(x =>
+            {
+                var (a, b, applies) = x;
+                // Normalise every declared field to the same value on both instances. If the declared fields
+                // fully cover equality the instances must now be equal; a missing field leaves them unequal.
+                for (int i = 0; i < applies.Length; i++)
+                {
+                    a = applies[i].SetPrimary(a);
+                    b = applies[i].SetPrimary(b);
+                }
+                if (!equals(a, b) || hash(a) != hash(b))
+                    throw new CsCheckException("Equality or GetHashCode is affected by a field that is not declared as compared or ignored.");
+                // Change one field at a time on b. Compared fields must break equality; ignored fields must not.
+                for (int i = 0; i < applies.Length; i++)
+                {
+                    var bAlt = applies[i].SetAlt(b);
+                    bool eq = equals(a, bAlt);
+                    if (i < comparedCount)
+                    {
+                        b = applies[i].SetPrimary(b); // restore for in-place (mutable) setters
+                        if (eq)
+                            throw new CsCheckException($"Compared field '{applies[i].Name}' does not affect equality: changing it left the instances equal.");
+                    }
+                    else
+                    {
+                        bool hashEq = hash(a) == hash(bAlt);
+                        b = applies[i].SetPrimary(b); // restore for in-place (mutable) setters
+                        if (!eq || !hashEq)
+                            throw new CsCheckException($"Ignored field '{applies[i].Name}' affects equality: changing it made the instances unequal.");
+                    }
+                }
+                return true;
+            }, null, seed, iter, time, threads, (Func<(T, T, FieldApply<T>[]), string>)Print2);
+    }
+}
+readonly struct FieldApply<T>(string name, Func<T, T> setPrimary, Func<T, T> setAlt)
+{
+    public readonly string Name = name;
+    public readonly Func<T, T> SetPrimary = setPrimary;
+    public readonly Func<T, T> SetAlt = setAlt;
 }
 
-internal sealed class FasterResult(double sigma, int repeat)
+// Generates two values that differ by the comparer. Retries internally so a low-cardinality field does not
+// waste sample iterations, and throws a clear field-named error if the generator cannot produce a distinct pair.
+sealed class GenDistinctPair<V>(Gen<V> gen, IEqualityComparer<V> comparer, string name) : Gen<(V, V)>
 {
-    readonly double Limit = sigma * sigma;
-    public Exception? Exception;
-    public int Faster, Slower;
-    public long FasterMin = long.MaxValue, SlowerMin = long.MaxValue;
-    public MedianEstimator Median = new();
-    bool completed;
-
-    private float SigmaSquared
+    public override (V, V) Generate(PCG pcg, Size? min, out Size size)
     {
-        // Binomial distribution: Mean = n p, Variance = n p q in this case H0 has n = Faster + Slower, p = 0.5, and q = 0.5
-        // sigmas = Abs(Faster - Mean) / Sqrt(Variance) = Sqrt((Faster - Slower)^2/(Faster + Slower))
-        get
+        int i = Check.WhereLimit;
+        while (i-- > 0)
         {
-            float d = Faster - Slower;
-            return d * d / (Faster + Slower);
+            var v1 = gen.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v2 = gen.Generate(pcg, min, out var s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            if (!comparer.Equals(v1, v2)) return (v1, v2);
         }
+        throw new CsCheckException($"Field '{name}' generator did not produce two distinct values after {Check.WhereLimit} attempts.");
+    }
+}
+
+abstract class EqualityField<T>
+{
+    private protected EqualityField(string name) => Name = name;
+    internal string Name { get; }
+    internal abstract Gen<FieldApply<T>> ApplyGen();
+}
+
+sealed class EqualityField<T, V> : EqualityField<T>
+{
+    readonly Func<T, V, T> set;
+    readonly Gen<V> gen;
+    readonly IEqualityComparer<V> comparer;
+
+    internal EqualityField(string name, Func<T, V, T> set, Gen<V> gen, IEqualityComparer<V>? comparer) : base(name)
+    {
+        this.set = set;
+        this.gen = gen;
+        this.comparer = comparer ?? EqualityComparer<V>.Default;
     }
 
-    public bool NotFaster => Slower > Faster || Median.Median < 0.0;
-
-    public bool Add(long faster, long slower)
+    internal override Gen<FieldApply<T>> ApplyGen()
     {
-        lock (Median)
-        {
-            if (completed) return false;
-            if (faster < FasterMin) FasterMin = faster;
-            if (slower < SlowerMin) SlowerMin = slower;
-            double ratio;
-            if (slower > faster)
-            {
-                ratio = (double)(slower - faster) / slower;
-                Faster++;
-            }
-            else if (slower != faster)
-            {
-                ratio = (double)(slower - faster) / faster;
-                Slower++;
-            }
-            else
-            {
-                ratio = 0d;
-            }
-            Median.Add(ratio);
-            if (SigmaSquared < Limit) return false;
-            completed = true;
-            return true;
-        }
+        var name = Name;
+        var s = set;
+        return new GenDistinctPair<V>(gen, comparer, name)
+            .Select(t => new FieldApply<T>(name, x => s(x, t.Item1), x => s(x, t.Item2)));
+    }
+}
+
+/// <summary>A builder for the compared and ignored fields tested by <see cref="Check.Equality{T}(Gen{T}, Func{EqualityFields{T}, EqualityFields{T}}, string, long, int, int, Func{ValueTuple{T, T}, string})"/>. Each field takes a setter (a functional <c>with</c> setter or an in-place <see cref="Action{T, V}"/>) and a value generator. To test a compared field the generator must be able to produce two meaningfully-different values for it; for a field with normalized equality (rounding, tolerance, case) either generate values that stay distinct once set or pass a matching comparer.</summary>
+public sealed class EqualityFields<T>
+{
+    internal readonly List<EqualityField<T>> ComparedFields = [];
+    internal readonly List<EqualityField<T>> IgnoredFields = [];
+
+    /// <summary>Add a field that is expected to be included in equality. Changing it must make two equal instances unequal.</summary>
+    /// <param name="set">A functional setter that returns the instance with the field value set (e.g. a record <c>with</c> expression).</param>
+    /// <param name="gen">The generator for the field value.</param>
+    /// <param name="comparer">When two field values are considered the same for equality (default EqualityComparer.Default). For a field whose setter transforms the value (e.g. rounds or clamps), pass a comparer that reflects that transform so the two generated values stay distinct once set.</param>
+    /// <param name="name">The field name for failure messages (defaults to the setter expression).</param>
+    public EqualityFields<T> Compared<V>(Func<T, V, T> set, Gen<V> gen, IEqualityComparer<V>? comparer = null, [CallerArgumentExpression(nameof(set))] string name = "")
+    {
+        ComparedFields.Add(new EqualityField<T, V>(name, set, gen, comparer));
+        return this;
     }
 
-    public override string ToString()
+    /// <summary>Add a field that is expected to be included in equality. Changing it must make two equal instances unequal.</summary>
+    /// <param name="set">An in-place setter that mutates the field value on the instance.</param>
+    /// <param name="gen">The generator for the field value.</param>
+    /// <param name="comparer">When two field values are considered the same for equality (default EqualityComparer.Default). For a field whose setter transforms the value (e.g. rounds or clamps), pass a comparer that reflects that transform so the two generated values stay distinct once set.</param>
+    /// <param name="name">The field name for failure messages (defaults to the setter expression).</param>
+    public EqualityFields<T> Compared<V>(Action<T, V> set, Gen<V> gen, IEqualityComparer<V>? comparer = null, [CallerArgumentExpression(nameof(set))] string name = "")
     {
-        var times = Median.Median >= 0.0 ? 1 / (1 - Median.Median) : 1 + Median.Median;
-        var q1Times = Median.Q1 >= 0.0 ? 1 / (1 - Median.Q1) : 1 + Median.Q1;
-        var q3Times = Median.Q3 >= 0.0 ? 1 / (1 - Median.Q3) : 1 + Median.Q3;
-        var faster = Median.Median >= 0.0 ? "faster" : "slower";
-        if (Median.Median < 0.0)
-        {
-            times = 1 / times;
-            (q1Times, q3Times) = (1 / q3Times, 1 / q1Times);
-        }
-        var (timeString, timeUnit) = TimeFormat((double)Math.Min(FasterMin, SlowerMin) / repeat);
-        var result = $"{Median.Median:P2}[{Median.Q1:P2}..{Median.Q3:P2}] {times:#0.00}x[{q1Times:#0.00}x..{q3Times:#0.00}x] {faster}";
-        if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
-        else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
-        result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / repeat)}{timeUnit} vs {timeString((double)SlowerMin / repeat)}{timeUnit}";
-        if (Check.IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
-        return result;
+        ComparedFields.Add(new EqualityField<T, V>(name, (t, v) => { set(t, v); return t; }, gen, comparer));
+        return this;
     }
 
-    private static (Func<double, string>, string) TimeFormat(double maxValue) =>
-        (maxValue * 1000 / Stopwatch.Frequency) switch
-        {
-            >= 1000000 => (d => (d / Stopwatch.Frequency).ToString("###0"), "s"),
-            >= 100000 => (d => (d / Stopwatch.Frequency).ToString("###0.#"), "s"),
-            >= 10000 => (d => (d / Stopwatch.Frequency).ToString("###0.##"), "s"),
-            >= 1000 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0"), "ms"),
-            >= 100 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.#"), "ms"),
-            >= 10 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.##"), "ms"),
-            >= 1 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.###"), "ms"),
-            >= 0.1 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.#"), "μs"),
-            >= 0.01 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.##"), "μs"),
-            >= 0.001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0"), "ns"),
-            >= 0.0001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.#"), "ns"),
-            >= 0.00001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.##"), "ns"),
-            >= 0.000001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.###"), "ns"),
-            _ => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.####"), "ns"),
-        };
+    /// <summary>Add a field that is expected to be excluded from equality. Changing it must keep two equal instances equal.</summary>
+    /// <param name="set">A functional setter that returns the instance with the field value set (e.g. a record <c>with</c> expression).</param>
+    /// <param name="gen">The generator for the field value.</param>
+    /// <param name="comparer">When two field values are considered the same for equality (default EqualityComparer.Default). For a field whose setter transforms the value (e.g. rounds or clamps), pass a comparer that reflects that transform so the two generated values stay distinct once set.</param>
+    /// <param name="name">The field name for failure messages (defaults to the setter expression).</param>
+    public EqualityFields<T> Ignored<V>(Func<T, V, T> set, Gen<V> gen, IEqualityComparer<V>? comparer = null, [CallerArgumentExpression(nameof(set))] string name = "")
+    {
+        IgnoredFields.Add(new EqualityField<T, V>(name, set, gen, comparer));
+        return this;
+    }
 
-    public void Output(Action<string> output) => output(ToString());
+    /// <summary>Add a field that is expected to be excluded from equality. Changing it must keep two equal instances equal.</summary>
+    /// <param name="set">An in-place setter that mutates the field value on the instance.</param>
+    /// <param name="gen">The generator for the field value.</param>
+    /// <param name="comparer">When two field values are considered the same for equality (default EqualityComparer.Default). For a field whose setter transforms the value (e.g. rounds or clamps), pass a comparer that reflects that transform so the two generated values stay distinct once set.</param>
+    /// <param name="name">The field name for failure messages (defaults to the setter expression).</param>
+    public EqualityFields<T> Ignored<V>(Action<T, V> set, Gen<V> gen, IEqualityComparer<V>? comparer = null, [CallerArgumentExpression(nameof(set))] string name = "")
+    {
+        IgnoredFields.Add(new EqualityField<T, V>(name, (t, v) => { set(t, v); return t; }, gen, comparer));
+        return this;
+    }
 }

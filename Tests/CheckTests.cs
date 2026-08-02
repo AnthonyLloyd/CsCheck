@@ -325,6 +325,134 @@ public class CheckTests
         Check.Equality(Gen.String);
     }
 
+    sealed record Account(int Id, string Note)
+    {
+        public bool Equals(Account? other) => other is not null && Id == other.Id;
+        public override int GetHashCode() => Id.GetHashCode();
+    }
+
+    [Test]
+    public void Equality_Fields()
+    {
+        var gen =
+            from id in Gen.Int
+            from note in Gen.String
+            select new Account(id, note);
+        gen.Equality(f => f
+            .Compared((a, v) => a with { Id = v }, Gen.Int)
+            .Ignored((a, v) => a with { Note = v }, Gen.String));
+    }
+
+    static Gen<Account> GenAccount =>
+        from id in Gen.Int
+        from note in Gen.String
+        select new Account(id, note);
+
+    [Test]
+    public void Equality_Fields_Detects_Ignored_Declared_As_Compared()
+    {
+        Assert.Throws<CsCheckException>(() => GenAccount.Equality(f => f
+            .Compared((a, v) => a with { Id = v }, Gen.Int)
+            .Compared((a, v) => a with { Note = v }, Gen.String)));
+    }
+
+    [Test]
+    public void Equality_Fields_Detects_Compared_Declared_As_Ignored()
+    {
+        Assert.Throws<CsCheckException>(() => GenAccount.Equality(f => f
+            .Ignored((a, v) => a with { Id = v }, Gen.Int)
+            .Ignored((a, v) => a with { Note = v }, Gen.String)));
+    }
+
+    [Test]
+    public void Equality_Fields_Detects_Missing_Field()
+    {
+        Assert.Throws<CsCheckException>(() => GenAccount.Equality(f => f
+            .Ignored((a, v) => a with { Note = v }, Gen.String)));
+    }
+
+    [Test]
+    public void Equality_Fields_Detects_Non_Varying_Gen()
+    {
+        Assert.Throws<CsCheckException>(() => GenAccount.Equality(f => f
+            .Compared((a, v) => a with { Id = v }, Gen.Const(0))));
+    }
+
+    [Test]
+    public void Equality_Fields_Mutable()
+    {
+        var gen = Gen.Select(Gen.Int, Gen.String, (id, note) => new MutableAccount(id, note));
+        gen.Equality(f => f
+            .Compared((a, v) => a.Id = v, Gen.Int)
+            .Ignored((a, v) => a.Note = v, Gen.String));
+    }
+
+    [Test]
+    public void Equality_Fields_Nested()
+    {
+        var gen =
+            from name in Gen.String
+            from house in Gen.Int
+            from street in Gen.String
+            select new Person(name, new Address(house, street));
+        gen.Equality(f => f
+            .Compared((p, v) => p with { Name = v }, Gen.String)
+            .Compared((p, v) => p with { Addr = p.Addr with { House = v } }, Gen.Int)
+            .Ignored((p, v) => p with { Addr = p.Addr with { Street = v } }, Gen.String));
+    }
+
+    [Test]
+    public void Equality_Fields_Comparer()
+    {
+        GenAccount.Equality(new AccountNoteComparer(), f => f
+            .Compared((a, v) => a with { Note = v }, Gen.String)
+            .Ignored((a, v) => a with { Id = v }, Gen.Int));
+    }
+
+    [Test]
+    public void Equality_Fields_Normalized()
+    {
+        var gen = Gen.Int[0, 1000].Select(x => new Rounded(x));
+        gen.Equality(f => f
+            .Compared((r, v) => r with { Raw = v }, Gen.Int[0, 1000], new RoundToTenComparer()));
+    }
+
+    sealed class MutableAccount(int id, string note)
+    {
+        public int Id = id;
+        public string Note = note;
+        public override bool Equals(object? obj) => obj is MutableAccount m && m.Id == Id;
+        public override int GetHashCode() => Id.GetHashCode();
+    }
+
+    sealed record Address(int House, string Street);
+
+    sealed record Person(string Name, Address Addr)
+    {
+        public bool Equals(Person? other) => other is not null && Name == other.Name && Addr.House == other.Addr.House;
+        public override int GetHashCode() => HashCode.Combine(Name, Addr.House);
+    }
+
+    sealed record Rounded(int Raw)
+    {
+        int Bucket => (Raw + 5) / 10 * 10;
+        public bool Equals(Rounded? other) => other is not null && Bucket == other.Bucket;
+        public override int GetHashCode() => Bucket.GetHashCode();
+    }
+
+    sealed class AccountNoteComparer : IEqualityComparer<Account>
+    {
+        public bool Equals(Account? a, Account? b) => a is null ? b is null : b is not null && a.Note == b.Note;
+        public int GetHashCode(Account a) => a.Note.GetHashCode();
+    }
+
+    sealed class RoundToTenComparer : IEqualityComparer<int>
+    {
+        static int Round(int v) => (v + 5) / 10 * 10;
+        public bool Equals(int a, int b) => Round(a) == Round(b);
+        public int GetHashCode(int v) => Round(v).GetHashCode();
+    }
+
     [Test]
     public void Enqueue_Faster_Than_Median()
     {
