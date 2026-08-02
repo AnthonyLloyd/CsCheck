@@ -511,9 +511,9 @@ Standard Output Messages:
 
 Equality checks that a type's `Equals`, `IEquatable<T>` and `GetHashCode` are consistent for generated values: equal values compare equal both ways and share a hash code, while unequal values disagree.
 
-You can also declare the fields in the equality contract. **Compared** fields must change equality; **Ignored** fields must not. CsCheck also checks completeness: if an undeclared field affects equality, it fails and names the field from the setter expression.
+You can also declare the fields in the equality contract. **Compared** fields must change equality; **Ignored** fields must not. CsCheck also checks completeness: if an undeclared field affects equality, it fails.
 
-Setters can be record `with` expressions or in-place `Action`s. For normalized equality (rounding, tolerance, case), use a matching `IEqualityComparer` (or a generator that still produces distinct values after setting).
+Setters can be record `with` expressions or in-place `Action`s. For declared fields, failure messages use the setter expression name. For normalized equality (rounding, tolerance, case), use a matching `IEqualityComparer` (or a generator that still produces distinct values after setting).
 
 You can pass an `IEqualityComparer<T>` as the first argument to test a comparer directly instead of the type's own equality.
 
