@@ -509,11 +509,13 @@ Standard Output Messages:
 
 ## Equality testing
 
-Equality checks that a type's `Equals`, `IEquatable<T>` and `GetHashCode` are consistent for generated values: equal values are equal both ways and share a hash code, and unequal values disagree.
+Equality checks that a type's `Equals`, `IEquatable<T>` and `GetHashCode` are consistent for generated values: equal values compare equal both ways and share a hash code, while unequal values disagree.
 
-Optionally declare the fields that make up equality. Each **Compared** field must change equality and each **Ignored** field must not. It also checks the declared fields are **complete**: any field that affects equality but has not been declared as compared or ignored is detected as a failure. The setter can be a record `with` expression or an in-place `Action`. A field whose equality is normalized (rounding, tolerance, case) can be given a matching `IEqualityComparer` (or a generator that stays distinct once set). Failure messages name the field from the setter expression.
+You can also declare the fields in the equality contract. **Compared** fields must change equality; **Ignored** fields must not. CsCheck also checks completeness: if an undeclared field affects equality, it fails and names the field from the setter expression.
 
-An `IEqualityComparer<T>` can be passed as the first argument to test a comparer instead of the type's own equality.
+Setters can be record `with` expressions or in-place `Action`s. For normalized equality (rounding, tolerance, case), use a matching `IEqualityComparer` (or a generator that still produces distinct values after setting).
+
+You can pass an `IEqualityComparer<T>` as the first argument to test a comparer directly instead of the type's own equality.
 
 ### Account Equality
 ```csharp
