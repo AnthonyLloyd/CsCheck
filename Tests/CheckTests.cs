@@ -348,22 +348,16 @@ public class CheckTests
         public override int GetHashCode() => Id.GetHashCode();
     }
 
+    static Gen<Account> GenAccount => Gen.Select(Gen.Int, Gen.String, (id, note) => new Account(id, note));
+
     [Test]
     public void Equality_Fields()
     {
-        var gen =
-            from id in Gen.Int
-            from note in Gen.String
-            select new Account(id, note);
-        gen.Equality(f => f
+        GenAccount.Equality(f => f
             .Compared((a, v) => a with { Id = v }, Gen.Int)
             .Ignored((a, v) => a with { Note = v }, Gen.String));
     }
 
-    static Gen<Account> GenAccount =>
-        from id in Gen.Int
-        from note in Gen.String
-        select new Account(id, note);
 
     [Test]
     public void Equality_Fields_Detects_Ignored_Declared_As_Compared()
@@ -398,8 +392,8 @@ public class CheckTests
     [Test]
     public void Equality_Fields_Mutable()
     {
-        var gen = Gen.Select(Gen.Int, Gen.String, (id, note) => new MutableAccount(id, note));
-        gen.Equality(f => f
+        Gen.Select(Gen.Int, Gen.String, (id, note) => new MutableAccount(id, note))
+        .Equality(f => f
             .Compared((a, v) => a.Id = v, Gen.Int)
             .Ignored((a, v) => a.Note = v, Gen.String));
     }
@@ -425,8 +419,7 @@ public class CheckTests
     [Test]
     public void Equality_Fields_Normalized()
     {
-        var gen = Gen.Int[0, 1000].Select(x => new Rounded(x));
-        gen.Equality(f => f
+        Gen.Int[0, 1000].Select(x => new Rounded(x)).Equality(f => f
             .Compared((r, v) => r with { Raw = v }, Gen.Int[0, 1000], new RoundToTenComparer()));
     }
 
@@ -526,13 +519,11 @@ public class CheckTests
     // with the fluent Union(down, up) builder, whose Case is compile-time constrained to real arms of Either.
     sealed record Holder(int Tag, Either Choice);
 
-    static Gen<Holder> GenHolder =>
-        Gen.Select(Gen.Int, GenEither, (t, e) => new Holder(t, e));
-
     [Test]
     public void Equality_Fields_Union_Field()
     {
-        GenHolder.Equality(f => f
+        Gen.Select(Gen.Int, GenEither, (t, e) => new Holder(t, e))
+        .Equality(f => f
             .Compared((h, v) => h with { Tag = v }, Gen.Int)
             .Union(h => h.Choice, (h, c) => h with { Choice = c })
                 .Case<Either.L>(lf => lf
@@ -599,7 +590,7 @@ public class CheckTests
             .Case<Gauge>(gf => gf
                 .Compared((x, id) => x with { Id = id }, Gen.String)
                 .Compared((x, v) => x with { Value = v }, Gen.Double.Unit)
-                .Ignored((x, t) => x with { Timestamp = t }, Gen.Long)), seed: "eNPu_XDrGhs7");
+                .Ignored((x, t) => x with { Timestamp = t }, Gen.Long)));
     }
 
     sealed record Tagged(string Tag, Signal Signal);
