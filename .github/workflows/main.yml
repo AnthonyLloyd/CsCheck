@@ -17,6 +17,6 @@ jobs:
     - uses: actions/checkout@v6
     - uses: actions/setup-dotnet@v5
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: '11.0.x'
     - name: Test
       run: dotnet run -c Release --project Tests --output Detailed --disable-logo --no-progress

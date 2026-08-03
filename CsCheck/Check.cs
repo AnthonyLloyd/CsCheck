@@ -3829,7 +3829,7 @@ public static partial class Check
         if (fields is not null)
         {
             var f = fields(new EqualityFields<T>());
-            if (f.ComparedFields.Count > 0 || f.IgnoredFields.Count > 0)
+            if (f.ComparedFields.Count > 0 || f.IgnoredFields.Count > 0 || f.CasePredicates.Count > 0)
                 SampleEqualityFields(gen, static (a, b) => a!.Equals(b), static a => a!.GetHashCode(), f, seed, iter, time, threads, print);
         }
     }
@@ -3865,7 +3865,7 @@ public static partial class Check
         if (fields is not null)
         {
             var f = fields(new EqualityFields<T>());
-            if (f.ComparedFields.Count > 0 || f.IgnoredFields.Count > 0)
+            if (f.ComparedFields.Count > 0 || f.IgnoredFields.Count > 0 || f.CasePredicates.Count > 0)
                 SampleEqualityFields(gen, comparer.Equals, t => comparer.GetHashCode(t!), f, seed, iter, time, threads, print);
         }
     }
@@ -3894,16 +3894,36 @@ public static partial class Check
         for (int i = 0; i < comparedCount; i++) all[i] = fields.ComparedFields[i];
         for (int i = 0; i < ignoredCount; i++) all[comparedCount + i] = fields.IgnoredFields[i];
         var applyGens = Array.ConvertAll(all, static f => f.ApplyGen());
+        var fieldApplies = Array.ConvertAll(all, static f => f.Applies);
+        var casePredicates = fields.CasePredicates.ToArray();
         Func<(T, T), string> basePrint = print ?? Print;
         string Print2((T, T, FieldApply<T>[]) x) => basePrint((x.Item1, x.Item2));
         Gen.Select(gen.Select(gen), new GenFieldApplies<T>(applyGens), static (pair, applies) => (pair.Item1, pair.Item2, applies))
             .Sample(x =>
             {
                 var (a, b, applies) = x;
-                // Normalise every declared field to the same value on both instances. If the declared fields
-                // fully cover equality the instances must now be equal; a missing field leaves them unequal.
+                // Determine whether a and b belong to the same declared case. Two instances share a case when every
+                // declared case predicate agrees on them. With no cases declared this is always true and the check
+                // reduces to the plain product-type contract.
+                for (int c = 0; c < casePredicates.Length; c++)
+                {
+                    if (casePredicates[c](a) != casePredicates[c](b))
+                    {
+                        // Different declared cases must not be equal: the case discriminant is part of equality.
+                        if (equals(a, b) || equals(b, a))
+                            throw new CsCheckException("Instances of different declared cases compare equal: the case discriminant is not part of equality.");
+                        return true;
+                    }
+                }
+                // Cache which fields apply to this case before any mutation (declared setters preserve the case).
+                var applicable = new bool[applies.Length];
+                for (int i = 0; i < applies.Length; i++) applicable[i] = fieldApplies[i](a);
+                // Normalise every applicable declared field to the same value on both instances. If the declared
+                // fields fully cover equality for this case the instances must now be equal; a missing field leaves
+                // them unequal.
                 for (int i = 0; i < applies.Length; i++)
                 {
+                    if (!applicable[i]) continue;
                     a = applies[i].SetPrimary(a);
                     b = applies[i].SetPrimary(b);
                 }
@@ -3912,6 +3932,7 @@ public static partial class Check
                 // Change one field at a time on b. Compared fields must break equality; ignored fields must not.
                 for (int i = 0; i < applies.Length; i++)
                 {
+                    if (!applicable[i]) continue;
                     var bAlt = applies[i].SetAlt(b);
                     bool eq = equals(a, bAlt);
                     if (i < comparedCount)
@@ -3922,12 +3943,12 @@ public static partial class Check
                     }
                     else
                     {
-bool hashEq = hash(a) == hash(bAlt);
-b = applies[i].SetPrimary(b); // restore for in-place (mutable) setters
-if (!eq)
-    throw new CsCheckException($"Ignored field '{applies[i].Name}' affects equality: changing it made the instances unequal.");
-if (!hashEq)
-    throw new CsCheckException($"Ignored field '{applies[i].Name}' affects GetHashCode: changing it changed the hash code while the instances remained equal.");
+                        bool hashEq = hash(a) == hash(bAlt);
+                        b = applies[i].SetPrimary(b); // restore for in-place (mutable) setters
+                        if (!eq)
+                            throw new CsCheckException($"Ignored field '{applies[i].Name}' affects equality: changing it made the instances unequal.");
+                        if (!hashEq)
+                            throw new CsCheckException($"Ignored field '{applies[i].Name}' affects GetHashCode: changing it changed the hash code while the instances remained equal.");
                     }
                 }
                 return true;
@@ -3965,7 +3986,18 @@ abstract class EqualityField<T>
 {
     private protected EqualityField(string name) => Name = name;
     internal string Name { get; }
+    /// <summary>Whether this field is present on (applies to) a given instance. Always true for a plain product
+    /// field; for a field declared inside a Case it is the conjunction of the case predicate chain, so the field is
+    /// only exercised on instances that belong to that case.</summary>
+    internal Func<T, bool> Applies { get; init; } = static _ => true;
     internal abstract Gen<FieldApply<T>> ApplyGen();
+}
+
+// A field whose apply generator is supplied directly, used when lifting an arm field into the parent type via a
+// Case's down/up projection.
+sealed class MappedEqualityField<T>(string name, Gen<FieldApply<T>> gen) : EqualityField<T>(name)
+{
+    internal override Gen<FieldApply<T>> ApplyGen() => gen;
 }
 
 sealed class EqualityField<T, V> : EqualityField<T>
@@ -3995,6 +4027,7 @@ public sealed class EqualityFields<T>
 {
     internal readonly List<EqualityField<T>> ComparedFields = [];
     internal readonly List<EqualityField<T>> IgnoredFields = [];
+    internal readonly List<Func<T, bool>> CasePredicates = [];
 
     /// <summary>Add a field that is expected to be included in equality. Changing it must make two equal instances unequal.</summary>
     /// <param name="set">A functional setter that returns the instance with the field value set (e.g. a record <c>with</c> expression).</param>
@@ -4039,4 +4072,96 @@ public sealed class EqualityFields<T>
         IgnoredFields.Add(new EqualityField<T, V>(name, (t, v) => { set(t, v); return t; }, gen, comparer));
         return this;
     }
+
+    /// <summary>Add a case (arm) of a sum type e.g. a discriminated union, One-of, or an Either. The arm's own
+    /// compared and ignored fields are declared against the arm payload type <typeparamref name="TArm"/> and are only
+    /// exercised on instances that belong to this case. Cases may be nested (an arm can itself declare cases) to test
+    /// arbitrarily nested sum types. Instances of different declared cases are additionally checked to compare unequal,
+    /// verifying the case discriminant is part of equality.</summary>
+    /// <param name="isCase">Predicate identifying whether an instance belongs to this case (e.g. a type test). Must be safe to call on any instance.</param>
+    /// <param name="down">Projects an instance of this case to its arm payload. Only called for instances where <paramref name="isCase"/> is true.</param>
+    /// <param name="up">Rebuilds an instance from a (possibly modified) arm payload, staying within this case.</param>
+    /// <param name="armFields">Declares the compared/ignored fields (and any nested cases) of the arm payload.</param>
+    public EqualityFields<T> Case<TArm>(Func<T, bool> isCase, Func<T, TArm> down, Func<T, TArm, T> up,
+        Func<EqualityFields<TArm>, EqualityFields<TArm>> armFields)
+    {
+        var arm = armFields(new EqualityFields<TArm>());
+        CasePredicates.Add(isCase);
+        foreach (var p in arm.CasePredicates)
+            CasePredicates.Add(t => isCase(t) && p(down(t)));
+        foreach (var cf in arm.ComparedFields)
+            ComparedFields.Add(Lift(cf, isCase, down, up));
+        foreach (var igf in arm.IgnoredFields)
+            IgnoredFields.Add(Lift(igf, isCase, down, up));
+        return this;
+    }
+
+    static EqualityField<T> Lift<TArm>(EqualityField<TArm> field, Func<T, bool> isCase, Func<T, TArm> down, Func<T, TArm, T> up)
+    {
+        var applies = field.Applies;
+        var gen = field.ApplyGen().Select(fa => new FieldApply<T>(fa.Name,
+            t => up(t, fa.SetPrimary(down(t))),
+            t => up(t, fa.SetAlt(down(t)))));
+        return new MappedEqualityField<T>(field.Name, gen) { Applies = t => isCase(t) && applies(down(t)) };
+    }
+
+    /// <summary>Add a case (arm) of a sum type whose arm payload type <typeparamref name="TArm"/> is a subtype of
+    /// <typeparamref name="T"/> (e.g. an abstract record hierarchy, class hierarchy, or subtype-based One-of). The case
+    /// predicate and the down/up projections are derived automatically, so only the arm's fields need to be declared.
+    /// Use the four-argument overload for sum types whose arms are not subtypes of <typeparamref name="T"/> (e.g. a C#
+    /// <c>union</c> whose members are distinct types).</summary>
+    /// <param name="armFields">Declares the compared/ignored fields (and any nested cases) of the arm payload.</param>
+    public EqualityFields<T> Case<TArm>(Func<EqualityFields<TArm>, EqualityFields<TArm>> armFields) where TArm : T
+        => Case(static t => t is TArm, static t => (TArm)(object)t!, static (_, a) => a, armFields);
+
+    /// <summary>Descend into a sub-component (field) of <typeparamref name="T"/> that is itself a sum type (or record),
+    /// without splitting on a case, to declare its cases and/or compared/ignored fields. Equivalent to the
+    /// four-argument <c>Case</c> with an always-true predicate. Useful for a record whose field is a union or record.</summary>
+    /// <param name="down">Projects an instance to the sub-component.</param>
+    /// <param name="up">Rebuilds an instance from a (possibly modified) sub-component.</param>
+    /// <param name="fieldFields">Declares the cases and/or compared/ignored fields of the sub-component.</param>
+    public EqualityFields<T> Union<TField>(Func<T, TField> down, Func<T, TField, T> up,
+        Func<EqualityFields<TField>, EqualityFields<TField>> fieldFields)
+        => Case(static _ => true, down, up, fieldFields);
+
+    /// <summary>Descend into a sum-typed field of <typeparamref name="T"/> and return a builder whose <c>Case</c>
+    /// declares each arm. The arm type is constrained to be a subtype of the field type <typeparamref name="TField"/>,
+    /// giving compile-time safety that only real arms are declared. For a field that is a C# <c>union</c> (arms not
+    /// subtypes) use the three-argument <c>Union</c> and declare the arms with the four-argument <c>Case</c>.</summary>
+    /// <param name="down">Projects an instance to the sum-typed field.</param>
+    /// <param name="up">Rebuilds an instance from a (possibly modified) field value.</param>
+    public UnionFields<T, TField> Union<TField>(Func<T, TField> down, Func<T, TField, T> up)
+        => new(this, down, up);
+}
+
+/// <summary>A builder returned by <see cref="EqualityFields{T}.Union{TField}(Func{T, TField}, Func{T, TField, T})"/>
+/// that declares the arms of a sum-typed field. Implicitly converts back to the parent <see cref="EqualityFields{T}"/>.</summary>
+public sealed class UnionFields<T, TField>
+{
+    readonly EqualityFields<T> fields;
+    readonly Func<T, TField> down;
+    readonly Func<T, TField, T> up;
+    internal UnionFields(EqualityFields<T> fields, Func<T, TField> down, Func<T, TField, T> up)
+    {
+        this.fields = fields;
+        this.down = down;
+        this.up = up;
+    }
+
+    /// <summary>Declare an arm of the sum-typed field. <typeparamref name="TArm"/> must be a subtype of the field type.</summary>
+    /// <param name="armFields">Declares the compared/ignored fields (and any nested cases) of the arm payload.</param>
+    public UnionFields<T, TField> Case<TArm>(Func<EqualityFields<TArm>, EqualityFields<TArm>> armFields) where TArm : TField
+    {
+        var d = down;
+        var u = up;
+        fields.Case<TArm>(
+            t => d(t) is TArm,
+            t => (TArm)(object)d(t)!,
+            (t, arm) => u(t, (TField)(object)arm!),
+            armFields);
+        return this;
+    }
+
+    /// <summary>Return the parent builder to continue declaring fields.</summary>
+    public static implicit operator EqualityFields<T>(UnionFields<T, TField> builder) => builder.fields;
 }

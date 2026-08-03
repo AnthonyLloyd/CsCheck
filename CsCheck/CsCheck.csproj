@@ -22,9 +22,9 @@ CsCheck also makes parallel, performance and regression testing simple and fast.
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;parallel;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>4.7.0</Version>
+        <Version>4.8.0</Version>
         <PackageReleaseNotes>
-Added SampleModelBasedAsync.
+Added Check.Equality IEqualityComparer, field checking, completeness and union support.
         </PackageReleaseNotes>
         <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>
@@ -47,7 +47,7 @@ Added SampleModelBasedAsync.
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.301" PrivateAssets="All" />
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.123" PrivateAssets="All" />
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.138" PrivateAssets="All" />
         <None Include="../CsCheck.png" Pack="true" PackagePath="" Visible="False" />
         <None Include="../README.md" Pack="true" PackagePath="" Visible="False" />
     </ItemGroup>

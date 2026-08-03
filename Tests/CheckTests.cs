@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Collections.Concurrent;
@@ -308,6 +308,23 @@ public class CheckTests
     }
 
     [Test]
+    public void Enqueue_Faster_Than_Median()
+    {
+        Gen.Double.OneTwo.Array[10].Select(Gen.Double.OneTwo, (a, s) =>
+        {
+            var median = new MedianEstimator();
+            foreach (var d in a) median.Add(d);
+            var queue = new Queue<double>(100);
+            return (median, queue, s);
+        })
+        .Faster(
+            (_, q, s) => q.Enqueue(s),
+            (m, _, s) => m.Add(s),
+            repeat: 100,
+            writeLine: TUnitX.WriteLine);
+    }
+
+    [Test]
     public void Equality_Int()
     {
         Check.Equality(Gen.Int);
@@ -390,12 +407,8 @@ public class CheckTests
     [Test]
     public void Equality_Fields_Nested()
     {
-        var gen =
-            from name in Gen.String
-            from house in Gen.Int
-            from street in Gen.String
-            select new Person(name, new Address(house, street));
-        gen.Equality(f => f
+        Gen.Select(Gen.String, Gen.Int, Gen.String, (name, house, street) => new Person(name, new Address(house, street)))
+        .Equality(f => f
             .Compared((p, v) => p with { Name = v }, Gen.String)
             .Compared((p, v) => p with { Addr = p.Addr with { House = v } }, Gen.Int)
             .Ignored((p, v) => p with { Addr = p.Addr with { Street = v } }, Gen.String));
@@ -415,6 +428,201 @@ public class CheckTests
         var gen = Gen.Int[0, 1000].Select(x => new Rounded(x));
         gen.Equality(f => f
             .Compared((r, v) => r with { Raw = v }, Gen.Int[0, 1000], new RoundToTenComparer()));
+    }
+
+    abstract record Either
+    {
+        public sealed record L(string Name, int Version) : Either
+        {
+            public bool Equals(L? other) => other is not null && Name == other.Name; // Version ignored
+            public override int GetHashCode() => Name.GetHashCode();
+        }
+        public sealed record R(int X, int Y) : Either;
+    }
+
+    static Gen<Either> GenEither =>
+        Gen.OneOf<Either>(
+            Gen.Select(Gen.String, Gen.Int, (n, v) => new Either.L(n, v)),
+            Gen.Select(Gen.Int, Gen.Int, (x, y) => new Either.R(x, y)));
+
+    static EqualityFields<Either> DeclareEither(EqualityFields<Either> f) => f
+        .Case<Either.L>(af => af
+            .Compared((l, s) => l with { Name = s }, Gen.String)
+            .Ignored((l, i) => l with { Version = i }, Gen.Int))
+        .Case<Either.R>(rf => rf
+            .Compared((r, x) => r with { X = x }, Gen.Int)
+            .Compared((r, y) => r with { Y = y }, Gen.Int));
+
+    [Test]
+    public void Equality_Fields_Either()
+    {
+        GenEither.Equality(DeclareEither);
+    }
+
+    [Test]
+    public void Equality_Fields_Either_Detects_Ignored_Declared_As_Compared()
+    {
+        Assert.Throws<CsCheckException>(() => GenEither.Equality(f => f
+            .Case<Either.L>(af => af
+                .Compared((l, s) => l with { Name = s }, Gen.String)
+                .Compared((l, i) => l with { Version = i }, Gen.Int)) // Version is actually ignored
+            .Case<Either.R>(rf => rf
+                .Compared((r, x) => r with { X = x }, Gen.Int)
+                .Compared((r, y) => r with { Y = y }, Gen.Int))));
+    }
+
+    [Test]
+    public void Equality_Fields_Either_Detects_Missing_Field_In_Arm()
+    {
+        Assert.Throws<CsCheckException>(() => GenEither.Equality(f => f
+            .Case<Either.L>(af => af
+                .Compared((l, s) => l with { Name = s }, Gen.String)
+                .Ignored((l, i) => l with { Version = i }, Gen.Int))
+            .Case<Either.R>(rf => rf
+                .Compared((r, x) => r with { X = x }, Gen.Int)))); // Y compared field omitted
+    }
+
+    [Test]
+    public void Equality_Fields_Either_Detects_Conflated_Cases()
+    {
+        Assert.Throws<CsCheckException>(() => GenEither.Equality(new AlwaysEqualEitherComparer(), DeclareEither));
+    }
+
+    abstract record Nested
+    {
+        public sealed record Inner(Either Value) : Nested;
+        public sealed record Outer(int X, int Y) : Nested;
+    }
+
+    static Gen<Nested> GenNested =>
+        Gen.OneOf<Nested>(
+            GenEither.Select(e => new Nested.Inner(e)),
+            Gen.Select(Gen.Int, Gen.Int, (x, y) => new Nested.Outer(x, y)));
+
+    [Test]
+    public void Equality_Fields_Nested_Either()
+    {
+        GenNested.Equality(f => f
+            .Case<Nested.Inner>(inf => inf
+                .Union(n => n.Value, (_, e) => new Nested.Inner(e))
+                    .Case<Either.L>(lf => lf
+                        .Compared((l, s) => l with { Name = s }, Gen.String)
+                        .Ignored((l, i) => l with { Version = i }, Gen.Int))
+                    .Case<Either.R>(rf => rf
+                        .Compared((r, x) => r with { X = x }, Gen.Int)
+                        .Compared((r, y) => r with { Y = y }, Gen.Int)))
+            .Case<Nested.Outer>(of => of
+                .Compared((o, x) => o with { X = x }, Gen.Int)
+                .Compared((o, y) => o with { Y = y }, Gen.Int)));
+    }
+
+    sealed class AlwaysEqualEitherComparer : IEqualityComparer<Either>
+    {
+        public bool Equals(Either? a, Either? b) => true;
+        public int GetHashCode(Either e) => 0;
+    }
+
+    // A record with a sum-typed (subtype-sum) field. Tag is an ordinary compared field; the Either field is reached
+    // with the fluent Union(down, up) builder, whose Case is compile-time constrained to real arms of Either.
+    sealed record Holder(int Tag, Either Choice);
+
+    static Gen<Holder> GenHolder =>
+        Gen.Select(Gen.Int, GenEither, (t, e) => new Holder(t, e));
+
+    [Test]
+    public void Equality_Fields_Union_Field()
+    {
+        GenHolder.Equality(f => f
+            .Compared((h, v) => h with { Tag = v }, Gen.Int)
+            .Union(h => h.Choice, (h, c) => h with { Choice = c })
+                .Case<Either.L>(lf => lf
+                    .Compared((l, s) => l with { Name = s }, Gen.String)
+                    .Ignored((l, i) => l with { Version = i }, Gen.Int))
+                .Case<Either.R>(rf => rf
+                    .Compared((r, x) => r with { X = x }, Gen.Int)
+                    .Compared((r, y) => r with { Y = y }, Gen.Int)));
+    }
+
+    sealed record Cat(string Name, int Whiskers)
+    {
+        public bool Equals(Cat? other) => other is not null && Name == other.Name; // Whiskers ignored
+        public override int GetHashCode() => Name.GetHashCode();
+    }
+
+    sealed record Dog(string Name, string Breed);
+
+    readonly union Pet(Cat, Dog);
+
+    static Gen<Pet> GenPet =>
+        Gen.OneOf(
+            Gen.Select(Gen.String, Gen.Int, (n, w) => new Pet(new Cat(n, w))),
+            Gen.Select(Gen.String, Gen.String, (n, b) => new Pet(new Dog(n, b))));
+
+    [Test]
+    public void Equality_Fields_Union()
+    {
+        GenPet.Equality(f => f
+            .Case<Cat>(cf => cf
+                .Compared((c, s) => c with { Name = s }, Gen.String)
+                .Ignored((c, w) => c with { Whiskers = w }, Gen.Int))
+            .Case<Dog>(df => df
+                .Compared((d, s) => d with { Name = s }, Gen.String)
+                .Compared((d, b) => d with { Breed = b }, Gen.String)));
+    }
+
+    // Two similar-but-different arms, each with two compared fields and one ignored field (Timestamp).
+    sealed record Sensor(string Id, double Reading, long Timestamp)
+    {
+        public bool Equals(Sensor? other) => other is not null && Id == other.Id && Reading == other.Reading; // Timestamp ignored
+        public override int GetHashCode() => HashCode.Combine(Id, Reading);
+    }
+
+    sealed record Gauge(string Id, double Value, long Timestamp)
+    {
+        public bool Equals(Gauge? other) => other is not null && Id == other.Id && Value == other.Value; // Timestamp ignored
+        public override int GetHashCode() => HashCode.Combine(Id, Value);
+    }
+
+    readonly union Signal(Sensor, Gauge);
+
+    static Gen<Signal> GenSignal =>
+        Gen.OneOf(
+            Gen.Select(Gen.String, Gen.Double.Unit, Gen.Long, (id, r, t) => new Signal(new Sensor(id, r, t))),
+            Gen.Select(Gen.String, Gen.Double.Unit, Gen.Long, (id, v, t) => new Signal(new Gauge(id, v, t))));
+
+    [Test]
+    public void Equality_Fields_Union_Both_Arms_Mixed()
+    {
+        GenSignal.Equality(f => f
+            .Case<Sensor>(sf => sf
+                .Compared((x, id) => x with { Id = id }, Gen.String)
+                .Compared((x, r) => x with { Reading = r }, Gen.Double.Unit)
+                .Ignored((x, t) => x with { Timestamp = t }, Gen.Long))
+            .Case<Gauge>(gf => gf
+                .Compared((x, id) => x with { Id = id }, Gen.String)
+                .Compared((x, v) => x with { Value = v }, Gen.Double.Unit)
+                .Ignored((x, t) => x with { Timestamp = t }, Gen.Long)));
+    }
+
+    sealed record Tagged(string Tag, Signal Signal);
+
+    static Gen<Tagged> GenTagged =>
+        Gen.Select(Gen.String, GenSignal, (t, s) => new Tagged(t, s));
+
+    [Test]
+    public void Equality_Fields_Record_With_Union_Field()
+    {
+        GenTagged.Equality(f => f
+            .Compared((o, s) => o with { Tag = s }, Gen.String)
+            .Union(o => o.Signal, (o, sig) => o with { Signal = sig }, sf => sf
+                .Case<Sensor>(ssf => ssf
+                    .Compared((x, id) => x with { Id = id }, Gen.String)
+                    .Compared((x, r) => x with { Reading = r }, Gen.Double.Unit)
+                    .Ignored((x, t) => x with { Timestamp = t }, Gen.Long))
+                .Case<Gauge>(gf => gf
+                    .Compared((x, id) => x with { Id = id }, Gen.String)
+                    .Compared((x, v) => x with { Value = v }, Gen.Double.Unit)
+                    .Ignored((x, t) => x with { Timestamp = t }, Gen.Long))));
     }
 
     sealed class MutableAccount(int id, string note)
@@ -452,21 +660,50 @@ public class CheckTests
         public bool Equals(int a, int b) => Round(a) == Round(b);
         public int GetHashCode(int v) => Round(v).GetHashCode();
     }
+}
 
-    [Test]
-    public void Enqueue_Faster_Than_Median()
+// Builds the member -> union conversion (a public constructor `T(TArm)`) once per (T, TArm) pair.
+static class UnionCtor<T, TArm> where T : System.Runtime.CompilerServices.IUnion
+{
+    public static readonly Func<TArm, T> Up = Build();
+
+    static Func<TArm, T> Build()
     {
-        Gen.Double.OneTwo.Array[10].Select(Gen.Double.OneTwo, (a, s) =>
-        {
-            var median = new MedianEstimator();
-            foreach (var d in a) median.Add(d);
-            var queue = new Queue<double>(100);
-            return (median, queue, s);
-        })
-        .Faster(
-            (_, q, s) => q.Enqueue(s),
-            (m, _, s) => m.Add(s),
-            repeat: 100,
-            writeLine: TUnitX.WriteLine);
+        var p = System.Linq.Expressions.Expression.Parameter(typeof(TArm), "a");
+        var ctor = typeof(T).GetConstructor([typeof(TArm)])
+            ?? throw new InvalidOperationException($"{typeof(T).Name} has no constructor taking a {typeof(TArm).Name}.");
+        return System.Linq.Expressions.Expression.Lambda<Func<TArm, T>>(
+            System.Linq.Expressions.Expression.New(ctor, p), p).Compile();
     }
+}
+
+// A builder that scopes case declarations for a C# union type T. Because T is fixed on the builder, Case needs only
+// the arm type argument, and the predicate, down- and up-projections are all derived (IUnion.Value + the constructor).
+sealed class UnionFields<T> where T : System.Runtime.CompilerServices.IUnion
+{
+    readonly EqualityFields<T> fields;
+    internal UnionFields(EqualityFields<T> fields) => this.fields = fields;
+
+    public UnionFields<T> Case<TArm>(Func<EqualityFields<TArm>, EqualityFields<TArm>> armFields)
+    {
+        fields.Case(t => t.Value is TArm, t => (TArm)t.Value!, (_, a) => UnionCtor<T, TArm>.Up(a), armFields);
+        return this;
+    }
+
+    public static implicit operator EqualityFields<T>(UnionFields<T> u) => u.fields;
+}
+
+static class UnionEqualityFields
+{
+    // Top-level union: hand the fields callback a UnionFields<T> so arms read as f.Case<Sensor>(...) with no .Union().
+    public static void Equality<T>(this Gen<T> gen, Func<UnionFields<T>, EqualityFields<T>> fields,
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T, T), string>? print = null)
+        where T : System.Runtime.CompilerServices.IUnion
+        => gen.Equality((EqualityFields<T> f) => fields(new UnionFields<T>(f)), seed, iter, time, threads, print);
+
+    // Union-typed field: hand the callback a UnionFields<TField> so arms read as sf.Case<Sensor>(...) with no inner .Union().
+    public static EqualityFields<TParent> Union<TParent, TField>(this EqualityFields<TParent> fields,
+        Func<TParent, TField> down, Func<TParent, TField, TParent> up, Func<UnionFields<TField>, EqualityFields<TField>> fieldFields)
+        where TField : System.Runtime.CompilerServices.IUnion
+        => fields.Union(down, up, sf => fieldFields(new UnionFields<TField>(sf)));
 }

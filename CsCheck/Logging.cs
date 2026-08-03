@@ -158,7 +158,7 @@ public static class Logging
         }
     }
 
-    private static readonly Dictionary<string, string> _emptyDictionary = [];
+    private static readonly Dictionary<string, string> _emptyDictionary = new(StringComparer.Ordinal);
 }
 
 #pragma warning disable IDE1006 // Naming Styles

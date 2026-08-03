@@ -517,7 +517,8 @@ Setters can be record `with` expressions or in-place `Action`s. For declared fie
 
 You can pass an `IEqualityComparer<T>` as the first argument to test a comparer directly instead of the type's own equality.
 
-### Account Equality
+For sum types (a discriminated union, One-of, or an `Either`) declare each arm with `Case`. An arm's compared/ignored fields are declared against the arm payload and are only exercised on instances of that case; instances of different cases are additionally checked to compare unequal (the case discriminant is part of equality). Cases can be nested to test nested sum types.
+
 ```csharp
 [Test]
 public void Equality_Int()
@@ -544,6 +545,35 @@ public void Equality_Fields()
     );
 }
 ```
+
+### Sum type (union / Either) Equality
+```csharp
+// Arms that are subtypes of the sum type: the one-argument Case derives everything.
+abstract record Either
+{
+    public sealed record L(string Name, int Version) : Either // Version is ignored
+    {
+        public bool Equals(L? other) => other is not null && Name == other.Name;
+        public override int GetHashCode() => Name.GetHashCode();
+    }
+    public sealed record R(int X, int Y) : Either;
+}
+
+[Test]
+public void Equality_Either()
+{
+    genEither.Equality(f => f
+        .Case<Either.L>(af => af
+            .Compared((l, s) => l with { Name = s }, Gen.String)
+            .Ignored((l, i) => l with { Version = i }, Gen.Int))
+        .Case<Either.R>(rf => rf
+            .Compared((r, x) => r with { X = x }, Gen.Int)
+            .Compared((r, y) => r with { Y = y }, Gen.Int))
+    );
+}
+```
+
+When the arms are not subtypes of the sum type (for example a C# `union` whose members are distinct types) use the four-argument `Case(isCase, down, up, armFields)` overload, supplying a predicate and the projections to and from the arm payload. For a record whose field is itself a union or record, use `Union(down, up, fieldFields)` to descend into that field and declare its cases and/or fields. When that field is a subtype-sum, the fluent `Union(down, up).Case<TArm>(...)` builder is compile-time constrained so only real arms (`TArm : TField`) can be declared.
 
 ## Debug utilities
 

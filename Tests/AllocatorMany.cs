@@ -226,9 +226,9 @@ public static class AllocatorMany
             var results_i1 = results[i1];
             var results_i2 = results[i2];
             if (results_i1[j1] + change >= 0
-             && results_i1[j2] - change >= 0
+             && results_i1[j2] >= change
              && results_i2[j2] + change >= 0
-             && results_i2[j1] - change >= 0)
+             && results_i2[j1] >= change)
             {
                 results_i1[j1] += change;
                 results_i1[j2] -= change;

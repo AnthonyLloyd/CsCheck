@@ -29,6 +29,8 @@ using System.Collections.Immutable;
 using System.Collections.Frozen;
 using System.Collections.ObjectModel;
 
+#pragma warning disable MA0193 // Use an overload with a MidpointRounding argument
+
 public sealed class CsCheckException : Exception
 {
     readonly Exception? _exception;
