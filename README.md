@@ -517,15 +517,9 @@ Setters can be record `with` expressions or in-place `Action`s. For declared fie
 
 You can pass an `IEqualityComparer<T>` as the first argument to test a comparer directly instead of the type's own equality.
 
-For sum types (a discriminated union, One-of, or an `Either`) declare each arm with `Case`. An arm's compared/ignored fields are declared against the arm payload and are only exercised on instances of that case; instances of different cases are additionally checked to compare unequal (the case discriminant is part of equality). Cases can be nested to test nested sum types.
+For unions declare each arm with `Case`. An arm's compared/ignored fields are declared against the arm payload and are only exercised on instances of that case; instances of different cases are additionally checked to compare unequal (the case discriminant is part of equality). Cases can be nested to test nested union types.
 
 ```csharp
-[Test]
-public void Equality_Int()
-{
-    Check.Equality(Gen.Int);
-}
-
 record Account(int Id, string Note) // equality is on Id only, Note is ignored
 {
     public virtual bool Equals(Account? other) => other is not null && Id == other.Id;
@@ -544,32 +538,30 @@ public void Equality_Fields()
         .Ignored((a, v) => a with { Note = v }, Gen.String)
     );
 }
-```
 
-### Sum type (union / Either) Equality
-```csharp
-// Arms that are subtypes of the sum type: the one-argument Case derives everything.
-abstract record Either
+sealed record Cat(string Name, int Whiskers)
 {
-    public sealed record L(string Name, int Version) : Either // Version is ignored
-    {
-        public bool Equals(L? other) => other is not null && Name == other.Name;
-        public override int GetHashCode() => Name.GetHashCode();
-    }
-    public sealed record R(int X, int Y) : Either;
+    public bool Equals(Cat? other) => other is not null && Name == other.Name; // Whiskers ignored
+    public override int GetHashCode() => Name.GetHashCode();
 }
 
+sealed record Dog(string Name, string Breed);
+
+readonly union Pet(Cat, Dog);
+
 [Test]
-public void Equality_Either()
+public void Equality_Fields_Union()
 {
-    genEither.Equality(f => f
-        .Case<Either.L>(af => af
-            .Compared((l, s) => l with { Name = s }, Gen.String)
-            .Ignored((l, i) => l with { Version = i }, Gen.Int))
-        .Case<Either.R>(rf => rf
-            .Compared((r, x) => r with { X = x }, Gen.Int)
-            .Compared((r, y) => r with { Y = y }, Gen.Int))
-    );
+    Gen.OneOf(
+        Gen.Select(Gen.String, Gen.Int, (name, whiskers) => new Pet(new Cat(name, whiskers))),
+        Gen.Select(Gen.String, Gen.String, (name, breed) => new Pet(new Dog(name, breed))))
+    .Equality(f => f
+        .Case<Cat>(cf => cf
+            .Compared((c, s) => c with { Name = s }, Gen.String)
+            .Ignored((c, w) => c with { Whiskers = w }, Gen.Int))
+        .Case<Dog>(df => df
+            .Compared((d, s) => d with { Name = s }, Gen.String)
+            .Compared((d, b) => d with { Breed = b }, Gen.String)));
 }
 ```
 

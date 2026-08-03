@@ -553,15 +553,13 @@ public class CheckTests
 
     readonly union Pet(Cat, Dog);
 
-    static Gen<Pet> GenPet =>
-        Gen.OneOf(
-            Gen.Select(Gen.String, Gen.Int, (n, w) => new Pet(new Cat(n, w))),
-            Gen.Select(Gen.String, Gen.String, (n, b) => new Pet(new Dog(n, b))));
-
     [Test]
     public void Equality_Fields_Union()
     {
-        GenPet.Equality(f => f
+        Gen.OneOf(
+            Gen.Select(Gen.String, Gen.Int, (name, whiskers) => new Pet(new Cat(name, whiskers))),
+            Gen.Select(Gen.String, Gen.String, (name, breed) => new Pet(new Dog(name, breed))))
+        .Equality(f => f
             .Case<Cat>(cf => cf
                 .Compared((c, s) => c with { Name = s }, Gen.String)
                 .Ignored((c, w) => c with { Whiskers = w }, Gen.Int))
@@ -601,7 +599,7 @@ public class CheckTests
             .Case<Gauge>(gf => gf
                 .Compared((x, id) => x with { Id = id }, Gen.String)
                 .Compared((x, v) => x with { Value = v }, Gen.Double.Unit)
-                .Ignored((x, t) => x with { Timestamp = t }, Gen.Long)));
+                .Ignored((x, t) => x with { Timestamp = t }, Gen.Long)), seed: "eNPu_XDrGhs7");
     }
 
     sealed record Tagged(string Tag, Signal Signal);
