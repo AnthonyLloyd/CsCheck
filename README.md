@@ -692,15 +692,15 @@ replay - The number of times to retry the seed to reproduce a SampleParallel fai
 Global defaults can also be set via environment variables:
 
 ```powershell
-$env:CsCheck_Iter=10000;dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/GenTests/*;rm env:CsCheck*
+dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/GenTests/* -e CsCheck_Iter=10000
 
-$env:CsCheck_Time=10;dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/FloatingPointTests/*;rm env:CsCheck*
+dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/FloatingPointTests/* -e CsCheck_Time=10
 
-$env:CsCheck_Seed="0N0XIzNsQ0O2";dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/NSum_Shuffle_Check;rm env:CsCheck*
+dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/NSum_Shuffle_Check -e CsCheck_Seed="0N0XIzNsQ0O2"
 
-$env:CsCheck_Sigma=50;dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/*_Faster;rm env:CsCheck*
+dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/*_Faster -e CsCheck_Sigma=50
 
-$env:CsCheck_Threads=1;dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/*_Perf;rm env:CsCheck*
+dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/*_Perf -e CsCheck_Threads=1
 ```
 
 ## Development
