@@ -63,8 +63,11 @@ usage pattern, find a similar test there first and follow it.
   `AnalysisMode All` with Meziantou.Analyzer). Keep generated code warning-clean.
 - **No reflection** is used in the library; prefer composing generators over
   reflection-based helpers.
-- A failing `Sample` shrinks to the simplest example and prints a **seed**
-  string. Re-run with `seed:` to reproduce exactly.
+- A failing `Sample` shrinks to the simplest example and prints a line with a
+  **seed** plus `(N shrinks, M skipped, K total)`. Re-run with `seed:` to
+  reproduce exactly. `skipped` counts shrink-phase candidates that weren't
+  smaller than the current minimal failure, so they were never asserted — it is
+  **not** errors or `Where`-filtered inputs, and is `0` in a passing run.
 
 ## Writing tests — the core entry points
 
@@ -177,3 +180,9 @@ Global defaults via environment variables: `CsCheck_Iter`, `CsCheck_Time`,
   versions — don't rely on it in committed library code.
 - Prefer `Gen.Const(() => new ...())` (factory) over a shared instance for
   parallel/model tests so each run gets a fresh state.
+- **`skipped` in a failure message is not a problem.** It counts shrink-phase
+  candidates whose generated `Size` was not smaller than the current smallest
+  failure, so they were skipped rather than asserted. It does **not** mean
+  inputs threw, were `Where`-filtered, or that coverage was lost. It only
+  becomes non-zero *after* a failure triggers shrinking; a passing test always
+  reports `0 skipped`. Do not treat a large `skipped` count as a secondary bug.

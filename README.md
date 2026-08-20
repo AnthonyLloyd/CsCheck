@@ -80,6 +80,17 @@ static readonly Gen<JsonNode> genJsonNode = Gen.Recursive<JsonNode>((depth, genJ
 The default sample size is 100 iterations. Set iter: to change this or time: to run for a number of seconds.  
 Setting these from the command line can be a good way to run your tests in different ways and in Release mode.
 
+A failing **Sample** throws with a line like:
+
+```
+Set seed: "0000018ab..." or -e CsCheck_Seed=0000018ab... to reproduce (12 shrinks, 3,456 skipped, 4,000 total).
+```
+
+- **seed** - paste into `seed:` (or `CsCheck_Seed`) to replay this exact failure.
+- **shrinks** - how many progressively-smaller failing cases were found before the simplest one shown below.
+- **skipped** - shrink-phase candidates that were **not smaller** than the current minimal failure, so they were never asserted. This is expected, not an error: it is *not* a count of exceptions, filtered (`Where`) inputs, or lost coverage. It is `0` in any passing run and only appears once a failure has been found and shrinking begins. A large number just means the shrinker generated many non-smaller candidates while hunting for the simplest one.
+- **total** - total candidates generated (asserted + skipped).
+
 ### Unit Single
 ```csharp
 [Test]
