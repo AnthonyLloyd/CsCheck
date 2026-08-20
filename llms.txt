@@ -5,7 +5,7 @@
 Key facts an assistant should know before generating CsCheck code:
 
 - You compose a `Gen<T>` and call a terminating method (`Sample`, `SampleModelBased`, `SampleMetamorphic`, `SampleParallel`, `Faster`, `Check.Hash`). There are **no `Arb` classes** and you **never write shrinkers** — shrinking is automatic.
-- A failing test shrinks to the simplest case and prints a **seed**; re-run with `seed:` to reproduce.
+- A failing test shrinks to the simplest case and prints a **seed** plus `(N shrinks, M skipped, K total)`; re-run with `seed:` to reproduce. `skipped` = shrink-phase candidates that weren't smaller than the current minimal failure, so they were never asserted — **not** errors or `Where`-filtered inputs, and `0` in a passing run.
 - CsCheck is **test-framework agnostic**: it signals failure by throwing an exception (or `Sample` returning `false`), with no dependency on any test runner. Use it with xUnit, NUnit, MSTest, TUnit, or no framework at all. This repo's own tests happen to use TUnit + Microsoft.Testing.Platform, but that is not required.
 - The `Tests/` project is the canonical example collection.
 - Install: `dotnet add package CsCheck`. License: Apache-2.0.
