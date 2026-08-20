@@ -139,7 +139,7 @@ public class HashTests
                 hash.Add(Gen.Char.Generate(pcg, null, out _));
                 hash.Add(Gen.String.Generate(pcg, null, out _));
             }
-        }, 4372645869);
+        }, 8168389655);
     }
 
     [Test]
