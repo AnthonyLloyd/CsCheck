@@ -26,10 +26,10 @@ CsCheck also has functionality to make multiple types of testing simple and fast
 - [Model-based testing](#Model-based-testing)
 - [Metamorphic testing](#Metamorphic-testing)
 - [Parallel testing](#Parallel-testing)
-- [Causal profiling](#Causal-profiling)
-- [Regression testing](#Regression-testing)
 - [Performance testing](#Performance-testing)
+- [Regression testing](#Regression-testing)
 - [Equality testing](#Equality-testing)
+- [Causal profiling](#Causal-profiling)
 - [Debug utilities](#Debug-utilities)
 - [Configuration](#Configuration)
 - [Development](#Development)
@@ -317,74 +317,6 @@ public void SampleParallelModel_ConcurrentQueue()
 }
 ```
 
-## Causal profiling
-
-Causal profiling is a technique to investigate the effect of speeding up one or more concurrent regions of code.
-It shows which regions are the bottleneck and what overall performance gain could be achieved from each region.
-
-Idea from Emery Berger. My blog posts on this [here](http://anthonylloyd.github.io/blog/2019/10/11/causal-profiling).
-
-```csharp
-[Test]
-public void Fasta()
-{
-    Causal.Profile(() => FastaUtils.Fasta.NotMain(10_000_000, null)).Output(writeLine);
-}
-
-static int[] Rnds(int i, int j, ref int seed)
-{
-    var region = Causal.RegionStart("rnds");
-    var a = intPool.Rent(BlockSize1);
-    var s = a.AsSpan(0, i);
-    s[0] = j;
-    for (i = 1, j = Width; i < s.Length; i++)
-    {
-        if (j-- == 0)
-        {
-            j = Width;
-            s[i] = IM * 3 / 2;
-        }
-        else
-        {
-            s[i] = seed = (seed * IA + IC) % IM;
-        }
-    }
-    Causal.RegionEnd(region);
-    return a;
-}
-```
-
-## Regression testing
-
-### Portfolio Calculation
-**Single** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
-**Hash** is used to find and check a hash for a number of results.  
-It saves a temp cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
-Together **Single** and **Hash** eliminate the need to commit data files in regression testing while also giving detailed information of any change.
-
-```csharp
-[Test]
-public void Portfolio_Small_Mixed_Example()
-{
-    var portfolio = ModelGen.Portfolio.Single(p =>
-           p.Positions.Count == 5
-        && p.Positions.Any(p => p.Instrument is Bond)
-        && p.Positions.Any(p => p.Instrument is Equity)
-    , "0N0XIzNsQ0O2");
-    var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
-    var fxRates = ModelGen.Price.Array[currencies.Length].Single(a =>
-        a.All(p => pp is > 0.75 and < 1.5)
-    , "ftXKwKhS6ec4");
-    double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
-    Check.Hash(h =>
-    {
-        h.Add(portfolio.Positions.Select(p => p.Profit));
-        h.Add(portfolio.Profit(fxRate));
-        h.Add(portfolio.RiskByPosition(fxRate));
-    }, 5857230471108592669, decimalPlaces: 2);
-}
-```
-
 ## Performance testing
 
 **Faster** is used to statistically test that the first method is faster than the second and some condition is satisfied (by default equality of the output of the two methods).  
@@ -520,6 +452,37 @@ Standard Output Messages:
 10.94%[-3.27%..25.81%] 1.12x[0.97x..1.35x] faster, sigma = 10.0 (442 vs 190), min = 7.082ns vs 7.332ns
 ```
 
+## Regression testing
+
+### Portfolio Calculation
+**Single** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
+**Hash** is used to find and check a hash for a number of results.  
+It saves a temp cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
+Together **Single** and **Hash** eliminate the need to commit data files in regression testing while also giving detailed information of any change.
+
+```csharp
+[Test]
+public void Portfolio_Small_Mixed_Example()
+{
+    var portfolio = ModelGen.Portfolio.Single(p =>
+           p.Positions.Count == 5
+        && p.Positions.Any(p => p.Instrument is Bond)
+        && p.Positions.Any(p => p.Instrument is Equity)
+    , "0N0XIzNsQ0O2");
+    var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
+    var fxRates = ModelGen.Price.Array[currencies.Length].Single(a =>
+        a.All(p => pp is > 0.75 and < 1.5)
+    , "ftXKwKhS6ec4");
+    double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
+    Check.Hash(h =>
+    {
+        h.Add(portfolio.Positions.Select(p => p.Profit));
+        h.Add(portfolio.Profit(fxRate));
+        h.Add(portfolio.RiskByPosition(fxRate));
+    }, 5857230471108592669, decimalPlaces: 2);
+}
+```
+
 ## Equality testing
 
 Equality checks that a type's `Equals`, `IEquatable<T>` and `GetHashCode` are consistent for generated values: equal values compare equal both ways and share a hash code, while unequal values disagree.
@@ -575,6 +538,43 @@ public void Equality_Fields_Union()
         .Case<Dog>(df => df
             .Compared((d, s) => d with { Name = s }, Gen.String)
             .Compared((d, b) => d with { Breed = b }, Gen.String)));
+}
+```
+
+## Causal profiling
+
+Causal profiling is a technique to investigate the effect of speeding up one or more concurrent regions of code.
+It shows which regions are the bottleneck and what overall performance gain could be achieved from each region.
+
+Idea from Emery Berger. My blog posts on this [here](http://anthonylloyd.github.io/blog/2019/10/11/causal-profiling).
+
+```csharp
+[Test]
+public void Fasta()
+{
+    Causal.Profile(() => FastaUtils.Fasta.NotMain(10_000_000, null)).Output(writeLine);
+}
+
+static int[] Rnds(int i, int j, ref int seed)
+{
+    var region = Causal.RegionStart("rnds");
+    var a = intPool.Rent(BlockSize1);
+    var s = a.AsSpan(0, i);
+    s[0] = j;
+    for (i = 1, j = Width; i < s.Length; i++)
+    {
+        if (j-- == 0)
+        {
+            j = Width;
+            s[i] = IM * 3 / 2;
+        }
+        else
+        {
+            s[i] = seed = (seed * IA + IC) % IM;
+        }
+    }
+    Causal.RegionEnd(region);
+    return a;
 }
 ```
 
