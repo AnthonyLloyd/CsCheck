@@ -217,24 +217,24 @@ public void AllocatorMany_Classify()
     {
         var rowTotal = Array.ConvertAll(solution, row => row.Sum());
         var colTotal = Enumerable.Range(0, solution[0].Length).Select(col => solution.SumCol(col)).ToArray();
-        var allocation = AllocatorMany.Allocate(rowPrice, rowTotal, colTotal, new(seed), time: 60);
+        var allocation = AllocatorMany.Allocate(rowPrice, rowTotal, colTotal, new(seed), time: 1);
         if (!TotalsCorrectly(rowTotal, colTotal, allocation.Solution))
             throw new Exception("Does not total correctly");
         return $"{(allocation.KnownGlobal ? "Global" : "Local")}/{allocation.SolutionType}";
-    }, TUnitX.WriteLine, time: 900);
+    }, TUnitX.WriteLine, time: 60, threads: 1);
 }
 ```
 
 |                    | Count |       % |      Median |     Lower Q |     Upper Q |     Minimum |     Maximum |
 |--------------------|------:|--------:|------------:|------------:|------------:|------------:|------------:|
-| Global             |   458 |  50.22% |             |             |             |             |             |
-|   RoundingMinimum  |   343 |  37.61% |      2.68ms |      0.50ms |     10.85ms |      0.03ms |    190.92ms |
-|   EveryCombination |    87 |   9.54% |    173.99ms |     16.80ms |  1,199.64ms |      0.20ms | 42,257.35ms |
-|   RandomChange     |    28 |   3.07% | 59,592.98ms | 55,267.94ms | 59,901.58ms | 38,575.41ms | 60,107.64ms |
-| Local              |   454 |  49.78% |             |             |             |             |             |
-|   RoundingMinimum  |   301 |  33.00% | 60,000.12ms | 60,000.04ms | 60,003.70ms | 60,000.02ms | 60,144.84ms |
-|   RandomChange     |    90 |   9.87% | 60,000.06ms | 60,000.03ms | 60,004.41ms | 60,000.02ms | 60,136.59ms |
-|   EveryCombination |    63 |   6.91% | 60,000.10ms | 60,000.03ms | 60,001.29ms | 60,000.01ms | 60,019.36ms |
+| Global             |   742 |  93.81% |             |             |             |             |             |
+|   RoundingMinimum  |   588 |  74.34% |     0.320ms |     0.111ms |     1.022ms |     0.006ms |    23.021ms |
+|   RandomChange     |   110 |  13.91% |     3.102ms |     0.373ms |    56.713ms |     0.058ms |   968.609ms |
+|   EveryCombination |    44 |   5.56% |     2.871ms |     0.297ms |    57.800ms |     0.071ms |   726.476ms |
+| Local              |    49 |   6.19% |             |             |             |             |             |
+|   RandomChange     |    41 |   5.18% | 1,000.242ms | 1,000.164ms | 1,000.355ms | 1,000.076ms | 1,000.963ms |
+|   EveryCombination |     7 |   0.88% | 1,000.223ms | 1,000.151ms | 1,000.232ms | 1,000.134ms | 1,000.609ms |
+|   RoundingMinimum  |     1 |   0.13% | 1,000.117ms |             |             |             |             |
 
 ## Model-based testing
 
