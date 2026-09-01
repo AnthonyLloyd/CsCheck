@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 public static class AllocatorMany
 {
@@ -26,8 +27,26 @@ public static class AllocatorMany
         public double RMSE => Math.Sqrt(TotalSquaredError / ColumnCostError.Length) / _pricePrecisionFactor;
     }
 
-    private static bool CheckGlobal(int[] columnCostError)
-        => !Array.Exists(columnCostError, e => Math.Abs(e) > _pricePrecisionFactor / 2);
+    // Proven-global test. A feasible incumbent's column errors satisfy Σ_j d_j = δ (error_j = PF*d_j - r_j,
+    // fixed because Σ cost_j = totalCost). Minimising Σ (error_j/C_j)² under only that identity is a lower
+    // bound, and the incumbent attains it — so is global — iff no single unit of deviation moved between two
+    // columns helps: min_j (2*e_j + PF)/C_j² >= max_i (2*e_i - PF)/C_i². Compared exactly with Int128 (wide
+    // enough that C_j²*error can't overflow). Requires post-shift errors, so only call it within AllocateCore.
+    internal static bool IsRelaxedOptimal(int[] columnCostError, int[] colTotal)
+    {
+        const long PF = _pricePrecisionFactor;
+        long maxRemNum = 0, maxRemDen = 1, minAddNum = 0, minAddDen = 1;
+        for (int j = 0; j < columnCostError.Length; j++)
+        {
+            long e = columnCostError[j];
+            var den = (long)colTotal[j] * colTotal[j];
+            var rem = 2 * e - PF;
+            var add = 2 * e + PF;
+            if (j == 0 || (Int128)rem * maxRemDen > (Int128)maxRemNum * den) { maxRemNum = rem; maxRemDen = den; }
+            if (j == 0 || (Int128)add * minAddDen < (Int128)minAddNum * den) { minAddNum = add; minAddDen = den; }
+        }
+        return (Int128)minAddNum * maxRemDen >= (Int128)maxRemNum * minAddDen;
+    }
 
     public static Result Allocate(int[] rowPrice, int[] rowTotal, int[] colTotal, Random random, int time = 10, int threads = -1)
     {
@@ -160,53 +179,86 @@ public static class AllocatorMany
 
     private static Result AllocateCore(int[] rowPrice, int[] rowTotal, int[] colTotal, Random random, int time, int threads)
     {
-        var finishTime = Stopwatch.GetTimestamp() + time * Stopwatch.Frequency;
         rowPrice = ShiftToStartAtZeroAndScaleUp(rowPrice);
         var minimum = RoundingSolutionThenFindLocalMinimum(rowPrice, rowTotal, colTotal);
         if (minimum.KnownGlobal)
             return minimum;
 
-        Action CreateAction()
+        if (threads <= 0) threads = Environment.ProcessorCount;
+
+        // The time budget is a deadline checked inline by the searching threads — robust when the thread pool is
+        // oversubscribed, unlike a CancelAfter timer whose callback can be starved for many seconds.
+        var finishTime = Stopwatch.GetTimestamp() + Math.Max(0, time) * Stopwatch.Frequency;
+
+        if (threads == 1)
         {
-            var random2 = new Random(random.Next());
             var results = Copy(minimum.Solution);
             var colError = (int[])minimum.ColumnCostError.Clone();
-            return () =>
+            var random2 = new Random(random.Next());
+            while (!minimum.KnownGlobal && Stopwatch.GetTimestamp() < finishTime)
             {
                 RandomChange(rowPrice, results, colError, random2);
                 FindLocalMinimum(rowPrice, colTotal, results, colError);
                 var totalError = TotalSquaredError(colError, colTotal);
                 if (totalError < minimum.TotalSquaredError)
-                    lock (colTotal)
-                        if (totalError < minimum.TotalSquaredError)
-                        {
-                            minimum = new Result(results, colError, totalError, CheckGlobal(colError), SolutionType.RandomChange);
-                            results = Copy(results);
-                            colError = (int[])colError.Clone();
-                        }
-            };
-        }
-        if (threads <= 0) threads = Environment.ProcessorCount;
-        if (threads == 1)
-        {
-            var action = CreateAction();
-            while (!minimum.KnownGlobal && finishTime > Stopwatch.GetTimestamp())
-                action();
-        }
-        else
-        {
-            while (--threads > 0)
-            {
-                var threadAction = CreateAction();
-                ThreadPool.UnsafeQueueUserWorkItem(_ =>
                 {
-                    while (!minimum.KnownGlobal && finishTime > Stopwatch.GetTimestamp())
-                        threadAction();
-                }, null);
+                    minimum = new Result(results, colError, totalError, IsRelaxedOptimal(colError, colTotal), SolutionType.RandomChange);
+                    results = Copy(results);
+                    colError = (int[])colError.Clone();
+                }
             }
-            EveryCombination(rowPrice, rowTotal, colTotal, finishTime, ref minimum);
+            return minimum;
         }
-        return minimum;
+
+        // The token only signals "stop": a worker or the exhaustive search proved global, or time<=0 (no search).
+        using var cts = new CancellationTokenSource();
+        if (time <= 0) cts.Cancel();
+        var token = cts.Token;
+
+        // Random-restart workers run alongside the exhaustive search on this thread, sharing no mutable state:
+        // each worker owns its buffers and publishes immutable Results under `gate`, and the search uses a
+        // private incumbent so its "completed => global" can't be corrupted. Workers are joined, so nothing
+        // keeps mutating state after we return.
+        var gate = new Lock();
+        var best = minimum;
+
+        var tasks = new Task[threads - 1];
+        for (int t = 0; t < tasks.Length; t++)
+        {
+            var rnd = new Random(random.Next());   // seed here: Random isn't thread-safe and `random` is shared
+            tasks[t] = Task.Run(() =>
+            {
+                var results = Copy(minimum.Solution);
+                var colError = (int[])minimum.ColumnCostError.Clone();
+                while (!token.IsCancellationRequested && Stopwatch.GetTimestamp() < finishTime)
+                {
+                    RandomChange(rowPrice, results, colError, rnd);
+                    FindLocalMinimum(rowPrice, colTotal, results, colError);
+                    var totalError = TotalSquaredError(colError, colTotal);
+                    if (totalError < best.TotalSquaredError)   // best only decreases, so a stale read is safe here
+                        lock (gate)
+                            if (totalError < best.TotalSquaredError)
+                            {
+                                var isGlobal = IsRelaxedOptimal(colError, colTotal);
+                                best = new Result(results, colError, totalError, isGlobal, SolutionType.RandomChange);
+                                results = Copy(results);
+                                colError = (int[])colError.Clone();
+                                if (isGlobal) cts.Cancel();
+                            }
+                }
+            });
+        }
+
+        // Safe to share minimum's arrays: EveryCombination only replaces its incumbent, never mutates it in place.
+        var everyResult = minimum;
+        EveryCombination(rowPrice, rowTotal, colTotal, finishTime, ref everyResult, token);
+        cts.Cancel();
+        Task.WaitAll(tasks);   // establishes happens-before, so `best` is fully visible without the lock
+
+        var winner = everyResult.TotalSquaredError <= best.TotalSquaredError ? everyResult : best;
+        if (!winner.KnownGlobal && IsRelaxedOptimal(winner.ColumnCostError, colTotal))
+            winner = winner with { KnownGlobal = true };
+        return winner;
     }
 
     private static void RandomChange(int[] rowPrice, int[][] results, int[] colError, Random random)
@@ -251,12 +303,6 @@ public static class AllocatorMany
         return r;
     }
 
-    private static void CopyTo(this int[][] a, int[][] r)
-    {
-        for (int i = 0; i < a.Length; i++)
-            a[i].CopyTo(r[i], 0);
-    }
-
     private static (int, long) TotalQuantityAndCost(int[] rowPrice, int[] rowTotal)
     {
         var totalQuantity = 0;
@@ -283,14 +329,6 @@ public static class AllocatorMany
             colError[j] = (int)(cost - DivRound(colTotal[j] * totalCost, totalQuantity));
         }
         return colError;
-    }
-
-    internal static int ColCostError(int[] rowPrice, int[] colTotal, int[][] results, long totalCost, int totalQuantity, int col)
-    {
-        var cost = 0L;
-        for (int i = 0; i < results.Length; i++)
-            cost += (long)rowPrice[i] * results[i][col];
-        return (int)(cost - DivRound(colTotal[col] * totalCost, totalQuantity));
     }
 
     internal static double TotalSquaredError(int[] colCostError, int[] colTotal)
@@ -361,117 +399,89 @@ public static class AllocatorMany
         }
     }
 
-    private static int SumStart(this int[] row, int j)
-    {
-        var r = 0;
-        for (int i = j; i < row.Length; i++)
-            r += row[i];
-        return r;
-    }
-
-    public static void EveryCombination(int[] rowPrice, int[] rowTotal, int[] colTotal, long finishTime, ref Result minimum)
+    // Exhaustive branch-and-bound over every feasible matrix: fill columns left to right, each non-final column
+    // enumerating all row distributions of its total, the last column forced by row remainders; prune when the
+    // completed columns' error alone reaches the incumbent. If it finishes uninterrupted the incumbent is the
+    // true global optimum. Single-threaded on a private incumbent (by ref); improved leaves also try IsRelaxedOptimal.
+    internal static void EveryCombination(int[] rowPrice, int[] rowTotal, int[] colTotal, long finishTime, ref Result minimum, CancellationToken token)
     {
         var (totalQuantity, totalCost) = TotalQuantityAndCost(rowPrice, rowTotal);
-        var completed = EveryCombination(rowPrice, rowTotal, colTotal, totalQuantity, totalCost,
-            Copy(minimum.Solution), colTotal.Length - 1, new int[colTotal.Length], 0.0, finishTime, ref minimum);
-        if (completed && !minimum.KnownGlobal)
-            lock (colTotal)
-                if (!minimum.KnownGlobal)
-                    minimum = minimum with { KnownGlobal = true };
-    }
+        var rows = rowTotal.Length;
+        var cols = colTotal.Length;
+        var x = new int[rows][];
+        for (int i = 0; i < rows; i++) x[i] = new int[cols];
+        var rowRem = (int[])rowTotal.Clone();
+        var target = new long[cols];
+        for (int j = 0; j < cols; j++) target[j] = DivRound((long)colTotal[j] * totalCost, totalQuantity);
+        var cancelled = false;
+        var tick = 0L;
+        var incumbent = minimum;
 
-    public static bool EveryCombination(int[] rowPrice, int[] rowTotal, int[] colTotal, int totalQuantity, long totalCost,
-        int[][] solution, int col, int[] colErrorSoFar, double totalErrorSoFar, long finishTime, ref Result minimum)
-    {
-        if (col == 0)
+        double ColErrorSq(int col)
         {
-            for (int i = 0; i < rowTotal.Length; i++)
-            {
-                var row = solution[i];
-                row[0] = rowTotal[i] - row.SumStart(1);
-            }
-            // calculate errors
-            var colError_0 = ColCostError(rowPrice, colTotal, solution, totalCost, totalQuantity, 0);
-            totalErrorSoFar += Sqr((double)colError_0 / colTotal[0]);
-            if (totalErrorSoFar <= minimum.TotalSquaredError)
-                lock (colTotal)
-                    if (totalErrorSoFar <= minimum.TotalSquaredError)
-                    {
-                        colErrorSoFar[0] = colError_0;
-                        colErrorSoFar.CopyTo(minimum.ColumnCostError, 0);
-                        solution.CopyTo(minimum.Solution);
-                        minimum = new Result(minimum.Solution, minimum.ColumnCostError, totalErrorSoFar, CheckGlobal(minimum.ColumnCostError), SolutionType.EveryCombination);
-                    }
-            return !minimum.KnownGlobal;
+            var cost = 0L;
+            for (int i = 0; i < rows; i++) cost += (long)rowPrice[i] * x[i][col];
+            var e = (double)(cost - target[col]) / colTotal[col];
+            return e * e;
         }
-        else
+        void Publish(double err)
         {
-            // start position
-            var total = colTotal[col];
-            for (int i = 0; i < rowTotal.Length; i++)
+            var sol = Copy(x);
+            var ce = new int[cols];
+            for (int j = 0; j < cols; j++)
             {
-                var row = solution[i];
-                var rowRemaining = rowTotal[i] - row.SumStart(col + 1);
-                if (total > rowRemaining)
-                {
-                    row[col] = rowRemaining;
-                    total -= rowRemaining;
-                }
-                else
-                {
-                    row[col] = total;
-                    total = 0;
-                }
+                var cost = 0L;
+                for (int i = 0; i < rows; i++) cost += (long)rowPrice[i] * x[i][j];
+                ce[j] = (int)(cost - target[j]);
             }
+            incumbent = new Result(sol, ce, err, IsRelaxedOptimal(ce, colTotal), SolutionType.EveryCombination);
+        }
+        // The deadline or another thread's proof latches into `cancelled` so the per-branch fast-abort can unwind
+        // the recursion with a cheap local read. The clock is polled only every 8192 calls (it dominates otherwise).
+        bool Interrupted()
+        {
+            if (cancelled || incumbent.KnownGlobal) return true;
+            if (token.IsCancellationRequested || ((++tick & 8191) == 0 && Stopwatch.GetTimestamp() >= finishTime))
+                cancelled = true;
+            return cancelled;
+        }
+        void EnumCol(int col, int row, int remaining, double errSoFar)
+        {
+            if (cancelled || incumbent.KnownGlobal) return;  // cheap fast-abort, reached on every branch
+            if (col == cols - 1)                             // last column is forced by the row remainders
+            {
+                if (Interrupted()) return;
+                for (int i = 0; i < rows; i++) x[i][col] = rowRem[i];
+                var err = errSoFar + ColErrorSq(col);
+                if (err <= incumbent.TotalSquaredError) Publish(err);
+                return;
+            }
+            if (row == rows - 1)
+            {
+                if (Interrupted()) return;                   // budget check, reached even when pruned
+                if (remaining <= rowRem[row])
+                {
+                    x[row][col] = remaining; rowRem[row] -= remaining;
+                    var err = errSoFar + ColErrorSq(col);
+                    if (err < incumbent.TotalSquaredError) EnumCol(col + 1, 0, colTotal[col + 1], err);
+                    rowRem[row] += remaining; x[row][col] = 0;
+                }
+                return;
+            }
+            var hi = Math.Min(remaining, rowRem[row]);
+            for (int v = 0; v <= hi; v++)
+            {
+                if (cancelled || incumbent.KnownGlobal) return;
+                x[row][col] = v; rowRem[row] -= v;
+                EnumCol(col, row + 1, remaining - v, errSoFar);
+                rowRem[row] += v; x[row][col] = 0;
+            }
+        }
 
-            while (true)
-            {
-                if (minimum.KnownGlobal || finishTime <= Stopwatch.GetTimestamp())
-                    return false;
-                // calculate errors
-                var colError_col = ColCostError(rowPrice, colTotal, solution, totalCost, totalQuantity, col);
-                var additionalError = Sqr((double)colError_col / colTotal[col]);
-                if (totalErrorSoFar + additionalError < minimum.TotalSquaredError)
-                {
-                    colErrorSoFar[col] = colError_col;
-                    var completed = EveryCombination(rowPrice, rowTotal, colTotal, totalQuantity, totalCost,
-                        solution, col - 1, colErrorSoFar, totalErrorSoFar + additionalError, finishTime, ref minimum);
-                    if (!completed) return false;
-                }
-                var noProgress = true;
-                for (int i = 1; i < solution.Length; i++)
-                {
-                    if (solution[i - 1][col] > 0 && solution[i].SumStart(col) < rowTotal[i])
-                    {
-                        solution[i - 1][col]--;
-                        solution[i][col]++;
-                        // reset start position to i - 1
-                        total = 0;
-                        for (int i2 = 0; i2 < i; i2++)
-                            total += solution[i2][col];
-                        for (int i2 = 0; i2 < i; i2++)
-                        {
-                            var row = solution[i2];
-                            var rowRemaining = rowTotal[i2] - row.SumStart(col + 1);
-                            if (total > rowRemaining)
-                            {
-                                row[col] = rowRemaining;
-                                total -= rowRemaining;
-                            }
-                            else
-                            {
-                                row[col] = total;
-                                total = 0;
-                            }
-                        }
-                        noProgress = false;
-                        break;
-                    }
-                }
-                if (noProgress) break;
-            }
-            return true;
-        }
+        EnumCol(0, 0, colTotal[0], 0.0);
+        if (!cancelled && !incumbent.KnownGlobal)   // finished the whole tree uninterrupted => optimum proven
+            incumbent = incumbent with { KnownGlobal = true };
+        minimum = incumbent;
     }
 
     private static Result RoundingSolutionThenFindLocalMinimum(int[] rowPrice, int[] rowTotal, int[] colTotal)
@@ -480,7 +490,7 @@ public static class AllocatorMany
         var colError = ColCostError(rowPrice, rowTotal, colTotal, results);
         FindLocalMinimum(rowPrice, colTotal, results, colError);
         var minError = TotalSquaredError(colError, colTotal);
-        return new Result(results, colError, minError, CheckGlobal(colError), SolutionType.RoundingMinimum);
+        return new Result(results, colError, minError, IsRelaxedOptimal(colError, colTotal), SolutionType.RoundingMinimum);
     }
 
     internal static int[][] RoundingSolution(int[] rowTotal, int[] colTotal)

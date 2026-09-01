@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using CsCheck;
 
 public class AllocatorMany_Tests
@@ -94,7 +95,7 @@ public class AllocatorMany_Tests
             if (!TotalsCorrectly(rowTotal, colTotal, allocation.Solution))
                 throw new Exception("Does not total correctly");
             return $"{(allocation.KnownGlobal ? "Global" : "Local")}/{allocation.SolutionType}";
-        }, writeLine: TUnitX.WriteLine, time: 10);
+        }, writeLine: TUnitX.WriteLine, time: 10, threads: 1);
     }
 
     [Test]
@@ -298,4 +299,158 @@ public class AllocatorMany_Tests
                 return false;
         return true;
     }
+
+    [Test, Skip("Long-running; run explicitly")]
+    public void CertificateNeverCertifiesNonOptimum()
+    {
+        var iter = EnvInt("SOUND_ITER", 20000);
+        int checkedN = 0, withCert = 0;
+        Gen.Select(Gen.Int[2, 5], Gen.Int[2, 4]).SelectMany((rows, cols) =>
+            Gen.Select(Gen.Int[0, 3].Array[cols].Where(a => a.Sum() > 0).Array[rows], Gen.Int[1, 30].Array[rows]))
+        .Sample((solution, rowPrice) =>
+        {
+            var colTotal = Enumerable.Range(0, solution[0].Length).Select(c => solution.Sum(r => r[c])).ToArray();
+            if (!InDomain(rowPrice, colTotal)) return true;
+            var rowTotal = Array.ConvertAll(solution, row => row.Sum());
+            var b = BruteForce(AllocatorMany.ShiftToStartAtZeroAndScaleUp(rowPrice), rowTotal, colTotal);
+            if (b.TooBig) return true;
+            checkedN++;
+            if (b.AnyCert) withCert++;
+            return b.CertSound;
+        }, iter: iter, threads: 1);
+        TUnitX.WriteLine($"checked={checkedN} withCertifiedOptimum={withCert}");
+    }
+
+    [Test, Skip("Long-running; run explicitly")]
+    public void EveryCombinationFindsAndProvesOptimum()
+    {
+        var iter = EnvInt("EC_ITER", 40000);
+        int checkedN = 0, provedGlobal = 0;
+        // Small instances so the exhaustive search always completes within budget (deterministic result).
+        Gen.Select(Gen.Int[2, 4], Gen.Int[2, 3]).SelectMany((rows, cols) =>
+            Gen.Select(Gen.Int[0, 2].Array[cols].Where(a => a.Sum() > 0).Array[rows], Gen.Int[1, 20].Array[rows]))
+        .Sample((solution, rowPrice) =>
+        {
+            var colTotal = Enumerable.Range(0, solution[0].Length).Select(c => solution.Sum(r => r[c])).ToArray();
+            if (!InDomain(rowPrice, colTotal)) return true;
+            var rowTotal = Array.ConvertAll(solution, row => row.Sum());
+            var shifted = AllocatorMany.ShiftToStartAtZeroAndScaleUp(rowPrice);
+            var b = BruteForce(shifted, rowTotal, colTotal);
+            if (b.TooBig) return true;
+            checkedN++;
+            var results = AllocatorMany.RoundingSolution(rowTotal, colTotal);
+            var colError = AllocatorMany.ColCostError(shifted, rowTotal, colTotal, results);
+            var seedTse = AllocatorMany.TotalSquaredError(colError, colTotal);
+            var inc = new AllocatorMany.Result(results, colError, seedTse, false, AllocatorMany.SolutionType.RoundingMinimum);
+            AllocatorMany.EveryCombination(shifted, rowTotal, colTotal, long.MaxValue, ref inc, CancellationToken.None);   // no budget: run to completion
+            if (inc.KnownGlobal) provedGlobal++;
+            var tol = 1e-9 * (1 + b.MinTSE);
+            if (inc.TotalSquaredError < b.MinTSE - tol) return false;                     // never below the true optimum
+            return !inc.KnownGlobal || Math.Abs(inc.TotalSquaredError - b.MinTSE) <= tol; // a global claim must be the optimum
+        }, iter: iter, threads: 1);
+        TUnitX.WriteLine($"checked={checkedN} provedGlobal={provedGlobal}");
+    }
+
+    [Test, Skip("Long-running; run explicitly")]
+    public void AllocateGlobalClaimsAreCorrect()
+    {
+        var iter = EnvInt("E2E_ITER", 4000);
+        var threads = EnvInt("E2E_THREADS", -1);
+        var time = EnvInt("E2E_TIME", 1);
+        int checkedN = 0, proved = 0, wrong = 0;
+        // Allocate is multithreaded (nondeterministic), so accumulate violations rather than let CsCheck shrink.
+        Gen.Select(Gen.Int[2, 5], Gen.Int[2, 4]).SelectMany((rows, cols) =>
+            Gen.Select(Gen.Int[0, 3].Array[cols].Where(a => a.Sum() > 0).Array[rows], Gen.Int[1, 30].Array[rows], Gen.Int.Uniform))
+        .Sample((solution, rowPrice, seed) =>
+        {
+            var colTotal = Enumerable.Range(0, solution[0].Length).Select(c => solution.Sum(r => r[c])).ToArray();
+            if (!InDomain(rowPrice, colTotal)) return true;
+            var rowTotal = Array.ConvertAll(solution, row => row.Sum());
+            var b = BruteForce(AllocatorMany.ShiftToStartAtZeroAndScaleUp(rowPrice), rowTotal, colTotal);
+            if (b.TooBig) return true;
+            checkedN++;
+            var res = AllocatorMany.Allocate((int[])rowPrice.Clone(), (int[])rowTotal.Clone(), (int[])colTotal.Clone(), new Random(seed), time, threads);
+            var tol = 1e-9 * (1 + b.MinTSE);
+            if (!TotalsCorrectly(rowTotal, colTotal, res.Solution)) wrong++;                    // must be feasible
+            if (res.TotalSquaredError < b.MinTSE - tol) wrong++;                                // never below the optimum
+            if (res.KnownGlobal) { proved++; if (Math.Abs(res.TotalSquaredError - b.MinTSE) > tol) wrong++; }  // a global claim must be the optimum
+            return true;
+        }, iter: iter, threads: 1);
+        TUnitX.WriteLine($"checked={checkedN} provedGlobal={proved} wrong={wrong}");
+        if (wrong > 0) throw new Exception($"Allocate produced {wrong} infeasible/below-optimum/false-global results");
+    }
+
+    private static int EnvInt(string name, int dflt)
+        => int.TryParse(Environment.GetEnvironmentVariable(name), out var v) ? v : dflt;
+
+    private static long DivRound(long x, long y) => (y / 2 + x) / y;
+
+    private readonly record struct BruteResult(double MinTSE, bool CertSound, bool AnyCert, bool TooBig);
+
+    // Enumerate every feasible matrix with the given margins: the true minimum TSE, and a check that the
+    // certificate (IsRelaxedOptimal) never declares a non-optimal solution global. TooBig if past the node cap.
+    private static BruteResult BruteForce(int[] priceShifted, int[] rowTotal, int[] colTotal)
+    {
+        int rows = rowTotal.Length, cols = colTotal.Length;
+        var tq = 0; var totalCost = 0L;
+        for (int i = 0; i < rows; i++) { tq += rowTotal[i]; totalCost += (long)priceShifted[i] * rowTotal[i]; }
+        var target = new long[cols];
+        for (int j = 0; j < cols; j++) target[j] = DivRound((long)colTotal[j] * totalCost, tq);
+        var x = new int[rows][];
+        for (int i = 0; i < rows; i++) x[i] = new int[cols];
+        var colRem = (int[])colTotal.Clone();
+        var colErr = new int[cols];
+        var best = double.PositiveInfinity;
+        var certMax = double.NegativeInfinity;
+        var anyCert = false;
+        var nodes = 0L;
+        const long cap = 5_000_000;
+        var overflow = false;
+
+        void Eval()
+        {
+            var tse = 0.0;
+            for (int j = 0; j < cols; j++)
+            {
+                var cost = 0L;
+                for (int i = 0; i < rows; i++) cost += (long)priceShifted[i] * x[i][j];
+                colErr[j] = (int)(cost - target[j]);
+                var e = colErr[j] / (double)colTotal[j];
+                tse += e * e;
+            }
+            if (tse < best) best = tse;
+            if (AllocatorMany.IsRelaxedOptimal(colErr, colTotal)) { anyCert = true; if (tse > certMax) certMax = tse; }
+        }
+        void Rec(int i, int j, int rowRem)
+        {
+            if (overflow) return;
+            if (++nodes > cap) { overflow = true; return; }
+            if (j == cols - 1)
+            {
+                if (rowRem <= colRem[j])
+                {
+                    x[i][j] = rowRem; colRem[j] -= rowRem;
+                    if (i == rows - 1) { var ok = true; for (int c = 0; c < cols; c++) if (colRem[c] != 0) { ok = false; break; } if (ok) Eval(); }
+                    else Rec(i + 1, 0, rowTotal[i + 1]);
+                    colRem[j] += rowRem;
+                }
+                return;
+            }
+            var hi = Math.Min(rowRem, colRem[j]);
+            for (int v = 0; v <= hi; v++)
+            {
+                x[i][j] = v; colRem[j] -= v;
+                Rec(i, j + 1, rowRem - v);
+                colRem[j] += v;
+            }
+        }
+        Rec(0, 0, rowTotal[0]);
+        if (overflow) return new BruteResult(double.NaN, true, false, true);
+        var certSound = !anyCert || certMax <= best + 1e-9 * (1 + best);
+        return new BruteResult(best, certSound, anyCert, false);
+    }
+
+    // AllocateCore's preconditions for the bound: no zero columns, not all col totals <= 1, >= 2 distinct prices.
+    private static bool InDomain(int[] rowPrice, int[] colTotal)
+        => !Array.Exists(colTotal, c => c == 0) && colTotal.Max() > 1 && rowPrice.Distinct().Skip(1).Any();
 }
