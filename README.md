@@ -227,14 +227,14 @@ public void AllocatorMany_Classify()
 
 |                    | Count |       % |      Median |     Lower Q |     Upper Q |     Minimum |     Maximum |
 |--------------------|------:|--------:|------------:|------------:|------------:|------------:|------------:|
-| Global             |   742 |  93.81% |             |             |             |             |             |
-|   RoundingMinimum  |   588 |  74.34% |     0.320ms |     0.111ms |     1.022ms |     0.006ms |    23.021ms |
-|   RandomChange     |   110 |  13.91% |     3.102ms |     0.373ms |    56.713ms |     0.058ms |   968.609ms |
-|   EveryCombination |    44 |   5.56% |     2.871ms |     0.297ms |    57.800ms |     0.071ms |   726.476ms |
-| Local              |    49 |   6.19% |             |             |             |             |             |
-|   RandomChange     |    41 |   5.18% | 1,000.242ms | 1,000.164ms | 1,000.355ms | 1,000.076ms | 1,000.963ms |
-|   EveryCombination |     7 |   0.88% | 1,000.223ms | 1,000.151ms | 1,000.232ms | 1,000.134ms | 1,000.609ms |
-|   RoundingMinimum  |     1 |   0.13% | 1,000.117ms |             |             |             |             |
+| Global             | 2,082 |  97.79% |             |             |             |             |             |
+|   RoundingMinimum  | 1,559 |  73.23% |     0.336ms |     0.099ms |     0.907ms |     0.003ms |    21.391ms |
+|   RandomChange     |   400 |  18.79% |     1.046ms |     0.266ms |     7.659ms |     0.037ms |   626.076ms |
+|   EveryCombination |   123 |   5.78% |     4.067ms |     0.283ms |    44.982ms |     0.043ms |   975.250ms |
+| Local              |    47 |   2.21% |             |             |             |             |             |
+|   RandomChange     |    44 |   2.07% | 1,000.252ms | 1,000.192ms | 1,000.325ms | 1,000.128ms | 1,000.644ms |
+|   EveryCombination |     2 |   0.09% | 1,000.188ms |             |             |             |             |
+|   RoundingMinimum  |     1 |   0.05% | 1,000.212ms |             |             |             |             |
 
 ## Model-based testing
 
