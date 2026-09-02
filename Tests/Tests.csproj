@@ -16,7 +16,7 @@
         <AssemblyOriginatorKeyFile>../SigningKey.snk</AssemblyOriginatorKeyFile>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="TUnit" Version="1.63.0" />
+        <PackageReference Include="TUnit" Version="1.65.68" />
         <ProjectReference Include="..\CsCheck\CsCheck.csproj" />
         <Using Include="TUnit.Assertions.Enums" />
     </ItemGroup>
