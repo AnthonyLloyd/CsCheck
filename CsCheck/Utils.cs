@@ -71,6 +71,18 @@ public static partial class Check
         return string.IsNullOrWhiteSpace(value) ? defaultValue : double.Parse(value);
     }
 
+static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
+{
+    var value = Environment.GetEnvironmentVariable(variable);
+    if (string.IsNullOrWhiteSpace(value)) return defaultValue;
+
+    value = value.Trim();
+    if (value is "1" or "y" or "Y") return true;
+    if (value is "0" or "n" or "N") return false;
+    if (bool.TryParse(value, out var b)) return b;
+    return defaultValue;
+}
+
     static string? ParseEnvironmentVariableToSeed(string variable)
     {
         var value = Environment.GetEnvironmentVariable(variable);

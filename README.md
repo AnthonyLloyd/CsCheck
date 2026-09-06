@@ -341,7 +341,7 @@ The performance is raised in an exception if it fails but can also be output if 
 ```
 Tests.CheckTests.Faster_Linq_Random [27ms]
 Standard Output Messages:
-32.29%[29.47%..36.51%] 1.48x[1.42x..1.58x] faster, sigma = 50.0 (2,551 vs 17), min = 208ns vs 375ns
+32.29%[29.47%..36.51%] 1.48x[1.42x..1.58x] faster, sigma = 50.0 (2,551 vs 17), min = 208ns vs 375ns, alloc = 0B vs 48B
 ```
 
  The first number is the estimated percentage median performance improvement with the interquartile range in the square brackets.
@@ -349,7 +349,8 @@ Standard Output Messages:
  33⅓% faster = 1.5x faster and 90% faster = 10x faster, take your pick.
  The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
  distribution for the null hypothesis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
- Finally the minimum time taken for faster vs slower is shown as an idea of timing and for additional diagnostics of the result (machine dependent).
+ The minimum time taken for faster vs slower is shown as an idea of timing and for additional diagnostics of the result (machine dependent).
+ Finally the allocation of a single call of faster vs slower is shown, measured at the end of the run (default on the measuring thread; set allocAll: true to include all threads; async Faster always measures all threads).
 
 ### Matrix Multiply
 
@@ -449,7 +450,7 @@ public void Varint_Faster()
 ```
 Tests.ArraySerializerTests.Varint_Faster [45 ms]
 Standard Output Messages:
-10.94%[-3.27%..25.81%] 1.12x[0.97x..1.35x] faster, sigma = 10.0 (442 vs 190), min = 7.082ns vs 7.332ns
+10.94%[-3.27%..25.81%] 1.12x[0.97x..1.35x] faster, sigma = 10.0 (442 vs 190), min = 7.082ns vs 7.332ns, alloc = 0B vs 0B
 ```
 
 ## Regression testing
@@ -698,6 +699,7 @@ timeout - The timeout in seconds to use for Faster (default 60 seconds).
 print - A function to convert the state to a string for error reporting (default Check.Print).  
 equal - A function to check if the two states are the same (default Check.Equal).  
 sigma - For Faster sigma is the number of standard deviations from the null hypothesis (default 6).  
+allocAll - For Faster count allocation on all threads (default false).  
 replay - The number of times to retry the seed to reproduce a SampleParallel fail (default 100).  
 
 Global defaults can also be set via environment variables:
