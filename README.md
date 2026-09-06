@@ -699,7 +699,7 @@ timeout - The timeout in seconds to use for Faster (default 60 seconds).
 print - A function to convert the state to a string for error reporting (default Check.Print).  
 equal - A function to check if the two states are the same (default Check.Equal).  
 sigma - For Faster sigma is the number of standard deviations from the null hypothesis (default 6).  
-allocAll - For Faster count allocation on all threads.  
+allocAll - For Faster count allocation on all threads (default false).  
 replay - The number of times to retry the seed to reproduce a SampleParallel fail (default 100).  
 
 Global defaults can also be set via environment variables:
