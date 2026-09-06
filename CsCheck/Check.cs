@@ -40,6 +40,8 @@ public static partial class Check
     public static int Ulps = ParseEnvironmentVariableToInt("CsCheck_Ulps", 4);
     /// <summary>The number of Where Gne iterations before throwing an exception.</summary>
     public static int WhereLimit = ParseEnvironmentVariableToInt("CsCheck_WhereLimit", 100);
+    /// <summary>Measure Faster allocations across all threads rather than just the measuring thread (default false).</summary>
+    public static bool AllocAll = ParseEnvironmentVariableToBool("CsCheck_AllocAll", false);
     internal static bool IsDebug = Assembly.GetCallingAssembly().GetCustomAttribute<DebuggableAttribute>()?.IsJITTrackingEnabled ?? false;
 
     sealed class SampleActionWorker<T>(Gen<T> gen, Action<T> assert, CountdownEvent cde, string? seed, long target, bool isIter) : IThreadPoolWorkItem
@@ -2495,6 +2497,7 @@ public static partial class Check
     sealed class FasterActionWorker(ITimerAction fasterTimer, ITimerAction slowerTimer, FasterResult result, long endTimestamp, bool raiseexception) : IThreadPoolWorkItem
     {
         volatile bool running = true;
+        public void MeasureAllocations() => result.MeasureAllocations(() => fasterTimer.Time(), () => slowerTimer.Time());
         public void Execute()
         {
             try
@@ -2533,10 +2536,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     public static void Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true,
-        Action<string>? writeLine = null)
+        Action<string>? writeLine = null, bool? allocAll = null)
     {
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, allocAll ?? AllocAll);
         var worker = new FasterActionWorker(
             Timer.Create(faster, repeat),
             Timer.Create(slower, repeat),
@@ -2548,7 +2552,11 @@ public static partial class Check
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
         if (result.Exception is not null) throw result.Exception;
-        if (writeLine is not null) result.Output(writeLine);
+        if (writeLine is not null)
+        {
+            worker.MeasureAllocations();
+            result.Output(writeLine);
+        }
     }
 
     /// <summary>Assert the first function is faster than the second to a given sigma.</summary>
@@ -2560,10 +2568,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     public static void Faster<I1, I2>(I1 faster, I2 slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true,
-        Action<string>? writeLine = null) where I1 : IInvoke where I2 : IInvoke
+        Action<string>? writeLine = null, bool? allocAll = null) where I1 : IInvoke where I2 : IInvoke
     {
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, allocAll ?? AllocAll);
         var worker = new FasterActionWorker(
             Timer.Create(faster, repeat),
             Timer.Create(slower, repeat),
@@ -2575,12 +2584,17 @@ public static partial class Check
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
         if (result.Exception is not null) throw result.Exception;
-        if (writeLine is not null) result.Output(writeLine);
+        if (writeLine is not null)
+        {
+            worker.MeasureAllocations();
+            result.Output(writeLine);
+        }
     }
 
     sealed class FasterFuncWorker<T>(ITimerFunc<T> fasterTimer, ITimerFunc<T> slowerTimer, FasterResult result, Func<T, T, bool> equal, long endTimestamp, bool raiseexception) : IThreadPoolWorkItem
     {
         volatile bool running = true;
+        public void MeasureAllocations() => result.MeasureAllocations(() => fasterTimer.Time(out _), () => slowerTimer.Time(out _));
         public void Execute()
         {
             try
@@ -2630,10 +2644,11 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     public static void Faster<T>(Func<T> faster, Func<T> slower, Func<T, T, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
     {
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, allocAll ?? AllocAll);
         var worker = new FasterFuncWorker<T>(
             Timer.Create(faster, repeat),
             Timer.Create(slower, repeat),
@@ -2645,10 +2660,12 @@ public static partial class Check
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
-        if (raiseexception && result.NotFaster && !IsDebug)
-            throw new CsCheckException(result.ToString());
         if (result.Exception is not null) throw result.Exception;
-        if (writeLine is not null) result.Output(writeLine);
+        if (writeLine is not null)
+        {
+            worker.MeasureAllocations();
+            result.Output(writeLine);
+        }
     }
 
     /// <summary>Assert the first function is faster than the second to a given sigma.</summary>
@@ -2665,7 +2682,7 @@ public static partial class Check
     {
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, true);
         var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
         var running = true;
         async Task Worker()
@@ -2701,7 +2718,11 @@ public static partial class Check
             _ = Task.Run(Worker);
         await Worker().ConfigureAwait(false);
         if (result.Exception is not null) throw result.Exception;
-        if (writeLine is not null) result.Output(writeLine);
+        if (writeLine is not null)
+        {
+            await result.MeasureAllocationsAsync(() => fasterTimer.Time(), () => slowerTimer.Time()).ConfigureAwait(false);
+            result.Output(writeLine);
+        }
     }
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma.</summary>
@@ -2720,7 +2741,7 @@ public static partial class Check
         equal ??= Equal;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, true);
         var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
         var running = true;
         async Task Worker()
@@ -2768,12 +2789,21 @@ public static partial class Check
             _ = Task.Run(Worker);
         await Worker().ConfigureAwait(false);
         if (result.Exception is not null) throw result.Exception;
-        if (writeLine is not null) result.Output(writeLine);
+        if (writeLine is not null)
+        {
+            await result.MeasureAllocationsAsync(() => fasterTimer.Time(), () => slowerTimer.Time()).ConfigureAwait(false);
+            result.Output(writeLine);
+        }
     }
 
     sealed class FasterActionWorker<T>(Gen<T> gen, ITimerAction<T> fasterTimer, ITimerAction<T> slowerTimer, FasterResult result, long endTimestamp, string? seed, bool raiseexception) : IThreadPoolWorkItem
     {
         volatile bool running = true;
+        public void MeasureAllocations()
+        {
+            var t = gen.Single();
+            result.MeasureAllocations(() => fasterTimer.Time(t), () => slowerTimer.Time(t));
+        }
         public void Execute()
         {
             var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
@@ -2821,10 +2851,11 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     public static void Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1,
-        string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
     {
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, allocAll ?? AllocAll);
         var worker = new FasterActionWorker<T>(
             gen,
             Timer.Create(faster, repeat),
@@ -2838,7 +2869,11 @@ public static partial class Check
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
         if (result.Exception is not null) throw result.Exception;
-        if (writeLine is not null) result.Output(writeLine);
+        if (writeLine is not null)
+        {
+            worker.MeasureAllocations();
+            result.Output(writeLine);
+        }
     }
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -2852,10 +2887,11 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> faster, Action<T1, T2> slower, double sigma = -1.0, int threads = -1, int repeat = 1,
-        int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
-        => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+        int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2868,10 +2904,11 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> faster, Action<T1, T2, T3> slower, double sigma = -1.0, int threads = -1,
-        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2884,11 +2921,12 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> faster, Action<T1, T2, T3, T4> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2901,11 +2939,12 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> faster, Action<T1, T2, T3, T4, T5> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2918,11 +2957,12 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> faster, Action<T1, T2, T3, T4, T5, T6> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2935,11 +2975,12 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> faster, Action<T1, T2, T3, T4, T5, T6, T7> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2952,11 +2993,12 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> faster, Action<T1, T2, T3, T4, T5, T6, T7, T8> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2976,7 +3018,7 @@ public static partial class Check
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
         var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, true);
         var running = true;
         async Task Worker()
         {
@@ -3019,7 +3061,12 @@ public static partial class Check
             _ = Task.Run(Worker);
         await Worker().ConfigureAwait(false);
         if (result.Exception is not null) throw result.Exception;
-        if (writeLine is not null) result.Output(writeLine);
+        if (writeLine is not null)
+        {
+            var t = gen.Single();
+            await result.MeasureAllocationsAsync(() => fasterTimer.Time(t), () => slowerTimer.Time(t)).ConfigureAwait(false);
+            result.Output(writeLine);
+        }
     }
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -3140,6 +3187,11 @@ public static partial class Check
     sealed class FasterFuncWorker<T, R>(Gen<T> gen, ITimerFunc<T, R> fasterTimer, ITimerFunc<T, R> slowerTimer, FasterResult result, long endTimestamp, Func<R, R, bool> equal, string? seed, bool raiseexception) : IThreadPoolWorkItem
     {
         volatile bool running = true;
+        public void MeasureAllocations()
+        {
+            var t = gen.Single();
+            result.MeasureAllocations(() => fasterTimer.Time(t, out _), () => slowerTimer.Time(t, out _));
+        }
         public void Execute()
         {
             var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
@@ -3198,10 +3250,11 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     public static void Faster<T, R>(this Gen<T> gen, Func<T, R> faster, Func<T, R> slower, Func<R, R, bool>? equal = null, double sigma = -1.0, int threads = -1,
-        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
     {
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, allocAll ?? AllocAll);
         var worker = new FasterFuncWorker<T, R>(
             gen,
             Timer.Create(faster, repeat),
@@ -3216,7 +3269,11 @@ public static partial class Check
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
         if (result.Exception is not null) throw result.Exception;
-        if (writeLine is not null) result.Output(writeLine);
+        if (writeLine is not null)
+        {
+            worker.MeasureAllocations();
+            result.Output(writeLine);
+        }
     }
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -3231,11 +3288,12 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     public static void Faster<I1, I2, T, R>(this Gen<T> gen, I1 faster, I2 slower, Func<R, R, bool>? equal = null, double sigma = -1.0, int threads = -1, int repeat = 1,
-        int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
             where I1 : IInvoke<T, R> where I2 : IInvoke<T, R>
     {
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, allocAll ?? AllocAll);
         var worker = new FasterFuncWorker<T, R>(
             gen,
             Timer.Create<I1, T, R>(faster, repeat),
@@ -3250,7 +3308,11 @@ public static partial class Check
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
         if (result.Exception is not null) throw result.Exception;
-        if (writeLine is not null) result.Output(writeLine);
+        if (writeLine is not null)
+        {
+            worker.MeasureAllocations();
+            result.Output(writeLine);
+        }
     }
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -3265,10 +3327,11 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> faster, Func<T1, T2, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
-        => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -3282,10 +3345,11 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> faster, Func<T1, T2, T3, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -3299,11 +3363,12 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> faster, Func<T1, T2, T3, T4, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), equal, sigma, threads, repeat, timeout, seed,
-            raiseexception, writeLine);
+            raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -3317,11 +3382,12 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> faster, Func<T1, T2, T3, T4, T5, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), equal, sigma, threads, repeat,
-            timeout, seed, raiseexception, writeLine);
+            timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -3335,11 +3401,12 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> faster, Func<T1, T2, T3, T4, T5, T6, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), equal, sigma,
-            threads, repeat, timeout, seed, raiseexception, writeLine);
+            threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -3353,11 +3420,12 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
-            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -3371,11 +3439,12 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
-            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -3397,7 +3466,7 @@ public static partial class Check
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
         var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
-        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat);
+        var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, true);
         var running = true;
         async Task Worker()
         {
@@ -3452,7 +3521,12 @@ public static partial class Check
             _ = Task.Run(Worker);
         await Worker().ConfigureAwait(false);
         if (result.Exception is not null) throw result.Exception;
-        if (writeLine is not null) result.Output(writeLine);
+        if (writeLine is not null)
+        {
+            var t = gen.Single();
+            await result.MeasureAllocationsAsync(() => fasterTimer.Time(t), () => slowerTimer.Time(t)).ConfigureAwait(false);
+            result.Output(writeLine);
+        }
     }
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
@@ -3579,14 +3653,15 @@ public static partial class Check
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
             equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    internal sealed class FasterResult(double sigma, int repeat)
+    internal sealed class FasterResult(double sigma, int repeat, bool allocAll)
     {
         readonly double Limit = sigma * sigma;
         public Exception? Exception;
         public int Faster, Slower;
         public long FasterMin = long.MaxValue, SlowerMin = long.MaxValue;
+        public long FasterBytes, SlowerBytes;
         public MedianEstimator Median = new();
-        bool completed;
+        bool completed, bytesMeasured;
 
         private float SigmaSquared
         {
@@ -3630,6 +3705,35 @@ public static partial class Check
             }
         }
 
+        long AllocatedBytes => allocAll ? GC.GetTotalAllocatedBytes(precise: true) : GC.GetAllocatedBytesForCurrentThread();
+
+        /// <summary>Measure the allocations of a single call of each. Run after the statistical loop so the code is fully warmed up and tier-1 jitted.</summary>
+        public void MeasureAllocations(Action faster, Action slower)
+        {
+            var start = AllocatedBytes;
+            faster();
+            var middle = AllocatedBytes;
+            slower();
+            var end = AllocatedBytes;
+            FasterBytes = middle - start;
+            SlowerBytes = end - middle;
+            bytesMeasured = true;
+        }
+
+        /// <summary>Measure the allocations of a single call of each. Async is always allocAll as continuations can resume on any thread.</summary>
+        public async Task MeasureAllocationsAsync(Func<Task> faster, Func<Task> slower)
+        {
+            await Task.Yield(); // box this state machine before measuring so its allocation isn't charged to faster
+            var start = AllocatedBytes;
+            await faster().ConfigureAwait(false);
+            var middle = AllocatedBytes;
+            await slower().ConfigureAwait(false);
+            var end = AllocatedBytes;
+            FasterBytes = middle - start;
+            SlowerBytes = end - middle;
+            bytesMeasured = true;
+        }
+
         public override string ToString()
         {
             var times = Median.Median >= 0.0 ? 1 / (1 - Median.Median) : 1 + Median.Median;
@@ -3646,9 +3750,18 @@ public static partial class Check
             if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
             else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
             result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / repeat)}{timeUnit} vs {timeString((double)SlowerMin / repeat)}{timeUnit}";
+            if (bytesMeasured) result = $"{result}, alloc = {ByteString((double)FasterBytes / repeat)} vs {ByteString((double)SlowerBytes / repeat)}";
             if (Check.IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
             return result;
         }
+
+        private static string ByteString(double bytes) =>
+            bytes switch
+            {
+                >= 1_048_576 => (bytes / 1_048_576).ToString("###0.##") + "MB",
+                >= 1_024 => (bytes / 1_024).ToString("###0.##") + "KB",
+                _ => bytes.ToString("###0.##") + "B",
+            };
 
         private static (Func<double, string>, string) TimeFormat(double maxValue) =>
             (maxValue * 1000 / Stopwatch.Frequency) switch
