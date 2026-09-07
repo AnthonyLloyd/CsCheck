@@ -4074,8 +4074,6 @@ readonly struct FieldApply<T>(string name, Func<T, T> setPrimary, Func<T, T> set
     public readonly Func<T, T> SetAlt = setAlt;
 }
 
-// Generates two values that differ by the comparer. Retries internally so a low-cardinality field does not
-// waste sample iterations, and throws a clear field-named error if the generator cannot produce a distinct pair.
 sealed class GenDistinctPair<V>(Gen<V> gen, IEqualityComparer<V> comparer, string name) : Gen<(V, V)>
 {
     public override (V, V) Generate(PCG pcg, Size? min, out Size size)
@@ -4089,6 +4087,11 @@ sealed class GenDistinctPair<V>(Gen<V> gen, IEqualityComparer<V> comparer, strin
             size.Add(s);
             if (Size.IsLessThan(min, size)) return default!;
             if (!comparer.Equals(v1, v2)) return (v1, v2);
+        }
+        if (min is not null)
+        {
+            size = new Size(ulong.MaxValue);
+            return default!;
         }
         throw new CsCheckException($"Field '{name}' generator did not produce two distinct values after {Check.WhereLimit} attempts.");
     }

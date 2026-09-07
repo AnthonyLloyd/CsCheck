@@ -423,6 +423,16 @@ public class CheckTests
             .Compared((r, v) => r with { Raw = v }, Gen.Int[0, 1000], new RoundToTenComparer()));
     }
 
+    [Test]
+    public async Task Equality_DistinctPair_Skips_Under_Shrinking_But_Throws_At_Root()
+    {
+        var pair = new GenDistinctPair<int>(Gen.Const(0), EqualityComparer<int>.Default, "field");
+        Assert.Throws<CsCheckException>(() => pair.Generate(PCG.Parse("0000000000aa"), null, out _));
+        var min = new Size(0);
+        pair.Generate(PCG.Parse("0000000000aa"), min, out var size);
+        await Assert.That(Size.IsLessThan(size, min)).IsFalse();
+    }
+
     abstract record Either
     {
         public sealed record L(string Name, int Version) : Either
