@@ -305,8 +305,8 @@ public static class Gen
             size.Add(s);
             if (Size.IsLessThan(min, size)) return default!;
             var v3 = gen3.Generate(pcg, min, out s);
-            if (Size.IsLessThan(min, size)) return default!;
             size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
             var v4 = gen4.Generate(pcg, min, out s);
             size.Add(s);
             if (Size.IsLessThan(min, size)) return default!;
@@ -427,6 +427,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var v2 = gen2.Generate(pcg, min, out var s);
             size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return (v1, v2);
         }
     }
@@ -445,6 +446,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var v3 = gen3.Generate(pcg, min, out s);
             size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return (v1, v2, v3);
         }
     }
@@ -466,6 +468,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var v4 = gen4.Generate(pcg, min, out s);
             size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return (v1, v2, v3, v4);
         }
     }
@@ -491,6 +494,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var v5 = gen5.Generate(pcg, min, out s);
             size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return (v1, v2, v3, v4, v5);
         }
     }
@@ -520,6 +524,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var v6 = gen6.Generate(pcg, min, out s);
             size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return (v1, v2, v3, v4, v5, v6);
         }
     }
@@ -552,6 +557,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var v7 = gen7.Generate(pcg, min, out s);
             size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return (v1, v2, v3, v4, v5, v6, v7);
         }
     }
@@ -587,6 +593,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var v8 = gen8.Generate(pcg, min, out s);
             size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return (v1, v2, v3, v4, v5, v6, v7, v8);
         }
     }
@@ -603,6 +610,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1).Generate(pcg, min?.Below(size), out var sR);
             size.Append(sR);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -621,6 +629,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2).Generate(pcg, min?.Below(size), out s);
             size.Append(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -642,6 +651,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2, v3).Generate(pcg, min?.Below(size), out s);
             size.Append(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -666,6 +676,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2, v3, v4).Generate(pcg, min?.Below(size), out s);
             size.Append(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -693,6 +704,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, min?.Below(size), out s);
             size.Append(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -723,6 +735,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2, v3, v4, v5, v6).Generate(pcg, min?.Below(size), out s);
             size.Append(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -756,6 +769,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2, v3, v4, v5, v6, v7).Generate(pcg, min?.Below(size), out s);
             size.Append(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -792,6 +806,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2, v3, v4, v5, v6, v7, v8).Generate(pcg, min?.Below(size), out s);
             size.Append(s);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -842,6 +857,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2).Generate(pcg, min?.Below(size), out var sR);
             size.Append(sR);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -857,6 +873,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2, v3).Generate(pcg, min?.Below(size), out var sR);
             size.Append(sR);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -872,6 +889,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2, v3, v4).Generate(pcg, min?.Below(size), out var sR);
             size.Append(sR);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -887,6 +905,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2, v3, v4, v5).Generate(pcg, min?.Below(size), out var sR);
             size.Append(sR);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -902,6 +921,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2, v3, v4, v5, v6).Generate(pcg, min?.Below(size), out var sR);
             size.Append(sR);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -917,6 +937,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2, v3, v4, v5, v6, v7).Generate(pcg, min?.Below(size), out var sR);
             size.Append(sR);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -932,6 +953,7 @@ public static class Gen
             if (Size.IsLessThan(min, size)) return default!;
             var vR = selector(v1, v2, v3, v4, v5, v6, v7, v8).Generate(pcg, min?.Below(size), out var sR);
             size.Append(sR);
+            if (Size.IsLessThan(min, size)) return default!;
             return vR;
         }
     }
@@ -950,8 +972,8 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t)) return t;
             }
-            ThrowHelper.ThrowFailingWhereMaxCount();
-            size = default!;
+            if (min is null) ThrowHelper.ThrowFailingWhereMaxCount();
+            size = new Size(ulong.MaxValue);
             return default!;
         }
     }
@@ -970,8 +992,8 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2)) return (t1, t2);
             }
-            ThrowHelper.ThrowFailingWhereMaxCount();
-            size = default!;
+            if (min is null) ThrowHelper.ThrowFailingWhereMaxCount();
+            size = new Size(ulong.MaxValue);
             return default!;
         }
     }
@@ -990,8 +1012,8 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2, t3)) return (t1, t2, t3);
             }
-            ThrowHelper.ThrowFailingWhereMaxCount();
-            size = default!;
+            if (min is null) ThrowHelper.ThrowFailingWhereMaxCount();
+            size = new Size(ulong.MaxValue);
             return default!;
         }
     }
@@ -1010,8 +1032,8 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2, t3, t4)) return (t1, t2, t3, t4);
             }
-            ThrowHelper.ThrowFailingWhereMaxCount();
-            size = default!;
+            if (min is null) ThrowHelper.ThrowFailingWhereMaxCount();
+            size = new Size(ulong.MaxValue);
             return default!;
         }
     }
@@ -1030,8 +1052,8 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2, t3, t4, t5)) return (t1, t2, t3, t4, t5);
             }
-            ThrowHelper.ThrowFailingWhereMaxCount();
-            size = default!;
+            if (min is null) ThrowHelper.ThrowFailingWhereMaxCount();
+            size = new Size(ulong.MaxValue);
             return default!;
         }
     }
@@ -1050,8 +1072,8 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2, t3, t4, t5, t6)) return (t1, t2, t3, t4, t5, t6);
             }
-            ThrowHelper.ThrowFailingWhereMaxCount();
-            size = default!;
+            if (min is null) ThrowHelper.ThrowFailingWhereMaxCount();
+            size = new Size(ulong.MaxValue);
             return default!;
         }
     }
@@ -1070,8 +1092,8 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2, t3, t4, t5, t6, t7)) return (t1, t2, t3, t4, t5, t6, t7);
             }
-            ThrowHelper.ThrowFailingWhereMaxCount();
-            size = default!;
+            if (min is null) ThrowHelper.ThrowFailingWhereMaxCount();
+            size = new Size(ulong.MaxValue);
             return default!;
         }
     }
@@ -1090,8 +1112,8 @@ public static class Gen
                 if (Size.IsLessThan(min, size)) return default!;
                 if (predicate(t1, t2, t3, t4, t5, t6, t7, t8)) return (t1, t2, t3, t4, t5, t6, t7, t8);
             }
-            ThrowHelper.ThrowFailingWhereMaxCount();
-            size = default!;
+            if (min is null) ThrowHelper.ThrowFailingWhereMaxCount();
+            size = new Size(ulong.MaxValue);
             return default!;
         }
     }
@@ -2807,7 +2829,9 @@ public sealed class GenArrayUnique<T>(Gen<T> gen) : Gen<T[]>
             }
             else if (++bad == 1000)
             {
-                ThrowHelper.Throw("Failing to add to ArrayUnique");
+                if (min is null) ThrowHelper.Throw("Failing to add to ArrayUnique");
+                size = new Size(ulong.MaxValue);
+                return default!;
             }
         }
         return vs;
@@ -2969,7 +2993,9 @@ public sealed class GenHashSet<T>(Gen<T> gen) : Gen<HashSet<T>>
             }
             else if (++bad == 1000)
             {
-                ThrowHelper.Throw("Failing to add to HashSet");
+                if (min is null) ThrowHelper.Throw("Failing to add to HashSet");
+                size = new Size(ulong.MaxValue);
+                return default!;
             }
         }
         return vs;
@@ -3037,7 +3063,9 @@ public sealed class GenDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<Dictiona
             }
             else if (++bad == 1000)
             {
-                ThrowHelper.Throw("Failing to add to Dictionary");
+                if (min is null) ThrowHelper.Throw("Failing to add to Dictionary");
+                size = new Size(ulong.MaxValue);
+                return default!;
             }
         }
         return vs;
@@ -3105,7 +3133,9 @@ public sealed class GenSortedDictionary<K, V>(Gen<K> genK, Gen<V> genV) : Gen<So
             }
             else if (++bad == 1000)
             {
-                ThrowHelper.Throw("Failing to add to SortedDictionary");
+                if (min is null) ThrowHelper.Throw("Failing to add to SortedDictionary");
+                size = new Size(ulong.MaxValue);
+                return default!;
             }
         }
         return vs;

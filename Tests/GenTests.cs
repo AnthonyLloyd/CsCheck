@@ -6,6 +6,15 @@ using CsCheck;
 
 public class GenTests
 {
+    sealed class SizedGen<T>(T value, ulong sizeI) : Gen<T>
+    {
+        public override T Generate(PCG pcg, Size? min, out Size size)
+        {
+            size = new Size(sizeI);
+            return value;
+        }
+    }
+
     static int[] Tally(int n, int[] ia)
     {
         var a = new int[n];
@@ -644,12 +653,67 @@ public class GenTests
     }
 
     [Test]
+    public async Task Select_Tuple_Skips_When_Final_Field_Is_Not_Smaller()
+    {
+        var min = new Size(0);
+        var actual = Gen.Select(new SizedGen<string>("a", 0), new SizedGen<string>("b", 1))
+            .Generate(PCG.Parse("0000000000aa"), min, out var size);
+        await Assert.That(actual).IsEqualTo(default((string, string)));
+        await Assert.That(Size.IsLessThan(size, min)).IsFalse();
+    }
+
+    [Test]
+    public async Task Select_Skips_When_Intermediate_Field_Is_Not_Smaller()
+    {
+        var min = new Size(0);
+        var actual = Gen.Select(
+            new SizedGen<int>(1, 0),
+            new SizedGen<int>(2, 0),
+            new SizedGen<int>(3, 1),
+            new SizedGen<int>(4, 0),
+            new SizedGen<int>(5, 0),
+            static (_, _, _, _, _) => 123)
+            .Generate(PCG.Parse("0000000000aa"), min, out var size);
+        await Assert.That(actual).IsEqualTo(0);
+        await Assert.That(Size.IsLessThan(size, min)).IsFalse();
+    }
+
+    [Test]
+    public async Task SelectMany_Skips_When_Result_Is_Not_Smaller()
+    {
+        var min = new Size(0, new Size(0));
+        var actual = new SizedGen<int>(1, 0)
+            .SelectMany(_ => new SizedGen<string>("result", 1))
+            .Generate(PCG.Parse("0000000000aa"), min, out var size);
+        await Assert.That(actual).IsNull();
+        await Assert.That(Size.IsLessThan(size, min)).IsFalse();
+    }
+
+    [Test]
     public void HashSet()
     {
         Gen.ULong[1, 1000]
         .HashSet[10, 100]
         .Sample(i => i.Count >= 10 && i.Count <= 100
                   && i.All(j => j is >= 1 and <= 1000));
+    }
+
+    [Test]
+    public async Task ArrayUnique_Skips_Under_Shrinking_But_Throws_At_Root()
+    {
+        var gen = Gen.Const(0).ArrayUnique[2];
+        Assert.Throws<CsCheckException>(() => gen.Generate(PCG.Parse("0000000000aa"), null, out _));
+        gen.Generate(PCG.Parse("0000000000aa"), new Size(2UL << 32, new Size(0)), out var size);
+        await Assert.That(Size.IsLessThan(size, new Size(2UL << 32, new Size(0)))).IsFalse();
+    }
+
+    [Test]
+    public async Task HashSet_Skips_Under_Shrinking_But_Throws_At_Root()
+    {
+        var gen = Gen.Const(0).HashSet[2];
+        Assert.Throws<CsCheckException>(() => gen.Generate(PCG.Parse("0000000000aa"), null, out _));
+        gen.Generate(PCG.Parse("0000000000aa"), new Size(2UL << 32, new Size(0)), out var size);
+        await Assert.That(Size.IsLessThan(size, new Size(2UL << 32, new Size(0)))).IsFalse();
     }
 
     [Test]
@@ -661,11 +725,29 @@ public class GenTests
     }
 
     [Test]
+    public async Task Dictionary_Skips_Under_Shrinking_But_Throws_At_Root()
+    {
+        var gen = Gen.Dictionary(Gen.Const(0), Gen.Bool)[2];
+        Assert.Throws<CsCheckException>(() => gen.Generate(PCG.Parse("0000000000aa"), null, out _));
+        gen.Generate(PCG.Parse("0000000000aa"), new Size(2UL << 32, new Size(0)), out var size);
+        await Assert.That(Size.IsLessThan(size, new Size(2UL << 32, new Size(0)))).IsFalse();
+    }
+
+    [Test]
     public void SortedDictionary()
     {
         Gen.SortedDictionary(Gen.UInt[1, 1000], Gen.Bool)[10, 100]
         .Sample(i => i.Count >= 10 && i.Count <= 100
                   && i.All(j => j.Key is >= 1 and <= 1000));
+    }
+
+    [Test]
+    public async Task SortedDictionary_Skips_Under_Shrinking_But_Throws_At_Root()
+    {
+        var gen = Gen.SortedDictionary(Gen.Const(0), Gen.Bool)[2];
+        Assert.Throws<CsCheckException>(() => gen.Generate(PCG.Parse("0000000000aa"), null, out _));
+        gen.Generate(PCG.Parse("0000000000aa"), new Size(2UL << 32, new Size(0)), out var size);
+        await Assert.That(Size.IsLessThan(size, new Size(2UL << 32, new Size(0)))).IsFalse();
     }
 
     [Test]

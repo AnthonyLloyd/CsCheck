@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 /// <summary>Main random testing Check functions.</summary>
 public static partial class Check
@@ -4023,7 +4024,7 @@ public static partial class Check
                     {
                         // Different declared cases must not be equal: the case discriminant is part of equality.
                         if (equals(a, b) || equals(b, a))
-                            throw new CsCheckException("Instances of different declared cases compare equal: the case discriminant is not part of equality.");
+                            throw new CsCheckException($"Instances of different declared cases compare equal: the case discriminant is not part of equality. a = {Print(a)}, b = {Print(b)}");
                         return true;
                     }
                 }
@@ -4040,7 +4041,7 @@ public static partial class Check
                     b = applies[i].SetPrimary(b);
                 }
                 if (!equals(a, b) || hash(a) != hash(b))
-                    throw new CsCheckException("Equality or GetHashCode is affected by a field that is not declared as compared or ignored.");
+                    throw new CsCheckException($"Equality or GetHashCode is affected by a field that is not declared as compared or ignored. a = {Print(a)}, b = {Print(b)}");
                 // Change one field at a time on b. Compared fields must break equality; ignored fields must not.
                 for (int i = 0; i < applies.Length; i++)
                 {
@@ -4051,14 +4052,14 @@ public static partial class Check
                     {
                         b = applies[i].SetPrimary(b); // restore for in-place (mutable) setters
                         if (eq)
-                            throw new CsCheckException($"Compared field '{applies[i].Name}' does not affect equality: changing it left the instances equal.");
+                            throw new CsCheckException($"Compared field '{applies[i].Name}' does not affect equality: changing it left the instances equal. a = {Print(a)}, bAlt = {Print(bAlt)}");
                     }
                     else
                     {
                         bool hashEq = hash(a) == hash(bAlt);
                         b = applies[i].SetPrimary(b); // restore for in-place (mutable) setters
                         if (!eq)
-                            throw new CsCheckException($"Ignored field '{applies[i].Name}' affects equality: changing it made the instances unequal.");
+                            throw new CsCheckException($"Ignored field '{applies[i].Name}' affects equality: changing it made the instances unequal. a = {Print(a)}, bAlt = {Print(bAlt)}");
                         if (!hashEq)
                             throw new CsCheckException($"Ignored field '{applies[i].Name}' affects GetHashCode: changing it changed the hash code while the instances remained equal.");
                     }
@@ -4088,12 +4089,9 @@ sealed class GenDistinctPair<V>(Gen<V> gen, IEqualityComparer<V> comparer, strin
             if (Size.IsLessThan(min, size)) return default!;
             if (!comparer.Equals(v1, v2)) return (v1, v2);
         }
-        if (min is not null)
-        {
-            size = new Size(ulong.MaxValue);
-            return default!;
-        }
-        throw new CsCheckException($"Field '{name}' generator did not produce two distinct values after {Check.WhereLimit} attempts.");
+        if (min is null) ThrowHelper.Throw($"Field '{name}' generator did not produce two distinct values after {Check.WhereLimit} attempts.");
+        size = new Size(ulong.MaxValue);
+        return default!;
     }
 }
 
@@ -4269,7 +4267,7 @@ public sealed class UnionFields<T, TField>
     {
         var d = down;
         var u = up;
-        fields.Case<TArm>(
+        fields.Case(
             t => d(t) is TArm,
             t => (TArm)(object)d(t)!,
             (t, arm) => u(t, (TField)(object)arm!),
