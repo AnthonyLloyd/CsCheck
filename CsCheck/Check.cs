@@ -538,6 +538,7 @@ public static partial class Check
                             return;
                         }
                         totalLocal++;
+                        pcg = PCG.ThreadPCG; // Re-read every iteration. The await below resumes on whatever thread the pool gives it
                         state = pcg.State;
                         t = gen.Generate(pcg, minSize, out size);
                         if (minSize is null || Size.IsLessThan(size, minSize))
@@ -1202,6 +1203,7 @@ public static partial class Check
                             return;
                         }
                         totalLocal++;
+                        pcg = PCG.ThreadPCG; // Re-read every iteration. The await below resumes on whatever thread the pool gives it
                         state = pcg.State;
                         t = gen.Generate(pcg, minSize, out size);
                         if (minSize is null || Size.IsLessThan(size, minSize))
@@ -3030,6 +3032,7 @@ public static partial class Check
             {
                 while (running)
                 {
+                    if (seed is null) pcg = PCG.ThreadPCG; // Re-read every iteration. The await below resumes on whatever thread the pool gives it
                     state = pcg.State;
                     t = gen.Generate(pcg, null, out _);
                     if (!running) return;
@@ -3478,6 +3481,7 @@ public static partial class Check
             {
                 while (running)
                 {
+                    if (seed is null) pcg = PCG.ThreadPCG; // Re-read every iteration. The await below resumes on whatever thread the pool gives it
                     state = pcg.State;
                     t = gen.Generate(pcg, null, out _);
                     if (!running) return;
