@@ -254,6 +254,100 @@ public class CheckTests
         , threads: 1);
     }
 
+    /// <summary>The question a model-based run cannot otherwise answer: did each operation ever meet the states that
+    /// make it interesting. Here that is whether TryTake ran on an empty bag as well as a full one, which decides
+    /// whether the equal check ever compared anything but the easy case. The initial list is bounded because the
+    /// default Count is uniform over 0 to 127, so a bag starting near 64 with balanced adds and takes reaches empty
+    /// only in the rare iteration that starts there. That is the finding this table is for.</summary>
+    [Test]
+    public async Task SampleModelBased_Classify()
+    {
+        var lines = new List<string>();
+        Gen.Int[0, 5].List[0, 3].Select(l => (new ConcurrentBag<int>(l), l))
+        .SampleModelBased(
+            Gen.Int.Operation<ConcurrentBag<int>, List<int>>((bag, i) => bag.Add(i), (list, i) => list.Add(i)),
+            Gen.Operation<ConcurrentBag<int>, List<int>>(bag => bag.TryTake(out _), list => { if (list.Count > 0) list.RemoveAt(0); }),
+            equal: (bag, list) => bag.Count == list.Count, threads: 1,
+            classify: list => list.Count == 0 ? "empty" : "non-empty", writeLine: lines.Add);
+        foreach (var line in lines) TUnitX.WriteLine(line);
+        await Assert.That(lines.Any(l => l.Contains("| Op0"))).IsTrue();
+        await Assert.That(lines.Any(l => l.Contains("| Op1"))).IsTrue();
+        await Assert.That(lines.Any(l => l.Contains(Leaf("empty")))).IsTrue();
+        await Assert.That(lines.Any(l => l.Contains(Leaf("non-empty")))).IsTrue();
+    }
+
+    /// <summary>Classifier indents nested rows with U+00A0 non breaking spaces, which is the character in the literal
+    /// below, so matching on an ordinary space finds nothing. It also keeps "empty" off the "non-empty" row.</summary>
+    static string Leaf(string label) => " " + label;
+
+    /// <summary>The same for the async path, where the table has to be written after the returned task completes
+    /// rather than before it is handed back.</summary>
+    [Test]
+    public async Task SampleModelBasedAsync_Classify()
+    {
+        var lines = new List<string>();
+        await Gen.Int[0, 5].List[0, 3].Select(l => Task.FromResult((new ConcurrentBag<int>(l), l)))
+        .SampleModelBasedAsync(
+            Gen.Int.Operation<ConcurrentBag<int>, List<int>>(async (bag, i) => { await Task.Yield(); bag.Add(i); }, async (list, i) => { await Task.Yield(); list.Add(i); }),
+            Gen.Operation<ConcurrentBag<int>, List<int>>(async bag => { await Task.Yield(); bag.TryTake(out _); }, async list => { await Task.Yield(); if (list.Count > 0) list.RemoveAt(0); }),
+            equal: (bag, list) => bag.Count == list.Count, threads: 1,
+            classify: list => list.Count == 0 ? "empty" : "non-empty", writeLine: lines.Add);
+        foreach (var line in lines) TUnitX.WriteLine(line);
+        await Assert.That(lines.Any(l => l.Contains("| Op1"))).IsTrue();
+        await Assert.That(lines.Any(l => l.Contains(Leaf("empty")))).IsTrue();
+    }
+
+    /// <summary>The table is written when the sample fails, which is when it is worth reading: it says what the walk was
+    /// exploring at the point something broke. The classify overloads printed after the sample returned rather than in a
+    /// finally, so the one run whose distribution you actually wanted was the one that discarded it. Covers all three
+    /// shapes - the plain sample, the model based one, and the async one that prints after awaiting the task.</summary>
+    [Test]
+    public async Task Classify_Table_Survives_A_Failure()
+    {
+        var plain = new List<string>();
+        Assert.Throws<CsCheckException>(() => Gen.Int[0, 9].Sample(
+            i => i == 9 ? throw new CsCheckException("boom") : i < 5 ? "low" : "high",
+            writeLine: plain.Add, iter: 1_000, threads: 1));
+        foreach (var line in plain) TUnitX.WriteLine(line);
+        // Not Leaf: nothing to nest under here, so the row is not indented the way the model based table's rows are.
+        await Assert.That(plain.Any(l => l.Contains("| low"))).IsTrue();
+
+        var modelBased = new List<string>();
+        Assert.Throws<CsCheckException>(() => Gen.Int[0, 5].List[1, 3].Select(l => (new ConcurrentBag<int>(l), l))
+            .SampleModelBased(
+                Gen.Int.Operation<ConcurrentBag<int>, List<int>>((bag, i) => bag.Add(i), (list, i) => list.Add(i)),
+                // Disagrees on the model side only, so the equal check fails and the sample throws after shrinking.
+                equal: (bag, list) => bag.Count == list.Count && list.Count < 2, threads: 1,
+                classify: list => list.Count == 0 ? "empty" : "non-empty", writeLine: modelBased.Add));
+        foreach (var line in modelBased) TUnitX.WriteLine(line);
+        await Assert.That(modelBased.Any(l => l.Contains("| Op0"))).IsTrue();
+
+        var async = new List<string>();
+        await Assert.ThrowsAsync<CsCheckException>(async () => await Gen.Int[0, 9].SampleAsync(
+            async i => { await Task.Yield(); return i == 9 ? throw new CsCheckException("boom") : i < 5 ? "low" : "high"; },
+            writeLine: async.Add, iter: 1_000, threads: 1));
+        foreach (var line in async) TUnitX.WriteLine(line);
+        await Assert.That(async.Any(l => l.Contains("| low"))).IsTrue();
+    }
+
+    /// <summary>Without a classify the table is still written, one row per operation, which is the cheap signal that a
+    /// random walk has starved an operation. Nothing is written at all when writeLine is left unset, so the default
+    /// path pays nothing.</summary>
+    [Test]
+    public async Task SampleModelBased_Operation_Counts()
+    {
+        var lines = new List<string>();
+        Gen.Int[0, 5].List.Select(l => (new ConcurrentBag<int>(l), l))
+        .SampleModelBased(
+            Gen.Int.Operation<ConcurrentBag<int>, List<int>>((bag, i) => bag.Add(i), (list, i) => list.Add(i)),
+            Gen.Operation<ConcurrentBag<int>, List<int>>(bag => bag.TryTake(out _), list => { if (list.Count > 0) list.RemoveAt(0); }),
+            equal: (bag, list) => bag.Count == list.Count, threads: 1, writeLine: lines.Add);
+        foreach (var line in lines) TUnitX.WriteLine(line);
+        await Assert.That(lines.Any(l => l.Contains("| Op0"))).IsTrue();
+        await Assert.That(lines.Any(l => l.Contains("| Op1"))).IsTrue();
+        await Assert.That(lines.Any(l => l.Contains("empty"))).IsFalse();
+    }
+
     [Test, Skip("failing")]
     public void SampleParallel_ConcurrentDictionary()
     {

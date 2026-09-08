@@ -292,13 +292,19 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
-        Sample(gen, t =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = classify(t);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger);
-        classifier.Print(writeLine);
+            Sample(gen, t =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = classify(t);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -315,13 +321,19 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
-        Sample(gen, (t1, t2) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = classify(t1, t2);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger);
-        classifier.Print(writeLine);
+            Sample(gen, (t1, t2) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = classify(t1, t2);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -338,13 +350,19 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
-        Sample(gen, (t1, t2, t3) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = classify(t1, t2, t3);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger);
-        classifier.Print(writeLine);
+            Sample(gen, (t1, t2, t3) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = classify(t1, t2, t3);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -361,13 +379,19 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
-        Sample(gen, (t1, t2, t3, t4) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = classify(t1, t2, t3, t4);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger);
-        classifier.Print(writeLine);
+            Sample(gen, (t1, t2, t3, t4) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = classify(t1, t2, t3, t4);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -384,13 +408,19 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
-        Sample(gen, (t1, t2, t3, t4, t5) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = classify(t1, t2, t3, t4, t5);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger);
-        classifier.Print(writeLine);
+            Sample(gen, (t1, t2, t3, t4, t5) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = classify(t1, t2, t3, t4, t5);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -407,13 +437,19 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
-        Sample(gen, (t1, t2, t3, t4, t5, t6) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = classify(t1, t2, t3, t4, t5, t6);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger);
-        classifier.Print(writeLine);
+            Sample(gen, (t1, t2, t3, t4, t5, t6) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = classify(t1, t2, t3, t4, t5, t6);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -431,13 +467,19 @@ public static partial class Check
         ILogger? logger = null)
     {
         var classifier = new Classifier();
-        Sample(gen, (t1, t2, t3, t4, t5, t6, t7) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = classify(t1, t2, t3, t4, t5, t6, t7);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger);
-        classifier.Print(writeLine);
+            Sample(gen, (t1, t2, t3, t4, t5, t6, t7) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = classify(t1, t2, t3, t4, t5, t6, t7);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -455,13 +497,19 @@ public static partial class Check
         ILogger? logger = null)
     {
         var classifier = new Classifier();
-        Sample(gen, (t1, t2, t3, t4, t5, t6, t7, t8) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = classify(t1, t2, t3, t4, t5, t6, t7, t8);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger);
-        classifier.Print(writeLine);
+            Sample(gen, (t1, t2, t3, t4, t5, t6, t7, t8) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = classify(t1, t2, t3, t4, t5, t6, t7, t8);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -694,13 +742,19 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
-        await SampleAsync(gen, async t =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = await classify(t).ConfigureAwait(false);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
-        classifier.Print(writeLine);
+            await SampleAsync(gen, async t =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = await classify(t).ConfigureAwait(false);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -717,13 +771,19 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
-        await SampleAsync(gen, async (t1, t2) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2).ConfigureAwait(false);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
-        classifier.Print(writeLine);
+            await SampleAsync(gen, async (t1, t2) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = await classify(t1, t2).ConfigureAwait(false);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -740,13 +800,19 @@ public static partial class Check
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
     {
         var classifier = new Classifier();
-        await SampleAsync(gen, async (t1, t2, t3) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2, t3).ConfigureAwait(false);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
-        classifier.Print(writeLine);
+            await SampleAsync(gen, async (t1, t2, t3) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = await classify(t1, t2, t3).ConfigureAwait(false);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -764,13 +830,19 @@ public static partial class Check
         ILogger? logger = null)
     {
         var classifier = new Classifier();
-        await SampleAsync(gen, async (t1, t2, t3, t4) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2, t3, t4).ConfigureAwait(false);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
-        classifier.Print(writeLine);
+            await SampleAsync(gen, async (t1, t2, t3, t4) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = await classify(t1, t2, t3, t4).ConfigureAwait(false);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -788,13 +860,19 @@ public static partial class Check
         ILogger? logger = null)
     {
         var classifier = new Classifier();
-        await SampleAsync(gen, async (t1, t2, t3, t4, t5) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2, t3, t4, t5).ConfigureAwait(false);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
-        classifier.Print(writeLine);
+            await SampleAsync(gen, async (t1, t2, t3, t4, t5) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = await classify(t1, t2, t3, t4, t5).ConfigureAwait(false);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -812,13 +890,19 @@ public static partial class Check
         ILogger? logger = null)
     {
         var classifier = new Classifier();
-        await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2, t3, t4, t5, t6).ConfigureAwait(false);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
-        classifier.Print(writeLine);
+            await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = await classify(t1, t2, t3, t4, t5, t6).ConfigureAwait(false);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -836,13 +920,19 @@ public static partial class Check
         ILogger? logger = null)
     {
         var classifier = new Classifier();
-        await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2, t3, t4, t5, t6, t7).ConfigureAwait(false);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
-        classifier.Print(writeLine);
+            await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = await classify(t1, t2, t3, t4, t5, t6, t7).ConfigureAwait(false);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -860,13 +950,19 @@ public static partial class Check
         ILogger? logger = null)
     {
         var classifier = new Classifier();
-        await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7, t8) =>
+        try
         {
-            var time = Stopwatch.GetTimestamp();
-            var name = await classify(t1, t2, t3, t4, t5, t6, t7, t8).ConfigureAwait(false);
-            classifier.Add(name, Stopwatch.GetTimestamp() - time);
-        }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
-        classifier.Print(writeLine);
+            await SampleAsync(gen, async (t1, t2, t3, t4, t5, t6, t7, t8) =>
+            {
+                var time = Stopwatch.GetTimestamp();
+                var name = await classify(t1, t2, t3, t4, t5, t6, t7, t8).ConfigureAwait(false);
+                classifier.Add(name, Stopwatch.GetTimestamp() - time);
+            }, null, seed, iter, time, threads, print, logger).ConfigureAwait(false);
+        }
+        finally
+        {
+            classifier.Print(writeLine);
+        }
     }
 
     sealed class SampleFuncWorker<T>(Gen<T> gen, Func<T, bool> predicate, CountdownEvent cde, string? seed, long target, bool isIter) : IThreadPoolWorkItem
@@ -1390,11 +1486,14 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model>[] operations,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
     {
         equal ??= ModelEqual;
         seed ??= Seed;
@@ -1404,52 +1503,76 @@ public static partial class Check
         printActual ??= Print;
         printModel ??= Print;
 
+        var classifier = writeLine is null ? null : new Classifier();
         var opNameActions = new Gen<(string, Action<Actual>, Action<Model>)>[operations.Length];
         for (int i = 0; i < operations.Length; i++)
         {
             var op = operations[i];
             var opName = "Op" + i;
-            opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2, t.Item3)) : op;
+            if (classifier is null)
+                opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2, t.Item3)) : op;
+            else
+                // start is captured by both actions so the time recorded is of the actual operation, and classify runs
+                // before the model action so it sees the state the operation was applied to.
+                opNameActions[i] = op.Select(t =>
+                {
+                    var start = 0L;
+                    return (op.AddOpNumber ? opName + t.Item1 : t.Item1,
+                        actual: (Action<Actual>)(a => { start = Stopwatch.GetTimestamp(); t.Item2(a); }),
+                        model: (Action<Model>)(m =>
+                        {
+                            var elapsed = Stopwatch.GetTimestamp() - start;
+                            classifier.Add(classify is null ? opName : opName + "/" + classify(m), elapsed);
+                            t.Item3(m);
+                        }));
+                });
         }
 
-        new GenInitial<Actual, Model>(initial)
-        .Select(Gen.OneOf(opNameActions).Array, (a, b) => new ModelBasedData<Actual, Model>(a.Actual, a.Model, a.Stream, a.Seed, b))
-        .Sample(d =>
+        try
         {
-            try
+            new GenInitial<Actual, Model>(initial)
+            .Select(Gen.OneOf(opNameActions).Array, (a, b) => new ModelBasedData<Actual, Model>(a.Actual, a.Model, a.Stream, a.Seed, b))
+            .Sample(d =>
             {
-                foreach (var operation in d.Operations)
+                try
                 {
-                    operation.Item2(d.ActualState);
-                    operation.Item3(d.ModelState);
+                    foreach (var operation in d.Operations)
+                    {
+                        operation.Item2(d.ActualState);
+                        operation.Item3(d.ModelState);
+                    }
+                    return equal(d.ActualState, d.ModelState);
                 }
-                return equal(d.ActualState, d.ModelState);
-            }
-            catch (Exception e)
+                catch (Exception e)
+                {
+                    d.Exception = e;
+                    return false;
+                }
+            }, writeLine, seed, iter, time, threads,
+            p =>
             {
-                d.Exception = e;
-                return false;
-            }
-        }, writeLine, seed, iter, time, threads,
-        p =>
+                if (p == null) return "";
+                var sb = new StringBuilder();
+                sb.Append("\n    Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
+                var initialState = initial.Generate(new PCG(p.Stream, p.Seed), null, out _);
+                sb.Append("\nInitial Actual: ").Append(printActual(initialState.Item1));
+                sb.Append("\nInitial  Model: ").Append(printModel(initialState.Item2));
+                if (p.Exception is null)
+                {
+                    sb.Append("\n  Final Actual: ").Append(printActual(p.ActualState));
+                    sb.Append("\n  Final  Model: ").Append(printModel(p.ModelState));
+                }
+                else
+                {
+                    sb.Append("\n     Exception: ").Append(p.Exception);
+                }
+                return sb.ToString();
+            }, logger);
+        }
+        finally
         {
-            if (p == null) return "";
-            var sb = new StringBuilder();
-            sb.Append("\n    Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
-            var initialState = initial.Generate(new PCG(p.Stream, p.Seed), null, out _);
-            sb.Append("\nInitial Actual: ").Append(printActual(initialState.Item1));
-            sb.Append("\nInitial  Model: ").Append(printModel(initialState.Item2));
-            if (p.Exception is null)
-            {
-                sb.Append("\n  Final Actual: ").Append(printActual(p.ActualState));
-                sb.Append("\n  Final  Model: ").Append(printModel(p.ModelState));
-            }
-            else
-            {
-                sb.Append("\n     Exception: ").Append(p.Exception);
-            }
-            return sb.ToString();
-        }, logger);
+            classifier?.Print(writeLine!);
+        }
     }
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
@@ -1463,13 +1586,16 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
-        => SampleModelBased(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBased(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1483,14 +1609,17 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
-        => SampleModelBased(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBased(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1505,14 +1634,17 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
-        => SampleModelBased(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBased(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1528,14 +1660,17 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
-        => SampleModelBased(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBased(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1552,6 +1687,8 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1559,9 +1696,10 @@ public static partial class Check
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         GenOperation<Actual, Model> operation5,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3, operation4, operation5],
-            equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+            equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1579,6 +1717,8 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1586,9 +1726,10 @@ public static partial class Check
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         GenOperation<Actual, Model> operation5, GenOperation<Actual, Model> operation6,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3, operation4, operation5, operation6],
-            equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+            equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     sealed class ModelBasedDataAsync<Actual, Model>(Task<(Actual, Model)> initial, uint stream, ulong seed, (string, Func<Actual, Task>, Func<Model, Task>)[] operations)
     {
@@ -1617,11 +1758,14 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model>[] operations,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
     {
         equal ??= ModelEqual;
         seed ??= Seed;
@@ -1631,15 +1775,32 @@ public static partial class Check
         printActual ??= Print;
         printModel ??= Print;
 
+        var classifier = writeLine is null ? null : new Classifier();
         var opNameActions = new Gen<(string, Func<Actual, Task>, Func<Model, Task>)>[operations.Length];
         for (int i = 0; i < operations.Length; i++)
         {
             var op = operations[i];
             var opName = "Op" + i;
-            opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2, t.Item3)) : op;
+            if (classifier is null)
+                opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2, t.Item3)) : op;
+            else
+                // start is captured by both actions so the time recorded is of the actual operation, and classify runs
+                // before the model action so it sees the state the operation was applied to.
+                opNameActions[i] = op.Select(t =>
+                {
+                    var start = 0L;
+                    return (op.AddOpNumber ? opName + t.Item1 : t.Item1,
+                        actual: (Func<Actual, Task>)(async a => { start = Stopwatch.GetTimestamp(); await t.Item2(a).ConfigureAwait(false); }),
+                        model: (Func<Model, Task>)(m =>
+                        {
+                            var elapsed = Stopwatch.GetTimestamp() - start;
+                            classifier.Add(classify is null ? opName : opName + "/" + classify(m), elapsed);
+                            return t.Item3(m);
+                        }));
+                });
         }
 
-        return new GenInitialAsync<Actual, Model>(initial)
+        var task = new GenInitialAsync<Actual, Model>(initial)
         .Select(Gen.OneOf(opNameActions).Array, (a, b) => new ModelBasedDataAsync<Actual, Model>(a.Task, a.Stream, a.Seed, b))
         .SampleAsync(async d =>
         {
@@ -1685,6 +1846,20 @@ public static partial class Check
             }
             return sb.ToString();
         }, logger);
+        return classifier is null ? task : PrintAfter(task, classifier, writeLine!);
+
+        // Printed in a finally, because a failing sample is exactly when the classification is worth reading.
+        static async Task PrintAfter(Task task, Classifier classifier, Action<string> writeLine)
+        {
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            finally
+            {
+                classifier.Print(writeLine);
+            }
+        }
     }
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
@@ -1698,13 +1873,16 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
-        => SampleModelBasedAsync(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBasedAsync(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1718,14 +1896,17 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation1,
         GenOperationAsync<Actual, Model> operation2,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
-        => SampleModelBasedAsync(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBasedAsync(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1740,14 +1921,17 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation1,
         GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
-        => SampleModelBasedAsync(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBasedAsync(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1763,14 +1947,17 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation1,
         GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3, GenOperationAsync<Actual, Model> operation4,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
-        => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
+        => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1787,6 +1974,8 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1794,9 +1983,10 @@ public static partial class Check
         GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3, GenOperationAsync<Actual, Model> operation4,
         GenOperationAsync<Actual, Model> operation5,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4, operation5],
-            equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+            equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
     /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1814,6 +2004,8 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
+    /// table of how often each operation ran is written, split by classification if this is given.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1821,9 +2013,10 @@ public static partial class Check
         GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3, GenOperationAsync<Actual, Model> operation4,
         GenOperationAsync<Actual, Model> operation5, GenOperationAsync<Actual, Model> operation6,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Action<string>? writeLine = null, ILogger? logger = null)
+        Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
+        Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4, operation5, operation6],
-            equal, seed, iter, time, threads, printActual, printModel, writeLine, logger);
+            equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     sealed class MetamorphicData<T>(T state1, T state2, uint stream, ulong seed)
     {

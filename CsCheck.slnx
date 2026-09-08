@@ -4,6 +4,8 @@
     <File Path="AGENTS.md" />
     <File Path="docs/Comparison.md" />
     <File Path="docs/GettingStarted.md" />
+    <File Path="docs/Spec.md" />
+    <File Path="docs/SpecDesign.md" />
     <File Path="docs/Why.md" />
     <File Path="README.md" />
   </Folder>

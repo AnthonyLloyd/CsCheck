@@ -101,6 +101,10 @@ Gen.Int.Array.Select(a => (new SetSlim<int>(a), new HashSet<int>(a)))
         (hs, i) => hs.Add(i)));
 ```
 
+With `writeLine:` set a table of how often each operation ran is written, rows named `Op0`, `Op1` by argument position.
+Add `classify:` over the model state to split each operation by the state it acted on, which is how to check the
+interesting cases were reached and not just the easy one. Both are inert without `writeLine:`.
+
 ### Metamorphic testing — `SampleMetamorphic`
 Do the same thing two different ways from one initial sample; assert equal.
 
@@ -112,6 +116,65 @@ Gen.Dictionary(Gen.Int, Gen.Byte)
         (d, t) => { d[t.V0] = t.V1; d[t.V2] = t.V3; },
         (d, t) => { if (t.V0 == t.V2) d[t.V2] = t.V3; else { d[t.V2] = t.V3; d[t.V0] = t.V1; } }));
 ```
+
+### Specification testing — `Spec` + `Exhaustive` / `Sample` / `Faults` / `Conform`
+For a stateful thing specified by a document (a protocol, exchange rules, a regulation). Write a small pure
+transition system over an immutable `record` state plus named requirements each carrying the sentence it comes
+from, then check it four ways from the one definition. See `docs/Spec.md` for how, `docs/SpecDesign.md` for why, and `Tests/Specs/FixEngineSpec.cs`.
+
+```csharp
+var spec = Spec.From(State.Connected)
+    .Action("Recv", Inbound, (s, _) => s.Status != Disconnected, (s, m) => s.Inbound(m), weight: 30)
+    .Action("Tick", s => s.Status != Disconnected, s => s.Tick(), weight: 20)
+    .Terminal(s => s.Status == Disconnected)
+    .Invariant("EXPECT-POSITIVE", "MsgSeqNum: value must be positive", s => s.Expect >= 1)
+    .Rule("TESTREQ-ANSWERED", "Respond to a TestRequest with a Heartbeat echoing the TestReqID.",
+        when: (b, a) => b.Up && a.Got(In.TestRequest, Seq.Expected), then: (b, a) => a.Put(Out.Heartbeat))
+    .Never("EXPECT-MONOTONIC", "SequenceReset may only increase the expected sequence number.",
+        (b, a) => a.Expect < b.Expect)
+    .Response("LOGOUT-COMPLETES", "Terminate anyway if the confirming Logout does not arrive.",
+        trigger: (b, a) => a.Status == LogoutSent && b.Status != LogoutSent,
+        response: (b, a) => a.Status == Disconnected, within: 3, per: "Tick");
+
+spec.Exhaustive(TUnitX.WriteLine);   // proof when the state space closes; shortest path when it does not
+spec.Sample(TUnitX.WriteLine);       // random walks with shrinking, for models too big to close
+spec.Faults(TUnitX.WriteLine);       // mutation testing for the requirements themselves
+spec.SampleFaults(TUnitX.WriteLine); // the same table walked rather than proved, when the space will not close
+spec.Dot();                          // reachable state graph in Graphviz DOT, for a model small enough to look at
+spec.Conform(() => new Engine(), Apply, TUnitX.WriteLine); // does the real code conform to the spec
+```
+
+Rules for generating this:
+- The state **must** be an immutable `record`/`record struct` (value equality) and every counter **must** saturate,
+  or `Exhaustive` never closes. Abstract argument values to the relations the document's rules are written in
+  (`TooLow`/`Expected`/`TooHigh`), not raw values.
+- Dependency direction is **implementation → specification → tests**. The system under test owns the vocabulary
+  (message kinds, enums, configuration constants) and knows nothing about the spec; the spec does
+  `using static Tests.TheImplementation;`. Never make the implementation reference its specification — it could then
+  not be shipped without it. In this repo the trio lives in `Tests/Specs/` as `Thing.cs`, `ThingSpec.cs` and
+  `ThingTests.cs`, so each file is named exactly after the single type it holds.
+- Saturate first; only when a counter genuinely cannot saturate add `.Boundary(s => ...)`, which closes the search
+  over that region instead of giving up at `maxStates`. The step out of the boundary is still checked, but an unheld
+  `Reachable` becomes a note rather than a failure because unreachability needs full closure. Do not add a boundary
+  to a model that already closes.
+- Put the last observation (message received, messages emitted) **in the state**. That is what makes every
+  requirement a pure predicate over `(before, after)`.
+- Requirement forms: `Invariant`, `Reachable`, `Rule(then)`, `Rule(when/then)`, `Rule(on:/when:/then:)`, `Never`, `AtMost`, `Response`, `Precedes`, `NeverAfter`. For a claim about every step use `Rule(then)`, never a `when:` of `true`: the first reports `every step`, the second a count that looks like vacuity information and is not.
+- `NeverAfter(until:)` scopes the obligation between two events, reopening on the next `after`. Prefer a state field
+  when the state can say whether the scope is open: it costs the same search state, prints in the counterexample, and
+  other requirements can read it. Six of the seven worked examples use a field; the one that uses `until:` had the
+  requirement come back **unexercised** from `Faults`, because its `until` closes the scope on the same condition that
+  would let `never` fire. A field cannot close itself out of the way.
+  `Response(within:, per:)` bounds in domain time — `per:` names the action that advances the deadline.
+- `Response` is for consequences that take time: a response holding on the trigger step itself does **not** discharge
+  the obligation. A property whose consequence happens in the triggering step (answer a TestRequest with a Heartbeat)
+  is a `Rule`. `Precedes` is the opposite — its two predicates holding on one step satisfies it.
+- Read `Triggered` in the report: `NEVER` means the requirement passed vacuously. `Fired` is per (action, argument) case, so `NEVER` there means that case is dead. A non-zero `deadlock` count prints a path to the first one.
+- Assert the size of the space (`report.States`, `report.Transitions`), not only that it closed. Every other assertion
+  has the form "no counterexample was found", which a search that explored too little also satisfies.
+- Assert which requirement caught each fault, not just that something did:
+  `Assert.That(report.CaughtBy("no heartbeat when idle")).IsEqualTo("HB-KEEPALIVE")`. A fault caught by the wrong
+  requirement passes while leaving the intended one unproven.
 
 ### Parallel / concurrency testing — `SampleParallel`
 Run operations sequentially then in parallel; passes if at least one
