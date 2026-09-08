@@ -3793,7 +3793,18 @@ public static partial class Check
     /// <summary>Generate a single random example.</summary>
     /// <param name="gen">The data generator.</param>
     public static T Single<T>(this Gen<T> gen)
-        => gen.Generate(PCG.ThreadPCG, null, out _);
+    {
+        var pcg = PCG.ThreadPCG;
+        var state = pcg.State;
+        try
+        {
+            return gen.Generate(pcg, null, out _);
+        }
+        catch (Exception e)
+        {
+            throw new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\"", e);
+        }
+    }
 
     sealed class SingleWorker<T>(Gen<T> gen, Func<T, bool> predicate) : IThreadPoolWorkItem
     {
