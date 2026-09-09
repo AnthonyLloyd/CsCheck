@@ -7,14 +7,12 @@ using static Tests.Specs.RefreshCache;
 /// <summary>A refresh-on-access cache as an executable specification of <see cref="RefreshCache"/>: values are
 /// served immediately from the slot, and a read that finds the value stale kicks off a single background load
 /// rather than blocking on it.
-///
-/// Unlike the FIX session layer there is no document to be faithful to. The quotes below are the design decisions,
+/// <para>Unlike the FIX session layer there is no document to be faithful to. The quotes below are the design decisions,
 /// and writing them down is the point: "serve stale while the loader is down" and "give up after a hard limit" are
-/// both defensible, and the specification is where you choose.
-///
-/// Concurrency is modelled by making the interleaving points actions. A load is not an atomic step: <c>Read</c>
+/// both defensible, and the specification is where you choose.</para>
+/// <para>Concurrency is modelled by making the interleaving points actions. A load is not an atomic step: <c>Read</c>
 /// starts it, and a later <c>Complete</c> or <c>Fail</c> ends it, with anything at all allowed in between. Exhaustive
-/// exploration then covers every interleaving instead of hoping a thread schedule hits the interesting one.</summary>
+/// exploration then covers every interleaving instead of hoping a thread schedule hits the interesting one.</para></summary>
 public static class RefreshCacheSpec
 {
     /// <summary>One key's slot. <c>Loads</c> counts loads in flight. It is an int rather than a bool on purpose:

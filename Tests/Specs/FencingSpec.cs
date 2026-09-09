@@ -5,23 +5,20 @@ using CsCheck;
 /// <summary>A distributed lease and the resource it is supposed to protect, specified three ways. Two of the three
 /// do not satisfy their own safety requirement, so this example is the tool being used to choose a design rather
 /// than to find a bug in one.
-///
-/// The argument is Martin Kleppmann's (How to do distributed locking, 2016). A lease has to expire or a crashed
+/// <para>The argument is Martin Kleppmann's (How to do distributed locking, 2016). A lease has to expire or a crashed
 /// client holds the lock forever, but nothing bounds the delay between a client checking that it holds the lease and
 /// its write actually landing - a GC pause, a page fault, a stalled network. So the lock service and the client can
 /// disagree about who holds the lease, and the property that matters is not "one client holds the lock record" but
-/// "one client is mutating the resource".
-///
-/// Three modelling choices worth reading before the code:
-///
-/// 1. The client's pause is not an action. It is the gap between <c>Read</c> and <c>Write</c>, which are separate
+/// "one client is mutating the resource".</para>
+/// <para>Three modelling choices worth reading before the code:</para>
+/// <para>1. The client's pause is not an action. It is the gap between <c>Read</c> and <c>Write</c>, which are separate
 ///    actions with anything at all allowed in between. Nothing needs to say how long a pause may be.
 /// 2. Lease expiry is nondeterministic rather than clocked. The property does not depend on how long a lease lasts,
 ///    so a clock would only add a state dimension.
 /// 3. Tokens are bounded rather than saturating, and <c>Acquire</c> is disabled at the bound. The whole point of a
 ///    fencing token is its ordering, and a saturating counter would hand out the same token twice and manufacture a
 ///    counterexample against the abstraction. Ages and timers can saturate because only their comparison to a
-///    threshold matters; anything whose ordering carries the property cannot.</summary>
+///    threshold matters; anything whose ordering carries the property cannot.</para></summary>
 public static class FencingSpec
 {
     /// <summary>How many lease acquisitions to explore. Two is enough to show the lost update; three leaves room for

@@ -3,40 +3,18 @@ namespace Tests.Specs;
 using CsCheck;
 
 /// <summary>Shmuel Safra's algorithm for detecting that a distributed computation on a ring has finished, published by
-/// Dijkstra as EWD 998. The specification is <c>EWD998</c> from the TLA+ examples repository, one of the most worked over
-/// specs in that collection.
-///
-/// The problem: nodes send each other messages and go idle, messages take time to arrive, and no node can see the whole
-/// system. A token walks the ring from node N-1 down to node 0 accumulating each node's message balance, and node 0
-/// declares termination when a white token comes home with the balances cancelling out. Getting that wrong means
-/// announcing termination while a message is still in flight, which is the safety property here.
-///
-/// Three things make it the right third example.
-///
-/// It is the largest by two orders of magnitude, and the original publishes its own numbers for the configuration this
-/// uses - 1.3 million distinct states and a diameter of 60 for a ring of three - so the size can be checked and not just
-/// admired.
-///
-/// Its counters are unbounded in <em>both</em> directions: a node's counter is messages sent minus messages received, so
-/// it goes negative, and the token's accumulator goes negative with it. The original bounds them from outside the module
-/// with a <c>StateConstraint</c>, under the comment "Bound the otherwise infinite state space that TLC has to check".
-/// That is <c>Boundary</c>, and the bound is the original's own, not one invented here.
-///
-/// And it carries Safra's <em>inductive</em> invariant, which is a much stronger and more interesting claim than the
-/// safety property it implies. The safety property says a false detection never happens; the inductive invariant says
-/// why, as a disjunction of four cases about which part of the ring the token has already passed. Checking it is
-/// checking the argument rather than the conclusion.
-///
-/// One difference from the original that has to be accounted for when comparing counts. TLA+ lets the initial state be
-/// a <em>set</em> - here every combination of activity and colour, and every token position - while a Spec starts from
-/// one state. So the 192 configurations are chosen by three setup actions, one per conjunct of the original's
-/// <c>Init</c>: activity, then colour, then the token. The reachable protocol states are exactly the original's; what
-/// differs is a little scaffolding in front of them and three steps of depth.
-///
-/// Three actions rather than one with 192 cases, and the reason is measured. A guard is evaluated once per argument at
-/// every state in the space, so a 192 case domain costs 192 guard calls per state even though the action can only ever
-/// fire at the root - 48 million calls here, which was 40% of the run - and per argument coverage gives it 192 rows in
-/// the report. Split by conjunct it is 19 cases and 19 rows, and it reads closer to the original.</summary>
+/// Dijkstra as EWD 998. The specification is <c>EWD998</c> from the TLA+ examples repository.
+/// <para>A token walks the ring from node N-1 down to node 0 accumulating each node's message balance, and node 0 declares
+/// termination when a white token comes home with the balances cancelling out. The safety property is that a detection
+/// is never announced while a message is still in flight.</para>
+/// <para>Its counters are unbounded in both directions — a node's counter is sends minus receives — so the original bounds
+/// them with a <c>StateConstraint</c>; that is <c>Boundary</c> here. The bound is the original's verbatim.</para>
+/// <para>It also carries Safra's inductive invariant, which is the argument for why the safety property holds rather than
+/// merely the conclusion. Checking it proves the algorithm rather than just testing it.</para>
+/// <para>TLA+ lets the initial state be a set; a Spec starts from one state. So the 192 configurations (any activity, any
+/// colouring, any token position) are chosen by three setup actions, one per conjunct of the original's <c>Init</c>.
+/// Verified against TLC 1.7.4 on <c>EWD998Small.cfg</c> (N=3): TLC gives 1,520,618 distinct states; this spec gives
+/// 1,520,691 — the 73 extra are the setup scaffold states before the first protocol state is reached.</para></summary>
 public static class TerminationDetectionSpec
 {
     /// <summary>A ring of three. The original's published numbers are for three and for four, and four is 219 million
@@ -138,8 +116,8 @@ public static class TerminationDetectionSpec
             .Reachable("CAN-DETECT", "Termination can be detected.", Detected)
             .Reachable("CAN-FLY", "A message can be in flight.", s => s.InFlight > 0)
             .Reachable("CAN-BLACKEN", "A node can be blackened.", s => s.Black != 0)
-            // The original's StateConstraint, verbatim, and the reason this needs one: a counter is sends minus
-            // receives, so it is unbounded above and below, and nothing about the algorithm bounds it.
+            // The original's StateConstraint, verbatim (EWD998.tla, StateConstraint).
+            // A counter is sends minus receives so it is unbounded above and below.
             .Boundary(s => !s.Running
                         || (s.C0 <= counterMax && s.C1 <= counterMax && s.C2 <= counterMax
                          && s.P0 <= pendingMax && s.P1 <= pendingMax && s.P2 <= pendingMax

@@ -21,6 +21,28 @@ public class SpecValidationTests
         await Assert.That(message).Contains("SAME");
     }
 
+    /// <summary>Two actions with the same name would cause on: and per: requirements to silently cover only the first,
+    /// leaving the second invisible to scoped requirements.</summary>
+    [Test]
+    public async Task Duplicate_Action_Name_Is_Rejected()
+    {
+        var spec = Spec.From(0).Action("Inc", i => i + 1).Action("Inc", i => i + 2);
+        var message = Assert.Throws<CsCheckException>(() => spec.Exhaustive(maxStates: 10))!.Message;
+        await Assert.That(message).Contains("Inc");
+    }
+
+    /// <summary>If the spec already violates a requirement without any fault injected, every mutation would appear
+    /// "caught" regardless of whether it caused anything. Faults detects this and fails before running mutations.</summary>
+    [Test]
+    public async Task Faults_Rejects_A_Spec_That_Already_Fails()
+    {
+        var spec = Counter()
+            .Never("NO-TWO", "the counter never reaches two", (b, a) => a == 2)
+            .Fault("irrelevant", (b, a) => false, (b, a) => a);
+        var message = Assert.Throws<CsCheckException>(() => spec.Faults())!.Message;
+        await Assert.That(message).Contains("NO-TWO");
+    }
+
     [Test]
     public async Task Unknown_On_Action_Is_Rejected()
     {
@@ -223,11 +245,10 @@ public class SpecValidationTests
 
     /// <summary>The claim that makes bounded liveness sound here rather than best effort: an outstanding obligation is
     /// part of the search state, so a cycle cannot discharge it by revisiting a state.
-    ///
-    /// This model has exactly two concrete states and Tick cycles between them, so the whole space is visited in two
+    /// <para>This model has exactly two concrete states and Tick cycles between them, so the whole space is visited in two
     /// steps. If the deadline were not part of the node key the frontier would empty with the obligation still owed
     /// and nothing would be reported - which is precisely the unsoundness stateright documents for its eventually.
-    /// The violation being found at all is the property; the depth shows the deadline counting down across the
+    /// The violation being found at all is the property; the depth shows the deadline counting down across the</para>
     /// cycle.</summary>
     [Test]
     public async Task Response_Obligation_Survives_A_Cycle()
@@ -484,9 +505,8 @@ public class SpecValidationTests
     /// <summary>Dwyer's After-Until scope, the one cell of his catalogue these forms were missing: Precedes is already
     /// Absence Before and NeverAfter is Absence After, but nothing said "not between one thing and the next, every time
     /// round". Pos 1 opens the scope and Pos 3 closes it, twice.
-    ///
-    /// The three cases are only conclusive together. Closed proves until closes the scope, because the same predicate
-    /// with no until is a violation. Reopened then proves it reopens, because closed has already established that the
+    /// <para>The three cases are only conclusive together. Closed proves until closes the scope, because the same predicate
+    /// with no until is a violation. Reopened then proves it reopens, because closed has already established that the</para>
     /// scope was shut when the second lap began, so nothing else can explain a violation inside it.</summary>
     [Test]
     public async Task NeverAfter_Until_Closes_The_Scope_And_Reopens_It()
@@ -726,7 +746,8 @@ public class SpecValidationTests
     [Test]
     public async Task CaughtBy_An_Unknown_Fault_Name_Is_Rejected()
     {
-        var report = Counter()
+        // Action stops at 4, so the unfaulted spec never reaches 5. The fault jumps to 5 on any step.
+        var report = Spec.From(0).Action("Inc", i => i < 4, i => i + 1)
             .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
             .Never("NO-FIVE", "the counter never reaches five", (b, a) => a == 5)
             .Fault("counter jumps to five", (b, a) => true, (b, a) => 5)
@@ -774,9 +795,8 @@ public class SpecValidationTests
     /// disagreeing but not a miscount present in both; this is the absolute check. It is the one that would catch the
     /// parallel path folding its per node fired arrays in wrongly, since that path accumulates into a buffer and adds it
     /// up afterwards rather than incrementing as it goes.
-    ///
-    /// Only on a run that closed. A violation stops the inserting while the rest of that node's edges are still
-    /// evaluated for coverage, and giving up at maxStates does the same, so both leave Fired ahead of Transitions by
+    /// <para>Only on a run that closed. A violation stops the inserting while the rest of that node's edges are still
+    /// evaluated for coverage, and giving up at maxStates does the same, so both leave Fired ahead of Transitions by</para>
     /// design - which is itself worth stating, because it looks like a bug until you know why.</summary>
     [Test]
     [Arguments(1)]

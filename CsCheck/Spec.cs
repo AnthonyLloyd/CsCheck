@@ -332,9 +332,8 @@ public sealed class Spec<S>(S initial)
     /// <summary>May hold on at most <paramref name="times"/> steps of any one execution: "at most three retries", "the
     /// resource is created once". <c>Never</c> is the <paramref name="times"/> of zero case, expressed separately
     /// because it needs no counter.
-    ///
-    /// The count so far becomes part of the search state, so this is proved rather than sampled: without that, a state
-    /// reached once and a state reached for the fourth time would be the same search node and the excess would go
+    /// <para>The count so far becomes part of the search state, so this is proved rather than sampled: without that, a state
+    /// reached once and a state reached for the fourth time would be the same search node and the excess would go</para>
     /// unreported. Costs one byte of node per requirement, so unlike <c>Precedes</c> the limit is eight.</summary>
     public Spec<S> AtMost(string id, string quote, int times, Func<S, S, bool> occurs)
     {
@@ -362,11 +361,10 @@ public sealed class Spec<S>(S initial)
     /// <summary>Bounded response. Once <paramref name="trigger"/> holds, <paramref name="response"/> must hold on one of
     /// the next <paramref name="within"/> steps, unless <paramref name="cancel"/> discharges the obligation first.
     /// The outstanding deadline becomes part of the search state so <c>Exhaustive</c> proves this too.
-    ///
-    /// The next steps, not this one: a response holding on the trigger step itself does not discharge the obligation.
+    /// <para>The next steps, not this one: a response holding on the trigger step itself does not discharge the obligation.
     /// That is stricter than the usual reading of leads-to, and the opposite of <c>Precedes</c>, which is satisfied by
     /// its two predicates holding on one step. So a property whose consequence happens <em>in</em> the triggering step,
-    /// like answering a TestRequest with a Heartbeat, is a <c>Rule</c>; <c>Response</c> is for the ones that take
+    /// like answering a TestRequest with a Heartbeat, is a <c>Rule</c>; <c>Response</c> is for the ones that take</para>
     /// time.</summary>
     /// <remarks><paramref name="per"/> names an action, not an action and its argument. That is right for a clock,
     /// which is what it is nearly always used for, but it means a deadline cannot be measured in "reads of key k".
@@ -426,11 +424,10 @@ public sealed class Spec<S>(S initial)
     /// The mirror of <c>Precedes</c>, for the many specifications that say a state is reached and then never left:
     /// once initialised never uninitialised, once committed never rolled back, once a value is cached never a miss.
     /// Holding on the same step is not a violation.
-    ///
-    /// Give <paramref name="until"/> and the obligation lifts again when it holds, and returns when
+    /// <para>Give <paramref name="until"/> and the obligation lifts again when it holds, and returns when
     /// <paramref name="after"/> next does - "not between one and the other, every time round". The opening and closing
     /// steps are both outside the scope. Before reaching for it, check whether the state already says whether the scope
-    /// is open: a field costs the same search state, reads in the printed counterexample where a history bit does not,
+    /// is open: a field costs the same search state, reads in the printed counterexample where a history bit does not,</para>
     /// and can be shared with other requirements. Every worked example is better off with the field.</summary>
     public Spec<S> NeverAfter(string id, string quote, Func<S, S, bool> after, Func<S, S, bool> never,
         Func<S, S, bool>? until = null)
@@ -480,6 +477,11 @@ public sealed class Spec<S>(S initial)
         if (Actions.Count == 0) ThrowHelper.Throw("Spec has no actions");
         // Otherwise every state is pruned, the report says one state and closed, and it looks like a proof.
         if (InBoundary is not null && !InBoundary(Initial)) ThrowHelper.Throw("Spec boundary excludes the initial state");
+        // Two actions with the same name make on: and per: resolution ambiguous: only the first match is found, so a
+        // requirement scoped to that name silently misses every later action of the same name.
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var a in Actions)
+            if (!names.Add(a.Name)) ThrowHelper.Throw($"Spec has more than one action with the name '{a.Name}'");
         // Two requirements sharing an id would give the coverage table two identical rows and make Faults credit the
         // wrong one, quietly degrading the traceability the ids exist for.
         var ids = new HashSet<string>(StringComparer.Ordinal);
@@ -1527,8 +1529,7 @@ public static partial class Check
     /// sampled rather than the shallowest that exists, and <c>NOTHING</c> means no requirement was seen to detect the
     /// fault rather than that none can. A <c>Reachable</c> requirement can never appear in <c>Caught by</c> at all,
     /// because unreachability only follows from closure.
-    ///
-    /// The budget is per fault, so the work is <paramref name="iter"/> walks times the number of faults.</remarks>
+    /// <para>The budget is per fault, so the work is <paramref name="iter"/> walks times the number of faults.</para></remarks>
     /// <param name="spec">The specification to mutate.</param>
     /// <param name="writeLine">WriteLine function for the fault table.</param>
     /// <param name="minSteps">The shortest trace to generate.</param>
@@ -1583,6 +1584,10 @@ public static partial class Check
         // Every other engine validates through the walk it starts. This one would skip it entirely for a spec with no
         // faults declared, so a typo in an on: name would go unreported.
         spec.Validate();
+        // A spec that already violates a requirement without any fault injected will report every mutation as "caught",
+        // because the base violation is found regardless. Fail immediately with the base violation so the table is not
+        // filled with misleading "caught" entries from a spec that was never correct.
+        Exhaustive(spec, null, null, 10_000_000, int.MaxValue, 1, true, out _);
         var w = 5;
         for (int i = 0; i < spec.FaultList.Count; i++) if (spec.FaultList[i].Name.Length > w) w = spec.FaultList[i].Name.Length;
         // Measured, so an id of any length still lines the table up.
@@ -1658,7 +1663,11 @@ public static partial class Check
             {
                 var violation = SpecCheck(spec, trace, null);
                 if (violation is not null) return violation.ToString(spec.Printer);
-                var i = Diverged(create, apply, trace);
+                // Re-running Diverged here to find the step for the error message. If apply throws deterministically
+                // the printer would throw too and Sample could not produce the shrunk CsCheckException with the trace.
+                int i;
+                try { i = Diverged(create, apply, trace); }
+                catch (Exception e) { i = -1; return $"\n  Implementation threw during conformance check: {e.Message}"; }
                 return new StringBuilder("\n  Implementation diverged from the specification at step ").Append(i + 1)
                     .Append("\n         Trace: ").Append(trace.ToString(spec.Printer, i)).ToString();
             });

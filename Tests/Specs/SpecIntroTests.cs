@@ -7,13 +7,11 @@ using CsCheck;
 /// <summary>An introduction to <c>Spec</c>, in one file. The subject is the state machine everyone has written: an
 /// order that gets paid, shipped and delivered, or cancelled and refunded. It usually lives in a table on a wiki page
 /// and gets implemented as a switch, and it always has a hole in it somewhere.
-///
-/// Nothing here needs abstracting. The state is a three field record and the space closes at seven states and six
-/// transitions, so you can check the tool's answer by hand - which is the point of reading this one first.
-///
-/// The worked examples that follow this one (FixEngine, RefreshCache, Fencing, BlockingQueue, AlternatingBit,
+/// <para>Nothing here needs abstracting. The state is a three field record and the space closes at seven states and six
+/// transitions, so you can check the tool's answer by hand - which is the point of reading this one first.</para>
+/// <para>The worked examples that follow this one (FixEngine, RefreshCache, Fencing, BlockingQueue, AlternatingBit,
 /// Disruptor, TerminationDetection) are where the technique gets
-/// interesting and where the abstraction choices start to matter.</summary>
+/// interesting and where the abstraction choices start to matter.</para></summary>
 public class SpecIntroTests
 {
     public enum Status { New, Paid, Shipped, Delivered, Cancelled }
@@ -104,8 +102,7 @@ public class SpecIntroTests
     /// <summary>Enumerate every reachable state and check every requirement on every transition out of every one of
     /// them. When the frontier empties the state space is closed, so this is a proof for the model rather than a
     /// sample of it, and the report is the certificate.
-    ///
-    /// Read the report as well as the assertions. Triggered says how often each requirement's antecedent actually
+    /// <para>Read the report as well as the assertions. Triggered says how often each requirement's antecedent actually</para>
     /// fired - a NEVER there means the requirement passed vacuously and proves nothing.</summary>
     [Test]
     public async Task Exhaustive_Proof()
@@ -134,13 +131,11 @@ public class SpecIntroTests
 
     /// <summary>Forget to let a cancelled order be refunded - an omission, not a wrong answer - and a paid order that
     /// is cancelled can reach a state it can never leave with the customer's money still held.
-    ///
-    /// Two independent signals catch it. CAN-REFUND is now provably unreachable, because the state space closed
+    /// <para>Two independent signals catch it. CAN-REFUND is now provably unreachable, because the state space closed
     /// without it ever holding; that is what Reachable is for. And the deadlock count is 1, which costs no requirement
     /// at all - Exhaustive knows which states have nothing enabled, and Terminal said which of those were intended.
-    /// The second signal is the more interesting one, because nobody writes a requirement for a transition they forgot.
-    ///
-    /// Refund and REFUND-IS-ONE-STEP report NEVER here, which is correct: with the action disabled there is nothing
+    /// The second signal is the more interesting one, because nobody writes a requirement for a transition they forgot.</para>
+    /// <para>Refund and REFUND-IS-ONE-STEP report NEVER here, which is correct: with the action disabled there is nothing</para>
     /// for them to do. That is what the coverage table is for.</summary>
     [Test]
     public async Task Missing_Transition_Is_A_Dead_End()

@@ -270,7 +270,7 @@ public class SpecScaleTests
             var fresh = Stopwatch.StartNew();
             var report = spec.Exhaustive();
             fresh.Stop();
-            TUnitX.WriteLine($"{name,-8} {report.States,6:#,0} states {report.Transitions,8:#,0} transitions "
+            TUnitX.WriteLine($"{name,-9} {report.States,9:#,0} states {report.Transitions,11:#,0} transitions "
                 + $"{fresh.Elapsed.TotalMilliseconds,6:0.0}ms");
         }
     }

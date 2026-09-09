@@ -22,9 +22,8 @@ public class FencingTests
     /// <summary>Fencing only the writes is not enough, which is the interesting result. The resource learns a token
     /// only when one is presented, so a new holder that has not written yet leaves the old holder's token still the
     /// highest the resource has seen, and the old holder's late write is accepted.
-    ///
-    /// The shortest violation is not the lost update itself but its direct cause two steps earlier: a read on a
-    /// superseded token being served. Both requirements fail for this configuration; breadth first finds the
+    /// <para>The shortest violation is not the lost update itself but its direct cause two steps earlier: a read on a
+    /// superseded token being served. Both requirements fail for this configuration; breadth first finds the</para>
     /// shallower one, which is also the more useful one to be told about.</summary>
     [Test]
     public async Task Writes_Only_Is_Not_Enough()

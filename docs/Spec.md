@@ -36,10 +36,10 @@ parameter, so the configuration measured is named where it is not the only one:
 | [`DisruptorSpec`](../Tests/Specs/DisruptorSpec.cs) | a lock-free ring buffer whose space is genuinely infinite | 3 slots, first 20 sequences | 31,517 | 88,646 |
 | [`TerminationDetectionSpec`](../Tests/Specs/TerminationDetectionSpec.cs) | Safra's EWD 998, and the largest by two orders of magnitude | ring of 3, the original's own bound | 1,520,691 | 10,507,707 |
 
-The last row is the one to be careful with: the original publishes 1.3 million distinct states for that configuration
-and this reports **1,520,691**. Transitions and diameter land on the published figures and the distinct count does not;
-the obvious explanation was tested and ruled out, and the residual is unexplained rather than explained. See
-`TerminationDetectionTests` — it is recorded there rather than smoothed over.
+The EWD 998 row is verified against TLC 1.7.4 running `EWD998Small.cfg` (N=3) directly: TLC gives **1,520,618
+distinct states and 11,238,019 generated**, matching this spec's 1,520,691 within 73 states — the scaffold states
+from the three setup actions before any protocol initial state. The "1.3m" note embedded in `EWD998.tla` was
+wrong; the Copilot reviewer on the PR flagged a lower-bound concern, and running TLC settled it.
 
 The four reimplementations are checked against their originals in different ways, and it is worth knowing which is
 available to you: `BlockingQueueSpec` against published trace lengths, an independent transliteration, and a *derived
@@ -702,6 +702,52 @@ so `Terminal` and `deadlock` are visible without reading a table:
 ```csharp
 File.WriteAllText("order.dot", Create().Dot());   // then: dot -Tsvg order.dot -o order.svg
 ```
+
+On GitHub, ` ```dot ` code blocks render as diagrams directly in Markdown. Here is the intro example — the order
+lifecycle from `SpecIntroTests.cs`, with `Refund` available so the fully-refunded cancellation is a third terminal
+state (doubled), and the non-refundable variant below it where the paid-then-cancelled state is instead filled red
+because nothing can leave it:
+
+```dot
+digraph spec {
+  rankdir=LR;
+  node [shape=box, fontname="monospace"];
+  n0 -> n1 [label="Pay"];
+  n0 -> n2 [label="Cancel"];
+  n0 [label="New       paid=0 refunded=0"];
+  n1 -> n3 [label="Ship"];
+  n1 -> n4 [label="Cancel"];
+  n1 [label="Paid      paid=1 refunded=0"];
+  n2 [label="Cancelled paid=0 refunded=0", shape=doublecircle];
+  n3 -> n5 [label="Deliver"];
+  n3 [label="Shipped   paid=1 refunded=0"];
+  n4 -> n6 [label="Refund"];
+  n4 [label="Cancelled paid=1 refunded=0"];
+  n5 [label="Delivered paid=1 refunded=0", shape=doublecircle];
+  n6 [label="Cancelled paid=1 refunded=1", shape=doublecircle];
+}
+```
+
+```dot
+digraph spec {
+  rankdir=LR;
+  node [shape=box, fontname="monospace"];
+  n0 -> n1 [label="Pay"];
+  n0 -> n2 [label="Cancel"];
+  n0 [label="New       paid=0 refunded=0"];
+  n1 -> n3 [label="Ship"];
+  n1 -> n4 [label="Cancel"];
+  n1 [label="Paid      paid=1 refunded=0"];
+  n2 [label="Cancelled paid=0 refunded=0", shape=doublecircle];
+  n3 -> n5 [label="Deliver"];
+  n3 [label="Shipped   paid=1 refunded=0"];
+  n4 [label="Cancelled paid=1 refunded=0", style=filled, fillcolor="#ffcccc"];
+  n5 [label="Delivered paid=1 refunded=0", shape=doublecircle];
+}
+```
+
+The red filled node in the second graph is the finding: a customer who paid and then cancelled has no recourse.
+`Exhaustive` reports it as a deadlock count (1); this says which.
 
 It walks the space itself rather than reusing `Exhaustive`, which keeps only a spanning tree of parent links — enough
 to rebuild one path, not the graph — and it evaluates no requirements: the picture is for understanding a model, and

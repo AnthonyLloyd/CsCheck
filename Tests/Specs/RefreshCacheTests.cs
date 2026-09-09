@@ -65,8 +65,7 @@ public class RefreshCacheTests
     /// <summary>The cache has no liveness property of its own: a stale value only becomes fresh if something reads it
     /// and the loader returns, and neither is bounded by anything the cache controls. Asserting the property anyway
     /// puts the counterexample on the record, which is the argument for whichever behaviour you choose to ship.
-    ///
-    /// The requirement is stated per key. A single Response over both would carry one deadline between them, so a
+    /// <para>The requirement is stated per key. A single Response over both would carry one deadline between them, so a</para>
     /// refresh completing for one key would discharge the obligation raised by the other.</summary>
     [Test]
     public async Task Stale_Is_Unbounded_While_Loader_Fails()

@@ -5,11 +5,10 @@ using System;
 /// <summary>A hand written session engine in the shape production code actually takes: mutable flags and an ordered
 /// chain of ifs, written from the FIX rules directly. It has one planted defect, to show what a conformance failure
 /// looks like.
-///
-/// This is the system under test, so it owns the vocabulary - the message kinds, the sequence relations, what a step
+/// <para>This is the system under test, so it owns the vocabulary - the message kinds, the sequence relations, what a step
 /// emits, and the connection status - and knows nothing about the specification that checks it. The dependency runs
 /// engine to specification to tests and never back, because an implementation that referenced its own specification
-/// could not be shipped without it.</summary>
+/// could not be shipped without it.</para></summary>
 public sealed class FixEngine
 {
     /// <summary>HeartBtInt, in ticks.</summary>

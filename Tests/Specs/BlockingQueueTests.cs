@@ -7,21 +7,17 @@ using CsCheck;
 using Wake = BlockingQueueSpec.Wake;
 
 /// <summary>Checked against the original three ways, in increasing order of how much it would take to fool.
-///
-/// One, an independent breadth first walk transliterated straight from the TLA+ - a list of producer ids for the
+/// <para>One, an independent breadth first walk transliterated straight from the TLA+ - a list of producer ids for the
 /// buffer and a set of names for the wait set, no bitmasks and no abstraction - has to agree on whether the deadlock is
-/// reachable and on how many steps it takes to get there.
-///
-/// Two, the trace lengths the original publishes for named configurations are pinned: p1c2b1 deadlocks in eight states
-/// and p2c2b1 in nine, TLC counting the initial state as one.
-///
-/// Three, and this is the one worth having, the original derives a closed form for when the design is broken -
+/// reachable and on how many steps it takes to get there.</para>
+/// <para>Two, the trace lengths the original publishes for named configurations are pinned: p1c2b1 deadlocks in eight states
+/// and p2c2b1 in nine, TLC counting the initial state as one.</para>
+/// <para>Three, and this is the one worth having, the original derives a closed form for when the design is broken -
 /// deadlock free exactly when twice the capacity is at least the number of threads. That is a claim about a whole
-/// family rather than about one trace, so the sweep checks this reimplementation against a theorem.
-///
-/// Reading the original mattered. Its final version notifies one thread of the <em>opposite</em> kind, which is
+/// family rather than about one trace, so the sweep checks this reimplementation against a theorem.</para>
+/// <para>Reading the original mattered. Its final version notifies one thread of the <em>opposite</em> kind, which is
 /// already a fix, and a model of that finds nothing - as the first attempt here did, oracle and all. The version the
-/// published traces come from notifies one arbitrary thread of <em>either</em> kind, because that is what
+/// published traces come from notifies one arbitrary thread of <em>either</em> kind, because that is what</para>
 /// <c>Object.notify</c> does, and that is the whole bug.</summary>
 public class BlockingQueueTests
 {
@@ -106,9 +102,8 @@ public class BlockingQueueTests
     /// <summary>An independent walk of the original, transliterated rather than modelled: the buffer is a list of the
     /// producer ids that filled it and the wait set is a set of names, so nothing here shares an assumption or a line
     /// of bit arithmetic with the specification. It has to agree on the shortest number of steps to a deadlock.
-    ///
-    /// It also prices the one abstraction. This keeps the producer ids the original carries; the specification keeps
-    /// only the length, because nothing ever reads a value out of the buffer - Get takes the tail and discards the head,
+    /// <para>It also prices the one abstraction. This keeps the producer ids the original carries; the specification keeps
+    /// only the length, because nothing ever reads a value out of the buffer - Get takes the tail and discards the head,</para>
     /// and a notify picks a thread rather than the datum's owner. The ratio is what that distinction would have cost.</summary>
     [Test]
     public async Task Agrees_With_A_Transliteration_Of_The_Original()

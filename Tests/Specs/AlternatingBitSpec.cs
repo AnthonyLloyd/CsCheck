@@ -5,8 +5,7 @@ using CsCheck;
 /// <summary>The Alternating Bit Protocol: how to get reliable, in-order, exactly-once delivery over a channel that
 /// loses, duplicates and possibly reorders, using one bit of sequence number. Bartlett, Scantlebury and Wilkinson,
 /// 1969, and the standard first example in every protocol verification course since.
-///
-/// This is the example that <c>AtMost</c> exists for, and the reason is worth stating because the other four worked
+/// <para>This is the example that <c>AtMost</c> exists for, and the reason is worth stating because the other four worked
 /// examples could not use it. The property is <b>at-most-once delivery</b>: a frame handed to the application once,
 /// never twice, however many copies of it the channel makes. Counting deliveries per frame is not something the
 /// protocol does - a real receiver keeps one bit, not a tally - so putting the count in the model would be adding
@@ -14,12 +13,11 @@ using CsCheck;
 /// state instead, which is exactly the distinction its documentation draws: without that, a state reached once and the
 /// same state reached for the second time would be one search node and the duplicate would go unreported. The
 /// per-element overload gives each frame its own count, because one shared count would let a duplicate of frame 0
-/// spend frame 1's budget.
-///
-/// It is also checkable against two textbook results rather than against one file, which is a stronger thing to check
+/// spend frame 1's budget.</para>
+/// <para>It is also checkable against two textbook results rather than against one file, which is a stronger thing to check
 /// against. <b>One bit is necessary</b>: a receiver that does not check the bit delivers duplicates. <b>And one bit is
 /// sufficient only if the channel preserves order</b>: over a channel that may reorder, one bit is not enough and the
-/// protocol fails. Both are configurations here, and both come out as predicted.</summary>
+/// protocol fails. Both are configurations here, and both come out as predicted.</para></summary>
 public static class AlternatingBitSpec
 {
     /// <summary>How many frames the sender has to deliver. Three is enough for the bit to alternate twice, which is what

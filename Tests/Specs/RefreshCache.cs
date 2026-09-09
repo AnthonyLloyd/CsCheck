@@ -5,9 +5,8 @@ using System;
 /// <summary>A refresh-on-access cache written the way the real thing is: mutable per-key entries, an explicit
 /// in-flight flag, and no planted defect. The load is split into starting it and completing it so the interleaving
 /// point is part of the API - which is exactly what makes it both model checkable and conformance testable.
-///
-/// As the system under test this owns the vocabulary and the configuration; the specification depends on it and not
-/// the other way round.</summary>
+/// <para>As the system under test this owns the vocabulary and the configuration; the specification depends on it and not
+/// the other way round.</para></summary>
 public sealed class RefreshCache
 {
     /// <summary>Ticks before a loaded value is considered stale and worth refreshing.</summary>

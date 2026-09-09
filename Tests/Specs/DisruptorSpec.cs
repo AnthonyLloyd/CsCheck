@@ -7,27 +7,22 @@ using CsCheck;
 /// it. The specification is <c>Disruptor_MPMC</c> from the TLA+ examples repository, which models a Rust
 /// implementation, and the property is the one it exists to check - that no producer ever writes a slot while a consumer
 /// is reading it.
-///
-/// It earns its place here for a reason none of the other examples can: <b>its state space is genuinely infinite, and no
+/// <para>It earns its place here for a reason none of the other examples can: <b>its state space is genuinely infinite, and no
 /// abstraction makes it finite</b>. The sequence counter only ever goes up. The original is in the same position and
 /// deals with it the same way, by supplying a bound from outside the module, which is what <c>Boundary</c> is. What
 /// closure means here is therefore weaker than elsewhere and worth saying out loud: <em>no data race is reachable
 /// within the first N sequences</em>. <c>DisruptorTests</c> raises N and shows the answer stops changing, which is
-/// evidence the bound hides nothing rather than a proof that it does not.
-///
-/// Two things the original carries that this does not, both dropped after checking nothing reads them.
-///
-/// The ring buffer's per-slot <c>readers</c> and <c>writers</c> sets, which exist to state <c>NoDataRaces</c>, are a
+/// evidence the bound hides nothing rather than a proof that it does not.</para>
+/// <para>Two things the original carries that this does not, both dropped after checking nothing reads them.</para>
+/// <para>The ring buffer's per-slot <c>readers</c> and <c>writers</c> sets, which exist to state <c>NoDataRaces</c>, are a
 /// function of the thread state: a writer occupies the slot of its claimed sequence exactly while its program counter
 /// says <c>Access</c>, and a reader occupies the slot of its next sequence on the same condition. So the invariant can
-/// be computed from the counters, and the sets are not part of the state at all.
-///
-/// The slot <em>values</em> and the <c>consumed</c> history are only ever appended to or read into that history, which
-/// the original itself labels as being for liveness. Nothing any safety requirement asks depends on them.
-///
-/// The one piece of cleverness kept verbatim is how publication is encoded. Rather than remembering which sequence a
+/// be computed from the counters, and the sets are not part of the state at all.</para>
+/// <para>The slot <em>values</em> and the <c>consumed</c> history are only ever appended to or read into that history, which
+/// the original itself labels as being for liveness. Nothing any safety requirement asks depends on them.</para>
+/// <para>The one piece of cleverness kept verbatim is how publication is encoded. Rather than remembering which sequence a
 /// slot holds, one bit per slot flips on each publish, and a sequence counts as published when the bit matches the
-/// parity of its round. The original's comment explains why that is sound: producers cannot overtake consumers.</summary>
+/// parity of its round. The original's comment explains why that is sound: producers cannot overtake consumers.</para></summary>
 public static class DisruptorSpec
 {
     /// <summary>Two of each, which is the smallest configuration that can race: one producer and one consumer cannot

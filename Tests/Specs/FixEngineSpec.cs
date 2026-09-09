@@ -9,31 +9,27 @@ using static Tests.Specs.FixEngine;
 /// an executable specification of <see cref="FixEngine"/>. Not the whole session layer: the scope is stated at the
 /// bottom of this comment and is narrower than the phrase "session layer" would suggest. Checked against QuickFIX/n
 /// Session.cs and SessionState.cs, which is why some rules below cite it.
-///
-/// Two words to be careful with. <see cref="State"/> is the complete valuation of every variable at one instant -
+/// <para>Two words to be careful with. <see cref="State"/> is the complete valuation of every variable at one instant -
 /// what model checkers mean by state, and what <c>Spec&lt;S&gt;</c> takes - while the single mode within it is
 /// <see cref="ConnectionStatus"/>, which is what an FSM library would have called the state. And the last
 /// inbound message and the messages emitted are themselves fields of <see cref="State"/>, which is what makes every
-/// requirement a predicate over a pair of states.
-///
-/// A session outlives its connections, so <see cref="ConnectionStatus.Disconnected"/> is not the end: one
+/// requirement a predicate over a pair of states.</para>
+/// <para>A session outlives its connections, so <see cref="ConnectionStatus.Disconnected"/> is not the end: one
 /// <see cref="State.Reconnect"/> is modelled, carrying the sequence numbers across. That is what makes the two
 /// directions of a reset distinguishable at all, and it is why several requirements have to stand aside for
-/// <see cref="State.WasReset"/>.
-///
-/// Two abstractions make the space finite. Sequence numbers become their <see cref="Seq"/> relation to the number
+/// <see cref="State.WasReset"/>.</para>
+/// <para>Two abstractions make the space finite. Sequence numbers become their <see cref="Seq"/> relation to the number
 /// expected, which is how the session layer's own rules are worded, but this loses NewSeqNo: a SequenceReset raises
 /// <see cref="State.Expect"/> by one rather than setting it. The counters also saturate at <see cref="Cap"/>, which a
 /// Logon answered with a ResendRequest reaches immediately, so OUTBOUND-ADVANCES checks its arithmetic below the cap
 /// and above it only that the numbers stop moving. And the clocks are <see cref="Interval"/> ticks saturating at
 /// <see cref="Cap"/>, collapsing four constants QuickFIX keeps independent (1x HeartBtInt to send a heartbeat, 1.2x
 /// to send a TestRequest, 2.4x to time out, fixed seconds for logon and logout), so the ordering of the timing rules
-/// is checked and their ratios are not.
-///
-/// Out of scope, so read nothing here as evidence about it: what a resend actually contains, beyond that one happens
+/// is checked and their ratios are not.</para>
+/// <para>Out of scope, so read nothing here as evidence about it: what a resend actually contains, beyond that one happens
 /// and that outbound numbers are consumed one per message; PossDupFlag and OrigSendingTime on messages this side
 /// resends; administrative messages replaced by SequenceReset-GapFill; SendingTime accuracy; CompID validation; and
-/// session level Rejects other than the two below.</summary>
+/// session level Rejects other than the two below.</para></summary>
 public static class FixEngineSpec
 {
     /// <summary>The inbound cases the session must handle. This list is the conformance matrix: one entry per

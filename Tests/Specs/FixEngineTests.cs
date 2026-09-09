@@ -13,10 +13,9 @@ public class FixEngineTests
     /// of every one of them. When the frontier empties the space is closed, so this is a proof for the abstracted
     /// model rather than a sample of it - including the two bounded response requirements, whose outstanding
     /// deadlines are carried in the search state.
-    ///
-    /// The size of the space is pinned as well. Every other assertion here has the form "no counterexample was
+    /// <para>The size of the space is pinned as well. Every other assertion here has the form "no counterexample was
     /// found", which a search that explored too little also satisfies, so without this a change that dropped a whole
-    /// class of successor would leave the test green while proving strictly less. A model change that legitimately
+    /// class of successor would leave the test green while proving strictly less. A model change that legitimately</para>
     /// moves these numbers should update them in the same commit, deliberately.</summary>
     [Test]
     public async Task Exhaustive_Proof()
@@ -42,9 +41,8 @@ public class FixEngineTests
     /// <summary>Mutation testing for the specification itself. Each planted defect is injected in turn and the state
     /// space re-explored; the table shows which requirement caught it and how many steps the shortest counterexample
     /// took. Faults throws if any defect escapes every requirement, so this fails when a requirement is missing.
-    ///
-    /// The two pairings asserted below are the ones worth pinning. Being caught by something is not enough: a fault
-    /// caught by the wrong requirement passes while leaving the intended one unproven, which is what happened to the
+    /// <para>The two pairings asserted below are the ones worth pinning. Being caught by something is not enough: a fault
+    /// caught by the wrong requirement passes while leaving the intended one unproven, which is what happened to the</para>
     /// test request fault before it was rewritten to perturb only the termination.</summary>
     [Test]
     public async Task Faults_Are_All_Caught()

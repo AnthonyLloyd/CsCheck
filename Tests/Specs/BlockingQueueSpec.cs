@@ -5,27 +5,23 @@ using CsCheck;
 /// <summary>A bounded buffer guarded by <c>wait</c> and <c>notify</c>, and the reason every code review says to write
 /// <c>notifyAll</c>. A producer that finds the buffer full waits; a consumer that finds it empty waits; and each of
 /// them, on succeeding, wakes one thread of the opposite kind. Nothing in that is obviously wrong, and it deadlocks.
-///
-/// The specification is Markus Kuppe's <c>BlockingQueue</c> (github.com/lemmy/BlockingQueue), which is the canonical
+/// <para>The specification is Markus Kuppe's <c>BlockingQueue</c> (github.com/lemmy/BlockingQueue), which is the canonical
 /// demonstration of a model checker finding a real Java concurrency bug - the fairness constraint in it is Lamport's.
-/// Two things make it worth having here rather than only there.
-///
-/// First, it is the one worked example that <em>deadlocks</em>. The other three prove a safety property over a design
+/// Two things make it worth having here rather than only there.</para>
+/// <para>First, it is the one worked example that <em>deadlocks</em>. The other three prove a safety property over a design
 /// that holds; this one has a design that does not, and the way it fails is that every thread ends up waiting for one
 /// of the others. That is a state with no action enabled, so it needs no requirement at all to detect: the deadlock
 /// count finds it and <c>DeadlockTrace</c> prints the path. The original states it as an invariant instead
-/// (<c>waitSet # Producers \cup Consumers</c>), and both are worth seeing - see the tests.
-///
-/// Second, the original derives a closed form for when the bug bites: it is deadlock free exactly when
+/// (<c>waitSet # Producers \cup Consumers</c>), and both are worth seeing - see the tests.</para>
+/// <para>Second, the original derives a closed form for when the bug bites: it is deadlock free exactly when
 /// <c>2 * BufCapacity &gt;= Cardinality(Producers \cup Consumers)</c>. A prediction over a whole family of
 /// configurations is a much stronger thing to check a reimplementation against than any single trace, and the tests
-/// sweep it.
-///
-/// One abstraction, and it is the one the docs argue for. The original buffer is a sequence of the producer ids that
+/// sweep it.</para>
+/// <para>One abstraction, and it is the one the docs argue for. The original buffer is a sequence of the producer ids that
 /// filled it, but nothing ever reads a value out of it: <c>Get</c> takes <c>Tail(buffer)</c> and discards the head,
 /// and a notify picks any waiting thread rather than the one whose datum was consumed. So only the length can change
 /// behaviour, and the length is what this carries. <c>BlockingQueueTests</c> measures what keeping the ids would have
-/// cost.</summary>
+/// cost.</para></summary>
 public static class BlockingQueueSpec
 {
     /// <summary>Which thread a successful <c>Put</c> or <c>Get</c> wakes. Three designs someone might actually write,
