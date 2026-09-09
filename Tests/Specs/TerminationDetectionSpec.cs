@@ -51,7 +51,7 @@ public static class TerminationDetectionSpec
 
         public override string ToString()
         {
-            if (!Running) return string.Concat("(setup phase ", Phase.ToString(), ")");
+            if (!Running) return $"(setup phase {Phase})";
             var sb = new System.Text.StringBuilder();
             for (int i = 0; i < N; i++)
                 sb.Append(i == 0 ? "" : " ").Append('n').Append(i).Append(IsActive(i) ? "+" : "-")
@@ -71,10 +71,10 @@ public static class TerminationDetectionSpec
             // The original's Init, one action per conjunct: any activity, then any colouring (or all white), then any
             // token position. The token always starts black with a zero accumulator, so the first round can never
             // conclude - Rule 6.
-            .Action("SetupActive", Masks, (s, m) => s.Phase == 0, (s, m) => s with { Active = m, Phase = 1 })
-            .Action("SetupColour", anyInitialColour ? Masks : White, (s, m) => s.Phase == 1,
+            .Action("SetupActive", Masks, (s, _) => s.Phase == 0, (s, m) => s with { Active = m, Phase = 1 })
+            .Action("SetupColour", anyInitialColour ? Masks : White, (s, _) => s.Phase == 1,
                                                                     (s, m) => s with { Black = m, Phase = 2 })
-            .Action("SetupToken", Nodes, (s, p) => s.Phase == 2,
+            .Action("SetupToken", Nodes, (s, _) => s.Phase == 2,
                                          (s, p) => s with { Pos = p, TokenBlack = true, Phase = 3 })
             // Rules 1 + 5 + 6. Node 0 starts a fresh round when the last one was not conclusive.
             .Action("InitiateProbe", s => s.Running && s.Pos == 0
@@ -165,7 +165,7 @@ public static class TerminationDetectionSpec
 
     public readonly record struct Msg(int From, int To)
     {
-        public override string ToString() => string.Concat(From.ToString(), "->", To.ToString());
+        public override string ToString() => $"{From}->{To}";
     }
 
     static readonly Msg[] Sends = [.. from i in Nodes from j in Nodes where i != j select new Msg(i, j)];
