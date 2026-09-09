@@ -1250,7 +1250,6 @@ public static partial class Check
     /// search state, so when the space closes every requirement is proved for the model, not sampled. Any violation is
     /// reported with a shortest path to it.</summary>
     /// <param name="spec">The specification to explore.</param>
-    /// <param name="writeLine">WriteLine function for the proof certificate.</param>
     /// <param name="maxStates">Give up after this many distinct states (default 10,000,000, measured at 2.0GB peak and
     /// under four seconds when actually reached). Hitting this proves nothing; declare a <c>Boundary</c> instead and the
     /// exploration closes over a region you chose. The boundary applies here and to <c>Faults</c>, not to <c>Sample</c>
@@ -1270,8 +1269,9 @@ public static partial class Check
     /// and handing it out costs more than it saves, so this is a loss rather than a wash. Above one thread the delegates
     /// must also be thread safe, not merely pure.</param>
     /// <param name="throwOnViolation">Throw a <see cref="CsCheckException"/> on the first violation (default true).</param>
-    public static SpecReport Exhaustive<S>(this Spec<S> spec, Action<string>? writeLine = null, int maxStates = 10_000_000,
-        int maxDepth = int.MaxValue, int threads = 1, bool throwOnViolation = true)
+    /// <param name="writeLine">WriteLine function for the proof certificate.</param>
+    public static SpecReport Exhaustive<S>(this Spec<S> spec, int maxStates = 10_000_000, int maxDepth = int.MaxValue,
+        int threads = 1, bool throwOnViolation = true, Action<string>? writeLine = null)
         => Exhaustive(spec, null, writeLine, maxStates, maxDepth, threads, throwOnViolation, out _);
 
     /// <summary>Enumerate the whole reachable state space breadth first, returning any violation with a shortest
@@ -1537,7 +1537,7 @@ public static partial class Check
             spec.InBoundary is null ? null
                 : "within the declared boundary: a fault caught by NOTHING may still be caught outside it",
             "No requirement detects these faults", writeLine, throwOnUncaught,
-            baseline: () => { Exhaustive(spec, null, null, maxStates, maxDepth, threads, true, out _); },
+            baseline: () => Exhaustive(spec, null, null, maxStates, maxDepth, threads, true, out _),
             fault => { var r = Exhaustive(spec, fault, null, maxStates, maxDepth, threads, false, out var v); return (v, r.Closed); });
 
     /// <summary>Mutation testing for a specification whose state space is too large to close. Each declared

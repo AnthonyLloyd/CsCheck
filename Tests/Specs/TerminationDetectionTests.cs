@@ -17,7 +17,7 @@ public class TerminationDetectionTests
     [Test]
     public async Task Termination_Is_Never_Detected_Early()
     {
-        var report = TerminationDetectionSpec.Create().Exhaustive(TUnitX.WriteLine, maxStates: 4_000_000);
+        var report = TerminationDetectionSpec.Create().Exhaustive(maxStates: 4_000_000, writeLine: TUnitX.WriteLine);
         TUnitX.WriteLine($"\n{report.States:#,0} states  (TLC 1.7.4: 1,520,618 + 73 scaffold = 1,520,691)");
         // TLC's "states generated" (11.2M) includes out-of-boundary successors; our Transitions only counts edges
         // within the boundary (10.5M). The counts are semantically different, not a discrepancy.
@@ -62,7 +62,7 @@ public class TerminationDetectionTests
     public async Task The_Interesting_States_Are_All_Reached()
     {
         var report = TerminationDetectionSpec.Create(counterMax: 1, pendingMax: 1, tokenMax: 2)
-            .Exhaustive(TUnitX.WriteLine, maxStates: 4_000_000);
+            .Exhaustive(maxStates: 4_000_000, writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.NeverTriggered).IsEmpty();
         var table = report.ToString();

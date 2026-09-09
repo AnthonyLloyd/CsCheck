@@ -15,7 +15,7 @@ public class AlternatingBitTests
     [Test]
     public async Task One_Bit_Over_A_Fifo_Channel_Is_Correct()
     {
-        var report = AlternatingBitSpec.Create(Seq.OneBit, Order.Fifo).Exhaustive(TUnitX.WriteLine);
+        var report = AlternatingBitSpec.Create(Seq.OneBit, Order.Fifo).Exhaustive(writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.NeverTriggered).IsEmpty();
         await Assert.That(report.NeverFired).IsEmpty();
@@ -81,16 +81,16 @@ public class AlternatingBitTests
         var report = AlternatingBitSpec.Create()
             // A receiver that flips its bit without delivering: the frame is lost silently.
             .Fault("FlipWithoutDelivering",
-                (b, a) => a.JustDelivered >= 0,
+                (_, a) => a.JustDelivered >= 0,
                 (b, a) => a with { JustDelivered = -1, Delivered = b.Delivered })
             // A receiver that delivers but forgets to flip, so the next copy is delivered again.
             .Fault("DeliverWithoutFlipping",
-                (b, a) => a.JustDelivered >= 0,
+                (_, a) => a.JustDelivered >= 0,
                 (b, a) => a with { ExpectedBit = b.ExpectedBit })
             // A sender that moves on without waiting for the acknowledgement.
             .Fault("SendsWithoutWaiting",
-                (b, a) => a.JustSent >= 0,
-                (b, a) => a with { NextFrame = a.NextFrame + 1, SenderBit = !a.SenderBit })
+                (_, a) => a.JustSent >= 0,
+                (_, a) => a with { NextFrame = a.NextFrame + 1, SenderBit = !a.SenderBit })
             .Faults(TUnitX.WriteLine, throwOnUncaught: false);
         TUnitX.WriteLine("");
         foreach (var r in report.Results) TUnitX.WriteLine($"{r.Fault,-24} caught by {r.CaughtBy ?? "NOTHING"}");

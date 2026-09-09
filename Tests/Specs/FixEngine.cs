@@ -48,7 +48,7 @@ public sealed class FixEngine
     /// <summary>An inbound message, abstracted to its kind and its sequence number relation.</summary>
     public readonly record struct Msg(In Kind, Seq Seq)
     {
-        public override string ToString() => Seq == Seq.Expected ? Kind.ToString() : string.Concat(Kind.ToString(), " ", Seq.ToString());
+        public override string ToString() => Seq == Seq.Expected ? Kind.ToString() : $"{Kind} {Seq}";
     }
 
     ConnectionStatus _status = ConnectionStatus.AwaitingLogon;

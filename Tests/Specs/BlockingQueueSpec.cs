@@ -49,8 +49,7 @@ public static class BlockingQueueSpec
     /// of the opposite kind to wake, or when waking all of them.</summary>
     public readonly record struct Act(int Thread, int Wakes)
     {
-        public override string ToString() => Wakes < 0 ? string.Concat("t", Thread.ToString())
-                                                      : string.Concat("t", Thread.ToString(), "->t", Wakes.ToString());
+        public override string ToString() => Wakes < 0 ? $"t{Thread}" : $"t{Thread}->t{Wakes}";
     }
 
     /// <summary>The specification for one configuration. Producers are threads 0 to producers-1 and consumers follow

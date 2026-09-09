@@ -11,7 +11,7 @@ public class RefreshCacheTests
     [Test]
     public async Task Exhaustive_Proof()
     {
-        var report = RefreshCacheSpec.Create().Exhaustive(TUnitX.WriteLine);
+        var report = RefreshCacheSpec.Create().Exhaustive(writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsEqualTo(0);
         await Assert.That(report.NeverTriggered).IsEmpty();
@@ -74,8 +74,8 @@ public class RefreshCacheTests
         .Response("STALE-ALWAYS-CLEARS",
             "A stale value always becomes fresh again.",
             [RefreshCache.Key.A, RefreshCache.Key.B],
-            trigger: (b, a, k) => a.Started && a.Touched == k,
-            response: (b, a, k) => !a.Of(k).Stale,
+            trigger: (_, a, k) => a.Started && a.Touched == k,
+            response: (_, a, k) => !a.Of(k).Stale,
             within: RefreshCache.Ttl, per: "Tick")
         .Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();

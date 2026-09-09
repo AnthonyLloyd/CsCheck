@@ -39,7 +39,7 @@ public class FencingTests
     [Test]
     public async Task Every_Access_Is_Safe()
     {
-        var report = FencingSpec.Create(FencingSpec.Fence.Every).Exhaustive(TUnitX.WriteLine);
+        var report = FencingSpec.Create(FencingSpec.Fence.Every).Exhaustive(writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsEqualTo(0);
         await Assert.That(report.NeverTriggered).IsEmpty();

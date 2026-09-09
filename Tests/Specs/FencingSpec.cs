@@ -104,7 +104,7 @@ public static class FencingSpec
                     " ", Last.ToString()));
 
         static string Show(Node n)
-            => n.Phase == NodePhase.Idle ? "[idle]" : string.Concat("[t", n.Token.ToString(), n.Held == Held.Unread ? "]" : n.Held == Held.Current ? " read]" : " stale]");
+            => n.Phase == NodePhase.Idle ? "[idle]" : $"[t{n.Token}{(n.Held == Held.Unread ? "]" : n.Held == Held.Current ? " read]" : " stale]")}";
     }
 
     static readonly Client[] Clients = [Client.One, Client.Two];
@@ -160,8 +160,8 @@ public static class FencingSpec
         .NeverAfter("SUPERSEDED-TOKEN-REFUSED",
             "Once the resource has honoured a token, no access on a lower token is ever accepted again.",
             Tokens,
-            after: (b, a, t) => a.Fenced > t,
-            never: (b, a, t) => a.Last is Last.ReadOk or Last.WriteOk && a.ActorToken == t)
+            after: (_, a, t) => a.Fenced > t,
+            never: (_, a, t) => a.Last is Last.ReadOk or Last.WriteOk && a.ActorToken == t)
 
         .Fault("resource forgets to record the token",
             (b, a) => a.Fenced > b.Fenced,

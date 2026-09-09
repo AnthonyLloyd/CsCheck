@@ -20,7 +20,7 @@ public class FixEngineTests
     [Test]
     public async Task Exhaustive_Proof()
     {
-        var report = FixEngineSpec.Create().Exhaustive(TUnitX.WriteLine);
+        var report = FixEngineSpec.Create().Exhaustive(writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsEqualTo(0);
         await Assert.That(report.NeverTriggered).IsEmpty();
@@ -74,7 +74,7 @@ public class FixEngineTests
         .Response("GAP-RESOLVED",
             "A gap, once detected, is filled or the session is terminated.",
             trigger: (b, a) => a.GapOpen && !b.GapOpen,
-            response: (b, a) => !a.GapOpen || a.Status == FixEngine.ConnectionStatus.Disconnected,
+            response: (_, a) => !a.GapOpen || a.Status == FixEngine.ConnectionStatus.Disconnected,
             within: FixEngine.Interval * 2, per: "Tick")
         .Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
@@ -135,9 +135,7 @@ public class FixEngineTests
         .Sample(trace =>
         {
             var last = trace.Steps.LastOrDefault();
-            return last.Action == "Recv"
-                ? string.Concat(FixEngineSpec.Inbound[last.ArgIndex].ToString(), "/", last.After.Status.ToString())
-                : string.Concat(last.Action ?? "none", "/", last.After.Status.ToString());
+            return last.Action == "Recv" ? $"{FixEngineSpec.Inbound[last.ArgIndex]}/{last.After.Status}" : $"{last.Action ?? "none"}/{last.After.Status}";
         }, TUnitX.WriteLine, iter: 20_000);
     }
 }

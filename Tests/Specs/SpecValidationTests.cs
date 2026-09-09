@@ -37,8 +37,8 @@ public class SpecValidationTests
     public async Task Faults_Rejects_A_Spec_That_Already_Fails()
     {
         var spec = Spec.From(0).Action("Inc", i => i < 4, i => i + 1)
-            .Never("NO-TWO", "the counter never reaches two", (b, a) => a == 2)
-            .Fault("irrelevant", (b, a) => false, (b, a) => a);
+            .Never("NO-TWO", "the counter never reaches two", (_, a) => a == 2)
+            .Fault("irrelevant", (_, _) => false, (_, a) => a);
         var message = Assert.Throws<CsCheckException>(() => spec.Faults())!.Message;
         await Assert.That(message).Contains("NO-TWO");
     }
@@ -50,8 +50,8 @@ public class SpecValidationTests
     public async Task SampleFaults_Rejects_A_Spec_That_Already_Fails()
     {
         var spec = Counter()
-            .Never("NO-TWO", "the counter never reaches two", (b, a) => a == 2)
-            .Fault("irrelevant", (b, a) => false, (b, a) => a);
+            .Never("NO-TWO", "the counter never reaches two", (_, a) => a == 2)
+            .Fault("irrelevant", (_, _) => false, (_, a) => a);
         var message = Assert.Throws<CsCheckException>(() => spec.SampleFaults())!.Message;
         await Assert.That(message).Contains("NO-TWO");
     }
@@ -66,7 +66,7 @@ public class SpecValidationTests
         // Counter() is unbounded so Exhaustive gives up at maxStates without closing.
         var report = Counter()
             .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
-            .Fault("a jump", (b, a) => a == 3, (b, a) => a + 1)
+            .Fault("a jump", (_, a) => a == 3, (_, a) => a + 1)
             .Faults(maxStates: 5, throwOnUncaught: false);
         await Assert.That(report.Uncaught).IsEmpty();
         await Assert.That(report.Inconclusive).Contains("a jump");
@@ -85,7 +85,7 @@ public class SpecValidationTests
     [Test]
     public async Task Unknown_Per_Action_Is_Rejected()
     {
-        var spec = Counter().Response("R", "quote", (b, a) => a == 1, (b, a) => a > 1, within: 2, per: "Clock");
+        var spec = Counter().Response("R", "quote", (_, a) => a == 1, (_, a) => a > 1, within: 2, per: "Clock");
         var message = Assert.Throws<CsCheckException>(() => spec.Exhaustive(maxStates: 10))!.Message;
         await Assert.That(message).Contains("Clock");
     }
@@ -154,7 +154,7 @@ public class SpecValidationTests
         var report = Spec.From(new Tagged(0, 0))
             .Action("Step", t => t.Step < 3, t => new Tagged(t.Step + 1, t.Tag + 1))
             .Action("Churn", t => t with { Tag = t.Tag + 1 })
-            .Exhaustive(TUnitX.WriteLine);
+            .Exhaustive(writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.States).IsEqualTo(4);
     }
@@ -186,7 +186,7 @@ public class SpecValidationTests
     [Test]
     public async Task Widest_Field_Diagnostic_Is_Omitted_When_It_Cannot_Parse()
     {
-        var report = Spec.From(0).Action("Inc", i => i + 1).Exhaustive(TUnitX.WriteLine, maxStates: 100);
+        var report = Spec.From(0).Action("Inc", i => i + 1).Exhaustive(maxStates: 100, writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsFalse();
         await Assert.That(report.Note).Contains("gave up at 100 states");
         await Assert.That(report.Note).DoesNotContain("widest");
@@ -199,7 +199,7 @@ public class SpecValidationTests
     [Test]
     public async Task A_Tree_Shaped_Space_Is_Observed_Not_Blamed()
     {
-        var chain = Spec.From(0).Action("Inc", i => i < 10, i => i + 1).Exhaustive(TUnitX.WriteLine);
+        var chain = Spec.From(0).Action("Inc", i => i < 10, i => i + 1).Exhaustive(writeLine: TUnitX.WriteLine);
         await Assert.That(chain.Closed).IsTrue();
         await Assert.That(chain.States).IsEqualTo(11);
         await Assert.That(chain.Revisits).IsEqualTo(0);
@@ -222,7 +222,7 @@ public class SpecValidationTests
         await Assert.That(unbounded.Closed).IsFalse();
         await Assert.That(unbounded.Note).Contains("gave up");
 
-        var report = Spec.From(0).Action("Inc", i => i + 1).Boundary(i => i <= 5).Exhaustive(TUnitX.WriteLine);
+        var report = Spec.From(0).Action("Inc", i => i + 1).Boundary(i => i <= 5).Exhaustive(writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.States).IsEqualTo(6);
         await Assert.That(report.Pruned).IsEqualTo(1);
@@ -240,7 +240,7 @@ public class SpecValidationTests
         Spec.From(0)
             .Action("Inc", i => i + 1)
             .Boundary(i => i <= 5)
-            .Never("NO-SIX", "the counter never reaches six", (b, a) => a == 6)
+            .Never("NO-SIX", "the counter never reaches six", (_, a) => a == 6)
             .Exhaustive(out var violation);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NO-SIX");
@@ -287,7 +287,7 @@ public class SpecValidationTests
             .Action("Tick", i => (i + 1) % 2)
             .Response("NEVER-SETTLES", "entering one must be followed by settling",
                 trigger: (b, a) => b == 0 && a == 1,
-                response: (b, a) => false,
+                response: (_, _) => false,
                 within: 3, per: "Tick")
             .Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
@@ -325,16 +325,16 @@ public class SpecValidationTests
     {
         // One is pending and two is its only successor, so without a cancel the deadline always expires.
         static Spec<int> Waiting(Func<int, int, bool>? cancel) => Spec.From(0)
-            .Action("Raise", i => i == 0, i => 1)
-            .Action("Abandon", i => i == 1, i => 2)
+            .Action("Raise", i => i == 0, _ => 1)
+            .Action("Abandon", i => i == 1, _ => 2)
             .Response("ANSWERED", "a raised request is answered",
-                trigger: (b, a) => a == 1, response: (b, a) => a == 3, within: 1, cancel: cancel);
+                trigger: (_, a) => a == 1, response: (_, a) => a == 3, within: 1, cancel: cancel);
 
         Waiting(null).Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("ANSWERED");
 
-        var report = Waiting((b, a) => a == 2).Exhaustive(out var none, TUnitX.WriteLine);
+        var report = Waiting((_, a) => a == 2).Exhaustive(out var none, TUnitX.WriteLine);
         await Assert.That(none).IsNull();
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.NeverTriggered).IsEmpty();
@@ -348,8 +348,8 @@ public class SpecValidationTests
         var report = Spec.From(0)
             .Action("Inc", i => i < 5, i => i + 1)
             .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
-            .Fault("counter advances twice", (b, a) => true, (b, a) => a + 1)
-            .Fault("counter goes negative", (b, a) => true, (b, a) => -1)
+            .Fault("counter advances twice", (_, _) => true, (_, a) => a + 1)
+            .Fault("counter goes negative", (_, _) => true, (_, _) => -1)
             .Faults(TUnitX.WriteLine, throwOnUncaught: false);
         await Assert.That(report.Uncaught.Count).IsEqualTo(1);
         await Assert.That(report.Uncaught).Contains("counter advances twice");
@@ -367,8 +367,8 @@ public class SpecValidationTests
         var spec = Spec.From(0)
             .Action("Inc", i => i < 5, i => i + 1)
             .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
-            .Fault("counter advances twice", (b, a) => true, (b, a) => a + 1)
-            .Fault("counter goes negative", (b, a) => true, (b, a) => -1);
+            .Fault("counter advances twice", (_, _) => true, (_, a) => a + 1)
+            .Fault("counter goes negative", (_, _) => true, (_, _) => -1);
         var report = spec.SampleFaults(TUnitX.WriteLine, iter: 500, throwOnUncaught: false);
         await Assert.That(report.CaughtBy("counter advances twice")).IsNull();
         await Assert.That(report.CaughtBy("counter goes negative")).IsEqualTo("NON-NEGATIVE");
@@ -411,7 +411,7 @@ public class SpecValidationTests
         Spec.From(0)
             .Action("Go", i => i < 4, i => i + 1)
             .Response("SAME-STEP", "reaching one is answered by reaching one",
-                trigger: (b, a) => a == 1, response: (b, a) => a == 1, within: 1)
+                trigger: (_, a) => a == 1, response: (_, a) => a == 1, within: 1)
             .Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("SAME-STEP");
@@ -420,7 +420,7 @@ public class SpecValidationTests
         var report = Spec.From(0)
             .Action("Go", i => i < 4, i => i + 1)
             .Precedes("SAME-STEP", "reaching one is preceded by reaching one",
-                first: (b, a) => a == 1, second: (b, a) => a == 1)
+                first: (_, a) => a == 1, second: (_, a) => a == 1)
             .Exhaustive(out var none);
         await Assert.That(none).IsNull();
         await Assert.That(report.Closed).IsTrue();
@@ -483,7 +483,7 @@ public class SpecValidationTests
         var report = Spec.From(0)
             .Action("Inc", i => i < 4, i => i + 1)
             .Rule("ADVANCES", "every step advances the counter by one", (b, a) => a == b + 1)
-            .Exhaustive(TUnitX.WriteLine);
+            .Exhaustive(writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.NeverTriggered).IsEmpty();
         await Assert.That(report.ToString()).Contains("| ADVANCES    |  every step |");
@@ -491,13 +491,13 @@ public class SpecValidationTests
         // The same claim with a when: of true is guarded, so it reports a number that means the same thing less clearly.
         var guarded = Spec.From(0)
             .Action("Inc", i => i < 4, i => i + 1)
-            .Rule("ADVANCES", "every step advances the counter by one", (b, a) => true, (b, a) => a == b + 1)
+            .Rule("ADVANCES", "every step advances the counter by one", (_, _) => true, (b, a) => a == b + 1)
             .Exhaustive();
         await Assert.That(guarded.ToString()).Contains("| ADVANCES    |           4 |");
 
         Spec.From(0)
             .Action("Inc", i => i < 4, i => i + 1)
-            .Action("Jump", i => i == 0, i => 2)
+            .Action("Jump", i => i == 0, _ => 2)
             .Rule("ADVANCES", "every step advances the counter by one", (b, a) => a == b + 1)
             .Exhaustive(out var violation);
         await Assert.That(violation).IsNotNull();
@@ -544,12 +544,12 @@ public class SpecValidationTests
         static Spec<Lap> Scoped(Func<Lap, Lap, bool>? until, Func<Lap, Lap, bool> never) => Spec.From(new Lap(0, 0))
             .Action("Step", l => l.Count < 2, l => l.Pos == 3 ? new Lap(0, l.Count + 1) : l with { Pos = l.Pos + 1 })
             .NeverAfter("SCOPED", "never between position one and position three",
-                after: (b, a) => a.Pos == 1, never: never, until: until);
+                after: (_, a) => a.Pos == 1, never: never, until: until);
 
-        static bool ClosingStep(Lap b, Lap a) => a.Pos == 0 && a.Count == 1;   // reached from Pos 3, which closed it
-        static bool InsideSecond(Lap b, Lap a) => a.Pos == 2 && a.Count == 1;  // reached from Pos 1, which reopened it
+        static bool ClosingStep(Lap _, Lap a) => a.Pos == 0 && a.Count == 1;   // reached from Pos 3, which closed it
+        static bool InsideSecond(Lap _, Lap a) => a.Pos == 2 && a.Count == 1;  // reached from Pos 1, which reopened it
 
-        var closed = Scoped((b, a) => a.Pos == 3, ClosingStep).Exhaustive(out var none, TUnitX.WriteLine);
+        var closed = Scoped((_, a) => a.Pos == 3, ClosingStep).Exhaustive(out var none, TUnitX.WriteLine);
         await Assert.That(none).IsNull();
         await Assert.That(closed.Closed).IsTrue();
 
@@ -557,7 +557,7 @@ public class SpecValidationTests
         await Assert.That(unscoped).IsNotNull();
         await Assert.That(unscoped!.Detail).Contains("after the point");
 
-        Scoped((b, a) => a.Pos == 3, InsideSecond).Exhaustive(out var reopened, TUnitX.WriteLine);
+        Scoped((_, a) => a.Pos == 3, InsideSecond).Exhaustive(out var reopened, TUnitX.WriteLine);
         await Assert.That(reopened).IsNotNull();
         await Assert.That(reopened!.Id).IsEqualTo("SCOPED");
         await Assert.That(reopened.Detail).Contains("between the step that opens");
@@ -567,9 +567,9 @@ public class SpecValidationTests
         var keyed = Spec.From(new Lap(0, 0))
             .Action("Step", l => l.Count < 2, l => l.Pos == 3 ? new Lap(0, l.Count + 1) : l with { Pos = l.Pos + 1 })
             .NeverAfter("SCOPED", "never between position one and position three", [0, 1],
-                after: (b, a, c) => a.Pos == 1 && a.Count == c,
-                never: (b, a, c) => a.Pos == 0 && a.Count == c + 1,
-                until: (b, a, c) => a.Pos == 3 && a.Count == c)
+                after: (_, a, c) => a.Pos == 1 && a.Count == c,
+                never: (_, a, c) => a.Pos == 0 && a.Count == c + 1,
+                until: (_, a, c) => a.Pos == 3 && a.Count == c)
             .Exhaustive(out var keyedViolation);
         await Assert.That(keyedViolation).IsNull();
         await Assert.That(keyed.ToString()).Contains("SCOPED[1]");
@@ -587,11 +587,11 @@ public class SpecValidationTests
         {
             var spec = Counter();
             for (int i = 0; i < n; i++)
-                spec.Response($"R{i}", "quote", (b, a) => a == 1, (b, a) => a > 1, within: 2, per: "Inc");
+                spec.Response($"R{i}", "quote", (_, a) => a == 1, (_, a) => a > 1, within: 2, per: "Inc");
             return spec;
         }
         Responses(12).GenTrace(1, 1);
-        await Assert.That(Assert.Throws<CsCheckException>(() => { Responses(17); })!.Message)
+        await Assert.That(Assert.Throws<CsCheckException>(() => Responses(17))!.Message)
             .Contains("limit of 16 Response and AtMost");
 
         // And mixed, which is the case the split budget could not express at all.
@@ -602,34 +602,34 @@ public class SpecValidationTests
             return spec;
         }
         Mixed(10, 6).GenTrace(1, 1);
-        await Assert.That(Assert.Throws<CsCheckException>(() => { Mixed(10, 7); })!.Message)
+        await Assert.That(Assert.Throws<CsCheckException>(() => Mixed(10, 7))!.Message)
             .Contains("limit of 16 Response and AtMost");
 
         static Spec<int> SeventeenOver() => Counter().Response("R", "quote",
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-            (b, a, t) => a == t, (b, a, t) => a > t, within: 2, per: "Inc");
-        await Assert.That(Assert.Throws<CsCheckException>(() => { SeventeenOver(); })!.Message)
+            (_, a, t) => a == t, (_, a, t) => a > t, within: 2, per: "Inc");
+        await Assert.That(Assert.Throws<CsCheckException>(() => SeventeenOver())!.Message)
             .Contains("limit of 16 Response and AtMost");
 
         await Assert.That(Assert.Throws<CsCheckException>(
-            () => { Counter().Response("R", "q", (b, a) => true, (b, a) => true, within: 0, per: "Inc"); })!.Message)
+            () => Counter().Response("R", "q", (_, _) => true, (_, _) => true, within: 0, per: "Inc"))!.Message)
             .Contains("within must be 1 to 254");
         await Assert.That(Assert.Throws<CsCheckException>(
-            () => { Counter().Response("R", "q", (b, a) => true, (b, a) => true, within: 255, per: "Inc"); })!.Message)
+            () => Counter().Response("R", "q", (_, _) => true, (_, _) => true, within: 255, per: "Inc"))!.Message)
             .Contains("within must be 1 to 254");
 
         static Spec<int> SixtyFive()
         {
             var spec = Counter();
-            for (int i = 0; i < 65; i++) spec.Precedes($"P{i}", "quote", (b, a) => a == 1, (b, a) => a > 1);
+            for (int i = 0; i < 65; i++) spec.Precedes($"P{i}", "quote", (_, a) => a == 1, (_, a) => a > 1);
             return spec;
         }
-        await Assert.That(Assert.Throws<CsCheckException>(() => { SixtyFive(); })!.Message).Contains("64 Precedes");
+        await Assert.That(Assert.Throws<CsCheckException>(() => SixtyFive())!.Message).Contains("64 Precedes");
 
-        await Assert.That(Assert.Throws<CsCheckException>(() => { Mixed(0, 17); })!.Message)
+        await Assert.That(Assert.Throws<CsCheckException>(() => Mixed(0, 17))!.Message)
             .Contains("limit of 16 Response and AtMost");
         await Assert.That(Assert.Throws<CsCheckException>(
-            () => { Counter().AtMost("A", "q", 255, (b, a) => true); })!.Message).Contains("times must be 0 to 254");
+            () => Counter().AtMost("A", "q", 255, (_, _) => true))!.Message).Contains("times must be 0 to 254");
     }
 
     /// <summary>The reason coverage is counted per (action, argument) case and not per action. Set(2) is never enabled,
@@ -640,8 +640,8 @@ public class SpecValidationTests
     public async Task NeverFired_Detects_A_Dead_Argument_Case()
     {
         var report = Spec.From(0)
-            .Action("Set", [1, 2, 3], (s, v) => v != 2, (s, v) => v)
-            .Exhaustive(TUnitX.WriteLine);
+            .Action("Set", [1, 2, 3], (_, v) => v != 2, (_, v) => v)
+            .Exhaustive(writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(string.Join(",", report.NeverFired)).IsEqualTo("Set(2)");
         await Assert.That(report.ToString()).Contains("| Set(2)      |       NEVER |");
@@ -657,9 +657,9 @@ public class SpecValidationTests
     public async Task A_Response_Past_The_Eighth_Slot_Still_Expires()
     {
         var spec = Spec.From(0).Action("Tick", i => (i + 1) % 2);
-        for (int i = 0; i < 8; i++) spec.AtMost($"PAD{i}", "cannot occur", 3, (b, a) => false);
+        for (int i = 0; i < 8; i++) spec.AtMost($"PAD{i}", "cannot occur", 3, (_, _) => false);
         spec.Response("NINTH", "entering one must be followed by settling",
-            trigger: (b, a) => b == 0 && a == 1, response: (b, a) => false, within: 3, per: "Tick");
+            trigger: (b, a) => b == 0 && a == 1, response: (_, _) => false, within: 3, per: "Tick");
         spec.Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NINTH");
@@ -693,7 +693,7 @@ public class SpecValidationTests
         // Four labels for four states, and three edges between them. Every n referenced by an edge is declared.
 #pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
         await Assert.That(Regex.Count(dot, @"\[label=""\d")).IsEqualTo(4);
-        await Assert.That(Regex.Count(dot, @" -> n")).IsEqualTo(3);
+        await Assert.That(Regex.Count(dot, " -> n")).IsEqualTo(3);
         foreach (var to in Regex.Matches(dot, @" -> (n\d+)"))
             await Assert.That(dot).Contains(((Match)to).Groups[1].Value + " [label=");
         // The state whose successor was dropped is dashed, so it cannot be read as an intended end or a dead one.
@@ -725,7 +725,7 @@ public class SpecValidationTests
         static Spec<int> Ninth(int bound)
         {
             var spec = Spec.From(0).Action("Inc", i => i < 6, i => i + 1);
-            for (int i = 0; i < 8; i++) spec.AtMost($"PAD{i}", "cannot occur", 3, (b, a) => false);
+            for (int i = 0; i < 8; i++) spec.AtMost($"PAD{i}", "cannot occur", 3, (_, _) => false);
             return spec.AtMost("NINTH", "at most bound increments", bound, (b, a) => a > b);
         }
         var ok = Ninth(6).Exhaustive();
@@ -746,7 +746,7 @@ public class SpecValidationTests
     {
         var spec = Spec.From(0)
             .Action("Inc", i => i < 20, i => i + 1)
-            .Never("NO-FIVE", "the counter never reaches five", (b, a) => a == 5);
+            .Never("NO-FIVE", "the counter never reaches five", (_, a) => a == 5);
         var message = Assert.Throws<CsCheckException>(() => spec.Sample(maxSteps: 30, iter: 10_000))!.Message;
         TUnitX.WriteLine(message);
         await Assert.That(message).Contains("NO-FIVE");
@@ -763,7 +763,7 @@ public class SpecValidationTests
         var spec = Spec.From(0)
             .Action("Inc", i => i < 5, i => i + 1)
             .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
-            .Fault("counter advances twice", (b, a) => true, (b, a) => a + 1);
+            .Fault("counter advances twice", (_, _) => true, (_, a) => a + 1);
         var message = Assert.Throws<CsCheckException>(() => spec.Faults(lines.Add))!.Message;
         TUnitX.WriteLine(string.Join('\n', lines));
         await Assert.That(message).Contains("counter advances twice");
@@ -779,8 +779,8 @@ public class SpecValidationTests
         // Action stops at 4, so the unfaulted spec never reaches 5. The fault jumps to 5 on any step.
         var report = Spec.From(0).Action("Inc", i => i < 4, i => i + 1)
             .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
-            .Never("NO-FIVE", "the counter never reaches five", (b, a) => a == 5)
-            .Fault("counter jumps to five", (b, a) => true, (b, a) => 5)
+            .Never("NO-FIVE", "the counter never reaches five", (_, a) => a == 5)
+            .Fault("counter jumps to five", (_, _) => true, (_, _) => 5)
             .Faults(throwOnUncaught: false);
         await Assert.That(report.CaughtBy("counter jumps to five")).IsEqualTo("NO-FIVE");
         await Assert.That(Assert.Throws<CsCheckException>(() => report.CaughtBy("counter jumps to six"))!.Message)

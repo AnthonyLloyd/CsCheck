@@ -57,11 +57,10 @@ public static class RefreshCacheSpec
 
         public override string ToString()
             => string.Concat("A", Show(A), " B", Show(B),
-                Served == Served.None ? "" : string.Concat("  ", Touched.ToString(), "->", Served.ToString()),
+                Served == Served.None ? "" : $"  {Touched}->{Served}",
                 Started ? " load!" : "");
 
-        static string Show(Slot s)
-            => string.Concat("[v", s.Version.ToString(), " age", s.Age.ToString(), s.Loads == 0 ? "" : " ld" + s.Loads.ToString(), "]");
+        static string Show(Slot s) => $"[v{s.Version} age{s.Age}{(s.Loads == 0 ? "" : " ld" + s.Loads)}]";
     }
 
     static readonly Key[] Keys = [Key.A, Key.B];
@@ -91,20 +90,20 @@ public static class RefreshCacheSpec
             "A read that misses has a load in flight by the time it returns, so the caller is waiting on a load that "
             + "is actually running - joining one already in flight counts.",
             on: "Read",
-            when: (b, a) => a.Served == Served.Miss,
-            then: (b, a) => a.Of(a.Touched).Loads == 1)
+            when: (_, a) => a.Served == Served.Miss,
+            then: (_, a) => a.Of(a.Touched).Loads == 1)
         .Rule("STALE-REFRESHES",
             "A read that finds the value stale starts a load, so a value is refreshed by demand for it and not by a "
             + "timer.",
             on: "Read",
             when: (b, a) => b.Of(a.Touched).Stale && b.Of(a.Touched).Loads == 0,
-            then: (b, a) => a.Started && a.Of(a.Touched).Loads == 1)
+            then: (_, a) => a.Started && a.Of(a.Touched).Loads == 1)
         .Rule("STALE-SERVED-ANYWAY",
             "A read that finds the value stale still returns it. Refreshing is what happens next, not what the "
             + "caller waits for.",
             on: "Read",
             when: (b, a) => b.Of(a.Touched).Present && b.Of(a.Touched).Stale,
-            then: (b, a) => a.Served == Served.Stale)
+            then: (_, a) => a.Served == Served.Stale)
         .Rule("NO-HERD",
             "A read never starts a second load for a key that is already loading.",
             on: "Read",
@@ -119,13 +118,13 @@ public static class RefreshCacheSpec
         .Rule("COMPLETE-IS-FRESH",
             "A load that completes leaves the value fresh, so the next read is served without starting another load.",
             on: "Complete",
-            then: (b, a) => !a.Of(a.Touched).Stale && a.Of(a.Touched).Present)
+            then: (_, a) => !a.Of(a.Touched).Stale && a.Of(a.Touched).Present)
         .Rule("CROSS-KEY-INDEPENDENT",
             "A load in flight for one key never stops another key being served. One shared lock over the whole cache "
             + "would break this and nothing else here would notice.",
             on: "Read",
             when: (b, a) => b.Of(a.Touched).Present && b.Of(Other(a.Touched)).Loads > 0,
-            then: (b, a) => a.Served is Served.Fresh or Served.Stale)
+            then: (_, a) => a.Served is Served.Fresh or Served.Stale)
 
         .Never("VERSION-MONOTONIC",
             "A cached value is never replaced by an older one, and never disappears once present.",
@@ -136,8 +135,8 @@ public static class RefreshCacheSpec
             "Once a key has been loaded, no later read of it misses. This is the whole point of refreshing on access "
             + "rather than expiring: callers wait at most once per key, ever.",
             Keys,
-            after: (b, a, k) => a.Of(k).Present,
-            never: (b, a, k) => a.Served == Served.Miss && a.Touched == k)
+            after: (_, a, k) => a.Of(k).Present,
+            never: (_, a, k) => a.Served == Served.Miss && a.Touched == k)
 
         // There is deliberately no Response requirement here. Every liveness property this cache might have is the
         // environment's to deliver, not the cache's: a value only refreshes if something reads it and the loader
@@ -152,10 +151,10 @@ public static class RefreshCacheSpec
         .Fault("failure evicts the value",
             (b, a) => a.Served == Served.None && a.Of(a.Touched).Loads < b.Of(a.Touched).Loads
                    && a.Of(a.Touched).Version == b.Of(a.Touched).Version,
-            (b, a) => a.Of(a.Touched) is { } slot && slot.Present ? Set(a, new Slot(0, 0, slot.Loads)) : a)
+            (_, a) => a.Of(a.Touched) is { } slot && slot.Present ? Set(a, new Slot(0, 0, slot.Loads)) : a)
         .Fault("every read starts a load",
             (b, a) => a.Served != Served.None && !a.Started && (!b.Of(a.Touched).Present || b.Of(a.Touched).Stale),
-            (b, a) => Set(a, a.Of(a.Touched).Start()) with { Started = true })
+            (_, a) => Set(a, a.Of(a.Touched).Start()) with { Started = true })
         .Fault("stale read does not refresh",
             (b, a) => a.Started && b.Of(a.Touched).Present,
             (b, a) => Set(a, a.Of(a.Touched) with { Loads = b.Of(a.Touched).Loads }) with { Started = false })
@@ -173,7 +172,7 @@ public static class RefreshCacheSpec
             (b, a) => Set(a, a.Of(a.Touched) with { Version = b.Of(a.Touched).Version - 1 }))
         .Fault("completing a load ages it",
             (b, a) => a.Served == Served.None && a.Of(a.Touched).Version > b.Of(a.Touched).Version,
-            (b, a) => Set(a, a.Of(a.Touched) with { Age = Ttl }));
+            (_, a) => Set(a, a.Of(a.Touched) with { Age = Ttl }));
 
     static Key Other(Key k) => k == Key.A ? Key.B : Key.A;
 

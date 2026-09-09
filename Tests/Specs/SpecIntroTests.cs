@@ -26,8 +26,7 @@ public class SpecIntroTests
     {
         public bool Settled => Refunded == Paid;
 
-        public override string ToString()
-            => string.Concat(Status.ToString().PadRight(9), " paid=", Paid.ToString(), " refunded=", Refunded.ToString());
+        public override string ToString() => $"{Status,-9} paid={Paid} refunded={Refunded}";
     }
 
     /// <summary>The specification. Actions say what can happen and when; requirements say what must be true when it
@@ -68,7 +67,7 @@ public class SpecIntroTests
         // Must never be true of any step. Both states are available, so a requirement can talk about what changed.
         .Never("NO-SHIP-UNPAID",
             "Goods only leave once the money has arrived.",
-            (before, after) => after.Status is Status.Shipped or Status.Delivered && after.Paid == 0)
+            (_, after) => after.Status is Status.Shipped or Status.Delivered && after.Paid == 0)
         .Never("NO-CANCEL-AFTER-SHIP",
             "Once goods are on their way the order cannot be cancelled; that is a return, not a cancellation.",
             (before, after) => before.Status is Status.Shipped or Status.Delivered && after.Status == Status.Cancelled)
@@ -87,14 +86,14 @@ public class SpecIntroTests
             (before, after) => after.Paid > before.Paid,
             (before, after) => after with { Paid = before.Paid })
         .Fault("cancelling discards the payment",
-            (before, after) => after.Status == Status.Cancelled,
-            (before, after) => after with { Paid = 0 })
+            (_, after) => after.Status == Status.Cancelled,
+            (_, after) => after with { Paid = 0 })
         .Fault("refund pays out twice",
             (before, after) => after.Refunded > before.Refunded,
             (before, after) => after with { Refunded = before.Refunded + 2 })
         .Fault("cancel is allowed too late",
-            (before, after) => before.Status == Status.Shipped,
-            (before, after) => after with { Status = Status.Cancelled })
+            (before, _) => before.Status == Status.Shipped,
+            (_, after) => after with { Status = Status.Cancelled })
         .Fault("refund does not settle the order",
             (before, after) => after.Refunded > before.Refunded,
             (before, after) => after with { Refunded = before.Refunded });
@@ -107,7 +106,7 @@ public class SpecIntroTests
     [Test]
     public async Task Exhaustive_Proof()
     {
-        var report = Create().Exhaustive(TUnitX.WriteLine);
+        var report = Create().Exhaustive(writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsEqualTo(0);
         await Assert.That(report.NeverTriggered).IsEmpty();
@@ -165,7 +164,7 @@ public class SpecIntroTests
         // after a refund, and cancelled before paying - which is settled too, and which reading the picture corrected.
 #pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
         await Assert.That(Regex.Count(dot, @"\[label=""(New|Paid|Shipped|Delivered|Cancelled)")).IsEqualTo(7);
-        await Assert.That(Regex.Count(dot, @" -> n")).IsEqualTo(6);
+        await Assert.That(Regex.Count(dot, " -> n")).IsEqualTo(6);
         await Assert.That(Regex.Count(dot, "doublecircle")).IsEqualTo(3);
         await Assert.That(dot).DoesNotContain("fillcolor");
 

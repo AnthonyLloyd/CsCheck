@@ -65,12 +65,12 @@ public static class AlternatingBitSpec
 
             // The requirement this example is here for. One count per frame, in the search state rather than the model.
             .AtMost("DELIVERED-ONCE", "A frame is delivered to the application at most once, however many copies of it "
-                + "the channel produces.", 1, All, (b, a, f) => a.JustDelivered == f)
+                + "the channel produces.", 1, All, (_, a, f) => a.JustDelivered == f)
 
             // A frame cannot arrive before it was sent. Cheap, and it is the requirement that would catch a model where
             // the receiver invented data rather than one where the protocol was wrong.
             .Precedes("NOT-BEFORE-SENT", "A frame is delivered only if it was sent.", All,
-                (b, a, f) => a.JustSent == f, (b, a, f) => a.JustDelivered == f)
+                (_, a, f) => a.JustSent == f, (_, a, f) => a.JustDelivered == f)
 
             // Stop-and-wait, stated the way the protocol document states it: between putting a frame on the wire and its
             // acknowledgement coming back, nothing else goes on the wire. The scope opens on an event and closes on an
@@ -78,9 +78,9 @@ public static class AlternatingBitSpec
             // plain Never, and the docs would tell you to prefer that.
             .NeverAfter("STOP-AND-WAIT", "The sender does not transmit the next frame until the current one has been "
                 + "acknowledged.", All,
-                after: (b, a, f) => a.JustSent == f,
-                never: (b, a, f) => a.JustSent >= 0 && a.JustSent != f,
-                until: (b, a, f) => a.NextFrame > f)
+                after: (_, a, f) => a.JustSent == f,
+                never: (_, a, f) => a.JustSent >= 0 && a.JustSent != f,
+                until: (_, a, f) => a.NextFrame > f)
 
             // In order, and never more than were sent. The first is what makes "at most once" worth having: a protocol
             // could deliver each frame once and still deliver them backwards.
