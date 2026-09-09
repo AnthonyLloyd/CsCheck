@@ -1516,6 +1516,7 @@ public static partial class Check
             spec.InBoundary is null ? null
                 : "within the declared boundary: a fault caught by NOTHING may still be caught outside it",
             "No requirement detects these faults", writeLine, throwOnUncaught,
+            baseline: () => { Exhaustive(spec, null, null, maxStates, maxDepth, threads, true, out _); },
             fault => { Exhaustive(spec, fault, null, maxStates, maxDepth, threads, false, out var v); return v; });
 
     /// <summary>Mutation testing for a specification whose state space is too large to close. Each declared
@@ -1526,7 +1527,11 @@ public static partial class Check
     /// sampled rather than the shallowest that exists, and <c>NOTHING</c> means no requirement was seen to detect the
     /// fault rather than that none can. A <c>Reachable</c> requirement can never appear in <c>Caught by</c> at all,
     /// because unreachability only follows from closure.
-    /// <para>The budget is per fault, so the work is <paramref name="iter"/> walks times the number of faults.</para></remarks>
+    /// <para>Before injecting any fault, the unmutated spec is walked over the same budget and rejected immediately
+    /// if a requirement already fails. The baseline uses sampling rather than <c>Exhaustive</c> so the cost is
+    /// proportional: one extra fault-free pass, not a full exhaustive search on a space that does not close.</para>
+    /// <para>The budget is per fault, so the total work is <paramref name="iter"/> walks times the number of faults
+    /// plus one baseline pass.</para></remarks>
     /// <param name="spec">The specification to mutate.</param>
     /// <param name="writeLine">WriteLine function for the fault table.</param>
     /// <param name="minSteps">The shortest trace to generate.</param>
@@ -1541,6 +1546,13 @@ public static partial class Check
         => FaultsReport(spec, $"Spec.SampleFaults over {Plural(spec.FaultList.Count, "fault")}",
             "sampled, so Steps is the shallowest counterexample found and NOTHING means none was found, not that none exists",
             "No requirement detected these faults in the walks sampled", writeLine, throwOnUncaught,
+            // Sampled baseline: walk the unmutated spec over the same budget rather than running Exhaustive (which
+            // would give up at maxStates on a space that doesn't close — exactly why SampleFaults was chosen).
+            // This covers exactly the traces the fault walks will later sample, so any base violation reachable by
+            // sampling is caught here too, and the cost is one extra fault-free pass rather than a 10M-state search.
+            baseline: () => { var v = SampleFault(spec, new SpecFault<S>("(baseline)", (_, _) => false, (_, a) => a),
+                                                   minSteps, maxSteps, seed, iter, time, threads);
+                               if (v is not null) throw new CsCheckException(v.ToString(spec.Printer)); },
             fault => SampleFault(spec, fault, minSteps, maxSteps, seed, iter, time, threads));
 
     // Walk one fault, keeping the violation that happened on the earliest step of any trace.
@@ -1576,15 +1588,17 @@ public static partial class Check
     }
 
     static SpecFaultsReport FaultsReport<S>(Spec<S> spec, string mode, string? caveat, string uncaughtMessage,
-        Action<string>? writeLine, bool throwOnUncaught, Func<SpecFault<S>, SpecViolation<S>?> run)
+        Action<string>? writeLine, bool throwOnUncaught, Action baseline, Func<SpecFault<S>, SpecViolation<S>?> run)
     {
         // Every other engine validates through the walk it starts. This one would skip it entirely for a spec with no
         // faults declared, so a typo in an on: name would go unreported.
         spec.Validate();
         // A spec that already violates a requirement without any fault injected will report every mutation as "caught",
-        // because the base violation is found regardless. Fail immediately with the base violation so the table is not
-        // filled with misleading "caught" entries from a spec that was never correct.
-        Exhaustive(spec, null, null, 10_000_000, int.MaxValue, 1, true, out _);
+        // because the base violation is found regardless. Fail immediately so the table is not filled with misleading
+        // "caught" entries from a spec that was never correct. The baseline is supplied by the caller: Faults uses
+        // Exhaustive (a real proof), SampleFaults uses a sampled walk over the same budget (cost-proportional and
+        // checks exactly the traces that the fault walks will later sample).
+        baseline();
         var w = 5;
         for (int i = 0; i < spec.FaultList.Count; i++) if (spec.FaultList[i].Name.Length > w) w = spec.FaultList[i].Name.Length;
         // Measured, so an id of any length still lines the table up.

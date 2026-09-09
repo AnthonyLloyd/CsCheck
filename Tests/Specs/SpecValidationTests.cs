@@ -36,10 +36,23 @@ public class SpecValidationTests
     [Test]
     public async Task Faults_Rejects_A_Spec_That_Already_Fails()
     {
-        var spec = Counter()
+        var spec = Spec.From(0).Action("Inc", i => i < 4, i => i + 1)
             .Never("NO-TWO", "the counter never reaches two", (b, a) => a == 2)
             .Fault("irrelevant", (b, a) => false, (b, a) => a);
         var message = Assert.Throws<CsCheckException>(() => spec.Faults())!.Message;
+        await Assert.That(message).Contains("NO-TWO");
+    }
+
+    /// <summary>SampleFaults also checks the baseline before injecting faults. The baseline for SampleFaults uses a
+    /// sampled walk rather than Exhaustive, so it is cost-proportional and checks exactly the traces that the fault
+    /// walks will later sample — closing the gap without paying for a full exhaustive search.</summary>
+    [Test]
+    public async Task SampleFaults_Rejects_A_Spec_That_Already_Fails()
+    {
+        var spec = Counter()
+            .Never("NO-TWO", "the counter never reaches two", (b, a) => a == 2)
+            .Fault("irrelevant", (b, a) => false, (b, a) => a);
+        var message = Assert.Throws<CsCheckException>(() => spec.SampleFaults())!.Message;
         await Assert.That(message).Contains("NO-TWO");
     }
 
@@ -163,9 +176,8 @@ public class SpecValidationTests
     }
 
     /// <summary>A model that only ever advances is legitimately a tree, so the note that observes it must not read as an
-    /// accusation. This eleven state chain has perfect value equality and an earlier wording told it otherwise, which is
-    /// the first thing anyone's first model would have hit. A model that does revisit says nothing at all, which is what
-    /// keeps the note a signal rather than boilerplate.</summary>
+    /// accusation. This eleven state chain has perfect value equality, and a chain is the first model anyone writes.
+    /// A model that does revisit says nothing at all, which is what keeps the note a signal rather than boilerplate.</summary>
     [Test]
     public async Task A_Tree_Shaped_Space_Is_Observed_Not_Blamed()
     {
