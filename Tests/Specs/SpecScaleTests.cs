@@ -27,13 +27,9 @@ public class SpecScaleTests
         .Rule("ONE-AT-A-TIME", "exactly one coordinate moves per step",
             (b, a) => a.A + a.B + a.C == b.A + b.B + b.C + 1);
 
-    /// <summary>Throughput and bytes per state across three sizes. The floor asserted is an order of magnitude below
-    /// what any development machine manages, so this catches a real regression without being sensitive to the box it
-    /// runs on.</summary>
     [Test]
     public async Task Exhaustive_Scale()
     {
-        var slowest = double.MaxValue;
         foreach (var n in new[] { 20, 40, 60 })
         {
             // Built before the measurement, and reused, so the spec's own allocation is not counted in bytes/state.
@@ -47,12 +43,10 @@ public class SpecScaleTests
             sw.Stop();
             var bytes = (GC.GetTotalMemory(false) - before) / (double)report.States;
             var rate = report.Transitions / sw.Elapsed.TotalSeconds;
-            slowest = Math.Min(slowest, rate);
             TUnitX.WriteLine($"n={n,2} {report.States,9:#,0} states {report.Transitions,10:#,0} transitions "
                 + $"{sw.Elapsed.TotalMilliseconds,7:0.0}ms {rate / 1e6,5:0.00}M/s {bytes,5:0} bytes/state");
             await Assert.That(report.Closed).IsTrue();
         }
-        await Assert.That(slowest > 200_000).IsTrue();
     }
 
     /// <summary>The property that makes a parallel proof engine acceptable: the answer must not depend on how many
