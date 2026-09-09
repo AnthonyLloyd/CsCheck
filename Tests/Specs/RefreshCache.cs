@@ -1,6 +1,7 @@
 namespace Tests.Specs;
 
 using System;
+using System.Collections.Generic;
 
 /// <summary>A refresh-on-access cache written the way the real thing is: mutable per-key entries, an explicit
 /// in-flight flag, and no planted defect. The load is split into starting it and completing it so the interleaving
@@ -15,8 +16,6 @@ public sealed class RefreshCache
     /// comparable under <c>Conform</c>.</summary>
     public const int Cap = 3;
 
-    public enum Key { A, B }
-
     /// <summary>What a read handed back. <c>Miss</c> means the caller got nothing and has to wait for a load, which
     /// is the thing a refresh-on-access cache exists to avoid.</summary>
     public enum Served { None, Miss, Fresh, Stale }
@@ -28,16 +27,15 @@ public sealed class RefreshCache
         public int Loads;
     }
 
-    readonly Entry _a = new();
-    readonly Entry _b = new();
+    readonly Dictionary<string, Entry> _entries = new() { ["A"] = new(), ["B"] = new() };
 
-    Entry Get(Key k) => k == Key.A ? _a : _b;
+    Entry Get(string k) => _entries[k];
 
-    public int Version(Key k) => Get(k).Version;
-    public int Age(Key k) => Get(k).Age;
-    public int Loads(Key k) => Get(k).Loads;
+    public int Version(string k) => Get(k).Version;
+    public int Age(string k) => Get(k).Age;
+    public int Loads(string k) => Get(k).Loads;
 
-    public Served Read(Key k)
+    public Served Read(string k)
     {
         var e = Get(k);
         var served = e.Version == 0 ? Served.Miss : e.Age >= Ttl ? Served.Stale : Served.Fresh;
@@ -45,7 +43,7 @@ public sealed class RefreshCache
         return served;
     }
 
-    public void Complete(Key k)
+    public void Complete(string k)
     {
         var e = Get(k);
         e.Loads--;
@@ -53,11 +51,11 @@ public sealed class RefreshCache
         e.Age = 0;
     }
 
-    public void Fail(Key k) => Get(k).Loads--;
+    public void Fail(string k) => Get(k).Loads--;
 
     public void Tick()
     {
-        _a.Age = Math.Min(_a.Age + 1, Cap);
-        _b.Age = Math.Min(_b.Age + 1, Cap);
+        foreach (var e in _entries.Values)
+            e.Age = Math.Min(e.Age + 1, Cap);
     }
 }

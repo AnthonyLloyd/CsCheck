@@ -32,6 +32,21 @@ using static Tests.Specs.FixEngine;
 /// session level Rejects other than the two below.</para></summary>
 public static class FixEngineSpec
 {
+    /// <summary>MsgSeqNum of an inbound message relative to the expected number. For <see cref="In.SeqReset"/> this
+    /// is the relation of NewSeqNo instead, since a bare SequenceReset ignores MsgSeqNum. <c>TooLowDup</c> is
+    /// PossDupFlag=Y with a valid OrigSendingTime; <c>DupBadOrig</c> is PossDupFlag=Y with OrigSendingTime missing
+    /// or later than SendingTime, which the session layer requires be rejected rather than ignored.</summary>
+    public enum Seq { Expected, TooHigh, TooLow, TooLowDup, DupBadOrig }
+
+    /// <summary>An inbound message for the spec domain, expressed as kind and sequence relation rather than kind and
+    /// raw integer. This is the spec's own vocabulary; the engine's <see cref="FixEngine.Msg"/> carries a concrete
+    /// sequence number and PossDup flags, and the conformance test's <c>Apply</c> function translates between the
+    /// two.</summary>
+    public readonly record struct Msg(In Kind, Seq Seq)
+    {
+        public override string ToString() => Seq == Seq.Expected ? Kind.ToString() : $"{Kind} {Seq}";
+    }
+
     /// <summary>The inbound cases the session must handle. This list is the conformance matrix: one entry per
     /// (message kind, sequence relation) pair that the FIX session layer gives a rule for.</summary>
     public static readonly Msg[] Inbound =
@@ -47,6 +62,8 @@ public static class FixEngineSpec
         new(In.ResendRequest, Seq.Expected),
         new(In.GapFill, Seq.Expected), new(In.GapFill, Seq.TooLowDup),
         new(In.SeqReset, Seq.TooHigh), new(In.SeqReset, Seq.TooLow),
+        // FIX 4.4 requires a Logout to be accepted regardless of sequence number. Both entries verify the engine
+        // does not misapply the fatal sequence error path (SEQ-TOO-LOW-FATAL) to an incoming Logout.
         new(In.Logout, Seq.Expected), new(In.Logout, Seq.TooLow),
         new(In.Garbled, Seq.Expected),
     ];

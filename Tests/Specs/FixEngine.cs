@@ -5,10 +5,10 @@ using System;
 /// <summary>A hand written session engine in the shape production code actually takes: mutable flags and an ordered
 /// chain of ifs, written from the FIX rules directly. It has one planted defect, to show what a conformance failure
 /// looks like.
-/// <para>This is the system under test, so it owns the vocabulary - the message kinds, the sequence relations, what a step
-/// emits, and the connection status - and knows nothing about the specification that checks it. The dependency runs
-/// engine to specification to tests and never back, because an implementation that referenced its own specification
-/// could not be shipped without it.</para></summary>
+/// <para>This is the system under test, so it owns the vocabulary - the message kinds, what a step emits, and the
+/// connection status - and knows nothing about the specification that checks it. The dependency runs engine to
+/// specification to tests and never back, because an implementation that referenced its own specification could not
+/// be shipped without it.</para></summary>
 public sealed class FixEngine
 {
     /// <summary>HeartBtInt, in ticks.</summary>
@@ -28,14 +28,8 @@ public sealed class FixEngine
     /// <summary>Inbound message kinds. <c>Nothing</c> is a step with no inbound message: a clock tick, or one of
     /// our own sends. <c>LogonReset</c> is a Logon with ResetSeqNumFlag=Y. <c>GapFill</c> is SequenceReset-GapFill
     /// (GapFillFlag=Y); <c>SeqReset</c> is a bare SequenceReset-Reset (GapFillFlag=N) which ignores MsgSeqNum
-    /// altogether, so its <see cref="Seq"/> argument is the relation of NewSeqNo instead.</summary>
+    /// altogether, so <see cref="Msg.SeqNum"/> carries NewSeqNo instead.</summary>
     public enum In { Nothing, Logon, LogonReset, App, Heartbeat, TestRequest, ResendRequest, GapFill, SeqReset, Logout, Garbled }
-
-    /// <summary>MsgSeqNum of an inbound message relative to the number we expect. For <c>SeqReset</c> this is the
-    /// relation of NewSeqNo instead, since a bare SequenceReset ignores MsgSeqNum. <c>TooLowDup</c> is PossDupFlag=Y
-    /// with a valid OrigSendingTime; <c>DupBadOrig</c> is PossDupFlag=Y with OrigSendingTime missing or later than
-    /// SendingTime, which the session layer requires be rejected rather than ignored.</summary>
-    public enum Seq { Expected, TooHigh, TooLow, TooLowDup, DupBadOrig }
 
     /// <summary>What the session emitted during a step.</summary>
     [Flags]
@@ -45,10 +39,13 @@ public sealed class FixEngine
         Reject = 64, App = 128,
     }
 
-    /// <summary>An inbound message, abstracted to its kind and its sequence number relation.</summary>
-    public readonly record struct Msg(In Kind, Seq Seq)
+    /// <summary>An inbound message from the wire: the message kind, its MsgSeqNum, and the PossDupFlag fields.
+    /// For a bare SequenceReset (GapFillFlag=N), <see cref="SeqNum"/> carries NewSeqNo instead, since MsgSeqNum
+    /// is ignored by that message type.</summary>
+    public readonly record struct Msg(In Kind, int SeqNum, bool PossDup = false, bool GoodOrig = true)
     {
-        public override string ToString() => Seq == Seq.Expected ? Kind.ToString() : $"{Kind} {Seq}";
+        public override string ToString() =>
+            PossDup ? $"{Kind} {SeqNum} {(GoodOrig ? "dup" : "dupBadOrig")}" : $"{Kind} {SeqNum}";
     }
 
     ConnectionStatus _status = ConnectionStatus.AwaitingLogon;
@@ -114,7 +111,7 @@ public sealed class FixEngine
 
         if (m.Kind is In.Logon or In.LogonReset)
         {
-            if (Up || (m.Kind == In.Logon && m.Seq == Seq.TooLow))
+            if (Up || (m.Kind == In.Logon && m.SeqNum < _expect))
             {
                 Send(Out.Logout);
                 Terminate();
@@ -134,7 +131,7 @@ public sealed class FixEngine
             Send(Out.Logon);
             _status = ConnectionStatus.LoggedOn;
             if (m.Kind == In.LogonReset) Consume();
-            else if (m.Seq == Seq.TooHigh)
+            else if (m.SeqNum > _expect)
             {
                 Send(Out.ResendRequest);
                 _gapOpen = true;
@@ -150,36 +147,31 @@ public sealed class FixEngine
             return;
         }
 
+        // A bare SequenceReset (GapFillFlag=N) ignores MsgSeqNum; SeqNum carries NewSeqNo.
         if (m.Kind == In.SeqReset)
         {
             Accept();
-            if (m.Seq == Seq.TooHigh)
+            if (m.SeqNum > _expect)
             {
+                _expect = Math.Min(m.SeqNum, Cap);
                 _gapOpen = false;
                 _queued = 0;
-                Consume();
             }
             else Send(Out.Reject);
             return;
         }
 
-        if (m.Seq == Seq.DupBadOrig)
+        if (m.SeqNum < _expect)
         {
-            Send(Out.Reject);
+            if (m.PossDup)
+            {
+                if (!m.GoodOrig) Send(Out.Reject);
+                else Consume(); // PLANTED DEFECT: PossDupFlag=Y with valid OrigSendingTime must not advance the expected sequence number
+            }
+            else { Send(Out.Logout); Terminate(); }
             return;
         }
-        if (m.Seq == Seq.TooLowDup)
-        {
-            Consume(); // PLANTED DEFECT: an already processed duplicate must not advance the expected sequence number
-            return;
-        }
-        if (m.Seq == Seq.TooLow)
-        {
-            Send(Out.Logout);
-            Terminate();
-            return;
-        }
-        if (m.Seq == Seq.TooHigh)
+        if (m.SeqNum > _expect)
         {
             if (!_gapOpen) Send(Out.ResendRequest);
             _gapOpen = true;

@@ -3,6 +3,7 @@ namespace Tests.Specs;
 using System;
 using System.Linq;
 using CsCheck;
+using Seq = Tests.Specs.FixEngineSpec.Seq;
 
 /// <summary>The FIX 4.4 session core, specified once and then checked four ways: proved exhaustively, sampled
 /// randomly, mutation tested to show the requirements are strong enough, and used to check a hand written engine
@@ -82,17 +83,33 @@ public class FixEngineTests
         TUnitX.WriteLine(violation.ToString(s => s.ToString()));
     }
 
-    /// <summary>Conformance. The same random walk drives the specification and a hand written imperative engine, and
-    /// every step compares what the engine did with what the specification says. The engine has one planted defect,
-    /// so this is expected to fail and the assertion is on the shrunk counterexample.</summary>
+    /// <summary>Conformance. A random walk drives the specification; at each step the same action is applied to both
+    /// the specification and the engine, with <c>Apply</c> translating from the specification's abstract message
+    /// vocabulary to the engine's wire-level API. The engine has one planted defect, so this is expected to fail
+    /// and the assertion is on the shrunk counterexample.</summary>
     [Test]
     public async Task Conforms_To_Spec()
     {
+        // Apply is the bridge between the specification's abstract domain and the engine's concrete API.
+        // The spec expresses inbound messages as (kind, Seq relation); the engine takes a wire-level message
+        // with a real sequence number and PossDup fields. The translation uses the engine's current Expect to
+        // produce a sequence number that satisfies the intended relation.
         static bool Apply(FixEngine e, Transition<FixEngineSpec.State> t)
         {
             switch (t.Action)
             {
-                case "Recv": e.Inbound(FixEngineSpec.Inbound[t.ArgIndex]); break;
+                case "Recv":
+                    var specMsg = FixEngineSpec.Inbound[t.ArgIndex];
+                    var seqNum = specMsg.Seq switch
+                    {
+                        Seq.Expected => e.Expect,
+                        Seq.TooHigh => e.Expect + 1,
+                        _ => e.Expect - 1  // TooLow / TooLowDup / DupBadOrig
+                    };
+                    e.Inbound(new FixEngine.Msg(specMsg.Kind, seqNum,
+                        PossDup: specMsg.Seq is Seq.TooLowDup or Seq.DupBadOrig,
+                        GoodOrig: specMsg.Seq == Seq.TooLowDup));
+                    break;
                 case "Tick": e.Tick(); break;
                 case "SendApp": e.SendApp(); break;
                 case "SendLogout": e.SendLogout(); break;
@@ -100,7 +117,8 @@ public class FixEngineTests
                 default: e.Drop(); break;
             }
             return e.Status == t.After.Status && e.Sent == t.After.Sent
-                && e.Expect == t.After.Expect && e.Next == t.After.Next && e.GapOpen == t.After.GapOpen;
+                && e.Expect == t.After.Expect && e.Next == t.After.Next
+                && e.GapOpen == t.After.GapOpen && e.Queued == t.After.Queued;
         }
         var message = Assert.Throws<CsCheckException>(
             () => FixEngineSpec.Create().Conform(() => new FixEngine(), Apply, TUnitX.WriteLine, iter: 100_000))!.Message;

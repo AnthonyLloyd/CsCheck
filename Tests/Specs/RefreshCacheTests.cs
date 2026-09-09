@@ -43,7 +43,7 @@ public class RefreshCacheTests
     {
         static bool Apply(RefreshCache c, Transition<RefreshCacheSpec.State> t)
         {
-            var key = t.ArgIndex == 0 ? RefreshCache.Key.A : RefreshCache.Key.B;
+            var key = RefreshCacheSpec.Keys[t.ArgIndex];
             var served = RefreshCache.Served.None;
             switch (t.Action)
             {
@@ -73,7 +73,7 @@ public class RefreshCacheTests
         RefreshCacheSpec.Create()
         .Response("STALE-ALWAYS-CLEARS",
             "A stale value always becomes fresh again.",
-            [RefreshCache.Key.A, RefreshCache.Key.B],
+            RefreshCacheSpec.Keys,
             trigger: (_, a, k) => a.Started && a.Touched == k,
             response: (_, a, k) => !a.Of(k).Stale,
             within: RefreshCache.Ttl, per: "Tick")

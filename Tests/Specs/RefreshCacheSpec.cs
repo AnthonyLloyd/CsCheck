@@ -28,17 +28,17 @@ public static class RefreshCacheSpec
         public Slot Older() => this with { Age = Math.Min(Age + 1, Cap) };
     }
 
-    public readonly record struct State(Slot A, Slot B, Key Touched, Served Served, bool Started)
+    public readonly record struct State(Slot A, Slot B, string Touched, Served Served, bool Started)
     {
-        public static readonly State Empty = new(default, default, Key.A, Served.None, false);
+        public static readonly State Empty = new(default, default, "A", Served.None, false);
 
-        public Slot Of(Key k) => k == Key.A ? A : B;
-        State With(Key k, Slot s) => k == Key.A ? this with { A = s } : this with { B = s };
-        State Step(Key k) => this with { Touched = k, Served = Served.None, Started = false };
+        public Slot Of(string k) => k == "A" ? A : B;
+        State With(string k, Slot s) => k == "A" ? this with { A = s } : this with { B = s };
+        State Step(string k) => this with { Touched = k, Served = Served.None, Started = false };
 
         /// <summary>A caller asks for a key. Whatever is in the slot is handed straight back; a stale or absent value
         /// additionally kicks off a load, unless one is already in flight for that key.</summary>
-        public State Read(Key k)
+        public State Read(string k)
         {
             var slot = Of(k);
             var s = Step(k) with { Served = !slot.Present ? Served.Miss : slot.Stale ? Served.Stale : Served.Fresh };
@@ -46,14 +46,14 @@ public static class RefreshCacheSpec
         }
 
         /// <summary>A load returned. The slot takes the new value and its age restarts.</summary>
-        public State Complete(Key k) => Step(k).With(k, Of(k).Loaded());
+        public State Complete(string k) => Step(k).With(k, Of(k).Loaded());
 
         /// <summary>A load threw. The previous value is kept and served stale rather than evicted, so a failing
         /// loader degrades availability instead of destroying it.</summary>
-        public State Fail(Key k) => Step(k).With(k, Of(k) with { Loads = Of(k).Loads - 1 });
+        public State Fail(string k) => Step(k).With(k, Of(k) with { Loads = Of(k).Loads - 1 });
 
-        public State Tick() => (this with { Touched = Key.A, Served = Served.None, Started = false })
-            .With(Key.A, A.Older()).With(Key.B, B.Older());
+        public State Tick() => (this with { Touched = "A", Served = Served.None, Started = false })
+            .With("A", A.Older()).With("B", B.Older());
 
         public override string ToString()
             => string.Concat("A", Show(A), " B", Show(B),
@@ -63,7 +63,7 @@ public static class RefreshCacheSpec
         static string Show(Slot s) => $"[v{s.Version} age{s.Age}{(s.Loads == 0 ? "" : " ld" + s.Loads)}]";
     }
 
-    static readonly Key[] Keys = [Key.A, Key.B];
+    public static readonly string[] Keys = ["A", "B"];
 
     public static Spec<State> Create()
         => Spec.From(State.Empty)
@@ -174,7 +174,7 @@ public static class RefreshCacheSpec
             (b, a) => a.Served == Served.None && a.Of(a.Touched).Version > b.Of(a.Touched).Version,
             (_, a) => Set(a, a.Of(a.Touched) with { Age = Ttl }));
 
-    static Key Other(Key k) => k == Key.A ? Key.B : Key.A;
+    static string Other(string k) => k == "A" ? "B" : "A";
 
-    static State Set(State s, Slot slot) => s.Touched == Key.A ? s with { A = slot } : s with { B = slot };
+    static State Set(State s, Slot slot) => s.Touched == "A" ? s with { A = slot } : s with { B = slot };
 }
