@@ -1004,6 +1004,11 @@ public sealed class Classifier
     }
     public void Print(Action<string> writeLine)
     {
+        if (estimators.IsEmpty)
+        {
+            if (nullCount > 0) writeLine($"Null Count: {nullCount:#,##0}");
+            return;
+        }
         long total = estimators.Values.Sum(i => i.N);
         foreach (var (summary, s) in estimators.SelectMany(kv =>
                                         {

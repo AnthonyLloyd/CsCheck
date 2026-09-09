@@ -16,7 +16,7 @@ This gives the following advantages over tree based shrinking libraries:
 
 New to random testing? Read the [beginner's getting started guide](https://github.com/AnthonyLloyd/CsCheck/blob/master/docs/GettingStarted.md).
 
-See [why](https://github.com/AnthonyLloyd/CsCheck/blob/master/docs/Why.md) you should use it, the [comparison](https://github.com/AnthonyLloyd/CsCheck/blob/master/Comparison.md) with other random testing libraries, or how CsCheck does in the [shrinking challenge](https://github.com/jlink/shrinking-challenge).
+See [why](https://github.com/AnthonyLloyd/CsCheck/blob/master/docs/Why.md) you should use it, the [comparison](https://github.com/AnthonyLloyd/CsCheck/blob/master/docs/Comparison.md) with other random testing libraries, or how CsCheck does in the [shrinking challenge](https://github.com/jlink/shrinking-challenge).
 In one [shrinking challenge test](https://github.com/jlink/shrinking-challenge/blob/main/challenges/binheap.md) CsCheck managed to shrink to a new smaller example than was thought possible and is not reached by any other testing library.
 CsCheck is the only random testing library that can always shrink to the simplest example (given enough time).
 
@@ -25,9 +25,10 @@ CsCheck also has functionality to make multiple types of testing simple and fast
 - [Random testing](#Random-testing)
 - [Model-based testing](#Model-based-testing)
 - [Metamorphic testing](#Metamorphic-testing)
-- [Parallel testing](#Parallel-testing)
 - [Performance testing](#Performance-testing)
+- [Specification testing](#Specification-testing)
 - [Regression testing](#Regression-testing)
+- [Parallel testing](#Parallel-testing)
 - [Equality testing](#Equality-testing)
 - [Causal profiling](#Causal-profiling)
 - [Debug utilities](#Debug-utilities)
@@ -259,6 +260,36 @@ SetSlim_ModelBased()
 }
 ```
 
+### Operation coverage
+
+Set `writeLine` and a table of how often each operation ran is written, which is the cheapest way to see that a random
+walk has starved one. Add `classify` over the model state and each operation is split by the state it acted on, which
+answers whether the interesting cases were reached at all or only the easy one.
+
+```csharp
+Gen.Int[0, 5].List[0, 3].Select(l => (new ConcurrentBag<int>(l), l))
+.SampleModelBased(
+    Gen.Int.Operation<ConcurrentBag<int>, List<int>>((bag, i) => bag.Add(i), (list, i) => list.Add(i)),
+    Gen.Operation<ConcurrentBag<int>, List<int>>(bag => bag.TryTake(out _), list => { if (list.Count > 0) list.RemoveAt(0); }),
+    equal: (bag, list) => bag.Count == list.Count,
+    classify: list => list.Count == 0 ? "empty" : "non-empty",
+    writeLine: Console.WriteLine);
+```
+
+|             | Count |       % |    Median |   Lower Q |   Upper Q |   Minimum |    Maximum |
+|-------------|------:|--------:|----------:|----------:|----------:|----------:|-----------:|
+| Op0         | 3,388 |  50.27% |           |           |           |           |            |
+|   non-empty | 2,907 |  43.14% |  0.1000μs |  0.0059μs |  0.1095μs |  0.0000μs | 285.6000μs |
+|   empty     |   481 |   7.14% |  0.1000μs |  0.0992μs |  0.1018μs |  0.0000μs |   2.3000μs |
+| Op1         | 3,351 |  49.73% |           |           |           |           |            |
+|   non-empty | 2,910 |  43.18% |  0.0997μs |  0.0072μs |  0.1082μs |  0.0000μs | 362.6000μs |
+|   empty     |   441 |   6.54% |  0.1000μs |  0.0300μs |  0.1001μs |  0.0000μs |   0.8000μs |
+
+Rows are named by the operation's position in the argument list, and the times are of the actual operation rather than
+the model. The initial list is bounded here because the default `List` Count is uniform over 0 to 127, so a bag starting
+near 64 with balanced adds and takes reaches empty only in the rare iteration that starts there. Nothing is written and
+nothing is measured when `writeLine` is not set.
+
 ## Metamorphic testing
 
 The second most efficient form of random testing is metamorphic which means doing something two different ways and checking they produce the same result.
@@ -279,40 +310,6 @@ public void MapSlim_Metamorphic()
             (d, t) => { d[t.V0] = t.V1; d[t.V2] = t.V3; },
             (d, t) => { if (t.V0 == t.V2) d[t.V2] = t.V3; else { d[t.V2] = t.V3; d[t.V0] = t.V1; } }
         )
-    );
-}
-```
-
-## Parallel testing
-
-CsCheck has support for parallel testing with full shrinking capability.
-A number of operations are run sequentially and then a number in parallel on an initial state and the result is compared to all the possible linearized versions.
-At least one of these must be equal to the parallel result.
-
-Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603) and [paper](https://github.com/AnthonyLloyd/AnthonyLloyd.github.io/raw/master/public/cscheck/finding-race-conditions.pdf). This is easier to implement with CsCheck than QuickCheck because the random shrinking does not need to repeat each step as QuickCheck does (10 times by default) to make shrinking deterministic.
-
-```csharp
-[Test]
-public void SampleParallel_ConcurrentQueue()
-{
-    Gen.Const(() => new ConcurrentQueue<int>())
-    .SampleParallel(
-        Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
-        Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
-    );
-}
-```
-
-Can also be tested against a model (which doesn't need to be thread-safe):
-
-```csharp
-[Test]
-public void SampleParallelModel_ConcurrentQueue()
-{
-    Gen.Const(() => (new ConcurrentQueue<int>(), new Queue<int>()))
-    .SampleParallel(
-        Gen.Int.Operation<ConcurrentQueue<int>, Queue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i), (q, i) => q.Enqueue(i)),
-        Gen.Operation<ConcurrentQueue<int>, Queue<int>>("TryDequeue()", q => q.TryDequeue(out _), q => q.TryDequeue(out _))
     );
 }
 ```
@@ -453,6 +450,65 @@ Standard Output Messages:
 10.94%[-3.27%..25.81%] 1.12x[0.97x..1.35x] faster, sigma = 10.0 (442 vs 190), min = 7.082ns vs 7.332ns, alloc = 0B vs 0B
 ```
 
+## Specification testing
+
+Model-based testing needs a model to compare against. Sometimes what you have instead is a *document*: a protocol
+specification, an exchange's rules, a regulation. **Spec** lets you write the requirements down as named,
+quoted rules over a small pure state machine, and then check them four ways from the one definition.
+
+```csharp
+Spec.From(State.Connected)
+.Action("Recv", Inbound, (s, _) => s.Status != Disconnected, (s, m) => s.Inbound(m), weight: 30)
+.Action("Tick", s => s.Status != Disconnected, s => s.Tick(), weight: 20)
+.Rule("SEQ-TOO-LOW-FATAL",
+    "MsgSeqNum lower than expected without PossDupFlag set to Y is a fatal error: send a Logout and terminate.",
+    when: (b, a) => b.Up && a.RecvSeq == Seq.TooLow,
+    then: (b, a) => a.Put(Out.Logout) && a.Status == Disconnected)
+.Response("LOGOUT-COMPLETES",
+    "The initiator of a Logout waits for the confirming Logout, and terminates anyway if it does not arrive.",
+    trigger:  (b, a) => a.Status == LogoutSent && b.Status != LogoutSent,
+    response: (b, a) => a.Status == Disconnected,
+    within: 3, per: "Tick")
+.Never("DISCONNECTED-SILENT", "No message is sent on a terminated connection.",
+    (b, a) => b.Status == Disconnected && a.Sent != Out.None)
+.Reachable("CAN-LOG-ON", "A session can reach the logged on state at all.",
+    s => s.Status == LoggedOn);
+```
+
+- **`Exhaustive`** enumerates the whole reachable state space breadth first. When it closes, every requirement is
+  *proved* for the model rather than sampled — including bounded `Response` requirements, whose outstanding
+  deadlines are carried in the search state. Any violation comes back as a shortest path.
+- **`Sample`** random walks the same specification with normal CsCheck shrinking, for models too big to close.
+- **`Faults`** injects each declared defect in turn and reports which requirement caught it, and at what depth.
+  Mutation testing for the specification: a defect nothing catches means a requirement is missing, and a defect
+  caught by the *wrong* requirement means one of them is not what you thought. This is the one to reach for second —
+  a proof says the requirements hold, `Faults` says whether they were worth holding. `SampleFaults` produces the same
+  table by walking each fault instead of proving it, for a model too large to close.
+- **`Conform`** drives a real implementation down the same walk and checks it conforms to the specification on those traces.
+- **`Dot`** returns the reachable state graph in Graphviz DOT, with intended ends doubled, dead ends filled and cut-off states dashed, for a model small enough to look at.
+
+Every run prints how often each requirement's antecedent actually fired, so a requirement that passed vacuously
+says `NEVER` instead of quietly passing:
+
+```
+Spec.Exhaustive of 31 requirements
+  state space CLOSED: 2,438 states, 51,569 transitions, depth 11, 131 terminal, 0 deadlock
+  | Requirement            |   Triggered | Unresolved |
+  | CAN-LOG-ON             |      13,798 |            |
+  | SEQ-TOO-LOW-FATAL      |       4,420 |            |
+  | LOGOUT-COMPLETES       |         922 |            |
+  | DISCONNECTED-SILENT    |  every step |            |
+```
+
+(`every step` means the requirement has no antecedent that could fail to fire, so vacuity does not apply to it.)
+
+Start with [Tests/Specs/SpecIntroTests.cs](Tests/Specs/SpecIntroTests.cs) — an order lifecycle in one file, seven reachable
+states, small enough to check by hand. Then [docs/Spec.md](docs/Spec.md) for the seven worked examples: the FIX 4.4
+session core, a refresh-on-access cache, a distributed lease specified in three configurations to show which one is
+actually safe, and four reimplementations of published specifications — a `wait`/`notify` queue that deadlocks, the
+Alternating Bit Protocol, the LMAX Disruptor and Safra's EWD 998 termination detection — each checked against the
+original's own published results.
+
 ## Regression testing
 
 ### Portfolio Calculation
@@ -481,6 +537,40 @@ public void Portfolio_Small_Mixed_Example()
         h.Add(portfolio.Profit(fxRate));
         h.Add(portfolio.RiskByPosition(fxRate));
     }, 5857230471108592669, decimalPlaces: 2);
+}
+```
+
+## Parallel testing
+
+CsCheck has support for parallel testing with full shrinking capability.
+A number of operations are run sequentially and then a number in parallel on an initial state and the result is compared to all the possible linearized versions.
+At least one of these must be equal to the parallel result.
+
+Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603) and [paper](https://github.com/AnthonyLloyd/AnthonyLloyd.github.io/raw/master/public/cscheck/finding-race-conditions.pdf). This is easier to implement with CsCheck than QuickCheck because the random shrinking does not need to repeat each step as QuickCheck does (10 times by default) to make shrinking deterministic.
+
+```csharp
+[Test]
+public void SampleParallel_ConcurrentQueue()
+{
+    Gen.Const(() => new ConcurrentQueue<int>())
+    .SampleParallel(
+        Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
+        Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
+    );
+}
+```
+
+Can also be tested against a model (which doesn't need to be thread-safe):
+
+```csharp
+[Test]
+public void SampleParallelModel_ConcurrentQueue()
+{
+    Gen.Const(() => (new ConcurrentQueue<int>(), new Queue<int>()))
+    .SampleParallel(
+        Gen.Int.Operation<ConcurrentQueue<int>, Queue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i), (q, i) => q.Enqueue(i)),
+        Gen.Operation<ConcurrentQueue<int>, Queue<int>>("TryDequeue()", q => q.TryDequeue(out _), q => q.TryDequeue(out _))
+    );
 }
 ```
 

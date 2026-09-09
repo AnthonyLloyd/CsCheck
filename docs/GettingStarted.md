@@ -158,6 +158,22 @@ Gen.Int.Sample(input => OldCalculate(input) == NewCalculate(input));
 
 This is useful when refactoring, replacing an algorithm, introducing SIMD, native, or other high-performance code, or rewriting an implementation without manually calculating the answer for every input. CsCheck also has `SampleMetamorphic` for operations that should produce the same result when performed in different equivalent orders; see the [MapSlim example in the README](../README.md#metamorphic-testing).
 
+### Specification testing: check the rules you were given
+
+The two styles above need something to compare against — a reference implementation, or a second version of your own code. Sometimes you have neither, and what you have instead is a document: a protocol, an exchange's rules, a regulation. The rules are written down, but nothing checks that your code follows them.
+
+`Spec` lets you write those rules as named requirements over a small state machine, each carrying the sentence it came from:
+
+```csharp
+.Invariant("NO-OVER-REFUND", "Never refund more than was paid.", o => o.Refunded <= o.Paid)
+.Never("NO-SHIP-UNPAID", "Goods only leave once the money has arrived.",
+    (before, after) => after.Status is Status.Shipped or Status.Delivered && after.Paid == 0)
+```
+
+Then it does something the other styles cannot: rather than sampling, it enumerates *every* reachable state and checks every requirement on every step. When that finishes, the requirements are proved for the model rather than tested. It will also inject deliberate defects to show your requirements are strong enough to catch them, and drive your real code down the same steps to check it agrees.
+
+This costs more thought than the other styles, because the state machine has to be small enough to enumerate. Start with [Tests/Specs/SpecIntroTests.cs](../Tests/Specs/SpecIntroTests.cs) — an order lifecycle with seven states, small enough to check the answer by hand — and then [docs/Spec.md](Spec.md) for the full guide.
+
 ## Getting started
 
 1. Install CsCheck in your existing test project.

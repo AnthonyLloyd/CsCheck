@@ -7,6 +7,7 @@
 *.csproj text eol=lf crlf=input
 *.fsproj text eol=lf crlf=input
 *.sln text eol=lf crlf=input
+*.slnx text eol=lf crlf=input
 .gitattributes text eol=lf crlf=input
 .gitignore text eol=lf crlf=input
 

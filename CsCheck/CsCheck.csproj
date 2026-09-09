@@ -13,7 +13,7 @@ This gives the following advantages:
 - Shrinking can be continued later to give simpler cases for high dimensional problems.
 - Parallel concurrency testing and random shrinking work well together.
 
-CsCheck also makes parallel, performance and regression testing simple and fast.
+CsCheck also makes specification, parallel, performance and regression testing simple and fast.
         </Description>
         <Authors>Anthony Lloyd</Authors>
         <Owners>Anthony Lloyd</Owners>
@@ -21,10 +21,27 @@ CsCheck also makes parallel, performance and regression testing simple and fast.
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
-        <PackageTags>quickcheck;random;model-based;metamorphic;parallel;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>4.8.0</Version>
+        <PackageTags>quickcheck;random;model-based;metamorphic;specification;model-checking;temporal;parallel;performance;causal-profiling;regression;testing</PackageTags>
+        <Version>4.9.0</Version>
         <PackageReleaseNotes>
-Added Check.Equality IEqualityComparer, field checking, completeness and union support.
+Added allocation comparison to Faster.
+Added operation coverage and classify output to SampleModelBased.
+Fixed the classify table being lost when a sample fails, which is when it is worth reading.
+Faults and SampleFaults now check the unmutated spec before injecting any fault and reject it immediately if a
+requirement already fails. SampleFaults uses a sampled baseline at proportional cost; Faults uses a full exhaustive
+baseline matching its own budget. SpecFaultResult now carries a FaultOutcome enum (Caught, NotDetected, Inconclusive)
+so exhaustive-search give-up is reported as Inconclusive rather than silently as NOTHING; SpecFaultsReport gains an
+Inconclusive list alongside Uncaught.
+
+Added Spec specification testing: named requirements quoted from a document, proved by exhaustive state space
+enumeration, sampled by random walk with shrinking, mutation tested with Faults, and checked against a real
+implementation with Conform. Requirement forms are Invariant, Reachable, Rule, Never, AtMost, Response, Precedes and
+NeverAfter, the last of which scopes its obligation between two events when given an until, with per-element overloads
+where the requirement has more than one subject. Every run reports how often each requirement's antecedent fired, so
+one that passed vacuously says NEVER rather than passing quietly, and coverage is counted per action argument case so a
+dead case cannot hide behind a busy total. A non-zero deadlock count comes with a path to the first one. Boundary
+closes the exploration over a chosen region when no abstraction makes the model finite, and SampleFaults mutation
+tests by random walk when it does not close at all. Dot draws a small model's state graph in Graphviz.
         </PackageReleaseNotes>
         <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>

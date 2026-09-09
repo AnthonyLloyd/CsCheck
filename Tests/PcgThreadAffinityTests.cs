@@ -10,15 +10,13 @@ using CsCheck;
 /// synchronise. <see cref="PCG.Next"/> relies on that: it is a non-atomic read-modify-write of the public
 /// <c>State</c> field, so two threads drawing from one PCG read the same state, return the same number and then slip
 /// apart, silently corrupting both sequences.
-///
-/// The async samplers captured <c>PCG.ThreadPCG</c> once, outside their loop, and then awaited inside it with
+/// <para>The async samplers captured <c>PCG.ThreadPCG</c> once, outside their loop, and then awaited inside it with
 /// <c>ConfigureAwait(false)</c>. Every iteration after the first could therefore resume on a different pool thread
 /// while still driving the original thread's PCG - and the original thread, back in the pool, would pick up another
-/// test's sample and draw from that same PCG.
-///
-/// Almost nothing notices, because a corrupted stream is still a plausible random stream. What noticed was
+/// test's sample and draw from that same PCG.</para>
+/// <para>Almost nothing notices, because a corrupted stream is still a plausible random stream. What noticed was
 /// <c>Check.Equality</c>, whose first check is <c>gen.Clone()</c> - the one place in the library that draws a value
-/// twice from one state and requires the two to agree. It failed roughly once in twenty full test runs, in whichever
+/// twice from one state and requires the two to agree. It failed roughly once in twenty full test runs, in whichever</para>
 /// <c>Equality</c> test happened to be sharing a thread with an async sample, with a seed that never reproduced.</summary>
 public class PcgThreadAffinityTests
 {

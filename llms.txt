@@ -1,6 +1,6 @@
 # CsCheck
 
-> CsCheck is a C# property-based / random testing library (QuickCheck-style) for .NET. Generation and shrinking are both based on the PCG random number generator, so shrinking is automatic, parallelized, and reproducible from a seed. It supports random, model-based, metamorphic, parallel/concurrency, causal-profiling, regression, and performance testing.
+> CsCheck is a C# property-based / random testing library (QuickCheck-style) for .NET. Generation and shrinking are both based on the PCG random number generator, so shrinking is automatic, parallelized, and reproducible from a seed. It supports random, model-based, metamorphic, specification (exhaustive state-space and temporal requirements), parallel/concurrency, causal-profiling, regression, and performance testing.
 
 Key facts an assistant should know before generating CsCheck code:
 
@@ -23,8 +23,9 @@ Generators (compose with LINQ: `Select`, `SelectMany`, `Where`, query syntax):
 Terminating methods:
 
 - `gen.Sample(t => bool | throw)` — random testing.
-- `gen.SampleModelBased(Gen...Operation<Actual, Model>(...))` — apply random ops to actual + model, assert equal.
+- `gen.SampleModelBased(Gen...Operation<Actual, Model>(...))` — apply random ops to actual + model, assert equal. Add `writeLine:` for a table of how often each operation ran, and `classify:` over the model state to split each operation by the state it acted on.
 - `gen.SampleMetamorphic(Gen...Metamorphic<T>(f1, f2))` — two routes, same result.
+- `Spec.From(state).Action(...).Invariant/Reachable/Rule/Never/AtMost/Response/Precedes/NeverAfter(...)` then `.Exhaustive()` (enumerate the whole reachable state space — a proof when it closes), `.Sample()` (random walks with shrinking), `.Faults()` (mutation test the requirements, or `.SampleFaults()` when the space will not close) or `.Conform(create, apply)` (does the real implementation conform to the spec on sampled traces). `.Dot()` returns the reachable state graph in Graphviz DOT for a model small enough to look at. State must be an immutable record with saturating counters; where a counter cannot saturate, `.Boundary(predicate)` closes `Exhaustive` over a chosen region instead of giving up at `maxStates`. Keep the state narrow in bytes as well as bounded in values — every guard and requirement takes it by value, so padding costs roughly a nanosecond per byte per transition (1.84x measured from 12 to 96 bytes); pack flags into an int rather than a field each. See `docs/Spec.md`, and `docs/SpecDesign.md` for the design rationale and prior art.
 - `gen.SampleParallel(Gen...Operation<State>(...))` — concurrency/linearizability testing.
 - `gen.Faster(fast, slow, writeLine: ...)` — statistical performance comparison.
 - `ModelGen.X.Single(predicate, "seed")` + `Check.Hash(h => h.Add(...), expectedHash)` — regression testing.
@@ -50,8 +51,8 @@ public void Long_Range()
 
 - [README](https://github.com/AnthonyLloyd/CsCheck/blob/master/README.md): full guide with worked examples for every testing style.
 - [AGENTS.md](https://github.com/AnthonyLloyd/CsCheck/blob/master/AGENTS.md): conventions and build/test commands for coding agents.
-- [Why](https://github.com/AnthonyLloyd/CsCheck/blob/master/Why.md): rationale and motivation for the design.
-- [Comparison](https://github.com/AnthonyLloyd/CsCheck/blob/master/Comparison.md): comparison with other random testing libraries.
+- [Why](https://github.com/AnthonyLloyd/CsCheck/blob/master/docs/Why.md): rationale and motivation for the design.
+- [Comparison](https://github.com/AnthonyLloyd/CsCheck/blob/master/docs/Comparison.md): comparison with other random testing libraries.
 
 ## Examples
 
