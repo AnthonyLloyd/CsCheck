@@ -12,8 +12,8 @@ public class TerminationDetectionTests
     /// <summary>Safra's algorithm never announces termination while work is outstanding, and Safra's inductive invariant
     /// holds, which is the argument for why. Both over the region the original's own StateConstraint picks out.
     /// <para>Verified against TLC 1.7.4: 1,520,618 distinct states, 11,238,019 generated. Our count differs by 73 —
-    /// the scaffold states from the three setup actions that choose among the 192 protocol initial configurations</para>
-    /// that TLA+'s free-ranging <c>Init</c> gets for nothing.</summary>
+    /// the scaffold states from the three setup actions that choose among the 192 protocol initial configurations
+    /// that TLA+'s free-ranging <c>Init</c> gets for nothing.</para></summary>
     [Test]
     public async Task Termination_Is_Never_Detected_Early()
     {
@@ -36,8 +36,8 @@ public class TerminationDetectionTests
     /// comment in EWD998.tla was simply wrong. Adding lower bounds gives fewer states and a worse depth; they are not
     /// needed and the upper-only bounds are the faithful replication of the written StateConstraint.
     /// <para>The initial colouring question is still worth answering: TLA+'s Init allows any combination of colours (192
-    /// initial states), while our SetupColour only picks one of them for the anyInitialColour=false case. The count</para>
-    /// barely moves (1,520,691 vs 1,514,331), confirming it is not the meaningful dimension.</summary>
+    /// initial states), while our SetupColour only picks one of them for the anyInitialColour=false case. The count
+    /// barely moves (1,520,691 vs 1,514,331), confirming it is not the meaningful dimension.</para></summary>
     [Test]
     public async Task The_Boundary_Is_Faithful_To_The_Original()
     {
