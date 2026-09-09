@@ -316,10 +316,13 @@ await Assert.That(report.CaughtBy("no heartbeat when idle")).IsEqualTo("HB-KEEPA
 await Assert.That(report.Uncaught).IsEmpty();
 ```
 
-`Results` is one row per fault, `Uncaught` the ones nothing detected, `Unexercised` the trailing list, and `ToString()`
-the table — so a caller that only wants to read it can pass no `writeLine` and print the report instead. `CaughtBy`
-throws on a name that was never declared: a fault renamed without its assertion being updated would otherwise read as
-uncaught, which is the same green-for-the-wrong-reason failure the column exists to catch.
+`Results` is one row per fault, `Uncaught` the ones proved undetectable (exhaustive search closed, no violation found),
+`Inconclusive` the ones where the search gave up before closing (`NOT CLOSED` in the table — these do not trigger
+`throwOnUncaught`), `Unexercised` the trailing list, and `ToString()` the table. Each `SpecFaultResult` carries a
+`FaultOutcome` — `Caught`, `NotDetected`, or `Inconclusive` — which makes the three outcomes unambiguous rather than
+relying on a nullable `CaughtBy` plus a flag. `CaughtBy` throws on a name that was never declared: a fault renamed
+without its assertion being updated would otherwise read as uncaught, which is the same green-for-the-wrong-reason
+failure the column exists to catch.
 
 That column keeps working as the model grows, which is the real reason to have it. Adding the outbound sequence
 number moved `no heartbeat when idle` off `HB-KEEPALIVE` and onto `OUTBOUND-ADVANCES`: the fault stopped the

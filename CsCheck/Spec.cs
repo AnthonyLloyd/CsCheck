@@ -692,9 +692,23 @@ public sealed class SpecReport
     }
 }
 
-/// <summary>What became of one declared <c>Fault</c>: the requirement whose counterexample was shortest, and how many
-/// steps that took. <c>CaughtBy</c> is null when no requirement detected the defect at all.</summary>
-public readonly record struct SpecFaultResult(string Fault, string? CaughtBy, int Steps);
+/// <summary>The three possible outcomes of one fault injection run.</summary>
+public enum FaultOutcome
+{
+    /// <summary>A requirement detected the fault. <see cref="SpecFaultResult.CaughtBy"/> names it.</summary>
+    Caught,
+    /// <summary>The exhaustive search closed without finding a violation: the fault is proved undetectable in the
+    /// model. <see cref="SpecFaultResult.CaughtBy"/> is null.</summary>
+    NotDetected,
+    /// <summary>The exhaustive search gave up before closing the state space, so it is unknown whether the fault
+    /// is detectable. The fault appears in <see cref="SpecFaultsReport.Inconclusive"/>. Declare a
+    /// <c>Boundary</c> or reduce the model to make the search conclusive.</summary>
+    Inconclusive,
+}
+
+/// <summary>What became of one declared <c>Fault</c>: the outcome of the search, the requirement whose
+/// counterexample was shortest when caught, and how many steps that took.</summary>
+public readonly record struct SpecFaultResult(string Fault, FaultOutcome Outcome, string? CaughtBy, int Steps);
 
 /// <summary>The result of <c>Faults</c>. Its <c>ToString</c> is the table, so a caller that only wants to read it
 /// can pass no <c>writeLine</c> and print this instead.</summary>
@@ -702,9 +716,14 @@ public sealed class SpecFaultsReport
 {
     /// <summary>One entry per declared fault, in declaration order.</summary>
     public IReadOnlyList<SpecFaultResult> Results { get; }
-    /// <summary>Faults no requirement detected. Each one means a requirement is missing, and <c>Faults</c> throws on
-    /// these unless <c>throwOnUncaught</c> is false.</summary>
+    /// <summary>Faults with outcome <see cref="FaultOutcome.NotDetected"/>: the exhaustive search closed without
+    /// finding a violation, so each one means a requirement is missing. <c>Faults</c> throws on these unless
+    /// <c>throwOnUncaught</c> is false.</summary>
     public IReadOnlyList<string> Uncaught { get; }
+    /// <summary>Faults whose exhaustive search gave up before the state space closed, so it is not known whether
+    /// the fault is detectable. These are not thrown on, because the search was incomplete; they show as NOT CLOSED
+    /// in the table. Declare a <c>Boundary</c> or reduce the model to make the search conclusive.</summary>
+    public IReadOnlyList<string> Inconclusive { get; }
     /// <summary>Requirements that no declared fault exercises: a list of faults worth writing rather than a failure.
     /// <c>Reachable</c> requirements are excluded, and not because a fault cannot break one - perturbing the model away
     /// from the state does exactly that, and <c>Exhaustive</c> then reports the <c>Reachable</c> as the violation. They
@@ -715,16 +734,18 @@ public sealed class SpecFaultsReport
     readonly string _table;
 
     internal SpecFaultsReport(IReadOnlyList<SpecFaultResult> results, IReadOnlyList<string> uncaught,
-        IReadOnlyList<string> unexercised, string table)
+        IReadOnlyList<string> inconclusive, IReadOnlyList<string> unexercised, string table)
     {
         Results = results;
         Uncaught = uncaught;
+        Inconclusive = inconclusive;
         Unexercised = unexercised;
         _table = table;
     }
 
-    /// <summary>The requirement that caught <paramref name="fault"/>, or null if nothing did. Throws when no fault of
-    /// that name was declared, so a renamed or mistyped fault fails loudly rather than looking uncaught.</summary>
+    /// <summary>The requirement that caught <paramref name="fault"/>, or null when the outcome is
+    /// <see cref="FaultOutcome.NotDetected"/> or <see cref="FaultOutcome.Inconclusive"/>. Throws when no fault
+    /// of that name was declared, so a renamed or mistyped fault fails loudly rather than looking uncaught.</summary>
     public string? CaughtBy(string fault)
     {
         for (int i = 0; i < Results.Count; i++)
@@ -1517,7 +1538,7 @@ public static partial class Check
                 : "within the declared boundary: a fault caught by NOTHING may still be caught outside it",
             "No requirement detects these faults", writeLine, throwOnUncaught,
             baseline: () => { Exhaustive(spec, null, null, maxStates, maxDepth, threads, true, out _); },
-            fault => { Exhaustive(spec, fault, null, maxStates, maxDepth, threads, false, out var v); return v; });
+            fault => { var r = Exhaustive(spec, fault, null, maxStates, maxDepth, threads, false, out var v); return (v, r.Closed); });
 
     /// <summary>Mutation testing for a specification whose state space is too large to close. Each declared
     /// <c>Fault</c> is injected in turn and the specification walked randomly, and the shallowest violation found is
@@ -1553,7 +1574,8 @@ public static partial class Check
             baseline: () => { var v = SampleFault(spec, new SpecFault<S>("(baseline)", (_, _) => false, (_, a) => a),
                                                    minSteps, maxSteps, seed, iter, time, threads);
                                if (v is not null) throw new CsCheckException(v.ToString(spec.Printer)); },
-            fault => SampleFault(spec, fault, minSteps, maxSteps, seed, iter, time, threads));
+            // Sampling always concludes (the budget runs out, never "gives up"), so closed is always true.
+            fault => (SampleFault(spec, fault, minSteps, maxSteps, seed, iter, time, threads), true));
 
     // Walk one fault, keeping the violation that happened on the earliest step of any trace.
     // Ranked by the step the violation happened on rather than by the length of the trace that reached it,
@@ -1588,7 +1610,8 @@ public static partial class Check
     }
 
     static SpecFaultsReport FaultsReport<S>(Spec<S> spec, string mode, string? caveat, string uncaughtMessage,
-        Action<string>? writeLine, bool throwOnUncaught, Action baseline, Func<SpecFault<S>, SpecViolation<S>?> run)
+        Action<string>? writeLine, bool throwOnUncaught, Action baseline,
+        Func<SpecFault<S>, (SpecViolation<S>? Violation, bool Closed)> run)
     {
         // Every other engine validates through the walk it starts. This one would skip it entirely for a spec with no
         // faults declared, so a typo in an on: name would go unreported.
@@ -1608,16 +1631,23 @@ public static partial class Check
             .Append("\n  | ").Append("Fault".PadRight(w)).Append(" | ").Append("Caught by".PadRight(c)).Append(" | Steps |");
         var results = new SpecFaultResult[spec.FaultList.Count];
         var uncaught = new List<string>();
+        var inconclusive = new List<string>();
         var caught = new HashSet<string>(StringComparer.Ordinal);
         for (int f = 0; f < spec.FaultList.Count; f++)
         {
             var fault = spec.FaultList[f];
-            var violation = run(fault);
-            if (violation is null) uncaught.Add(fault.Name);
-            else caught.Add(violation.Id);
-            results[f] = new SpecFaultResult(fault.Name, violation?.Id, violation?.Trace.Steps.Length ?? 0);
+            var (violation, closed) = run(fault);
+            var outcome = violation is not null ? FaultOutcome.Caught
+                        : closed ? FaultOutcome.NotDetected
+                        : FaultOutcome.Inconclusive;
+            if (outcome == FaultOutcome.Caught) caught.Add(violation!.Id);
+            else if (outcome == FaultOutcome.NotDetected) uncaught.Add(fault.Name);
+            else inconclusive.Add(fault.Name);
+            results[f] = new SpecFaultResult(fault.Name, outcome, violation?.Id, violation?.Trace.Steps.Length ?? 0);
+            var label = outcome == FaultOutcome.Caught ? violation!.Id
+                      : outcome == FaultOutcome.NotDetected ? "NOTHING" : "NOT CLOSED";
             sb.Append("\n  | ").Append(fault.Name.PadRight(w)).Append(" | ")
-              .Append((violation?.Id ?? "NOTHING").PadRight(c)).Append(" | ")
+              .Append(label.PadRight(c)).Append(" | ")
               .Append((violation is null ? "" : (violation.Trace.Steps.Length).ToString()).PadLeft(5)).Append(" |");
         }
         var idle = new List<string>();
@@ -1628,7 +1658,9 @@ public static partial class Check
         if (idle.Count != 0)
             sb.Append("\n  no declared fault exercises: ").AppendJoin(", ", idle);
         if (caveat is not null) sb.Append("\n  ").Append(caveat);
-        var report = new SpecFaultsReport(results, uncaught, idle, sb.ToString());
+        if (inconclusive.Count != 0)
+            sb.Append("\n  inconclusive (search did not close): ").AppendJoin(", ", inconclusive);
+        var report = new SpecFaultsReport(results, uncaught, inconclusive, idle, sb.ToString());
         writeLine?.Invoke(report.ToString());
         if (uncaught.Count != 0 && throwOnUncaught)
             throw new CsCheckException($"{uncaughtMessage}: {string.Join(", ", uncaught)}");

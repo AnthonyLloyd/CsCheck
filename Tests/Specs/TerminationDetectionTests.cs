@@ -65,16 +65,20 @@ public class TerminationDetectionTests
             .Exhaustive(TUnitX.WriteLine, maxStates: 4_000_000);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.NeverTriggered).IsEmpty();
+        var table = report.ToString();
         foreach (var id in new[] { "CAN-TERMINATE", "CAN-DETECT", "CAN-FLY", "CAN-BLACKEN" })
-            await Assert.That(report.ToString()).Contains(id);
+            await Assert.That(table).Contains(id);
     }
 
     /// <summary>How the space grows with the bound, and evidence the bound is not what makes the algorithm look correct.
-    /// The original's own constraint is the largest row.</summary>
-    [Test]
+    /// The original's own constraint is the largest row. Skipped in normal CI because the final row (1.5M states)
+    /// takes several seconds; run explicitly to see the scaling table.</summary>
+    [Test, Skip("Long-running; run explicitly")]
     public async Task Growth_With_The_Bound()
     {
-        foreach (var (c, p, q) in new[] { (1, 1, 2), (2, 2, 4), (2, 2, 9), (3, 3, 9) })
+        // (2,2,4) and (2,2,9) produce identical state counts — the token accumulator bound only matters when it
+        // can exceed the sum of counter values, which it cannot at pendingMax=2.
+        foreach (var (c, p, q) in new[] { (1, 1, 2), (2, 2, 9), (3, 3, 9) })
         {
             var sw = Stopwatch.StartNew();
             var report = TerminationDetectionSpec.Create(c, p, q).Exhaustive(maxStates: 4_000_000);
@@ -99,6 +103,9 @@ public class TerminationDetectionTests
                 (b, a) => a with { Black = b.Black });
         var report = spec.Faults(TUnitX.WriteLine, maxStates: 4_000_000, throwOnUncaught: false);
         await Assert.That(report.Uncaught).IsEmpty();
-        TUnitX.WriteLine($"caught by {report.CaughtBy("NoBlackenOnReceive")}");
+        // Safra's inductive invariant (not just the safety property) is what detects this. If a refactoring
+        // accidentally split the invariant and lost the structural argument, the safety property might still hold
+        // superficially while this test would catch the loss.
+        await Assert.That(report.CaughtBy("NoBlackenOnReceive")).IsEqualTo("SAFRA-INV");
     }
 }

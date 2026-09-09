@@ -56,6 +56,24 @@ public class SpecValidationTests
         await Assert.That(message).Contains("NO-TWO");
     }
 
+    /// <summary>A fault on a spec whose space does not close is inconclusive, not uncaught. If Faults gives up at
+    /// maxStates without finding a violation, it cannot claim the fault is undetectable — it only explored part of
+    /// the space. The fault shows as NOT CLOSED in the table and appears in Inconclusive rather than Uncaught, so
+    /// throwOnUncaught does not fire and the caller knows the result is not a proof.</summary>
+    [Test]
+    public async Task Faults_Reports_Inconclusive_When_Search_Does_Not_Close()
+    {
+        // Counter() is unbounded so Exhaustive gives up at maxStates without closing.
+        var report = Counter()
+            .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
+            .Fault("a jump", (b, a) => a == 3, (b, a) => a + 1)
+            .Faults(maxStates: 5, throwOnUncaught: false);
+        await Assert.That(report.Uncaught).IsEmpty();
+        await Assert.That(report.Inconclusive).Contains("a jump");
+        await Assert.That(report.ToString()).Contains("NOT CLOSED");
+        await Assert.That(report.Results[0].Outcome).IsEqualTo(FaultOutcome.Inconclusive);
+    }
+
     [Test]
     public async Task Unknown_On_Action_Is_Rejected()
     {

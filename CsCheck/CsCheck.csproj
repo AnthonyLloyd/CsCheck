@@ -29,7 +29,9 @@ Added operation coverage and classify output to SampleModelBased.
 Fixed the classify table being lost when a sample fails, which is when it is worth reading.
 Faults and SampleFaults now check the unmutated spec before injecting any fault and reject it immediately if a
 requirement already fails. SampleFaults uses a sampled baseline at proportional cost; Faults uses a full exhaustive
-baseline matching its own budget.
+baseline matching its own budget. SpecFaultResult now carries a FaultOutcome enum (Caught, NotDetected, Inconclusive)
+so exhaustive-search give-up is reported as Inconclusive rather than silently as NOTHING; SpecFaultsReport gains an
+Inconclusive list alongside Uncaught.
 
 Added Spec specification testing: named requirements quoted from a document, proved by exhaustive state space
 enumeration, sampled by random walk with shrinking, mutation tested with Faults, and checked against a real
