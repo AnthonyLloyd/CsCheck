@@ -116,6 +116,10 @@ public static class TerminationDetectionSpec
             .Reachable("CAN-DETECT", "Termination can be detected.", Detected)
             .Reachable("CAN-FLY", "A message can be in flight.", s => s.InFlight > 0)
             .Reachable("CAN-BLACKEN", "A node can be blackened.", s => s.Black != 0)
+            // A detached state has no enabled actions (all inactive, no messages, token home white). Without
+            // Terminal, Exhaustive counts these as deadlocks and the DeadlockTrace points at a correct end state
+            // rather than an actual modelling dead-end.
+            .Terminal(Detected)
             // The original's StateConstraint, verbatim (EWD998.tla, StateConstraint).
             // A counter is sends minus receives so it is unbounded above and below.
             .Boundary(s => !s.Running
