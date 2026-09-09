@@ -33,7 +33,7 @@ using System.Threading;
 public readonly record struct Transition<S>(int Index, int ActionIndex, int ArgIndex, string Action, string Arg, S Before, S After)
 {
     /// <summary>The action as it appears in a trace: <c>Name</c>, or <c>Name(Arg)</c> when it has an argument.</summary>
-    public override string ToString() => Arg.Length == 0 ? Action : string.Concat(Action, "(", Arg, ")");
+    public override string ToString() => Arg.Length == 0 ? Action : $"{Action}({Arg})";
 }
 
 /// <summary>A sequence of <see cref="Transition{S}"/> generated from a <see cref="Spec{S}"/>.</summary>
@@ -353,7 +353,7 @@ public sealed class Spec<S>(S initial)
         foreach (var item in over!)
         {
             var t = item;
-            AtMost(string.Concat(id, "[", t?.ToString(), "]"), quote, times, (b, a) => occurs(b, a, t));
+            AtMost($"{id}[{t?.ToString()}]", quote, times, (b, a) => occurs(b, a, t));
         }
         return this;
     }
@@ -392,7 +392,7 @@ public sealed class Spec<S>(S initial)
         foreach (var item in over!)
         {
             var t = item;
-            Response(string.Concat(id, "[", t?.ToString(), "]"), quote, (b, a) => trigger(b, a, t),
+            Response($"{id}[{t?.ToString()}]", quote, (b, a) => trigger(b, a, t),
                 (b, a) => response(b, a, t), within, cancel is null ? null : (b, a) => cancel(b, a, t), per);
         }
         return this;
@@ -415,7 +415,7 @@ public sealed class Spec<S>(S initial)
         foreach (var item in over!)
         {
             var t = item;
-            Precedes(string.Concat(id, "[", t?.ToString(), "]"), quote, (b, a) => first(b, a, t), (b, a) => second(b, a, t));
+            Precedes($"{id}[{t?.ToString()}]", quote, (b, a) => first(b, a, t), (b, a) => second(b, a, t));
         }
         return this;
     }
@@ -448,7 +448,7 @@ public sealed class Spec<S>(S initial)
         foreach (var item in over!)
         {
             var t = item;
-            NeverAfter(string.Concat(id, "[", t?.ToString(), "]"), quote, (b, a) => after(b, a, t),
+            NeverAfter($"{id}[{t?.ToString()}]", quote, (b, a) => after(b, a, t),
                 (b, a) => never(b, a, t), until is null ? null : (b, a) => until(b, a, t));
         }
         return this;
@@ -564,7 +564,7 @@ sealed class GenSpecTrace<S>(Spec<S> spec, int minSteps, int maxSteps, SpecFault
                 if (chosen.Enabled(state, g)) enabledArgs[ng++] = g;
             var gi = enabledArgs[(int)pcg.Next((uint)ng)];
             var after = chosen.Apply(state, gi);
-            if (fault is not null && fault.When(state, after)) after = fault.Perturb(state, after);
+            if (fault?.When(state, after) == true) after = fault.Perturb(state, after);
             steps[n] = new Transition<S>(n, ai, gi, chosen.Name, chosen.ArgName(gi), state, after);
             state = after;
             total.Add(new Size(((ulong)ai << 20) + (ulong)gi));
@@ -766,7 +766,6 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
     readonly int _pairs = spec.ArgPairs;
     readonly int _maxStates = maxStates;
     readonly int _maxDepth = maxDepth;
-    readonly List<SpecNode<S>> _nodes = [new(spec.Initial, 0UL, 0UL, 0UL)];
     readonly List<int> _parent = [-1];
     readonly List<int> _edgeAction = [-1];
     readonly List<int> _edgeArg = [-1];
@@ -786,8 +785,8 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
     public bool Truncated => _truncated;
     // Transitions that reached an already seen state. One is proof the state's value equality works.
     public long Revisits => _revisits;
-    public int States => _nodes.Count;
-    public List<SpecNode<S>> Nodes => _nodes;
+    public int States => Nodes.Count;
+    public List<SpecNode<S>> Nodes { get; } = [new(spec.Initial, 0UL, 0UL, 0UL)];
 
     // Record one expanded transition, returning false when the walk must stop. Both walks call this
     // sequentially in source order, which is what makes the result independent of thread count.
@@ -800,7 +799,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
             _found = new SpecViolation<S>(req.Id, req.Quote, edge.Detail, _depth,
                 Path(head, edge.Action, edge.Arg, edge.After));
             _report.Depth = _depth + 1;
-            _report.States = _nodes.Count;
+            _report.States = Nodes.Count;
             return false;
         }
         var child = new SpecNode<S>(edge.After, edge.Deadlines, edge.Seen, edge.Counts);
@@ -810,14 +809,14 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
         // however many paths reach it - which is what Pruned has always claimed to be.
         if (_spec.InBoundary is not null && !_spec.InBoundary(edge.After)) { _report.Pruned++; return true; }
         // The note is composed after the walk, where the final counters are available and this stays off the hot path.
-        if (_nodes.Count == _maxStates)
+        if (Nodes.Count == _maxStates)
         {
-            _report.States = _nodes.Count;
+            _report.States = Nodes.Count;
             _report.Depth = _depth + 1;
             _gaveUp = true;
             return false;
         }
-        _nodes.Add(child);
+        Nodes.Add(child);
         _parent.Add(head);
         _edgeAction.Add(edge.Action);
         _edgeArg.Add(edge.Arg);
@@ -829,7 +828,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
     // first of the latter is remembered, because a count alone says a dead end exists without saying which.
     void Settle(int head)
     {
-        if (_spec.IsTerminal?.Invoke(_nodes[head].State) == true) _report.TerminalStates++;
+        if (_spec.IsTerminal?.Invoke(Nodes[head].State) == true) _report.TerminalStates++;
         else
         {
             if (_firstDeadlock < 0) _firstDeadlock = head;
@@ -866,7 +865,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
             var (ai, arg) = back[back.Count - 1 - i];
             var action = _actions[ai];
             var after = action.Apply(state, arg);
-            if (_fault is not null && _fault.When(state, after)) after = _fault.Perturb(state, after);
+            if (_fault?.When(state, after) == true) after = _fault.Perturb(state, after);
             steps[i] = new Transition<S>(i, ai, arg, action.Name, action.ArgName(arg), state, after);
             state = after;
         }
@@ -888,9 +887,9 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
     // registers and no buffer is touched. Measurably the fastest way to do this on one core.
     public void Sequential()
     {
-        for (int head = 0; head < _nodes.Count && !_stopped; head++)
+        for (int head = 0; head < Nodes.Count && !_stopped; head++)
         {
-            var node = _nodes[head];
+            var node = Nodes[head];
             _depth = _depths[head];
             if (_depth > _report.Depth) _report.Depth = _depth;
             if (_depth == _maxDepth) { _truncated = true; continue; }
@@ -908,7 +907,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
                     enabled++;
                     _counters.Fired[_argBase[a] + g]++;
                     var after = action.Apply(node.State, g);
-                    if (_fault is not null && _fault.When(node.State, after)) after = _fault.Perturb(node.State, after);
+                    if (_fault?.When(node.State, after) == true) after = _fault.Perturb(node.State, after);
                     ulong d = node.Deadlines, s = node.Seen, k = node.Counts;
                     var det = Check.CheckTransition(_spec, a, node.State, after, ref d, ref s, ref k, _counters.Triggered, 0, out var r);
                     if (!stopInserting && !Insert(head, new SpecEdge<S>(a, g, after, d, s, k, det, r)))
@@ -934,9 +933,9 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
         var triggered = new long[chunk * Math.Max(_reqs, 1)];
         var fired = new long[chunk * _pairs];
         var options = new ParallelOptions { MaxDegreeOfParallelism = threads };
-        for (int levelStart = 0; levelStart < _nodes.Count && !_stopped;)
+        for (int levelStart = 0; levelStart < Nodes.Count && !_stopped;)
         {
-            var levelEnd = _nodes.Count;
+            var levelEnd = Nodes.Count;
             _depth = _depths[levelStart];
             if (_depth > _report.Depth) _report.Depth = _depth;
             if (_depth == _maxDepth) { _truncated = true; break; }
@@ -948,7 +947,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
                 var from = chunkStart;
                 System.Threading.Tasks.Parallel.For(0, width, options, i =>
                 {
-                    var node = _nodes[from + i];
+                    var node = Nodes[from + i];
                     // Both buffers are strided by pairs, so one base serves both.
                     var slot = i * _pairs;
                     int n = 0, enabled = 0;
@@ -961,7 +960,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
                             enabled++;
                             fired[slot + _argBase[a] + g]++;
                             var after = action.Apply(node.State, g);
-                            if (_fault is not null && _fault.When(node.State, after)) after = _fault.Perturb(node.State, after);
+                            if (_fault?.When(node.State, after) == true) after = _fault.Perturb(node.State, after);
                             ulong d = node.Deadlines, s = node.Seen, k = node.Counts;
                             var det = Check.CheckTransition(_spec, a, node.State, after, ref d, ref s, ref k, triggered, i * _reqs, out var r);
                             edges[slot + n++] = new SpecEdge<S>(a, g, after, d, s, k, det, r);
@@ -1150,8 +1149,7 @@ public static partial class Check
         return violation;
     }
 
-    static string Plural(int n, string noun) => n == 1 ? string.Concat("1 ", noun)
-                                                      : string.Concat(n.ToString(), " ", noun, "s");
+    static string Plural(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n} {noun}s";
 
     static SpecReport SpecReportOf<S>(Spec<S> spec, string mode, SpecCounters c)
     {
@@ -1175,8 +1173,7 @@ public static partial class Check
             for (int g = 0; g < action.ArgCount; g++)
             {
                 var arg = action.ArgName(g);
-                report.ActionNames[spec.ArgBase[a] + g] = arg.Length == 0 ? action.Name
-                                                       : string.Concat(action.Name, "(", arg, ")");
+                report.ActionNames[spec.ArgBase[a] + g] = arg.Length == 0 ? action.Name : $"{action.Name}({arg})";
             }
         }
         for (int i = 0; i < spec.Requirements.Count; i++)
@@ -1362,7 +1359,7 @@ public static partial class Check
             }
             var note = "never held, but states outside the boundary were not explored so this is not a failure: "
                 + string.Join(", ", unheld);
-            report.Note = report.Note is null ? note : string.Concat(report.Note, "; ", note);
+            report.Note = report.Note is null ? note : $"{report.Note}; {note}";
         }
         writeLine?.Invoke(report.ToString());
         return report;
@@ -1411,7 +1408,7 @@ public static partial class Check
                     }
                     var arg = action.ArgName(g);
                     sb.Append("  n").Append(head).Append(" -> n").Append(to).Append(" [label=\"")
-                      .Append(Escape(arg.Length == 0 ? action.Name : string.Concat(action.Name, "(", arg, ")")))
+                      .Append(Escape(arg.Length == 0 ? action.Name : $"{action.Name}({arg})"))
                       .Append("\"];\n");
                 }
             }

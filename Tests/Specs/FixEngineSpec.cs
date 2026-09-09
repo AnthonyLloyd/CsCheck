@@ -206,21 +206,21 @@ public static class FixEngineSpec
             "The Logon message must be the first message sent by the initiator and the first message received by "
             + "the acceptor. Receipt of any other message type before a Logon terminates the connection.",
             when: (b, a) => b.Status == ConnectionStatus.AwaitingLogon && a.Heard && a.Recv is not In.Logon and not In.LogonReset and not In.Logout,
-            then: (b, a) => a.Status == ConnectionStatus.Disconnected)
+            then: (_, a) => a.Status == ConnectionStatus.Disconnected)
         .Rule("LOGON-REPLY",
             "Upon receipt of a valid Logon the acceptor must respond with a Logon message.",
             when: (b, a) => b.Status == ConnectionStatus.AwaitingLogon && a.Recv is In.Logon or In.LogonReset && a.RecvSeq != Seq.TooLow,
-            then: (b, a) => a.Put(Out.Logon) && a.Status == ConnectionStatus.LoggedOn)
+            then: (_, a) => a.Put(Out.Logon) && a.Status == ConnectionStatus.LoggedOn)
         .Rule("LOGON-TOO-HIGH",
             "If the MsgSeqNum of the Logon is higher than expected, respond with a Logon and then send a "
             + "ResendRequest. The session is established: it is not terminated for the gap.",
             when: (b, a) => b.Status == ConnectionStatus.AwaitingLogon && a.Got(In.Logon, Seq.TooHigh),
-            then: (b, a) => a.Put(Out.Logon) && a.Put(Out.ResendRequest) && a.Status == ConnectionStatus.LoggedOn)
+            then: (_, a) => a.Put(Out.Logon) && a.Put(Out.ResendRequest) && a.Status == ConnectionStatus.LoggedOn)
         .Rule("LOGON-TOO-LOW",
             "A Logon whose MsgSeqNum is lower than expected is the fatal too low case like any other message: send a "
             + "Logout and terminate. QuickFIX/n reaches this by calling Verify with the too low check left on.",
             when: (b, a) => b.Status == ConnectionStatus.AwaitingLogon && a.Got(In.Logon, Seq.TooLow),
-            then: (b, a) => a.Put(Out.Logout) && a.Status == ConnectionStatus.Disconnected)
+            then: (_, a) => a.Put(Out.Logout) && a.Status == ConnectionStatus.Disconnected)
         // This is a policy decision, not a rule I can cite. FIX 4.4 says Logon must be the first message received,
         // but names no behaviour for a second one, and QuickFIX/n does not reject it - NextLogon runs its normal path
         // again, sends another Logon response and calls OnLogon a second time. Terminating is the stricter reading.
@@ -228,7 +228,7 @@ public static class FixEngineSpec
             "A Logon received while a session is already established is treated as an error by this engine and the "
             + "connection is terminated, rather than being processed as a second logon.",
             when: (b, a) => b.Up && a.Recv is In.Logon or In.LogonReset,
-            then: (b, a) => a.Status == ConnectionStatus.Disconnected)
+            then: (_, a) => a.Status == ConnectionStatus.Disconnected)
         .Never("NO-REJECT-BEFORE-LOGON",
             "A Reject may not be sent until a Logon has been received; there is no session to reject on.",
             (b, a) => b.Status == ConnectionStatus.AwaitingLogon && a.Put(Out.Reject))
@@ -239,8 +239,8 @@ public static class FixEngineSpec
         // exactly this; these forms do not, so the second requirement is the workaround.
         .Precedes("NO-APP-BEFORE-LOGON",
             "No application message is sent before the first Logon exchange of the session has completed.",
-            first: (b, a) => a.Put(Out.Logon),
-            second: (b, a) => a.Put(Out.App))
+            first: (_, a) => a.Put(Out.Logon),
+            second: (_, a) => a.Put(Out.App))
         .Never("NO-APP-UNTIL-LOGGED-ON",
             "Application messages may not be exchanged until the Logon exchange has completed, and a new connection "
             + "must complete its own before the session resumes.",
@@ -257,7 +257,7 @@ public static class FixEngineSpec
         .Rule("SEQ-TOO-HIGH-RESEND",
             "MsgSeqNum higher than expected: send a ResendRequest for the missing range.",
             when: (b, a) => b.Up && a.Heard && !b.GapOpen && a.RecvSeq == Seq.TooHigh && a.Recv is not In.Logon and not In.SeqReset and not In.Logout,
-            then: (b, a) => a.Put(Out.ResendRequest))
+            then: (_, a) => a.Put(Out.ResendRequest))
         .Never("NO-DUPLICATE-RESEND",
             "Do not send a second ResendRequest while a ResendRequest is already outstanding.",
             (b, a) => b.GapOpen && a.Put(Out.ResendRequest))
@@ -265,7 +265,7 @@ public static class FixEngineSpec
             "MsgSeqNum lower than expected without PossDupFlag set to Y is a fatal error: send a Logout with the "
             + "text \"MsgSeqNum too low, expecting X but received Y\" and terminate the connection.",
             when: (b, a) => b.Up && a.Heard && a.RecvSeq == Seq.TooLow && a.Recv is not In.Logout and not In.SeqReset,
-            then: (b, a) => a.Put(Out.Logout) && a.Status == ConnectionStatus.Disconnected)
+            then: (_, a) => a.Put(Out.Logout) && a.Status == ConnectionStatus.Disconnected)
         .Rule("POSSDUP-IGNORED",
             "PossDupFlag set to Y with MsgSeqNum lower than expected and a valid OrigSendingTime: the message has "
             + "already been processed and is ignored. This is a rule of the established session; before a Logon, "
@@ -283,7 +283,7 @@ public static class FixEngineSpec
         .Rule("GARBLED-IGNORED",
             "Garbled message received: ignore it. Do not increment the expected sequence number and do not send a "
             + "Reject, because the message could not be trusted to identify itself.",
-            when: (b, a) => a.Got(In.Garbled),
+            when: (_, a) => a.Got(In.Garbled),
             then: (b, a) => a.Sent == Out.None && a.Expect == b.Expect && a.Status == b.Status && a.Quiet == b.Quiet)
         // Both of these hold across a reconnect, which carries the numbers over, and both stand aside for a reset.
         .Never("EXPECT-MONOTONIC",
@@ -303,7 +303,7 @@ public static class FixEngineSpec
         .Rule("OUTBOUND-ADVANCES",
             "Each message sent takes the next outbound sequence number, one number per message. A gap on this side "
             + "breaks the counterparty's recovery exactly as badly as a gap on theirs.",
-            when: (b, a) => !a.WasReset,
+            when: (_, a) => !a.WasReset,
             then: (b, a) => a.Next == Math.Min(b.Next + BitOperations.PopCount((uint)a.Sent), Cap))
         .Rule("SEQNUM-PERSISTS",
             "Sequence numbers belong to the session and not to the connection, so they are not reset when the "
@@ -314,25 +314,25 @@ public static class FixEngineSpec
             "A Logon carrying ResetSeqNumFlag=Y resets the sequence numbers in both directions to 1. Resetting only "
             + "the inbound side leaves the counterparty expecting a number this side will never send. Both are 1 "
             + "after the reset and 2 after the Logon exchange that carried it, one each way.",
-            when: (b, a) => a.WasReset,
-            then: (b, a) => a.Expect == 2 && a.Next == 2)
+            when: (_, a) => a.WasReset,
+            then: (_, a) => a.Expect == 2 && a.Next == 2)
 
         // ── administrative message replies ──────────────────────────────────────────────────────────────────
         .Rule("TESTREQ-ANSWERED",
             "When a TestRequest is received, respond with a Heartbeat containing the TestReqID that was sent.",
             when: (b, a) => b.Up && a.Got(In.TestRequest, Seq.Expected),
-            then: (b, a) => a.Put(Out.Heartbeat))
+            then: (_, a) => a.Put(Out.Heartbeat))
         .Rule("RESEND-ANSWERED",
             "When a ResendRequest is received, resend the requested range, replacing administrative messages with "
             + "a SequenceReset-GapFill.",
             when: (b, a) => b.Up && a.Got(In.ResendRequest, Seq.Expected),
-            then: (b, a) => a.Put(Out.Resend))
+            then: (_, a) => a.Put(Out.Resend))
 
         // ── logout and termination ──────────────────────────────────────────────────────────────────────────
         .Rule("LOGOUT-REPLY",
             "Upon receipt of a Logout the session responds with a Logout and terminates the connection.",
             when: (b, a) => b.Status == ConnectionStatus.LoggedOn && a.Got(In.Logout),
-            then: (b, a) => a.Put(Out.Logout) && a.Status == ConnectionStatus.Disconnected)
+            then: (_, a) => a.Put(Out.Logout) && a.Status == ConnectionStatus.Disconnected)
         .Never("DISCONNECTED-SILENT",
             "No message is sent on a terminated connection.",
             (b, a) => b.Status == ConnectionStatus.Disconnected && a.Sent != Out.None)
@@ -342,7 +342,7 @@ public static class FixEngineSpec
             "The initiator of a Logout waits for the confirming Logout before terminating the connection. If it "
             + "does not arrive within a reasonable period the connection is terminated anyway.",
             trigger: (b, a) => a.Status == ConnectionStatus.LogoutSent && b.Status != ConnectionStatus.LogoutSent,
-            response: (b, a) => a.Status == ConnectionStatus.Disconnected,
+            response: (_, a) => a.Status == ConnectionStatus.Disconnected,
             within: Interval + 1, per: "Tick")
 
         // ── heartbeats ──────────────────────────────────────────────────────────────────────────────────────
@@ -350,19 +350,19 @@ public static class FixEngineSpec
             "If no data has been sent during the previous HeartBtInt a Heartbeat must be sent, so the counterparty "
             + "can tell the session is alive.",
             on: "Tick",
-            when: (b, a) => b.Status == ConnectionStatus.LoggedOn && b.Idle >= Interval,
-            then: (b, a) => a.Sent != Out.None || a.Status == ConnectionStatus.Disconnected)
+            when: (b, _) => b.Status == ConnectionStatus.LoggedOn && b.Idle >= Interval,
+            then: (_, a) => a.Sent != Out.None || a.Status == ConnectionStatus.Disconnected)
         .Rule("TESTREQ-ON-QUIET",
             "If no data has been received during the previous HeartBtInt plus a reasonable transmission time, a "
             + "TestRequest must be sent to force a Heartbeat from the counterparty.",
             on: "Tick",
-            when: (b, a) => b.Status == ConnectionStatus.LoggedOn && b.Quiet >= Interval && !b.TestSent,
-            then: (b, a) => a.Put(Out.TestRequest))
+            when: (b, _) => b.Status == ConnectionStatus.LoggedOn && b.Quiet >= Interval && !b.TestSent,
+            then: (_, a) => a.Put(Out.TestRequest))
         .Response("TESTREQ-TIMEOUT",
             "If a Heartbeat is not received in response to the TestRequest the connection is terminated.",
             trigger: (b, a) => a.TestSent && !b.TestSent,
-            response: (b, a) => a.Status == ConnectionStatus.Disconnected,
-            within: Interval, cancel: (b, a) => !a.TestSent, per: "Tick")
+            response: (_, a) => a.Status == ConnectionStatus.Disconnected,
+            within: Interval, cancel: (_, a) => !a.TestSent, per: "Tick")
 
         // ── deliberate defects, to check the requirements above are strong enough ────────────────────────────
         .Fault("too low is not fatal",
@@ -371,37 +371,37 @@ public static class FixEngineSpec
             (b, a) => b with { Recv = a.Recv, RecvSeq = a.RecvSeq, Sent = Out.None, Quiet = 0, TestSent = false })
         .Fault("bad OrigSendingTime ignored instead of rejected",
             (b, a) => b.Up && a.RecvSeq == Seq.DupBadOrig,
-            (b, a) => a with { Sent = Out.None })
+            (_, a) => a with { Sent = Out.None })
         // The hole this closes: SEQ-TOO-LOW-FATAL is gated on b.Up, and in AwaitingLogon it is not, so before
         // LOGON-TOO-LOW existed nothing at all covered a too low Logon and the fault below went uncaught.
         .Fault("logon too low is not fatal",
             (b, a) => b.Status == ConnectionStatus.AwaitingLogon && a.Got(In.Logon, Seq.TooLow),
             (b, a) => b with { Recv = a.Recv, RecvSeq = a.RecvSeq, Sent = Out.None })
         .Fault("outbound seqnum not advanced when sending",
-            (b, a) => a.Sent != Out.None,
+            (_, a) => a.Sent != Out.None,
             (b, a) => a with { Next = b.Next })
         // Two faults for the reconnect, because they are caught from opposite sides: resetting lowers the numbers so
         // monotonicity has it, and only SEQNUM-PERSISTS covers a reconnect that disturbs them without lowering them.
         .Fault("sequence numbers reset on reconnect",
             (b, a) => b.Status == ConnectionStatus.Disconnected && a.Status == ConnectionStatus.AwaitingLogon,
-            (b, a) => a with { Expect = 1, Next = 1 })
+            (_, a) => a with { Expect = 1, Next = 1 })
         .Fault("sequence numbers drift on reconnect",
             (b, a) => b.Status == ConnectionStatus.Disconnected && a.Status == ConnectionStatus.AwaitingLogon,
             (b, a) => a with { Expect = Math.Min(b.Expect + 1, Cap) })
         // Only falsifiable because a reconnect can carry the counters above 1. Without that this fault produces
         // exactly the correct state, since a reset arriving on a fresh connection has nothing to reset.
         .Fault("reset only resets the inbound side",
-            (b, a) => a.WasReset,
+            (_, a) => a.WasReset,
             (b, a) => a with { Next = Math.Min(b.Next + 1, Cap) })
         .Fault("garbled consumes a seqnum",
-            (b, a) => a.Got(In.Garbled),
-            (b, a) => a with { Expect = Math.Min(a.Expect + 1, Cap) })
+            (_, a) => a.Got(In.Garbled),
+            (_, a) => a with { Expect = Math.Min(a.Expect + 1, Cap) })
         .Fault("SequenceReset lowers seqnum",
-            (b, a) => a.Got(In.SeqReset, Seq.TooLow),
-            (b, a) => a with { Expect = 1, Sent = Out.None })
+            (_, a) => a.Got(In.SeqReset, Seq.TooLow),
+            (_, a) => a with { Expect = 1, Sent = Out.None })
         .Fault("resends on every gap message",
             (b, a) => b.GapOpen && a.RecvSeq == Seq.TooHigh,
-            (b, a) => a with { Sent = a.Sent | Out.ResendRequest })
+            (_, a) => a with { Sent = a.Sent | Out.ResendRequest })
         // Next has to be wound back with Sent, or the fault is "sent nothing but burned a sequence number" and
         // OUTBOUND-ADVANCES catches it first - which passes Faults while leaving HB-KEEPALIVE unproven.
         .Fault("no heartbeat when idle",
@@ -409,23 +409,23 @@ public static class FixEngineSpec
             (b, a) => a with { Sent = Out.None, Next = b.Next, Idle = Math.Min(b.Idle + 1, Cap) })
         .Fault("logout never completes",
             (b, a) => b.Status == ConnectionStatus.LogoutSent && a.Status == ConnectionStatus.Disconnected && a.Recv == In.Nothing,
-            (b, a) => a with { Status = ConnectionStatus.LogoutSent })
+            (_, a) => a with { Status = ConnectionStatus.LogoutSent })
         .Fault("app accepted before logon",
             (b, a) => b.Status == ConnectionStatus.AwaitingLogon && a.Got(In.App, Seq.Expected),
             (b, a) => a with { Status = ConnectionStatus.AwaitingLogon, Expect = Math.Min(b.Expect + 1, Cap) })
         .Fault("app sent before logon",
             (b, a) => b.Status == ConnectionStatus.AwaitingLogon && a.Recv == In.Nothing,
-            (b, a) => a with { Sent = Out.App })
+            (_, a) => a with { Sent = Out.App })
         // The one the Precedes cannot catch. Expect above 1 is how this says "the first connection did log on" with
         // only a pair of states to work from: nothing advances it but an accepted message, and none is accepted
         // before a Logon. Without that clause the first connection can drop before logging on, no Logon was ever
         // sent, and the Precedes catches it after all - which is what happened on the first attempt.
         .Fault("app sent before the second logon",
             (b, a) => b.Status == ConnectionStatus.AwaitingLogon && b.Reconnected && b.Expect > 1 && a.Recv == In.Nothing,
-            (b, a) => a with { Sent = Out.App })
+            (_, a) => a with { Sent = Out.App })
         .Fault("reject sent before logon",
             (b, a) => b.Status == ConnectionStatus.AwaitingLogon && a.Got(In.Garbled),
-            (b, a) => a with { Sent = Out.Reject })
+            (_, a) => a with { Sent = Out.Reject })
         // Undo only the termination, keeping everything the real transition set. Rebuilding the state from the
         // before-state instead let the fault fabricate a state the model cannot reach, and it was then caught by the
         // wrong requirement - which is what the Caught by column is for.

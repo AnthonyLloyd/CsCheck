@@ -78,7 +78,7 @@ public class SpecScaleTests
     public async Task Counterexample_Is_Independent_Of_Thread_Count()
     {
         var spec = Cubes(6).Never("NO-DIAGONAL", "the diagonal is never reached",
-            (b, a) => a.A == a.B && a.B == a.C && a.A > 0);
+            (_, a) => a.A == a.B && a.B == a.C && a.A > 0);
         // The whole report, not just the counterexample. A violation stops the walk mid node, and the two paths reach
         // that point differently - one fused, one having already expanded the level - so coverage is where they would
         // drift. Cubes would not catch it: its violating action is the last one declared, so both paths happen to
@@ -86,7 +86,7 @@ public class SpecScaleTests
         static Spec<int> Early() => Spec.From(0)
             .Action("Bad", i => i + 100)
             .Action("Good", i => i + 1)
-            .Never("NO-BIG", "the counter never reaches a hundred", (b, a) => a >= 100);
+            .Never("NO-BIG", "the counter never reaches a hundred", (_, a) => a >= 100);
         var e1 = Early().Exhaustive(out _, threads: 1);
         var eN = Early().Exhaustive(out _, threads: Environment.ProcessorCount);
         await Assert.That(eN.ToString()).IsEqualTo(e1.ToString());
@@ -148,7 +148,7 @@ public class SpecScaleTests
     /// to more than one thread - the point of the test below is lost on a model whose every level holds one node.</summary>
     readonly record struct Tiny(int A, int B)
     {
-        public override string ToString() => string.Concat("(", A.ToString(), ",", B.ToString(), ")");
+        public override string ToString() => $"({A},{B})";
     }
 
     const int Cap = 24;
@@ -181,11 +181,11 @@ public class SpecScaleTests
             switch (r.Kind)
             {
                 case 0: spec.Invariant($"I{i}", "q", t => t.A <= Cap && t.B <= Cap); break;
-                case 1: spec.Never($"N{i}", "q", (b, a) => a.A == r.K && a.B == r.K); break;
+                case 1: spec.Never($"N{i}", "q", (_, a) => a.A == r.K && a.B == r.K); break;
                 case 2: spec.Rule($"R{i}", "q", (b, a) => a.A >= b.A); break;
                 case 3: spec.AtMost($"M{i}", "q", r.N, (b, a) => a.A > b.A); break;
-                case 4: spec.Response($"P{i}", "q", (b, a) => a.A == r.K, (b, a) => a.B > r.K, within: r.N); break;
-                default: spec.NeverAfter($"Z{i}", "q", (b, a) => a.A >= r.K, (b, a) => a.B < b.B); break;
+                case 4: spec.Response($"P{i}", "q", (_, a) => a.A == r.K, (_, a) => a.B > r.K, within: r.N); break;
+                default: spec.NeverAfter($"Z{i}", "q", (_, a) => a.A >= r.K, (b, a) => a.B < b.B); break;
             }
         }
         return spec;
@@ -204,8 +204,8 @@ public class SpecScaleTests
     {
         GenSpec.Sample(spec =>
         {
-            var one = spec.Exhaustive(out var v1, threads: 1, maxStates: 5_000);
-            var many = spec.Exhaustive(out var vN, threads: 4, maxStates: 5_000);
+            var one = spec.Exhaustive(out var v1, maxStates: 5_000, threads: 1);
+            var many = spec.Exhaustive(out var vN, maxStates: 5_000, threads: 4);
             return string.Equals(one.ToString(), many.ToString(), StringComparison.Ordinal)
                 && v1 is null == vN is null
                 && (v1 is null || string.Equals(v1.ToString(), vN!.ToString(), StringComparison.Ordinal));
@@ -223,7 +223,7 @@ public class SpecScaleTests
                 .Action("A", c => c.A < 25, c => c with { A = c.A + 1 })
                 .Action("B", c => c.B < 25, c => c with { B = c.B + 1 })
                 .Action("C", c => c.C < 25, c => c with { C = c.C + 1 })
-                .Invariant("WORK", "a stand in for a real requirement", c => Spin(cost) >= 0);
+                .Invariant("WORK", "a stand in for a real requirement", _ => Spin(cost) >= 0);
             spec.Exhaustive(threads: 1);
             var one = Stopwatch.StartNew();
             var r = spec.Exhaustive(threads: 1);
