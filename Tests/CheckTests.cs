@@ -278,7 +278,7 @@ public class CheckTests
 
     /// <summary>Classifier indents nested rows with U+00A0 non breaking spaces, which is the character in the literal
     /// below, so matching on an ordinary space finds nothing. It also keeps "empty" off the "non-empty" row.</summary>
-    static string Leaf(string label) => " " + label;
+    static string Leaf(string label) => "\u00A0" + label;
 
     /// <summary>The same for the async path, where the table has to be written after the returned task completes
     /// rather than before it is handed back.</summary>
