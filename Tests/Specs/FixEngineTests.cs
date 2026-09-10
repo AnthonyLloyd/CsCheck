@@ -28,6 +28,17 @@ public class FixEngineTests
         await Assert.That(report.NeverFired).IsEmpty();
         await Assert.That(report.States).IsEqualTo(2_438);
         await Assert.That(report.Transitions).IsEqualTo(51_569);
+        // docs/Spec.md and README.md each quote this report to explain how to read one, abridged to a different
+        // handful of rows. The two lines above the tables are not abridged, and every row either file does quote has
+        // to be a row this produces - the readme's had drifted a column wide without anything noticing.
+        var text = report.ToString();
+        foreach (var blocks in new[] { Docs.Spec, Docs.Readme })
+        {
+            var quoted = blocks.Single(b => b.StartsWith("Spec.Exhaustive of 31 requirements", StringComparison.Ordinal));
+            await Assert.That(text).StartsWith(string.Join('\n', quoted.Split('\n')[..2]));
+            foreach (var row in quoted.Split('\n').Where(l => l.StartsWith("  | ", StringComparison.Ordinal)))
+                await Assert.That(text).Contains(row);
+        }
     }
 
     /// <summary>The same specification driven as a random walk. This is what you run when the model is too big to

@@ -15,6 +15,32 @@ Writing the examples below, it repeatedly found requirements passing *for the wr
 suite was green and only the name of the catching requirement said anything was wrong. In one case it found a
 requirement that could not fail at all.
 
+How the four compose:
+
+```mermaid
+flowchart LR
+  spec(["write the spec"])
+  exhaustive(["Exhaustive"])
+  closed{"did the space<br/>close?"}
+  boundary(["Boundary<br/>scope it to a region"])
+  sample(["Sample<br/>random walks, shrunk"])
+  faults(["Faults"])
+  samplefaults(["SampleFaults"])
+  conform(["Conform<br/>does the real code agree?"])
+
+  spec --> exhaustive --> closed
+  closed -->|"yes: proved for the model"| faults
+  closed -->|"no, but a region would do"| boundary
+  boundary --> exhaustive
+  closed -->|"no"| sample
+  sample --> samplefaults
+  faults --> conform
+  samplefaults --> conform
+```
+
+Not closing does not mean falling straight to `Sample`. `Boundary` still gives a proof, over a region you chose rather
+than over everything, and two of the worked examples need it; *Boundary: when there is no sound abstraction* below.
+
 **Start with [`Tests/Specs/SpecIntroTests.cs`](../Tests/Specs/SpecIntroTests.cs)**: an order that gets paid, shipped and
 delivered, or cancelled and refunded, in one file with its tests. Seven reachable states and six transitions, so you
 can check the tool's answer by hand. It needs no abstraction and uses only `Invariant`, `Never` and `Rule`.
@@ -56,6 +82,29 @@ changed, see [SpecDesign.md](SpecDesign.md).
 Deliberately not full LTL. Each form is checkable incrementally in a few bytes of state, which is what makes the
 exhaustive engine possible.
 
+Which form a sentence wants:
+
+```mermaid
+flowchart TD
+  claim{"The sentence says something<br/>must be true..."}
+
+  claim -->|"of every state"| invariant(["Invariant"])
+  claim -->|"of at least one state"| reachable(["Reachable"])
+  claim -->|"of every step"| step{"Must the step hold,<br/>or not happen?"}
+  claim -->|"of a later step, not<br/>the one that triggered it"| later{"How is the later step<br/>tied to the earlier one?"}
+
+  step -->|"must hold"| rule(["Rule<br/>when: or on: narrows it"])
+  step -->|"must never happen"| never(["Never<br/>on: scopes it to one action"])
+  step -->|"at most n times"| atmost(["AtMost"])
+
+  later -->|"the earlier one obliges it"| response(["Response<br/>within:, cancel:, per:"])
+  later -->|"it needs an earlier one"| precedes(["Precedes"])
+  later -->|"the earlier one forbids<br/>it from then on"| neverafter(["NeverAfter<br/>until: re-closes the scope"])
+```
+
+The *later step, not the one that triggered it* branch is the one worth reading twice: a consequence that holds on the
+triggering step does not discharge a `Response`, so those are a `Rule`. *Bounded response* below works through why.
+
 These were arrived at from the worked examples, and they turn out to be a subset of the **Property Specification
 Patterns** of Dwyer, Avrunin and Corbett (1999), a catalogue derived from surveying 555 real specifications. Their
 occurrence family is Absence ("aka Never"), Universality ("aka Globally"), Existence ("aka Eventually") and Bounded
@@ -79,19 +128,19 @@ to know whether the closing R ever arrives, and a step-local check cannot. After
 variant that can be decided as you go. No pattern other than Absence has a scope at all.
 
 ```csharp
-.Invariant(id, quote, s => ...)                            // holds in every reachable state
-.Reachable(id, quote, s => ...)                            // holds in at least one reachable state
-.Rule(id, quote, (b, a) => ...)                            // holds over every step
-.Rule(id, quote, when: (b, a) => ..., then: (b, a) => ...) // same-step implication
-.Rule(id, quote, on: "Tick", then: ...)                    // ... whenever one action runs
-.Rule(id, quote, on: "Tick", when: ..., then: ...)         // ... and a condition holds too
-.Never(id, quote, (b, a) => ...)                           // forbidden step
-.Never(id, quote, on: "Tick", (b, a) => ...)               // ... only on one action, and countable
-.AtMost(id, quote, times, (b, a) => ...)                   // happens at most times per execution
-.Response(id, quote, trigger, response, within, cancel, per) // bounded response
-.Precedes(id, quote, first, second)                        // second never without first
-.NeverAfter(id, quote, after, never)                       // once after, thereafter never
-.NeverAfter(id, quote, after, never, until)                // ... lifted by until, back on the next after
+.Invariant(id, quote, s => ...)                               // holds in every reachable state
+.Reachable(id, quote, s => ...)                               // holds in at least one reachable state
+.Rule(id, quote, (b, a) => ...)                               // holds over every step
+.Rule(id, quote, when: (b, a) => ..., then: (b, a) => ...)    // same-step implication
+.Rule(id, quote, on: "Tick", then: ...)                       // ... whenever one action runs
+.Rule(id, quote, on: "Tick", when: ..., then: ...)            // ... and a condition holds too
+.Never(id, quote, (b, a) => ...)                              // forbidden step
+.Never(id, quote, on: "Tick", (b, a) => ...)                  // ... only on one action, and countable
+.AtMost(id, quote, times, (b, a) => ...)                      // happens at most times per execution
+.Response(id, quote, trigger, response, within, cancel, per)  // bounded response
+.Precedes(id, quote, first, second)                           // second never without first
+.NeverAfter(id, quote, after, never)                          // once after, thereafter never
+.NeverAfter(id, quote, after, never, until)                   // ... lifted by until, back on the next after
 ```
 
 The bare `Never` and the bare `Rule` apply to every step, so their coverage count would just be the number of steps
@@ -208,11 +257,11 @@ When the frontier empties you get:
 ```
 Spec.Exhaustive of 31 requirements
   state space CLOSED: 2,438 states, 51,569 transitions, depth 11, 131 terminal, 0 deadlock
-  | Requirement            |   Triggered | Unresolved |
-  | EXPECT-MONOTONIC       |  every step |            |
-  | LOGON-FIRST            |         624 |            |
-  | SEQ-TOO-HIGH-QUEUE     |       4,420 |            |
-  | LOGOUT-COMPLETES       |         922 |            |
+  | Requirement             |   Triggered | Unresolved |
+  | EXPECT-MONOTONIC        |  every step |            |
+  | LOGON-FIRST             |         624 |            |
+  | SEQ-TOO-HIGH-QUEUE      |       4,420 |            |
+  | LOGOUT-COMPLETES        |         922 |            |
   ...
   | Action                  |       Fired |
   | Recv(Logon TooHigh)     |       2,258 |
@@ -233,9 +282,29 @@ Spec.Exhaustive of 31 requirements
 - **`deadlock`**: states with no enabled action that were not declared `Terminal`. For a protocol this should be
   zero; anything else is a state the design cannot leave. When it is not zero the report prints a path to the first
   one, and `report.DeadlockTrace` is that path, because knowing a dead end exists is not the same as knowing where.
+  Each step of that path also says what else was enabled where it was taken, since knowing where is still not the
+  same as knowing which turn was the wrong one. `Sample` reports the same thing as `deadlocked`, counting walks rather
+  than states since it keeps no visited set - which matters, because it is the engine left when a space will not close.
 - **`Fired`**: one row per **(action, argument) case**, not per action. That matters: FIX has twenty inbound cases
   behind a single `Recv`, and counting per action hid a dead case behind a busy total; `NeverFired` could not see
   any of them. A `NEVER` here means that case is dead, which is the argument-level half of the vacuity story.
+
+The tail of `BlockingQueueSpec` at `Wake.Any` with two producers, two consumers and a capacity of one:
+
+```
+     6 Get(t2->t3)  or Get(t2->t0), Get(t2->t1)
+         buffer=0 waiting={p0,p1}
+     7 Get(t2)      or Get(t3)
+         buffer=0 waiting={p0,p1,c0}
+     8 Get(t3)
+         buffer=0 waiting={p0,p1,c0,c1}
+         (no action enabled - trace ends here)
+```
+
+That model's bug is `notify` waking one arbitrary thread of *either* kind, and the fix is to wake one of the *opposite*
+kind. Step 6 takes a same-kind wake with both opposite-kind wakes beside it, so the bug and its fix are on one line.
+Step 8 offers nothing, so the trace ends on a forced move and steps 6 and 7 are where to look. `Trace<S>.ToString`
+takes the same annotation as a callback for your own notes.
 
 **Assert the size of the space, not just that it closed.** Every other assertion you can make about a passing run has
 the form *"no counterexample was found"*, and a search that explored too little satisfies that just as well as one
@@ -706,6 +775,11 @@ are visible without reading a table:
 File.WriteAllText("order.md", "```mermaid\n" + Create().Mermaid() + "```\n");
 ```
 
+Arrows are one per pair of states, not one per transition. Picking the smallest falsifying domain routinely sends
+several arguments to the same state, so an `Enqueue` over `[1, 2, 3]` against a queue abstracted to its count draws one
+arrow labelled `Enqueue(1,2,3)`, and two actions arriving together read `Cancel, Timeout`. The summary counts
+transitions, the number the walk took, so it can exceed the arrows you can see.
+
 GitHub and Visual Studio render `mermaid` fences directly in Markdown. When documenting a model it is often worth
 showing both the generated Mermaid text and the graph it renders. Here is the non-refundable variant of the order
 lifecycle from `SpecIntroTests.cs`, where the paid-then-cancelled state has no enabled action:
@@ -734,7 +808,7 @@ flowchart LR
   class n4 deadlock;
   n5["Delivered paid=1 refunded=0"];
   class n5 terminal;
-  info["states: 6<br/>edges: 5<br/>terminal: 2<br/>deadlock: 1"];
+  info["states: 6<br/>transitions: 5<br/>depth: 3<br/>terminal: 2<br/>deadlock: 1"];
   class info note;
   subgraph legend["Legend"]
     legendTerminal["terminal"];
@@ -772,7 +846,7 @@ flowchart LR
   class n4 deadlock;
   n5["Delivered paid=1 refunded=0"];
   class n5 terminal;
-  info["states: 6<br/>edges: 5<br/>terminal: 2<br/>deadlock: 1"];
+  info["states: 6<br/>transitions: 5<br/>depth: 3<br/>terminal: 2<br/>deadlock: 1"];
   class info note;
   subgraph legend["Legend"]
     legendTerminal["terminal"];
@@ -793,3 +867,8 @@ to rebuild one path, not the graph) and it evaluates no requirements: the pictur
 useful long before a proof does. The seven-state intro example is the one where this beats the table, and it earned
 its keep immediately: it showed three terminal nodes where the test author had assumed two, because cancelling an
 order *before paying* is settled as well.
+
+`maxStates` is not the only ceiling. Mermaid refuses a diagram whose source exceeds its `maxTextSize`, 50,000
+characters by default, and shows an error in place of the picture rather than a truncated one. Reaching that at 200
+states needs 250 characters a state, which takes a wide state or a fanned-out argument domain; the graph above runs at
+55. If a fence renders as an error instead of a graph, lower `maxStates`.
