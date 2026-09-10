@@ -11,7 +11,7 @@ public class TerminationDetectionTests
 {
     /// <summary>Safra's algorithm never announces termination while work is outstanding, and Safra's inductive invariant
     /// holds, which is the argument for why. Both over the region the original's own StateConstraint picks out.
-    /// <para>Verified against TLC 1.7.4: 1,520,618 distinct states, 11,238,019 generated. Our count differs by 73 —
+    /// <para>Verified against TLC 1.7.4: 1,520,618 distinct states, 11,238,019 generated. Our count differs by 73:
     /// the scaffold states from the three setup actions that choose among the 192 protocol initial configurations
     /// that TLA+'s free-ranging <c>Init</c> gets for nothing.</para></summary>
     [Test]
@@ -32,7 +32,7 @@ public class TerminationDetectionTests
     }
 
     /// <summary>Copilot's PR review suggested missing lower bounds on counters might explain the apparent discrepancy
-    /// with TLC's published "1.3m". Running TLC 1.7.4 directly resolved it: TLC gives 1,520,618, not 1.3M — the
+    /// with TLC's published "1.3m". Running TLC 1.7.4 directly resolved it: TLC gives 1,520,618, not 1.3M; the
     /// comment in EWD998.tla was simply wrong. Adding lower bounds gives fewer states and a worse depth; they are not
     /// needed and the upper-only bounds are the faithful replication of the written StateConstraint.
     /// <para>The initial colouring question is still worth answering: TLA+'s Init allows any combination of colours (192
@@ -76,7 +76,7 @@ public class TerminationDetectionTests
     [Test, Skip("Long-running; run explicitly")]
     public async Task Growth_With_The_Bound()
     {
-        // (2,2,4) and (2,2,9) produce identical state counts — the token accumulator bound only matters when it
+        // (2,2,4) and (2,2,9) produce identical state counts: the token accumulator bound only matters when it
         // can exceed the sum of counter values, which it cannot at pendingMax=2.
         foreach (var (c, p, q) in new[] { (1, 1, 2), (2, 2, 9), (3, 3, 9) })
         {

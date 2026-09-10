@@ -1386,26 +1386,38 @@ public static partial class Check
         return report;
     }
 
-    /// <summary>The reachable state graph in Graphviz DOT, for a model small enough to look at. Terminal states are
-    /// drawn doubled and states with nothing enabled that were not declared <c>Terminal</c> are filled, so a dead end
-    /// is visible without reading anything. Pipe it through <c>dot -Tsvg</c>.</summary>
+    /// <summary>The reachable state graph in Mermaid flowchart syntax, for a model small enough to look at. Terminal
+    /// states, dead ends and truncated states are styled differently, so they are visible without reading a table.</summary>
     /// <remarks>This walks the space itself rather than reusing <c>Exhaustive</c>, because the walk keeps only a
     /// spanning tree of parent links - enough to rebuild one path, but not the graph. Requirements are not evaluated:
     /// the picture is for understanding a model, and <c>Exhaustive</c> is for proving things about it.</remarks>
     /// <param name="spec">The specification to draw.</param>
     /// <param name="maxStates">Give up after this many states, since a picture stops being useful long before a proof
     /// does (default 200).</param>
-    public static string Dot<S>(this Spec<S> spec, int maxStates = 200)
+    public static string Mermaid<S>(this Spec<S> spec, int maxStates = 200)
     {
         spec.Validate();
         // Keyed by SpecNode rather than S, which is unconstrained and so cannot key a Dictionary. The deadline and
         // history words stay zero here because no requirement is evaluated, so this is a plain state key.
         var ids = new Dictionary<SpecNode<S>, int> { [new(spec.Initial, 0UL, 0UL, 0UL)] = 0 };
         var states = new List<S> { spec.Initial };
-        var sb = new StringBuilder("digraph spec {\n  rankdir=LR;\n  node [shape=box, fontname=\"monospace\"];\n");
+        var sb = new StringBuilder(
+            "flowchart LR\n" +
+            "  classDef initial stroke:#495057,stroke-width:2px,stroke-dasharray: 3 3;\n" +
+            "  classDef terminal stroke:#0b7285,stroke-width:4px;\n" +
+            "  classDef deadlock stroke:#c92a2a,stroke-width:4px;\n" +
+            "  classDef truncated stroke:#f08c00,stroke-width:4px,stroke-dasharray: 5 5;\n" +
+            "  classDef note stroke:#868e96,stroke-dasharray: 3 3;\n" +
+            "  start((start));\n" +
+            "  start --> n0;\n" +
+            "  class start initial;\n");
         var truncated = false;
+        var edges = 0;
+        var omittedEdges = 0;
+        var terminalStates = 0;
+        var deadlockStates = 0;
         // Every discovered state is expanded, because a state the loop stopped short of would still be pointed at by
-        // the edge that discovered it and Graphviz would draw it captioned with its node id. The cap bounds states, so
+        // the edge that discovered it. The cap bounds states, so
         // this still terminates; what the cap skips is an edge needing a state past it, not a state's own label.
         for (int head = 0; head < states.Count; head++)
         {
@@ -1422,34 +1434,54 @@ public static partial class Check
                     var after = action.Apply(state, g);
                     if (!ids.TryGetValue(new(after, 0UL, 0UL, 0UL), out var to))
                     {
-                        if (states.Count == maxStates) { cutOff = truncated = true; continue; }
+                        if (states.Count == maxStates) { cutOff = truncated = true; omittedEdges++; continue; }
                         to = states.Count;
                         ids.Add(new(after, 0UL, 0UL, 0UL), to);
                         states.Add(after);
                     }
+                    edges++;
                     var arg = action.ArgName(g);
-                    sb.Append("  n").Append(head).Append(" -> n").Append(to).Append(" [label=\"")
+                    sb.Append("  n").Append(head).Append(" -->|\"")
                       .Append(Escape(arg.Length == 0 ? action.Name : $"{action.Name}({arg})"))
-                      .Append("\"];\n");
+                      .Append("\"| n").Append(to).Append(";\n");
                 }
             }
             // Dashed says the drawing stops here, which is not the same as the model stopping here - without it a state
             // whose successors were all dropped looks exactly like an intended end.
-            var shape = cutOff ? ", style=dashed"
-                      : enabled != 0 ? ""
-                      : spec.IsTerminal?.Invoke(state) == true ? ", shape=doublecircle"
-                      : ", style=filled, fillcolor=\"#ffcccc\"";
-            sb.Append("  n").Append(head).Append(" [label=\"").Append(Escape(spec.Printer(state)))
-              .Append('"').Append(shape).Append("];\n");
+            var cssClass = cutOff ? "truncated"
+                         : enabled != 0 ? ""
+                         : spec.IsTerminal?.Invoke(state) == true ? "terminal"
+                         : "deadlock";
+            if (string.Equals(cssClass, "terminal", StringComparison.Ordinal)) terminalStates++;
+            else if (string.Equals(cssClass, "deadlock", StringComparison.Ordinal)) deadlockStates++;
+            sb.Append("  n").Append(head).Append("[\"").Append(Escape(spec.Printer(state))).Append("\"];\n");
+            if (cssClass.Length != 0) sb.Append("  class n").Append(head).Append(' ').Append(cssClass).Append(";\n");
         }
         // On whether an edge was actually dropped, not on reaching the cap, so a model of exactly maxStates states that
         // was drawn in full is not labelled as given up on.
-        if (truncated) sb.Append("  truncated [label=\"gave up at ").Append(maxStates)
-            .Append(" states\", shape=plaintext];\n");
-        return sb.Append("}\n").ToString();
+        sb.Append("  info[\"states: ").Append(states.Count)
+          .Append("<br/>edges: ").Append(edges)
+          .Append("<br/>terminal: ").Append(terminalStates)
+          .Append("<br/>deadlock: ").Append(deadlockStates);
+        if (omittedEdges != 0) sb.Append("<br/>omitted edges: ").Append(omittedEdges);
+        sb.Append("\"];\n  class info note;\n")
+          .Append("  subgraph legend[\"Legend\"]\n")
+          .Append("    legendTerminal[\"terminal\"];\n")
+          .Append("    legendDeadlock[\"deadlock\"];\n")
+          .Append("    legendTruncated[\"truncated\"];\n")
+          .Append("  end\n")
+          .Append("  class legendTerminal terminal;\n")
+          .Append("  class legendDeadlock deadlock;\n")
+          .Append("  class legendTruncated truncated;\n");
+        if (truncated) sb.Append("  truncatedNote[\"gave up at ").Append(maxStates).Append(" states\"];\n")
+            .Append("  class truncatedNote note;\n");
+        return sb.ToString();
 
-        static string Escape(string s) => s.Replace("\\", "\\\\", StringComparison.Ordinal)
-                                           .Replace("\"", "\\\"", StringComparison.Ordinal);
+        static string Escape(string s) => s.Replace("&", "&amp;", StringComparison.Ordinal)
+                                           .Replace("\"", "&quot;", StringComparison.Ordinal)
+                                           .Replace("|", "&#124;", StringComparison.Ordinal)
+                                           .Replace("\r\n", "<br/>", StringComparison.Ordinal)
+                                           .Replace("\n", "<br/>", StringComparison.Ordinal);
     }
 
     // Which state fields have the most distinct values, sampled from the states already reached. This is the
@@ -1568,7 +1600,7 @@ public static partial class Check
             "sampled, so Steps is the shallowest counterexample found and NOTHING means none was found, not that none exists",
             "No requirement detected these faults in the walks sampled", writeLine, throwOnUncaught,
             // Sampled baseline: walk the unmutated spec over the same budget rather than running Exhaustive (which
-            // would give up at maxStates on a space that doesn't close — exactly why SampleFaults was chosen).
+            // would give up at maxStates on a space that doesn't close, exactly why SampleFaults was chosen).
             // This covers exactly the traces the fault walks will later sample, so any base violation reachable by
             // sampling is caught here too, and the cost is one extra fault-free pass rather than a 10M-state search.
             baseline: () => { var v = SampleFault(spec, new SpecFault<S>("(baseline)", (_, _) => false, (_, a) => a),

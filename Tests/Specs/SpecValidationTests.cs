@@ -45,7 +45,7 @@ public class SpecValidationTests
 
     /// <summary>SampleFaults also checks the baseline before injecting faults. The baseline for SampleFaults uses a
     /// sampled walk rather than Exhaustive, so it is cost-proportional and checks exactly the traces that the fault
-    /// walks will later sample — closing the gap without paying for a full exhaustive search.</summary>
+    /// walks will later sample, closing the gap without paying for a full exhaustive search.</summary>
     [Test]
     public async Task SampleFaults_Rejects_A_Spec_That_Already_Fails()
     {
@@ -57,7 +57,7 @@ public class SpecValidationTests
     }
 
     /// <summary>A fault on a spec whose space does not close is inconclusive, not uncaught. If Faults gives up at
-    /// maxStates without finding a violation, it cannot claim the fault is undetectable — it only explored part of
+    /// maxStates without finding a violation, it cannot claim the fault is undetectable; it only explored part of
     /// the space. The fault shows as NOT CLOSED in the table and appears in Inconclusive rather than Uncaught, so
     /// throwOnUncaught does not fire and the caller knows the result is not a proof.</summary>
     [Test]
@@ -666,52 +666,88 @@ public class SpecValidationTests
         await Assert.That(violation.Trace.Steps.Length).IsEqualTo(4);
     }
 
-    /// <summary>Dot writes state labels into a quoted DOT string, so a printer that emits a quote or a backslash would
-    /// otherwise produce a file Graphviz cannot parse. The order matters too: backslashes must be doubled before quotes
-    /// are escaped, or the backslash added by escaping a quote gets doubled as well.</summary>
+    /// <summary>Mermaid writes state labels into quoted strings, so a printer that emits quotes, pipes or newlines needs
+    /// escaping before the graph can render.</summary>
     [Test]
-    public async Task Dot_Escapes_Quotes_And_Backslashes()
+    public async Task Mermaid_Escapes_Label_Syntax()
     {
-        var dot = Spec.From(0)
+        var mermaid = Spec.From(0)
             .Action("Step", i => i < 1, i => i + 1)
-            .Print(i => "say \"hi\" \\ " + i)
-            .Dot();
-        TUnitX.WriteLine(dot);
-        await Assert.That(dot).Contains("[label=\"say \\\"hi\\\" \\\\ 0\"");
+            .Print(i => "say \"hi\" | " + i + "\nnext")
+            .Mermaid();
+        TUnitX.WriteLine(mermaid);
+        await Assert.That(mermaid).Contains("n0[\"say &quot;hi&quot; &#124; 0<br/>next\"]");
     }
 
-    /// <summary>A picture stops being useful long before a proof does, so Dot gives up at its own much smaller limit.
-    /// Every other Dot test draws a model well inside it, leaving the truncation path unrun - and it was wrong: the walk
-    /// stopped as soon as the cap was reached, so the last state discovered kept the edge that found it but never got a
-    /// label of its own, and Graphviz drew it captioned <c>n3</c>. Every state that is pointed at must be declared.</summary>
+    /// <summary>The emitted Mermaid is text people copy into Markdown, so its stable shape is part of the API.</summary>
     [Test]
-    public async Task Dot_Truncates_At_MaxStates()
+    public async Task Mermaid_Text_Output_Is_Stable()
     {
-        var dot = Spec.From(0).Action("Step", i => i < 10, i => i + 1).Dot(maxStates: 4);
-        TUnitX.WriteLine(dot);
-        await Assert.That(dot).Contains("truncated [label=\"gave up at 4 states\"");
+        var mermaid = Spec.From(0)
+            .Action("Step", i => i < 1, i => i + 1)
+            .Terminal(i => i == 1)
+            .Mermaid();
+        TUnitX.WriteLine(mermaid);
+        await Assert.That(mermaid).IsEqualTo(
+            """
+            flowchart LR
+              classDef initial stroke:#495057,stroke-width:2px,stroke-dasharray: 3 3;
+              classDef terminal stroke:#0b7285,stroke-width:4px;
+              classDef deadlock stroke:#c92a2a,stroke-width:4px;
+              classDef truncated stroke:#f08c00,stroke-width:4px,stroke-dasharray: 5 5;
+              classDef note stroke:#868e96,stroke-dasharray: 3 3;
+              start((start));
+              start --> n0;
+              class start initial;
+              n0 -->|"Step"| n1;
+              n0["0"];
+              n1["1"];
+              class n1 terminal;
+              info["states: 2<br/>edges: 1<br/>terminal: 1<br/>deadlock: 0"];
+              class info note;
+              subgraph legend["Legend"]
+                legendTerminal["terminal"];
+                legendDeadlock["deadlock"];
+                legendTruncated["truncated"];
+              end
+              class legendTerminal terminal;
+              class legendDeadlock deadlock;
+              class legendTruncated truncated;
+            """ + "\n");
+    }
+
+    /// <summary>A picture stops being useful long before a proof does, so Mermaid gives up at its own much smaller limit.
+    /// Every other Mermaid test draws a model well inside it, leaving the truncation path unrun - and it was wrong: the walk
+    /// stopped as soon as the cap was reached, so the last state discovered kept the edge that found it but never got a
+    /// label of its own. Every state that is pointed at must be declared.</summary>
+    [Test]
+    public async Task Mermaid_Truncates_At_MaxStates()
+    {
+        var mermaid = Spec.From(0).Action("Step", i => i < 10, i => i + 1).Mermaid(maxStates: 4);
+        TUnitX.WriteLine(mermaid);
+        await Assert.That(mermaid).Contains("truncatedNote[\"gave up at 4 states\"]");
         // Four labels for four states, and three edges between them. Every n referenced by an edge is declared.
 #pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
-        await Assert.That(Regex.Count(dot, @"\[label=""\d")).IsEqualTo(4);
-        await Assert.That(Regex.Count(dot, " -> n")).IsEqualTo(3);
-        foreach (var to in Regex.Matches(dot, @" -> (n\d+)"))
-            await Assert.That(dot).Contains(((Match)to).Groups[1].Value + " [label=");
+        await Assert.That(Regex.Count(mermaid, @"n\d+\[""\d")).IsEqualTo(4);
+        await Assert.That(Regex.Count(mermaid, " -->\\|")).IsEqualTo(3);
+        foreach (var to in Regex.Matches(mermaid, @" -->\|""[^""]+""\| (n\d+)"))
+            await Assert.That(mermaid).Contains(((Match)to).Groups[1].Value + "[\"");
         // The state whose successor was dropped is dashed, so it cannot be read as an intended end or a dead one.
-        await Assert.That(Regex.Count(dot, "style=dashed")).IsEqualTo(1);
-        await Assert.That(dot).DoesNotContain("fillcolor");
-        await Assert.That(dot).EndsWith("}\n");
+        await Assert.That(Regex.Count(mermaid, @"class n\d+ truncated")).IsEqualTo(1);
+        await Assert.That(Regex.Count(mermaid, @"class n\d+ deadlock")).IsEqualTo(0);
+        await Assert.That(mermaid).EndsWith("\n");
     }
 
     /// <summary>The note says an edge was dropped, so a model that happens to be exactly the size of the cap and was
     /// drawn in full must not claim it gave up.</summary>
     [Test]
-    public async Task Dot_Exactly_At_MaxStates_Is_Not_Truncated()
+    public async Task Mermaid_Exactly_At_MaxStates_Is_Not_Truncated()
     {
-        var dot = Spec.From(0).Action("Step", i => i < 3, i => i + 1).Dot(maxStates: 4);
-        TUnitX.WriteLine(dot);
-        await Assert.That(dot).DoesNotContain("gave up");
-        await Assert.That(dot).DoesNotContain("style=dashed");
-        await Assert.That(Regex.Count(dot, @"\[label=""\d")).IsEqualTo(4);
+        var mermaid = Spec.From(0).Action("Step", i => i < 3, i => i + 1).Mermaid(maxStates: 4);
+        TUnitX.WriteLine(mermaid);
+        await Assert.That(mermaid).DoesNotContain("gave up");
+        await Assert.That(Regex.Count(mermaid, @"class n\d+ truncated")).IsEqualTo(0);
+        await Assert.That(Regex.Count(mermaid, @"n\d+\[""\d")).IsEqualTo(4);
 #pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
     }
 

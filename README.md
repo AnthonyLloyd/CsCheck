@@ -11,7 +11,7 @@ This gives the following advantages over tree based shrinking libraries:
 - Automatic shrinking. Gen classes are composable with no need for Arb classes. So less boilerplate.
 - Random testing and shrinking are parallelized. This and PCG make it very fast.
 - Shrunk cases have a seed value. Simpler examples can easily be reproduced.
-- Shrinking can be continued later to give simpler cases for high dimensional problems.
+- Shrinking can be continued later to give simpler cases for high-dimensional problems.
 - Parallel concurrency testing and random shrinking work well together. Repeat is not needed.
 
 New to random testing? Read the [beginner's getting started guide](https://github.com/AnthonyLloyd/CsCheck/blob/master/docs/GettingStarted.md).
@@ -239,9 +239,9 @@ public void AllocatorMany_Classify()
 
 ## Model-based testing
 
-Model-based is the most efficient form of random testing.
+Model-based is often the most economical form of random testing.
 Only a small amount of code is needed to fully test functionality.
-SampleModelBased generates an initial actual and model and then applies a random sequence of operations to both checking that the actual and model are still equal.
+SampleModelBased generates an initial actual and model, then applies a random sequence of operations to both, checking that the actual and model stay equal after each operation.
 
 ### SetSlim Add
 ```csharp
@@ -292,7 +292,7 @@ nothing is measured when `writeLine` is not set.
 
 ## Metamorphic testing
 
-The second most efficient form of random testing is metamorphic which means doing something two different ways and checking they produce the same result.
+Metamorphic testing is another economical form: doing something two different ways and checking they produce the same result.
 SampleMetamorphic generates two identical initial samples and then applies the two functions and asserts the results are equal.
 This can be needed when no model can be found that is not just a reimplementation.
 
@@ -468,7 +468,7 @@ Spec.From(State.Connected)
     "The initiator of a Logout waits for the confirming Logout, and terminates anyway if it does not arrive.",
     trigger:  (b, a) => a.Status == LogoutSent && b.Status != LogoutSent,
     response: (b, a) => a.Status == Disconnected,
-    within: 3, per: "Tick")
+    within: Interval + 1, per: "Tick")
 .Never("DISCONNECTED-SILENT", "No message is sent on a terminated connection.",
     (b, a) => b.Status == Disconnected && a.Sent != Out.None)
 .Reachable("CAN-LOG-ON", "A session can reach the logged on state at all.",
@@ -476,16 +476,16 @@ Spec.From(State.Connected)
 ```
 
 - **`Exhaustive`** enumerates the whole reachable state space breadth first. When it closes, every requirement is
-  *proved* for the model rather than sampled — including bounded `Response` requirements, whose outstanding
+  *proved* for the model rather than sampled, including bounded `Response` requirements, whose outstanding
   deadlines are carried in the search state. Any violation comes back as a shortest path.
 - **`Sample`** random walks the same specification with normal CsCheck shrinking, for models too big to close.
 - **`Faults`** injects each declared defect in turn and reports which requirement caught it, and at what depth.
   Mutation testing for the specification: a defect nothing catches means a requirement is missing, and a defect
-  caught by the *wrong* requirement means one of them is not what you thought. This is the one to reach for second —
+  caught by the *wrong* requirement means one of them is not what you thought. This is the one to reach for second:
   a proof says the requirements hold, `Faults` says whether they were worth holding. `SampleFaults` produces the same
   table by walking each fault instead of proving it, for a model too large to close.
 - **`Conform`** drives a real implementation down the same walk and checks it conforms to the specification on those traces.
-- **`Dot`** returns the reachable state graph in Graphviz DOT, with intended ends doubled, dead ends filled and cut-off states dashed, for a model small enough to look at.
+- **`Mermaid`** returns the reachable state graph as a Mermaid flowchart, with intended ends, dead ends and cut-off states styled differently, for a model small enough to look at.
 
 Every run prints how often each requirement's antecedent actually fired, so a requirement that passed vacuously
 says `NEVER` instead of quietly passing:
@@ -502,11 +502,11 @@ Spec.Exhaustive of 31 requirements
 
 (`every step` means the requirement has no antecedent that could fail to fire, so vacuity does not apply to it.)
 
-Start with [Tests/Specs/SpecIntroTests.cs](Tests/Specs/SpecIntroTests.cs) — an order lifecycle in one file, seven reachable
+Start with [Tests/Specs/SpecIntroTests.cs](Tests/Specs/SpecIntroTests.cs), an order lifecycle in one file, seven reachable
 states, small enough to check by hand. Then [docs/Spec.md](docs/Spec.md) for the seven worked examples: the FIX 4.4
 session core, a refresh-on-access cache, a distributed lease specified in three configurations to show which one is
-actually safe, and four reimplementations of published specifications — a `wait`/`notify` queue that deadlocks, the
-Alternating Bit Protocol, the LMAX Disruptor and Safra's EWD 998 termination detection — each checked against the
+actually safe, and four reimplementations of published specifications: a `wait`/`notify` queue that deadlocks, the
+Alternating Bit Protocol, the LMAX Disruptor and Safra's EWD 998 termination detection, each checked against the
 original's own published results.
 
 ## Regression testing
@@ -528,7 +528,7 @@ public void Portfolio_Small_Mixed_Example()
     , "0N0XIzNsQ0O2");
     var currencies = portfolio.Positions.Select(p => p.Instrument.Currency).Distinct().ToArray();
     var fxRates = ModelGen.Price.Array[currencies.Length].Single(a =>
-        a.All(p => pp is > 0.75 and < 1.5)
+        a.All(p => p is > 0.75 and < 1.5)
     , "ftXKwKhS6ec4");
     double fxRate(Currency c) => fxRates[Array.IndexOf(currencies, c)];
     Check.Hash(h =>
@@ -543,8 +543,7 @@ public void Portfolio_Small_Mixed_Example()
 ## Parallel testing
 
 CsCheck has support for parallel testing with full shrinking capability.
-A number of operations are run sequentially and then a number in parallel on an initial state and the result is compared to all the possible linearized versions.
-At least one of these must be equal to the parallel result.
+Starting from an initial state, some operations are run sequentially and then some in parallel. The parallel result is compared against every possible linearization of those operations, and at least one must match.
 
 Idea from John Hughes [talk](https://youtu.be/1LNEWF8s1hI?t=1603) and [paper](https://github.com/AnthonyLloyd/AnthonyLloyd.github.io/raw/master/public/cscheck/finding-race-conditions.pdf). This is easier to implement with CsCheck than QuickCheck because the random shrinking does not need to repeat each step as QuickCheck does (10 times by default) to make shrinking deterministic.
 

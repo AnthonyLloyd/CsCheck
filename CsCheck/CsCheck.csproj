@@ -41,7 +41,7 @@ where the requirement has more than one subject. Every run reports how often eac
 one that passed vacuously says NEVER rather than passing quietly, and coverage is counted per action argument case so a
 dead case cannot hide behind a busy total. A non-zero deadlock count comes with a path to the first one. Boundary
 closes the exploration over a chosen region when no abstraction makes the model finite, and SampleFaults mutation
-tests by random walk when it does not close at all. Dot draws a small model's state graph in Graphviz.
+tests by random walk when it does not close at all. Mermaid draws a small model's state graph as a flowchart.
         </PackageReleaseNotes>
         <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>

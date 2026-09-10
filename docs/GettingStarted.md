@@ -55,7 +55,7 @@ public class AdditionTests
 }
 ```
 
-`Sample` asks `Gen.Int` for generated integers and runs the predicate for each one. Returning `false` or throwing an exception means the rule failed. The default is 100 iterations; `iter:` and `time:` can change that. The same body works in xUnit, NUnit, MSTest, or a plain test method—the surrounding attribute and assertion style are yours.
+`Sample` asks `Gen.Int` for generated integers and runs the predicate for each one. Returning `false` or throwing an exception means the rule failed. The default is 100 iterations; `iter:` and `time:` can change that. The same body works in xUnit, NUnit, MSTest, or a plain test method; the surrounding attribute and assertion style are yours.
 
 Here is another complete example that uses a `Guid` round trip without manually calculating expected values:
 
@@ -114,7 +114,7 @@ Yet the bug might only need:
 
 CsCheck is especially helpful when the input space is too large or awkward to enumerate by hand, including serialization and deserialization round trips; parsers and formatters; calculations and algorithms; collections, caches, and data structures; validation and conversion code; stateful APIs; refactoring; optimized replacements; boundary conditions; and concurrent code where race conditions may hide.
 
-A normal example-based test can be clearer when the example is valuable documentation itself—for example, a test named around `CalculateOntarioTax(100m)` and a known business outcome. Keep those examples. Add CsCheck when exploring many generated inputs tests the same rule more thoroughly.
+A normal example-based test can be clearer when the example is valuable documentation itself, for example, a test named around `CalculateOntarioTax(100m)` and a known business outcome. Keep those examples. Add CsCheck when exploring many generated inputs tests the same rule more thoroughly.
 
 ## The main testing styles
 
@@ -144,13 +144,15 @@ Add(99)
 Remove(7)
 ```
 
-It performs each generated sequence on both collections and checks that their final states agree. If a long sequence fails, shrinking can reduce it to a short sequence such as `Add(4)`, `Remove(4)`, `Add(4)`. In other words: use a simple trusted implementation as the reference model for a more complicated implementation.
+It performs each generated sequence on both collections and checks they stay equal after every operation. If a long sequence fails, shrinking can reduce it to a short sequence such as `Add(4)`, `Remove(4)`, `Add(4)`. In other words: use a simple trusted implementation as the reference model for a more complicated implementation.
 
 CsCheck supports this directly with `SampleModelBased`; see the [SetSlim example in the README](../README.md#model-based-testing) for the real API.
 
-### Metamorphic testing: compare equivalent work
+### Metamorphic testing: get the same result two ways
 
-Sometimes there is no simple reference model. During a refactoring or optimization, keep both versions and generate many inputs:
+Sometimes there is no simple reference model, but you know two different routes should reach the same answer. A round trip is the classic case: `Decode(Encode(x))` should equal `x`, checkable without ever knowing the encoded form. That is *metamorphic* testing: doing the same work two equivalent ways and comparing.
+
+A closely related option during a refactoring or optimization is to keep both versions and compare them directly:
 
 ```csharp
 Gen.Int.Sample(input => OldCalculate(input) == NewCalculate(input));
@@ -160,7 +162,7 @@ This is useful when refactoring, replacing an algorithm, introducing SIMD, nativ
 
 ### Specification testing: check the rules you were given
 
-The two styles above need something to compare against — a reference implementation, or a second version of your own code. Sometimes you have neither, and what you have instead is a document: a protocol, an exchange's rules, a regulation. The rules are written down, but nothing checks that your code follows them.
+The two styles above need something to compare against: a reference implementation, or a second version of your own code. Sometimes you have neither, and what you have instead is a document: a protocol, an exchange's rules, a regulation. The rules are written down, but nothing checks that your code follows them.
 
 `Spec` lets you write those rules as named requirements over a small state machine, each carrying the sentence it came from:
 
@@ -172,7 +174,7 @@ The two styles above need something to compare against — a reference implement
 
 Then it does something the other styles cannot: rather than sampling, it enumerates *every* reachable state and checks every requirement on every step. When that finishes, the requirements are proved for the model rather than tested. It will also inject deliberate defects to show your requirements are strong enough to catch them, and drive your real code down the same steps to check it agrees.
 
-This costs more thought than the other styles, because the state machine has to be small enough to enumerate. Start with [Tests/Specs/SpecIntroTests.cs](../Tests/Specs/SpecIntroTests.cs) — an order lifecycle with seven states, small enough to check the answer by hand — and then [docs/Spec.md](Spec.md) for the full guide.
+This costs more thought than the other styles, because the state machine has to be small enough to enumerate. Start with [Tests/Specs/SpecIntroTests.cs](../Tests/Specs/SpecIntroTests.cs), an order lifecycle with seven states, small enough to check the answer by hand, and then [docs/Spec.md](Spec.md) for the full guide.
 
 ## Getting started
 
