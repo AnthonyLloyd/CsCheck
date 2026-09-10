@@ -152,26 +152,27 @@ public class SpecIntroTests
     }
 
     /// <summary>Seven states is small enough to look at, so this is the one example where a picture beats a table.
-    /// <c>Dot</c> draws the reachable graph; pipe it through <c>dot -Tsvg</c>. The dead end in the version without a
-    /// refund is filled rather than doubled, which is the whole finding of the test above, visible at a glance.</summary>
+    /// <c>Mermaid</c> draws the reachable graph directly in Markdown. The dead end in the version without a
+    /// refund is highlighted as a deadlock rather than as terminal, which is the whole finding of the test above,
+    /// visible at a glance.</summary>
     [Test]
-    public async Task State_Graph_As_Dot()
+    public async Task State_Graph_As_Mermaid()
     {
-        var dot = Create().Dot();
-        TUnitX.WriteLine(dot);
-        await Assert.That(dot).StartsWith("digraph spec {");
-        // Seven nodes and six edges, matching the proof, and three intended ends drawn doubled: delivered, cancelled
+        var mermaid = Create().Mermaid();
+        TUnitX.WriteLine(mermaid);
+        await Assert.That(mermaid).StartsWith("flowchart LR");
+        // Seven nodes and six edges, matching the proof, and three intended ends highlighted: delivered, cancelled
         // after a refund, and cancelled before paying - which is settled too, and which reading the picture corrected.
 #pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
-        await Assert.That(Regex.Count(dot, @"\[label=""(New|Paid|Shipped|Delivered|Cancelled)")).IsEqualTo(7);
-        await Assert.That(Regex.Count(dot, " -> n")).IsEqualTo(6);
-        await Assert.That(Regex.Count(dot, "doublecircle")).IsEqualTo(3);
-        await Assert.That(dot).DoesNotContain("fillcolor");
+        await Assert.That(Regex.Count(mermaid, @"n\d+\[""(New|Paid|Shipped|Delivered|Cancelled)")).IsEqualTo(7);
+        await Assert.That(Regex.Count(mermaid, " -->\\|")).IsEqualTo(6);
+        await Assert.That(Regex.Count(mermaid, @"class n\d+ terminal")).IsEqualTo(3);
+        await Assert.That(Regex.Count(mermaid, @"class n\d+ deadlock")).IsEqualTo(0);
 
-        // Without the refund the cancelled order is a dead end, so it is filled instead.
-        var stuck = Create(refundable: false).Dot();
+        // Without the refund the cancelled order is a dead end, so it is highlighted as a deadlock instead.
+        var stuck = Create(refundable: false).Mermaid();
         TUnitX.WriteLine(stuck);
-        await Assert.That(Regex.Count(stuck, "fillcolor")).IsEqualTo(1);
+        await Assert.That(Regex.Count(stuck, @"class n\d+ deadlock")).IsEqualTo(1);
 #pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
     }
 

@@ -7,14 +7,14 @@ using CsCheck;
 /// <para>A token walks the ring from node N-1 down to node 0 accumulating each node's message balance, and node 0 declares
 /// termination when a white token comes home with the balances cancelling out. The safety property is that a detection
 /// is never announced while a message is still in flight.</para>
-/// <para>Its counters are unbounded in both directions — a node's counter is sends minus receives — so the original bounds
+/// <para>Its counters are unbounded in both directions (a node's counter is sends minus receives), so the original bounds
 /// them with a <c>StateConstraint</c>; that is <c>Boundary</c> here. The bound is the original's verbatim.</para>
 /// <para>It also carries Safra's inductive invariant, which is the argument for why the safety property holds rather than
 /// merely the conclusion. Checking it proves the algorithm rather than just testing it.</para>
 /// <para>TLA+ lets the initial state be a set; a Spec starts from one state. So the 192 configurations (any activity, any
 /// colouring, any token position) are chosen by three setup actions, one per conjunct of the original's <c>Init</c>.
 /// Verified against TLC 1.7.4 on <c>EWD998Small.cfg</c> (N=3): TLC gives 1,520,618 distinct states; this spec gives
-/// 1,520,691 — the 73 extra are the setup scaffold states before the first protocol state is reached.</para></summary>
+/// 1,520,691: the 73 extra are the setup scaffold states before the first protocol state is reached.</para></summary>
 public static class TerminationDetectionSpec
 {
     /// <summary>A ring of three. The original's published numbers are for three and for four, and four is 219 million

@@ -4,8 +4,8 @@
 
 Key facts an assistant should know before generating CsCheck code:
 
-- You compose a `Gen<T>` and call a terminating method (`Sample`, `SampleModelBased`, `SampleMetamorphic`, `SampleParallel`, `Faster`, `Check.Hash`). There are **no `Arb` classes** and you **never write shrinkers** — shrinking is automatic.
-- A failing test shrinks to the simplest case and prints a **seed** plus `(N shrinks, M skipped, K total)`; re-run with `seed:` to reproduce. `skipped` = shrink-phase candidates that weren't smaller than the current minimal failure, so they were never asserted — **not** errors or `Where`-filtered inputs, and `0` in a passing run.
+- You compose a `Gen<T>` and call a terminating method (`Sample`, `SampleModelBased`, `SampleMetamorphic`, `SampleParallel`, `Faster`, `Check.Hash`). There are **no `Arb` classes** and you **never write shrinkers**; shrinking is automatic.
+- A failing test shrinks to the simplest case and prints a **seed** plus `(N shrinks, M skipped, K total)`; re-run with `seed:` to reproduce. `skipped` = shrink-phase candidates that weren't smaller than the current minimal failure, so they were never asserted, **not** errors or `Where`-filtered inputs, and `0` in a passing run.
 - CsCheck is **test-framework agnostic**: it signals failure by throwing an exception (or `Sample` returning `false`), with no dependency on any test runner. Use it with xUnit, NUnit, MSTest, TUnit, or no framework at all. This repo's own tests happen to use TUnit + Microsoft.Testing.Platform, but that is not required.
 - The `Tests/` project is the canonical example collection.
 - Install: `dotnet add package CsCheck`. License: Apache-2.0.
@@ -22,13 +22,13 @@ Generators (compose with LINQ: `Select`, `SelectMany`, `Where`, query syntax):
 
 Terminating methods:
 
-- `gen.Sample(t => bool | throw)` — random testing.
-- `gen.SampleModelBased(Gen...Operation<Actual, Model>(...))` — apply random ops to actual + model, assert equal. Add `writeLine:` for a table of how often each operation ran, and `classify:` over the model state to split each operation by the state it acted on.
-- `gen.SampleMetamorphic(Gen...Metamorphic<T>(f1, f2))` — two routes, same result.
-- `Spec.From(state).Action(...).Invariant/Reachable/Rule/Never/AtMost/Response/Precedes/NeverAfter(...)` then `.Exhaustive()` (enumerate the whole reachable state space — a proof when it closes), `.Sample()` (random walks with shrinking), `.Faults()` (mutation test the requirements, or `.SampleFaults()` when the space will not close) or `.Conform(create, apply)` (does the real implementation conform to the spec on sampled traces). `.Dot()` returns the reachable state graph in Graphviz DOT for a model small enough to look at. State must be an immutable record with saturating counters; where a counter cannot saturate, `.Boundary(predicate)` closes `Exhaustive` over a chosen region instead of giving up at `maxStates`. Keep the state narrow in bytes as well as bounded in values — every guard and requirement takes it by value, so padding costs roughly a nanosecond per byte per transition (1.84x measured from 12 to 96 bytes); pack flags into an int rather than a field each. See `docs/Spec.md`, and `docs/SpecDesign.md` for the design rationale and prior art.
-- `gen.SampleParallel(Gen...Operation<State>(...))` — concurrency/linearizability testing.
-- `gen.Faster(fast, slow, writeLine: ...)` — statistical performance comparison.
-- `ModelGen.X.Single(predicate, "seed")` + `Check.Hash(h => h.Add(...), expectedHash)` — regression testing.
+- `gen.Sample(t => bool | throw)`: random testing.
+- `gen.SampleModelBased(Gen...Operation<Actual, Model>(...))`: apply random ops to actual + model, assert equal. Add `writeLine:` for a table of how often each operation ran, and `classify:` over the model state to split each operation by the state it acted on.
+- `gen.SampleMetamorphic(Gen...Metamorphic<T>(f1, f2))`: two routes, same result.
+- `Spec.From(state).Action(...).Invariant/Reachable/Rule/Never/AtMost/Response/Precedes/NeverAfter(...)` then `.Exhaustive()` (enumerate the whole reachable state space, a proof when it closes), `.Sample()` (random walks with shrinking), `.Faults()` (mutation test the requirements, or `.SampleFaults()` when the space will not close) or `.Conform(create, apply)` (does the real implementation conform to the spec on sampled traces). `.Mermaid()` returns the reachable state graph as a Mermaid flowchart for a model small enough to look at. State must be an immutable record with saturating counters; where a counter cannot saturate, `.Boundary(predicate)` closes `Exhaustive` over a chosen region instead of giving up at `maxStates`. Keep the state narrow in bytes as well as bounded in values: every guard and requirement takes it by value, so padding costs roughly a nanosecond per byte per transition (1.84x measured from 12 to 96 bytes); pack flags into an int rather than a field each. See `docs/Spec.md`, and `docs/SpecDesign.md` for the design rationale and prior art.
+- `gen.SampleParallel(Gen...Operation<State>(...))`: concurrency/linearizability testing.
+- `gen.Faster(fast, slow, writeLine: ...)`: statistical performance comparison.
+- `ModelGen.X.Single(predicate, "seed")` + `Check.Hash(h => h.Add(...), expectedHash)`: regression testing.
 
 Common optional parameters: `iter` (default 100), `time` (seconds), `seed`, `threads`, `timeout` (Faster, 60s), `sigma` (Faster, 6), `replay` (SampleParallel, 100), `print`, `equal`. Env-var defaults: `CsCheck_Iter`, `CsCheck_Time`, `CsCheck_Seed`, `CsCheck_Sigma`, `CsCheck_Threads`.
 

@@ -29,9 +29,9 @@ public static class AllocatorMany
 
     // Proven-global test. A feasible incumbent's column errors satisfy Σ_j d_j = δ (error_j = PF*d_j - r_j,
     // fixed because Σ cost_j = totalCost). Minimising Σ (error_j/C_j)² under only that identity is a lower
-    // bound, and the incumbent attains it — so is global — iff no single unit of deviation moved between two
+    // bound, and the incumbent attains it (so is global) iff no single unit of deviation moved between two
     // columns helps: min_j (2*e_j + PF)/C_j² >= max_i (2*e_i - PF)/C_i². When lo/hi box bounds are provided
-    // (achievable deviation range per column from ColBox), only feasible transfers are considered — tighter bound.
+    // (achievable deviation range per column from ColBox), only feasible transfers are considered, a tighter bound.
     // Compared exactly with Int128 (wide enough that C_j²*error can't overflow). Requires post-shift errors.
     internal static bool IsRelaxedOptimal(int[] columnCostError, int[] colTotal, int[]? lo = null, int[]? hi = null)
     {
@@ -224,7 +224,7 @@ public static class AllocatorMany
 
         if (threads <= 0) threads = Environment.ProcessorCount;
 
-        // The time budget is a deadline checked inline by the searching threads — robust when the thread pool is
+        // The time budget is a deadline checked inline by the searching threads, robust when the thread pool is
         // oversubscribed, unlike a CancelAfter timer whose callback can be starved for many seconds.
         var finishTime = Stopwatch.GetTimestamp() + Math.Max(0, time) * Stopwatch.Frequency;
 
