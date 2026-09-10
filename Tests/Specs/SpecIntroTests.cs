@@ -3,6 +3,7 @@ namespace Tests.Specs;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CsCheck;
+#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
 
 /// <summary>An introduction to <c>Spec</c>, in one file. The subject is the state machine everyone has written: an
 /// order that gets paid, shipped and delivered, or cancelled and refunded. It usually lives in a table on a wiki page
@@ -149,6 +150,8 @@ public class SpecIntroTests
         await Assert.That(report.DeadlockTrace).IsNotNull();
         await Assert.That(report.DeadlockTrace).Contains("Cancelled paid=1 refunded=0");
         await Assert.That(report.DeadlockTrace).Contains("no action enabled");
+        // The wrong turn named rather than left to be inferred: the step that took Cancel could have taken Ship.
+        await Assert.That(report.DeadlockTrace).Contains("Cancel  or Ship");
     }
 
     /// <summary>Seven states is small enough to look at, so this is the one example where a picture beats a table.
@@ -163,7 +166,6 @@ public class SpecIntroTests
         await Assert.That(mermaid).StartsWith("flowchart LR");
         // Seven nodes and six edges, matching the proof, and three intended ends highlighted: delivered, cancelled
         // after a refund, and cancelled before paying - which is settled too, and which reading the picture corrected.
-#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
         await Assert.That(Regex.Count(mermaid, @"n\d+\[""(New|Paid|Shipped|Delivered|Cancelled)")).IsEqualTo(7);
         await Assert.That(Regex.Count(mermaid, " -->\\|")).IsEqualTo(6);
         await Assert.That(Regex.Count(mermaid, @"class n\d+ terminal")).IsEqualTo(3);
@@ -173,7 +175,20 @@ public class SpecIntroTests
         var stuck = Create(refundable: false).Mermaid();
         TUnitX.WriteLine(stuck);
         await Assert.That(Regex.Count(stuck, @"class n\d+ deadlock")).IsEqualTo(1);
-#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
+    }
+
+    /// <summary>docs/Spec.md shows this graph twice, once as the text the call returns and once as the diagram a
+    /// Markdown renderer makes of it, so both copies have to be what the call returns now.</summary>
+    [Test]
+    public async Task Docs_Quote_The_Generated_State_Graph()
+    {
+        var stuck = Create(refundable: false).Mermaid();
+        // Matched on the generator's own opening lines, not on "flowchart", so a hand drawn diagram elsewhere in the
+        // guide is neither mistaken for this one nor able to hide a copy of it that has fallen behind.
+        var head = string.Join('\n', stuck.Split('\n')[..2]);
+        var quoted = Docs.Spec.Where(b => b.StartsWith(head, StringComparison.Ordinal)).ToArray();
+        await Assert.That(quoted.Length).IsEqualTo(2);
+        foreach (var block in quoted) await Assert.That(block).IsEqualTo(stuck);
     }
 
     /// <summary>The same specification as a random walk. For a model this small it adds nothing over the proof, but it

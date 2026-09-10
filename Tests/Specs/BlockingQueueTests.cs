@@ -3,8 +3,10 @@ namespace Tests.Specs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using CsCheck;
 using Wake = BlockingQueueSpec.Wake;
+#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
 
 /// <summary>Checked against the original three ways, in increasing order of how much it would take to fool.
 /// <para>One, an independent breadth first walk transliterated straight from the TLA+ - a list of producer ids for the
@@ -36,6 +38,21 @@ public class BlockingQueueTests
         await Assert.That(report.TerminalStates).IsEqualTo(0);
         await Assert.That(report.DeadlockTrace).Contains("waiting={p0,p1,c0,c1}");
         await Assert.That(report.DeadlockTrace).Contains("no action enabled");
+        // Asserted on the shape rather than on this interleaving, which is incidental: several steps had another wake
+        // available and the last had none, so the trace ends on a forced move.
+        var steps = report.DeadlockTrace!.Split('\n');
+        await Assert.That(steps.Count(s => s.Contains(" or ", StringComparison.Ordinal))).IsGreaterThan(1);
+        await Assert.That(steps.Last(s => Regex.IsMatch(s, @"^\s+\d+ "))).DoesNotContain(" or ");
+    }
+
+    /// <summary>docs/Spec.md quotes the tail of this trace to show the alternatives column, and the indentation is
+    /// load bearing: the step numbers are right padded to two, so a copy typed by hand does not line up.</summary>
+    [Test]
+    public async Task Docs_Quote_The_Generated_Deadlock_Trace()
+    {
+        var report = BlockingQueueSpec.Create(Wake.Any, producers: 2, consumers: 2, capacity: 1).Exhaustive();
+        var quoted = Docs.Spec.Single(b => b.Contains("no action enabled", StringComparison.Ordinal));
+        await Assert.That(report.DeadlockTrace).Contains(quoted.TrimEnd('\n'));
     }
 
     /// <summary>Both fixes, proved rather than assumed, and they are different fixes: notifyAll wakes everything, while

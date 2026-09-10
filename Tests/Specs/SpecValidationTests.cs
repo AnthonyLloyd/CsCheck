@@ -3,6 +3,7 @@ namespace Tests.Specs;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CsCheck;
+#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
 
 /// <summary>The mistakes a specification can contain that would otherwise pass silently and prove nothing. Each of
 /// these is rejected before any exploration starts, because the failure mode is a green test rather than a red one:
@@ -177,6 +178,9 @@ public class SpecValidationTests
         await Assert.That(report.Note!.IndexOf("Counter", StringComparison.Ordinal))
             .IsLessThan(report.Note!.IndexOf("Small", StringComparison.Ordinal));
         await Assert.That(report.Note).Contains("Flag (2 values)");
+        // The note as docs/Spec.md quotes it, wrapped there and one line here.
+        await Assert.That(report.Note).IsEqualTo(Docs.Unwrap(
+            Docs.Spec.Single(b => b.StartsWith("gave up at 2,000 states", StringComparison.Ordinal))));
     }
 
     /// <summary>A state with a hand written ToString cannot be parsed into fields, so the diagnostic is omitted rather
@@ -226,9 +230,9 @@ public class SpecValidationTests
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.States).IsEqualTo(6);
         await Assert.That(report.Pruned).IsEqualTo(1);
-        // The line quoted in docs/Spec.md, asserted here so the two cannot drift.
-        await Assert.That(report.ToString()).Contains(
-            "state space CLOSED within boundary: 6 states, 6 transitions, depth 5, 0 terminal, 0 deadlock, 1 outside");
+        // Read from docs/Spec.md rather than copied out of it, so editing either side alone fails.
+        await Assert.That(report.ToString()).Contains(Docs.Spec
+            .Single(b => b.StartsWith("state space CLOSED within boundary", StringComparison.Ordinal)).TrimEnd('\n'));
     }
 
     /// <summary>The property that makes a boundary worth having rather than just a smaller maxStates: the step that
@@ -679,6 +683,163 @@ public class SpecValidationTests
         await Assert.That(mermaid).Contains("n0[\"say &quot;hi&quot; &#124; 0<br/>next\"]");
     }
 
+    /// <summary>Escaping has to be exactly invertible, and the hand written test above only checks the characters
+    /// someone thought of - it passed while &lt; and &gt; went through raw. Two checks, because the round trip catches
+    /// a character escaped into something that no longer says what it said, and the strip catches one that reached the
+    /// label raw and so round trips trivially. The alphabet is dense in the structural characters, which
+    /// <c>Gen.String</c> over all of Unicode almost never produces.</summary>
+    [Test]
+    public void Mermaid_Label_Escaping_Round_Trips()
+    {
+        Gen.String["ab&<>\"|#;/\r\n"].Sample(text =>
+        {
+            var mermaid = Spec.From(0)
+                .Action("Step", [text], (i, _) => i < 1, (i, _) => i + 1)
+                .Print(_ => text)
+                .Mermaid();
+            var node = Regex.Match(mermaid, @"^  n0\[""(.*)""\];$", RegexOptions.Multiline);
+            var edge = Regex.Match(mermaid, @"^  n0 -->\|""(.*)""\| n1;$", RegexOptions.Multiline);
+            // A raw newline splits the line in two and neither half matches, so this covers the newline forms as well.
+            if (!node.Success || !edge.Success) return false;
+            // Both line ending forms escape to the same <br/>, so the original cannot be recovered any more exactly.
+            return Unescape(node.Groups[1].Value) == text.Replace("\r\n", "\n").Replace("\r", "\n")
+                && NoRawSyntax(node.Groups[1].Value) && NoRawSyntax(edge.Groups[1].Value);
+        });
+
+        static string Unescape(string s) => s.Replace("<br/>", "\n")
+                                             .Replace("&#124;", "|")
+                                             .Replace("&quot;", "\"")
+                                             .Replace("&gt;", ">")
+                                             .Replace("&lt;", "<")
+                                             .Replace("&amp;", "&");
+
+        static bool NoRawSyntax(string label) => label
+            .Replace("&amp;", "").Replace("&lt;", "").Replace("&gt;", "")
+            .Replace("&quot;", "").Replace("&#124;", "").Replace("<br/>", "")
+            .IndexOfAny(['&', '<', '>', '"', '|', '\n', '\r']) < 0;
+    }
+
+    /// <summary>A dead end needs no requirement to detect it, and that was only true of <c>Exhaustive</c> - a sampled
+    /// walk stopped early and said nothing, so the engine you fall back to on a space too big to close was the one that
+    /// could not see the bug the other finds for free. Counted as walks, not states, since a sampled walk keeps no
+    /// visited set: <c>DeadlockStates</c> stays zero rather than being filled in with a number that would not mean
+    /// what it means for <c>Exhaustive</c>.</summary>
+    [Test]
+    public async Task Sample_Reports_Walks_That_Dead_Ended()
+    {
+        var report = Spec.From(0)
+            .Action("Up", i => i < 3, i => i + 1)
+            .Action("Skip", i => i == 0, _ => 3)
+            .Sample(TUnitX.WriteLine, iter: 100);
+        await Assert.That(report.DeadlockTraces).IsGreaterThan(0);
+        await Assert.That(report.DeadlockStates).IsEqualTo(0);
+        await Assert.That(report.DeadlockTrace).IsNotNull();
+        await Assert.That(report.DeadlockTrace).Contains("no action enabled");
+        // Every walk leaves the initial state by one of two actions, so whichever is reported the first step has the
+        // other beside it - the alternatives come through on this path too.
+        await Assert.That(report.DeadlockTrace).Contains(" or ");
+    }
+
+    /// <summary>The same walks with the end declared: nothing was enabled there either, so a count that only asked
+    /// whether the walk stopped early would report every completed walk as a dead end.</summary>
+    [Test]
+    public async Task Sample_Does_Not_Count_An_Intended_End_As_A_Dead_End()
+    {
+        var report = Spec.From(0)
+            .Action("Up", i => i < 3, i => i + 1)
+            .Action("Skip", i => i == 0, _ => 3)
+            .Terminal(i => i == 3)
+            .Sample(TUnitX.WriteLine, iter: 100);
+        await Assert.That(report.DeadlockTraces).IsEqualTo(0);
+        await Assert.That(report.DeadlockTrace).IsNull();
+    }
+
+    /// <summary>Arguments are rendered on the alternatives the same way they are on the step, and a state with a wide
+    /// domain is bounded so one line cannot run away with the report.</summary>
+    [Test]
+    public async Task Deadlock_Alternatives_Render_Arguments_And_Are_Bounded()
+    {
+        var report = Spec.From(0)
+            .Action("Set", Enumerable.Range(0, 12).ToArray(), (n, _) => n == 0, (_, v) => v)
+            .Exhaustive(writeLine: TUnitX.WriteLine);
+        await Assert.That(report.DeadlockStates).IsGreaterThan(0);
+        await Assert.That(report.DeadlockTrace)
+            .Contains("or Set(0), Set(2), Set(3), Set(4), Set(5), Set(6), Set(7), Set(8) +3 more");
+    }
+
+    /// <summary>A queue abstracted to its count, which is what picking the smallest falsifying domain produces: all
+    /// three Enqueue arguments reach the same state, so one arrow says what three identical ones were saying. Dequeue
+    /// shares no target with Enqueue here, so the two stay separate arrows.</summary>
+    [Test]
+    public async Task Mermaid_Merges_Arrows_To_The_Same_State()
+    {
+        var mermaid = Spec.From(0)
+            .Action("Enqueue", [1, 2, 3], (n, _) => n < 2, (n, _) => n + 1)
+            .Action("Dequeue", n => n > 0, n => n - 1)
+            .Mermaid();
+        TUnitX.WriteLine(mermaid);
+        await Assert.That(mermaid).Contains("n0 -->|\"Enqueue(1,2,3)\"| n1;");
+        await Assert.That(mermaid).Contains("n1 -->|\"Dequeue\"| n0;");
+        await Assert.That(Regex.Count(mermaid, " -->\\|")).IsEqualTo(4);
+        await Assert.That(mermaid).Contains("transitions: 8");
+    }
+
+    /// <summary>Two actions reaching one state share the arrow, and each keeps its own name.</summary>
+    [Test]
+    public async Task Mermaid_Merges_Arrows_From_Different_Actions()
+    {
+        var mermaid = Spec.From(0)
+            .Action("Cancel", n => n == 0, _ => 1)
+            .Action("Timeout", n => n == 0, _ => 1)
+            .Mermaid();
+        TUnitX.WriteLine(mermaid);
+        await Assert.That(mermaid).Contains("n0 -->|\"Cancel, Timeout\"| n1;");
+    }
+
+    /// <summary>Merging must lose nothing, which the examples above cannot show: they only check the labels someone
+    /// predicted. The arrows have to be exactly the distinct source-target pairs, and every argument of every enabled
+    /// action has to appear against the arrow that carried it - a merge that quietly dropped one would still draw a
+    /// plausible diagram. The domains overlap so that different arguments genuinely do share a target.</summary>
+    [Test]
+    public void Mermaid_Merging_Loses_No_Transition()
+    {
+        Gen.Select(Gen.Int[1, 4], Gen.Int[1, 4], Gen.Int[2, 4])
+        .Sample((aArgs, bArgs, bound) =>
+        {
+            var mermaid = Spec.From(0)
+                .Action("A", Enumerable.Range(0, aArgs).ToArray(), (n, v) => (n + v) % bound)
+                .Action("B", Enumerable.Range(0, bArgs).ToArray(), (n, v) => (n * 2 + v) % bound)
+                .Mermaid(maxStates: 64);
+            // Node ids are handed out in discovery order, not by state value, so the labels are the only way across.
+            var ids = Regex.Matches(mermaid, @"^  (n\d+)\[""(\d+)""\];$", RegexOptions.Multiline)
+                .ToDictionary(m => int.Parse(m.Groups[2].Value), m => m.Groups[1].Value);
+            var arrows = Regex.Matches(mermaid, @"^  (n\d+) -->\|""(.*)""\| (n\d+);$", RegexOptions.Multiline);
+            // One arrow per source-target pair, or the merge did not merge.
+            var pairs = new HashSet<(string, string)>();
+            foreach (Match arrow in arrows)
+                if (!pairs.Add((arrow.Groups[1].Value, arrow.Groups[3].Value))) return false;
+            // Read every transition back out of the labels, so the set they describe can be compared with the model's.
+            var drawn = new HashSet<(string From, string Name, int Arg, string To)>();
+            foreach (Match arrow in arrows)
+                foreach (var segment in arrow.Groups[2].Value.Split(", "))
+                {
+                    var bracket = segment.IndexOf('(', StringComparison.Ordinal);
+                    if (bracket < 0) return false;
+                    foreach (var a in segment[(bracket + 1)..^1].Split(','))
+                        if (!drawn.Add((arrow.Groups[1].Value, segment[..bracket], int.Parse(a),
+                                        arrow.Groups[3].Value)))
+                            return false;
+                }
+            var expected = new HashSet<(string, string, int, string)>();
+            foreach (var (state, id) in ids)
+            {
+                for (int v = 0; v < aArgs; v++) expected.Add((id, "A", v, ids[(state + v) % bound]));
+                for (int v = 0; v < bArgs; v++) expected.Add((id, "B", v, ids[(state * 2 + v) % bound]));
+            }
+            return drawn.SetEquals(expected);
+        });
+    }
+
     /// <summary>The emitted Mermaid is text people copy into Markdown, so its stable shape is part of the API.</summary>
     [Test]
     public async Task Mermaid_Text_Output_Is_Stable()
@@ -703,7 +864,7 @@ public class SpecValidationTests
               n0["0"];
               n1["1"];
               class n1 terminal;
-              info["states: 2<br/>edges: 1<br/>terminal: 1<br/>deadlock: 0"];
+              info["states: 2<br/>transitions: 1<br/>depth: 1<br/>terminal: 1<br/>deadlock: 0"];
               class info note;
               subgraph legend["Legend"]
                 legendTerminal["terminal"];
@@ -727,7 +888,6 @@ public class SpecValidationTests
         TUnitX.WriteLine(mermaid);
         await Assert.That(mermaid).Contains("truncatedNote[\"gave up at 4 states\"]");
         // Four labels for four states, and three edges between them. Every n referenced by an edge is declared.
-#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
         await Assert.That(Regex.Count(mermaid, @"n\d+\[""\d")).IsEqualTo(4);
         await Assert.That(Regex.Count(mermaid, " -->\\|")).IsEqualTo(3);
         foreach (var to in Regex.Matches(mermaid, @" -->\|""[^""]+""\| (n\d+)"))
@@ -748,7 +908,6 @@ public class SpecValidationTests
         await Assert.That(mermaid).DoesNotContain("gave up");
         await Assert.That(Regex.Count(mermaid, @"class n\d+ truncated")).IsEqualTo(0);
         await Assert.That(Regex.Count(mermaid, @"n\d+\[""\d")).IsEqualTo(4);
-#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
     }
 
     /// <summary>Slots eight and above sit in the second counter word, reached through a ref conditional, so only a spec
