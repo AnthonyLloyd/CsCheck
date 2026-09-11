@@ -26,7 +26,7 @@ CsCheck also makes specification, performance and regression testing simple and 
         <PackageReleaseNotes>
 Added allocation comparison to Faster.
 Added operation coverage and classify output to SampleModelBased.
-Added Spec specification testing.
+Added NEW Spec specification testing.
         </PackageReleaseNotes>
         <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>

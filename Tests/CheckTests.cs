@@ -277,7 +277,7 @@ public class CheckTests
         foreach (object other in new object[]
         {
             new HashSet<int> { 1, 2, 3, 4 },
-            new Queue<int>(new[] { 1, 2, 3, 4 }),
+            new Queue<int>([1, 2, 3, 4]),
             Enumerable.Range(1, 4),
         })
         {
@@ -459,7 +459,7 @@ public class CheckTests
     {
         static void Same() { }
         var message = Assert.Throws<CsCheckException>(
-            () => Check.Faster(Same, Same, timeout: 1, repeat: repeat))!.Message;
+            () => Check.Faster(Same, Same, repeat: repeat, timeout: 1))!.Message;
         await Assert.That(message).Contains("repeat must be at least 1");
     }
 
@@ -472,7 +472,7 @@ public class CheckTests
         static Task Quick() => Task.CompletedTask;
         static Task Slow() { for (int i = 0; i < 400; i++) _ = i * i; return Task.CompletedTask; }
         var message = (await Assert.ThrowsAsync<CsCheckException>(
-            () => Check.FasterAsync(Quick, Slow, timeout: 1, repeat: repeat)))!.Message;
+            () => Check.FasterAsync(Quick, Slow, repeat: repeat, timeout: 1)))!.Message;
         await Assert.That(message).Contains("repeat must be at least 1");
     }
 
@@ -495,7 +495,7 @@ public class CheckTests
         .SampleParallel(
             Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
             Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _)),
-            threads: 1, iter: 20);
+            iter: 20, threads: 1);
     }
 
     [Test]
@@ -516,7 +516,7 @@ public class CheckTests
         .SampleParallel(
             Gen.Int.Operation<ConcurrentQueue<int>, Queue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i), (q, i) => q.Enqueue(i)),
             Gen.Operation<ConcurrentQueue<int>, Queue<int>>("TryDequeue()", q => q.TryDequeue(out _), q => q.TryDequeue(out _)),
-            threads: 1, iter: 20);
+            iter: 20, threads: 1);
     }
 
     [Test]

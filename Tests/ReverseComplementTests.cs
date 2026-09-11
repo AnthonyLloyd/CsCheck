@@ -1,4 +1,4 @@
-﻿#nullable disable
+#nullable disable
 #pragma warning disable IDE0300 // Simplify collection initialization
 #pragma warning disable IDE0028 // Simplify collection initialization
 #pragma warning disable IDE0230 // Use UTF-8 string literal
@@ -26,7 +26,7 @@ namespace Tests
 
     public class CausalTests
     {
-        [Test][Skip("Long running test.")]
+        [Test]
         public void Fasta()
         {
             Causal.Profile(() => FastaUtils.Fasta.NotMain(10_000_000, null)).Output(TUnitX.WriteLine);

@@ -371,7 +371,7 @@ public sealed class Spec<S>(S initial)
     /// because it needs no counter.
     /// <para>The count so far becomes part of the search state, so this is proved rather than sampled: without that, a state
     /// reached once and a state reached for the fourth time would be the same search node and the excess would go</para>
-    /// unreported. Costs one byte of node per requirement, so unlike <c>Precedes</c> the limit is eight.</summary>
+    /// unreported. Costs one byte of node per requirement, so unlike <c>Precedes</c> the limit is 16.</summary>
     public Spec<S> AtMost(string id, string quote, int times, Func<S, S, bool> occurs)
     {
         if (times is < 0 or > 254) ThrowHelper.Throw($"Spec AtMost '{id}' times must be 0 to 254, was {times}");

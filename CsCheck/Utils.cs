@@ -1,4 +1,4 @@
-﻿// Copyright 2026 Anthony Lloyd
+// Copyright 2026 Anthony Lloyd
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1160,9 +1160,6 @@ public static class ThrowHelper
 
 internal static class Reporter
 {
-    // Formatting and writing fail differently: a report that cannot be formatted can still be written about, but a
-    // writeLine that throws leaves nowhere to say so, and throwing from the finally it is called in would replace the
-    // violation the run exists to report.
     public static void Write(Action<string>? writeLine, object report)
     {
         if (writeLine is null) return;
