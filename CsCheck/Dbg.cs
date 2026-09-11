@@ -1,4 +1,4 @@
-﻿// Copyright 2026 Anthony Lloyd
+// Copyright 2026 Anthony Lloyd
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -409,7 +409,7 @@ public static class Dbg
         public void Dispose()
         {
             if (reading && stream.Length != stream.Position)
-                throw new CsCheckException($"file (length {stream.Length}) contains more data than read (length {stream.Position})");
+                ThrowHelper.Throw($"file (length {stream.Length}) contains more data than read (length {stream.Position})");
             regressionStream = null;
             stream.Dispose();
         }
@@ -428,7 +428,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadBool(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -442,7 +442,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadSByte(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -456,7 +456,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadByte(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -470,7 +470,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadShort(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -484,7 +484,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadUShort(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -498,7 +498,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadInt(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -512,7 +512,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadUInt(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -526,7 +526,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadLong(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -540,7 +540,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadULong(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -554,7 +554,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadDateTime(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -568,7 +568,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadTimeSpan(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -582,7 +582,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadDateTimeOffset(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -596,7 +596,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadGuid(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -610,7 +610,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadChar(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual '{val}' but Expected '{val2}'. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual '{val}' but Expected '{val2}'. (last string was {LastString})");
             }
             else
             {
@@ -625,7 +625,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadString(stream);
                 if (!string.Equals(val, val2))
-                    throw new CsCheckException($"Actual '{val}' but Expected '{val2}'. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual '{val}' but Expected '{val2}'. (last string was {LastString})");
             }
             else
             {
@@ -640,7 +640,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadDouble(stream);
                 if (Math.Abs(val - val2) > absolute + relative * (Math.Abs(val) + Math.Abs(val2)))
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -654,7 +654,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadFloat(stream);
                 if (Math.Abs(val - val2) > absolute + relative * (Math.Abs(val) + Math.Abs(val2)))
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -668,7 +668,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadDecimal(stream);
                 if ((double)Math.Abs(val - val2) > absolute + relative * (double)(Math.Abs(val) + Math.Abs(val2)))
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. `");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. `");
             }
             else
             {
@@ -973,3 +973,56 @@ public static class RegressionExtensions
         foreach (var v in col) r.Add(v);
     }
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Observations from a bug-hunting pass, parked here for later. Nothing below is acted on. Everything is measured rather
+// than inferred unless it says otherwise. Delete this block once it has been read.
+//
+// FOUND, NOT FIXED
+//
+// 1. Check.Equal on a rank 2 array versus a non-array is three-way inconsistent. Measured over 20 ordered pairs of a
+//    2x2 int[,] against collections holding 1,2,3,4:
+//        vs int[]                                                          -> false (correct)
+//        vs List, Collection, ReadOnlyCollection, ImmutableArray,
+//           ImmutableList, ArrayList                          (12 pairs)   -> throws ArgumentException
+//        vs HashSet, Queue, Enumerable.Range                  (6 pairs)    -> true
+//    Cause is in Utils.Equal: the rank 2 branch only fires when both sides are Array, so a T[,] falls through to
+//    "a is IList ail", and a rank 2 array's IList indexer throws. Anything that is not an IList falls further to the
+//    flattening compare, which casts the 2x2 to [1,2,3,4] and calls it equal. The true cases look worse than the
+//    throwing ones: the answer depends on the concrete type of the other side. Two skipped tests in CheckTests.cs
+//    (Equal_2D_Array_Versus_IList_..., Equal_2D_Array_Versus_A_Flat_Sequence_...) assert what I would expect instead.
+//
+// 5. The formatting branch of Reporter.Write in Utils.cs is unreachable from the Spec engines and therefore unpinned by
+//    any test. SpecReport.ToString is pure string building over precomputed values, so it cannot throw; everything that
+//    depends on the user's printer is rendered earlier, which is why SpecViolation.ToString and PrintTrace are guarded
+//    individually. The branch is kept as insurance for other report types, not because it is verified.
+//
+// 9. Using arg.Length != 0 as a proxy for "this action takes arguments" conflates an argument-less action with one whose
+//    argument prints as empty. It survives in ActionNames and Alternatives, where it costs only a label - Set rather
+//    than Set(). The Mermaid case, where it dropped arguments from a merged edge label, is fixed. A proper fix needs a
+//    hasArguments flag on SpecAction, since ArgCount == 1 cannot distinguish an argument-less action from a
+//    single-element domain.
+//
+// 10. SpecWalk's thread-static tally reuse compares Triggered.Length and Fired.Length but not Unresolved.Length. Safe
+//     only because both are sized by requirement count and so cannot diverge.
+//
+// WORTH CONSIDERING
+//
+// A. One property test over the Gen indexer surface would be worth more than any of the above: for any bounds, either
+//    construction throws CsCheckException or every generated value is in range. That single Sample would have caught
+//    Gen.TimeSpan[MinValue, MaxValue] (divide by zero), Gen.Char[""] (divide by zero), Frequency with a zero total
+//    (emitting default(T)) and the negative-length family, all of which were found one at a time by reading.
+//
+// B. The comment at Spec.cs:505 claims Validate is "called by every engine". That is currently true at all six call
+//    sites, but nothing enforces it. A reflection test enumerating the public engine entry points and asserting each one
+//    validates would keep it true as engines are added.
+//
+// C. Mutation-check multi-site fixes per site, not per fix. Two multi-site changes were half-unpinned when first
+//     written: the SampleParallel thread clamp, and the PCG Parse site, where the test only exercised the constructor
+//     and reverting the other half left the suite green.
+//
+// PROCESS
+//
+// F. Two tests fail only when CsCheck_Time is set globally, from wall-clock starvation across the parallel suite rather
+//    than from anything they assert: Classify_Table_Survives_A_Failure and SampleModelBasedAsync_Classify.
+// ---------------------------------------------------------------------------------------------------------------------

@@ -1218,6 +1218,7 @@ public static class Gen
         if (constants.Length == 0) ThrowHelper.Throw("Gen.FrequencyConst constants is empty");
         uint total = 0;
         foreach (var (i, _) in constants) total += (uint)i;
+        if (total == 0) ThrowHelper.Throw("Gen.FrequencyConst total frequency is zero");
         return HashHelper.IsPow2(total) ? new GenFrequencyConstPow2<T>(total, constants) : new GenFrequencyConst<T>(total, constants);
     }
 
@@ -1270,6 +1271,7 @@ public static class Gen
         if (gens.Length == 0) ThrowHelper.Throw("Gen.Frequency gens is empty");
         uint total = 0;
         foreach (var (i, _) in gens) total += (uint)i;
+        if (total == 0) ThrowHelper.Throw("Gen.Frequency total frequency is zero");
         return HashHelper.IsPow2(total) ? new GenFrequencyPow2<T>(total, gens) : new GenFrequency<T>(total, gens);
     }
 
@@ -1352,7 +1354,7 @@ public static class Gen
 
     static void ShuffleInPlace<T>(IList<T> a, PCG pcg, int lower)
     {
-        for (int i = a.Count - 1; i > lower; i--)
+        for (int i = a.Count - 1; i >= lower && i > 0; i--)
         {
             int j = (int)pcg.Next((uint)(i + 1));
             if (i != j)
@@ -1479,8 +1481,8 @@ public static class Gen
             int lower = Math.Max(gens.Length - length, 0);
             ShuffleInPlace(array, pcg, lower);
             size = new Size(0);
-            var r = new T[length];
-            for (int i = 0; i < length; i++)
+            var r = new T[gens.Length - lower];
+            for (int i = 0; i < r.Length; i++)
             {
                 r[i] = array[i + lower].Generate(pcg, min, out var s);
                 size.Add(s);
@@ -1524,8 +1526,9 @@ public static class Gen
             int lower = Math.Max(array.Length - length, 0);
             ShuffleInPlace(array, pcg, lower);
             size = new Size(0);
-            var r = new List<T>(length);
-            for (int i = 0; i < length; i++)
+            var count = array.Length - lower;
+            var r = new List<T>(count);
+            for (int i = 0; i < count; i++)
             {
                 r.Add(array[i + lower].Generate(pcg, min, out var s));
                 size.Add(s);
@@ -2582,7 +2585,7 @@ public sealed class GenDateOnly : Gen<DateOnly>
         get
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-            return new Range((uint)start.GetHashCode(), (uint)(finish.GetHashCode() - start.GetHashCode() + 1));
+            return new Range((uint)start.DayNumber, (uint)(finish.DayNumber - start.DayNumber + 1));
         }
     }
 }
@@ -2640,7 +2643,8 @@ public sealed class GenTimeSpan : Gen<TimeSpan>
         get
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-            return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
+            return start == TimeSpan.MinValue && finish == TimeSpan.MaxValue ? this
+                 : new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
         }
     }
 }
@@ -2694,7 +2698,13 @@ public sealed class GenChar : Gen<char>
 
     /// <summary>Generate char uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<char> this[char start, char finish]
-        => new Range(start, finish + 1U - start);
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range(start, finish + 1U - start);
+        }
+    }
     sealed class GenChars(string chars) : Gen<char>
     {
         public override char Generate(PCG pcg, Size? min, out Size size)
@@ -2705,7 +2715,15 @@ public sealed class GenChar : Gen<char>
         }
     }
     /// <summary>Generate char from chars in the string.</summary>
-    public Gen<char> this[string chars] => new GenChars(chars);
+    public Gen<char> this[string chars]
+    {
+        get
+        {
+            if (chars is null) ThrowHelper.Throw("Gen.Char chars is null");
+            if (chars.Length == 0) ThrowHelper.Throw("Gen.Char chars is empty");
+            return new GenChars(chars);
+        }
+    }
     public readonly Gen<char> AlphaNumeric = new GenChars("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
 }
 

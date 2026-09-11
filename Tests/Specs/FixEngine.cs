@@ -33,19 +33,14 @@ public sealed class FixEngine
 
     /// <summary>What the session emitted during a step.</summary>
     [Flags]
-    public enum Out
-    {
-        None = 0, Logon = 1, Heartbeat = 2, TestRequest = 4, ResendRequest = 8, Resend = 16, Logout = 32,
-        Reject = 64, App = 128,
-    }
+    public enum Out { None = 0, Logon = 1, Heartbeat = 2, TestRequest = 4, ResendRequest = 8, Resend = 16, Logout = 32, Reject = 64, App = 128 }
 
     /// <summary>An inbound message from the wire: the message kind, its MsgSeqNum, and the PossDupFlag fields.
     /// For a bare SequenceReset (GapFillFlag=N), <see cref="SeqNum"/> carries NewSeqNo instead, since MsgSeqNum
     /// is ignored by that message type.</summary>
     public readonly record struct Msg(In Kind, int SeqNum, bool PossDup = false, bool GoodOrig = true)
     {
-        public override string ToString() =>
-            PossDup ? $"{Kind} {SeqNum} {(GoodOrig ? "dup" : "dupBadOrig")}" : $"{Kind} {SeqNum}";
+        public override string ToString() => PossDup ? $"{Kind} {SeqNum} {(GoodOrig ? "dup" : "dupBadOrig")}" : $"{Kind} {SeqNum}";
     }
 
     ConnectionStatus _status = ConnectionStatus.AwaitingLogon;

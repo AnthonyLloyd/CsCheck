@@ -1,4 +1,4 @@
-﻿// Copyright 2026 Anthony Lloyd
+// Copyright 2026 Anthony Lloyd
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -358,13 +358,14 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
             return false;
         if (a is IEquatable<T> aieq)
             return aieq.Equals(b);
-        if (a is Array aa2 && b is Array ba2 && aa2.Rank == 2)
+        if (a is Array aa2 && b is Array ba2 && (aa2.Rank == 2 || ba2.Rank == 2))
         {
+            if (aa2.Rank != ba2.Rank) return false;
             int I = aa2.GetLength(0), J = aa2.GetLength(1);
             if (I != ba2.GetLength(0) || J != ba2.GetLength(1)) return false;
             for (int i = 0; i < I; i++)
                 for (int j = 0; j < J; j++)
-                    if (!Equals(aa2.GetValue(i, j), ba2.GetValue(i, j)))
+                    if (!Equal(aa2.GetValue(i, j), ba2.GetValue(i, j)))
                         return false;
             return true;
         }
@@ -386,7 +387,7 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
             if (IsUnorderedCollection(a.GetType()) || IsUnorderedCollection(b.GetType())
              || ao[0]?.GetType() is { IsGenericType: true } atype && atype.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
              || bo[0]?.GetType() is { IsGenericType: true } btype && btype.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
-                return !ao.Except(bo, EqualComparer.Instance).Any();
+                return EqualUnordered(ao, bo);
             for (int i = 0; i < ao.Length; i++)
                 if (!Equal(ao[i], bo[i]))
                     return false;
@@ -405,7 +406,14 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         if (ao.Length != bo.Length) return false;
         if (ao.Length == 0) return true;
         if (ao.Length == 1) return Equal(ao[0], bo[0]);
-        return !ao.Except(bo, EqualComparer.Instance).Any();
+        var unmatched = new List<object>(bo);
+        foreach (var x in ao)
+        {
+            var i = unmatched.FindIndex(y => EqualComparer.Instance.Equals(x, y));
+            if (i == -1) return false;
+            unmatched.RemoveAt(i);
+        }
+        return true;
     }
 
     private static bool IsUnorderedCollection(Type type)
@@ -552,41 +560,30 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
 
     internal static IEnumerable<T[]> Permutations<T>(int[] threadIds, T[] sequence)
     {
-        yield return sequence;
-        var next = new List<(int, int[], T[])> { (1, threadIds, sequence) };
-        while (next.Count != 0)
-        {
-            var current = next;
-            next = [];
-            foreach (var (start, ids, seq) in current)
-            {
-                for (int i = start; i < ids.Length; i++)
-                {
-                    int mask = 1 << ids[i];
-                    var lastIds = ids;
-                    var lastSeq = seq;
-                    int u = i;
-                    int isMask;
-                    while (u-- >= start && (mask & (isMask = 1 << ids[u])) == 0)
-                    {
-                        mask |= isMask;
-                        lastIds = CopySwap(lastIds, u);
-                        lastSeq = CopySwap(lastSeq, u);
-                        yield return lastSeq;
-                        if (u + 2 < ids.Length) next.Add((u + 2, lastIds, lastSeq));
-                    }
-                }
-            }
-        }
+        var taken = new bool[threadIds.Length];
+        var order = new T[threadIds.Length];
+        foreach (var permutation in Interleavings(threadIds, sequence, taken, order, 0))
+            yield return permutation;
     }
 
-    static T[] CopySwap<T>(T[] array, int i)
+    static IEnumerable<T[]> Interleavings<T>(int[] threadIds, T[] sequence, bool[] taken, T[] order, int depth)
     {
-        var copy = new T[array.Length];
-        for (int j = 0; j < array.Length; j++)
-            copy[j] = array[j];
-        (copy[i + 1], copy[i]) = (copy[i], copy[i + 1]);
-        return copy;
+        if (depth == order.Length)
+        {
+            yield return (T[])order.Clone();
+            yield break;
+        }
+loop_i: for (int i = 0; i < threadIds.Length; i++)
+        {
+            if (taken[i]) continue;
+            for (int j = 0; j < i; j++)
+                if (!taken[j] && threadIds[j] == threadIds[i]) { continue loop_i; }
+            taken[i] = true;
+            order[depth] = sequence[i];
+            foreach (var permutation in Interleavings(threadIds, sequence, taken, order, depth + 1))
+                yield return permutation;
+            taken[i] = false;
+        }
     }
 
     /// <summary>Check if two doubles are within the given absolute and relative tolerance.</summary>
@@ -709,7 +706,7 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         if (error < bestError)
         {
             bestError = error;
-            bestResult = (n.Max() - n.Min()) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Exponential;
+            bestResult = Math.Exp(a * (n.Max() - n.Min())) - 1.0 < constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Exponential;
         }
         return bestResult;
     }
@@ -745,7 +742,7 @@ public sealed class MedianEstimator
     /// <summary>The maximum or 100th percentile value.</summary>
     public double Q4;
     /// <summary>The minimum or 0th percentile value.</summary>
-    public double Minimum => Q0;
+    public double Minimum => N == 1 ? Q2 : N < 5 ? Q1 : Q0;
     /// <summary>The first, lower quartile, or 25th percentile value.</summary>
     public double LowerQuartile => Q1;
     /// <summary>The second quartile, median, or 50th percentile value.</summary>
@@ -753,7 +750,7 @@ public sealed class MedianEstimator
     /// <summary>The third, upper quartile, or 75th percentile value.</summary>
     public double UpperQuartile => Q3;
     /// <summary>The maximum or 100th percentile value.</summary>
-    public double Maximum => Q4;
+    public double Maximum => N < 3 ? Q2 : N == 3 ? Q3 : Q4;
 
     /// <summary>Add a sample observation.</summary>
     /// <param name="s">Sample observation value.</param>
@@ -1143,6 +1140,34 @@ public static class ThrowHelper
     public static void Throw(string message)
     {
         throw new CsCheckException(message);
+    }
+    [DoesNotReturn]
+    public static void Throw(string message, Exception? exception)
+    {
+        throw new CsCheckException(message, exception);
+    }
+    [DoesNotReturn]
+    public static T Throw<T>(string message)
+    {
+        throw new CsCheckException(message);
+    }
+    [DoesNotReturn]
+    public static T Throw<T>(string message, Exception? exception)
+    {
+        throw new CsCheckException(message, exception);
+    }
+}
+
+internal static class Reporter
+{
+    public static void Write(Action<string>? writeLine, object report)
+    {
+        if (writeLine is null) return;
+        string text;
+        try { text = report.ToString() ?? ""; }
+        catch (Exception e) { text = $"The report could not be formatted: {e.GetType().Name}: {e.Message}"; }
+        try { writeLine(text); }
+        catch { }
     }
 }
 

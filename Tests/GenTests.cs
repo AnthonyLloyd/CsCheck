@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Runtime.InteropServices;
@@ -440,6 +440,18 @@ public class GenTests
     }
 
     [Test]
+    public void Double_Range_Beyond_The_Unit_Interval()
+    {
+        var g = Gen.Double.Where(double.IsFinite);
+        (from t in Gen.Select(g, g)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
+         from value in Gen.Double[start, finish]
+         select (value, start, finish))
+        .Sample(i => i.value >= i.start && i.value <= i.finish);
+    }
+
+    [Test]
     public void Double_Range()
     {
         (from t in Gen.Double.Unit.Select(Gen.Double.Unit)
@@ -584,6 +596,12 @@ public class GenTests
     }
 
     [Test]
+    public void TimeSpan_MinMax()
+    {
+        Gen.TimeSpan[TimeSpan.MinValue, TimeSpan.MaxValue].Single();
+    }
+
+    [Test]
     public void TimeSpan_Range()
     {
         (from t in Gen.TimeSpan.Select(Gen.TimeSpan)
@@ -624,6 +642,21 @@ public class GenTests
     }
 
     [Test]
+    public async Task Char_Range_Rejects_Finish_Before_Start()
+    {
+        var message = Assert.Throws<CsCheckException>(() => _ = Gen.Char['z', 'a'])!.Message;
+        await Assert.That(message).Contains("finish");
+    }
+
+    [Test]
+    public async Task Char_Chars_Rejects_Empty_And_Null()
+    {
+        await Assert.That(Assert.Throws<CsCheckException>(() => _ = Gen.Char[""])!.Message).Contains("empty");
+        await Assert.That(Assert.Throws<CsCheckException>(() => _ = Gen.Char[null!])!.Message).Contains("null");
+        await Assert.That(Assert.Throws<CsCheckException>(() => _ = Gen.String[""])!.Message).Contains("empty");
+    }
+
+    [Test]
     public void Char_Distribution()
     {
         const int buckets = 70;
@@ -658,7 +691,7 @@ public class GenTests
         var min = new Size(0);
         var actual = Gen.Select(new SizedGen<string>("a", 0), new SizedGen<string>("b", 1))
             .Generate(PCG.Parse("0000000000aa"), min, out var size);
-        await Assert.That(actual).IsEqualTo(default((string, string)));
+        await Assert.That(actual).IsEqualTo(default);
         await Assert.That(Size.IsLessThan(size, min)).IsFalse();
     }
 
@@ -776,6 +809,15 @@ public class GenTests
     }
 
     [Test]
+    public async Task Frequency_Total_Zero_Is_Rejected()
+    {
+        var constants = Assert.Throws<CsCheckException>(() => Gen.FrequencyConst((0, "a"), (0, "b")))!.Message;
+        await Assert.That(constants).Contains("zero");
+        var gens = Assert.Throws<CsCheckException>(() => Gen.Frequency((0, Gen.Const("a")), (0, Gen.Const("b"))))!.Message;
+        await Assert.That(gens).Contains("zero");
+    }
+
+    [Test]
     public void Shuffle()
     {
         Gen.Int.Array.SelectMany(a1 => Gen.Shuffle(a1).Select(a2 => (a1, a2)))
@@ -784,6 +826,43 @@ public class GenTests
             Array.Sort(a1);
             Array.Sort(a2);
             return Check.Equal(a1, a2);
+        });
+    }
+
+    [Test]
+    public async Task Shuffle_Length_Reaches_Every_Ordered_Selection()
+    {
+        var source = new[] { 1, 2, 3, 4 };
+        var pcg = new PCG(1, 42UL);
+        foreach (var (length, expected) in new[] { (1, 4), (2, 12), (3, 24), (4, 24) })
+        {
+            var gen = Gen.Shuffle(source, length);
+            var seen = new HashSet<string>();
+            for (int i = 0; i < 4000; i++)
+            {
+                var a = gen.Generate(pcg, null, out _);
+                await Assert.That(a.Length).IsEqualTo(length);
+                await Assert.That(a.Distinct().Count()).IsEqualTo(length);
+                await Assert.That(a.All(source.Contains)).IsTrue();
+                seen.Add(string.Join(",", a));
+            }
+            await Assert.That(seen.Count).IsEqualTo(expected);
+        }
+    }
+
+    [Test]
+    public void ShuffleSelect_Length_Is_Clamped_To_The_Generators_Available()
+    {
+        Gen.Int[1, 5].Select(Gen.Int[0, 9])
+        .Sample((count, length) =>
+        {
+            var gens = Enumerable.Range(0, count).Select(i => Gen.Const(i)).ToArray();
+            var pcg = new PCG(1, 42UL);
+            var expected = Math.Min(length, count);
+            var fromArray = gens.ShuffleSelect(length).Generate(pcg, null, out _);
+            var fromList = gens.ToList().ShuffleSelect(length).Generate(pcg, null, out _);
+            return fromArray.Length == expected && fromList.Count == expected
+                && fromArray.Distinct().Count() == expected && fromArray.All(i => i >= 0 && i < count);
         });
     }
 

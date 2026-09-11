@@ -43,7 +43,9 @@ public sealed class Trace<S>
     public readonly S Initial;
     /// <summary>The steps in order. Shorter than the length asked for when the walk deadlocked.</summary>
     public readonly Transition<S>[] Steps;
-    /// <summary>True when the walk stopped early because no action was enabled.</summary>
+    /// <summary>True when the walk stopped early because no action was enabled. Equally true at a state
+    /// <c>Terminal</c> declared to be an intended end, so ask <c>Terminal</c> to tell a dead end from a finished
+    /// one.</summary>
     public readonly bool Deadlocked;
 
     internal Trace(S initial, Transition<S>[] steps, bool deadlocked)
@@ -56,18 +58,28 @@ public sealed class Trace<S>
     /// <summary>The trace with each state rendered by <paramref name="print"/>, one step per line.</summary>
     /// <param name="print">How to render a model state.</param>
     /// <param name="markStep">Zero based step to mark with <c>&gt;&gt;</c>, or -1 to mark none.</param>
-    public string ToString(Func<S, string> print, int markStep = -1)
+    /// <param name="annotate">Text to put after a step, for saying what else was possible there, or empty for none.
+    /// Notes are aligned as a column.</param>
+    public string ToString(Func<S, string> print, int markStep = -1, Func<Transition<S>, string>? annotate = null)
     {
         var sb = new StringBuilder();
         // Two at least so a short trace matches the docs, wider when the step numbers need it, and the state lines
         // follow the width so they stay level with the action names.
         var width = Math.Max(2, Steps.Length.ToString().Length);
         var indent = new string(' ', width + 7);
+        var actionWidth = 0;
+        if (annotate is not null)
+            for (int i = 0; i < Steps.Length; i++) actionWidth = Math.Max(actionWidth, Steps[i].ToString().Length);
         sb.Append('\n').Append(indent).Append(print(Initial));
         for (int i = 0; i < Steps.Length; i++)
         {
             sb.Append('\n').Append(i == markStep ? " >> " : "    ").Append((i + 1).ToString().PadLeft(width))
-              .Append(' ').Append(Steps[i].ToString()).Append('\n').Append(indent).Append(print(Steps[i].After));
+              .Append(' ');
+            var step = Steps[i].ToString();
+            var note = annotate?.Invoke(Steps[i]) ?? "";
+            // Unpadded when there is no note, so a step cannot gain trailing whitespace.
+            sb.Append(note.Length == 0 ? step : step.PadRight(actionWidth) + "  " + note)
+              .Append('\n').Append(indent).Append(print(Steps[i].After));
         }
         if (Deadlocked) sb.Append('\n').Append(indent).Append("(no action enabled - trace ends here)");
         return sb.ToString();
@@ -91,24 +103,49 @@ public sealed class SpecViolation<S>
     /// <summary>The trace that reached the failure, ending on the step that caused it.</summary>
     public readonly Trace<S> Trace;
 
-    internal SpecViolation(string id, string quote, string detail, int stepIndex, Trace<S> trace)
+    internal readonly Requirement<S>? Req;
+
+    internal SpecViolation(string id, string quote, string detail, int stepIndex, Trace<S> trace,
+        Requirement<S>? req = null)
     {
         Id = id;
         Quote = quote;
         Detail = detail;
         StepIndex = stepIndex;
         Trace = trace;
+        Req = req;
     }
 
     /// <summary>The requirement, its quote and the trace, with each state rendered by <paramref name="print"/> and the
     /// failing step marked.</summary>
     /// <param name="print">How to render a model state.</param>
     public string ToString(Func<S, string> print)
-        => new StringBuilder()
+    {
+        var sb = new StringBuilder()
             .Append("\n    Requirement: ").Append(Id).Append(" - ").Append(Detail)
             .Append("\n          Spec: \"").Append(Quote).Append('"')
-            .Append("\n         Trace: ").Append(Trace.ToString(print, StepIndex))
-            .ToString();
+            .Append("\n         Trace: ");
+        // The requirement, detail and quote need no printer, so a printer that throws must not cost them.
+        try { sb.Append(Trace.ToString(print, StepIndex, Obligations())); }
+        catch (Exception e) { sb.Append("could not be printed: ").Append(e.GetType().Name).Append(": ").Append(e.Message); }
+        return sb.ToString();
+    }
+
+    // Precedes is absent because it fails only when its second holds having never seen its first, so there is nothing
+    // earlier to mark.
+    Func<Transition<S>, string>? Obligations()
+    {
+        if (Req is null) return null;
+        var predicate = Req.Kind == ReqKind.AtMost ? Req.Consequent : Req.Trigger;
+        var word = Req.Kind switch
+        {
+            ReqKind.Response => "raised here",
+            ReqKind.NeverAfter => "scope opens",
+            ReqKind.AtMost => "counted",
+            _ => null,
+        };
+        return predicate is null || word is null ? null : t => predicate(t.Before, t.After) ? word : "";
+    }
 
     /// <summary>The violation with each state rendered by <typeparamref name="S"/>'s own <c>ToString</c>.</summary>
     public override string ToString() => ToString(s => s?.ToString() ?? "null");
@@ -334,7 +371,7 @@ public sealed class Spec<S>(S initial)
     /// because it needs no counter.
     /// <para>The count so far becomes part of the search state, so this is proved rather than sampled: without that, a state
     /// reached once and a state reached for the fourth time would be the same search node and the excess would go</para>
-    /// unreported. Costs one byte of node per requirement, so unlike <c>Precedes</c> the limit is eight.</summary>
+    /// unreported. Costs one byte of node per requirement, so unlike <c>Precedes</c> the limit is 16.</summary>
     public Spec<S> AtMost(string id, string quote, int times, Func<S, S, bool> occurs)
     {
         if (times is < 0 or > 254) ThrowHelper.Throw($"Spec AtMost '{id}' times must be 0 to 254, was {times}");
@@ -520,10 +557,13 @@ sealed class GenSpecTrace<S>(Spec<S> spec, int minSteps, int maxSteps, SpecFault
     [ThreadStatic] static int[]? actionBuf;
     [ThreadStatic] static int[]? argBuf;
 
+    readonly int lengths = minSteps >= 0 && maxSteps >= minSteps ? maxSteps - minSteps + 1
+        : ThrowHelper.Throw<int>($"Spec trace steps must be 0 <= minSteps <= maxSteps, was {minSteps} and {maxSteps}");
+
     public override Trace<S> Generate(PCG pcg, Size? min, out Size size)
     {
         var actions = spec.Actions;
-        var length = minSteps + (int)pcg.Next((uint)(maxSteps - minSteps + 1));
+        var length = minSteps + (int)pcg.Next((uint)lengths);
         var sizeI = (ulong)length << 32;
         var total = new Size(0);
         size = new Size(sizeI, total);
@@ -598,14 +638,21 @@ public sealed class SpecReport
     /// This bounds how long a counterexample can be, since the walk is breadth first.</summary>
     public int Depth { get; internal set; }
     /// <summary>States with no enabled action that were not declared <c>Terminal</c>. A model of a protocol should
-    /// have none: anywhere else with nothing to do is a state the design cannot leave.</summary>
+    /// have none: anywhere else with nothing to do is a state the design cannot leave. Zero for <c>Sample</c>, which
+    /// cannot count distinct states and reports <c>DeadlockTraces</c> instead.</summary>
     public int DeadlockStates { get; internal set; }
+    /// <summary>Random walks that ended in a state with nothing enabled. Zero for <c>Exhaustive</c>, which reports
+    /// <c>DeadlockStates</c> instead. A count of walks rather than of states, since a sampled walk keeps no visited
+    /// set and so cannot tell one dead end from the same one reached twice.</summary>
+    public long DeadlockTraces { get; internal set; }
     /// <summary>States with no enabled action that <c>Terminal</c> declared to be the intended end of a trace. Zero
-    /// when no <c>Terminal</c> was declared, in which case every such state is counted a deadlock instead.</summary>
+    /// when no <c>Terminal</c> was declared, in which case every such state is counted a deadlock instead, and zero
+    /// for <c>Sample</c>, which counts no states.</summary>
     public int TerminalStates { get; internal set; }
-    /// <summary>A path to the first state that had nothing enabled and was not declared <c>Terminal</c>, rendered with
-    /// the spec's printer, or null when there were none. <c>DeadlockStates</c> says a dead end exists; this says which,
-    /// which is the difference between knowing the design can get stuck and knowing where.</summary>
+    /// <summary>A path to a state that had nothing enabled and was not declared <c>Terminal</c>, rendered with the
+    /// spec's printer, or null when there were none. The count says a dead end exists; this says which, which is the
+    /// difference between knowing the design can get stuck and knowing where. <c>Exhaustive</c> gives a shortest one,
+    /// <c>Sample</c> the shortest it happened to walk.</summary>
     public string? DeadlockTrace { get; internal set; }
     /// <summary>States reached but not expanded because they fell outside the declared <c>Boundary</c>. When this is
     /// not zero, closure means "no violation is reachable without leaving the boundary", which is weaker than closure
@@ -668,9 +715,10 @@ public sealed class SpecReport
         }
         if (TracesWalked != 0)
             sb.Append("\n  ").Append(TracesWalked.ToString("#,0")).Append(" traces, ")
-              .Append(StepsWalked.ToString("#,0")).Append(" steps");
+              .Append(StepsWalked.ToString("#,0")).Append(" steps, ")
+              .Append(DeadlockTraces.ToString("#,0")).Append(" deadlocked");
         if (Note is not null) sb.Append("\n  ").Append(Note);
-        if (DeadlockTrace is not null) sb.Append("\n  first deadlock:").Append(DeadlockTrace);
+        if (DeadlockTrace is not null) sb.Append("\n  deadlock:").Append(DeadlockTrace);
         var w = 11;
         for (int i = 0; i < RequirementIds.Length; i++) if (RequirementIds[i].Length > w) w = RequirementIds[i].Length;
         for (int i = 0; i < ActionNames.Length; i++) if (ActionNames[i].Length > w) w = ActionNames[i].Length;
@@ -750,7 +798,7 @@ public sealed class SpecFaultsReport
     {
         for (int i = 0; i < Results.Count; i++)
             if (string.Equals(Results[i].Fault, fault, StringComparison.Ordinal)) return Results[i].CaughtBy;
-        throw new CsCheckException($"No fault named '{fault}' was declared");
+        return ThrowHelper.Throw<string?>($"No fault named '{fault}' was declared");
     }
 
     /// <summary>The fault table: one row per declared fault, and the requirements no fault exercised.</summary>
@@ -764,6 +812,7 @@ sealed class SpecCounters(int requirements, int actions)
     public readonly long[] Fired = new long[actions];
     public long Traces;
     public long Steps;
+    public long Deadlocks;
 }
 
 readonly record struct SpecNode<S>(S State, ulong Deadlines, ulong Seen, ulong Counts);
@@ -818,7 +867,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
         {
             var req = _spec.Requirements[edge.ReqIndex];
             _found = new SpecViolation<S>(req.Id, req.Quote, edge.Detail, _depth,
-                Path(head, edge.Action, edge.Arg, edge.After));
+                Path(head, edge.Action, edge.Arg, edge.After), req);
             _report.Depth = _depth + 1;
             _report.States = Nodes.Count;
             return false;
@@ -854,6 +903,15 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
         {
             if (_firstDeadlock < 0) _firstDeadlock = head;
             _report.DeadlockStates++;
+        }
+        if (!_spec.HasResponse) return;
+        var node = Nodes[head];
+        for (int i = 0; i < _reqs; i++)
+        {
+            var r = _spec.Requirements[i];
+            if (r.Kind != ReqKind.Response) continue;
+            var word = r.Shift < 64 ? node.Deadlines : node.Counts;
+            if (((word >> (r.Shift & 63)) & 0xFF) != 0) _counters.Unresolved[i]++;
         }
     }
 
@@ -1111,7 +1169,9 @@ public static partial class Check
     static SpecViolation<S>? SpecCheck<S>(Spec<S> spec, Trace<S> trace, SpecCounters? counters)
     {
         var detail = SpecInitial(spec, counters, out var ri);
-        if (detail is not null) return new SpecViolation<S>(spec.Requirements[ri].Id, spec.Requirements[ri].Quote, detail, -1, trace);
+        if (detail is not null)
+            return new SpecViolation<S>(spec.Requirements[ri].Id, spec.Requirements[ri].Quote, detail, -1, trace,
+                spec.Requirements[ri]);
         ulong deadlines = 0, seen = 0, counts = 0;
         var steps = trace.Steps;
         for (int i = 0; i < steps.Length; i++)
@@ -1119,7 +1179,8 @@ public static partial class Check
             detail = CheckTransition(spec, steps[i].ActionIndex, steps[i].Before, steps[i].After, ref deadlines, ref seen,
                 ref counts, counters?.Triggered, 0, out ri);
             if (detail is not null)
-                return new SpecViolation<S>(spec.Requirements[ri].Id, spec.Requirements[ri].Quote, detail, i, trace);
+                return new SpecViolation<S>(spec.Requirements[ri].Id, spec.Requirements[ri].Quote, detail, i, trace,
+                    spec.Requirements[ri]);
         }
         // Nothing to look for unless the spec has a Response, which only one of the worked examples has.
         if (counters is not null && spec.HasResponse)
@@ -1229,18 +1290,22 @@ public static partial class Check
         spec.Validate();
         var counters = new SpecCounters(spec.Requirements.Count, spec.ArgPairs);
         var report = SpecReportOf(spec, $"Spec.Sample of {Plural(spec.Requirements.Count, "requirement")}", counters);
+        // A dead end needs no requirement to detect it, which is the whole of the BlockingQueue example - but only
+        var deadEnds = new DeadEnds<S>(spec, counters);
         try
         {
             spec.GenTrace(minSteps, maxSteps).Sample(
-                trace => SpecWalk(spec, trace, counters) is null,
+                trace => { deadEnds.Observe(trace); return SpecWalk(spec, trace, counters) is null; },
                 null, seed, iter, time, threads,
-                trace => SpecCheck(spec, trace, null)?.ToString(spec.Printer) ?? trace.ToString(spec.Printer, -1));
+                trace => trace is null ? "\n  The model threw before a trace could be generated."
+                       : SpecCheck(spec, trace, null)?.ToString(spec.Printer) ?? trace.ToString(spec.Printer, -1));
         }
         finally
         {
             report.TracesWalked = counters.Traces;
             report.StepsWalked = counters.Steps;
-            writeLine?.Invoke(report.ToString());
+            deadEnds.Report(report);
+            Reporter.Write(writeLine, report);
         }
         return report;
     }
@@ -1304,8 +1369,8 @@ public static partial class Check
             violation = new SpecViolation<S>(spec.Requirements[ri].Id, spec.Requirements[ri].Quote, detail, -1,
                 new Trace<S>(spec.Initial, [], false));
             // Every other failing path reports before it returns or throws; this one was silent.
-            writeLine?.Invoke(report.ToString());
-            if (throwOnViolation) throw new CsCheckException(violation.ToString(spec.Printer));
+            Reporter.Write(writeLine, report);
+            if (throwOnViolation) ThrowHelper.Throw(violation.ToString(spec.Printer));
             return report;
         }
         // The frontier owns the visited set, which is a set and not a map: nothing ever looked a node up by index, and
@@ -1317,12 +1382,13 @@ public static partial class Check
 
         report.Revisits = walk.Revisits;
         // Computed here rather than in each branch below, so it is there whatever the run's outcome.
-        if (report.DeadlockStates != 0) report.DeadlockTrace = walk.DeadlockPath()?.ToString(spec.Printer, -1);
+        if (report.DeadlockStates != 0)
+            report.DeadlockTrace = PrintTrace(spec, walk.DeadlockPath());
         violation = walk.Found;
         if (walk.Found is not null)
         {
-            if (writeLine is not null) writeLine(report.ToString());
-            if (throwOnViolation) throw new CsCheckException(walk.Found.ToString(spec.Printer));
+            Reporter.Write(writeLine, report);
+            if (throwOnViolation) ThrowHelper.Throw(walk.Found.ToString(spec.Printer));
             return report;
         }
         if (walk.GaveUp)
@@ -1338,7 +1404,7 @@ public static partial class Check
                 // honestly infinite model never revisits either.
                 + (walk.Revisits == 0 ? "; no state was ever revisited, so check as well that no field of the state breaks "
                                       + "its value equality" : "");
-            writeLine?.Invoke(report.ToString());
+            Reporter.Write(writeLine, report);
             return report;
         }
         // maxDepth truncates like maxStates, not like Boundary: the states past it are inside whatever region was
@@ -1347,7 +1413,7 @@ public static partial class Check
         {
             report.States = walk.States;
             report.Note = $"stopped at maxDepth {maxDepth} - states beyond it were not explored, so nothing is proved";
-            writeLine?.Invoke(report.ToString());
+            Reporter.Write(writeLine, report);
             return report;
         }
         report.States = walk.States;
@@ -1374,15 +1440,15 @@ public static partial class Check
                 var req = spec.Requirements[unreachable];
                 violation = new SpecViolation<S>(req.Id, req.Quote,
                     "is unreachable: the state space closed without it ever holding", -1, new Trace<S>(spec.Initial, [], false));
-                writeLine?.Invoke(report.ToString());
-                if (throwOnViolation) throw new CsCheckException(violation.ToString(spec.Printer));
+                Reporter.Write(writeLine, report);
+                if (throwOnViolation) ThrowHelper.Throw(violation.ToString(spec.Printer));
                 return report;
             }
             var note = "never held, but states outside the boundary were not explored so this is not a failure: "
                 + string.Join(", ", unheld);
             report.Note = report.Note is null ? note : $"{report.Note}; {note}";
         }
-        writeLine?.Invoke(report.ToString());
+        Reporter.Write(writeLine, report);
         return report;
     }
 
@@ -1397,6 +1463,7 @@ public static partial class Check
     public static string Mermaid<S>(this Spec<S> spec, int maxStates = 200)
     {
         spec.Validate();
+        if (maxStates < 1) ThrowHelper.Throw($"Spec Mermaid maxStates must be at least 1, was {maxStates}");
         // Keyed by SpecNode rather than S, which is unconstrained and so cannot key a Dictionary. The deadline and
         // history words stay zero here because no requirement is evaluated, so this is a plain state key.
         var ids = new Dictionary<SpecNode<S>, int> { [new(spec.Initial, 0UL, 0UL, 0UL)] = 0 };
@@ -1412,10 +1479,19 @@ public static partial class Check
             "  start --> n0;\n" +
             "  class start initial;\n");
         var truncated = false;
-        var edges = 0;
-        var omittedEdges = 0;
+        var transitions = 0;
+        var omitted = 0;
         var terminalStates = 0;
         var deadlockStates = 0;
+        // Arrows are grouped by target rather than emitted as found: a small argument domain routinely sends several
+        // arguments to the same state, and one labelled arrow says what the parallel ones were all saying.
+        var outgoing = new List<(int To, int Action, int Arg)>();
+        var drawn = new List<int>();
+        var label = new StringBuilder();
+        // The walk is breadth first, so the depth a state is first discovered at is its shortest path from the initial
+        // state, and the largest of those is what SpecReport.Depth means.
+        var depths = new List<int> { 0 };
+        var depth = 0;
         // Every discovered state is expanded, because a state the loop stopped short of would still be pointed at by
         // the edge that discovered it. The cap bounds states, so
         // this still terminates; what the cap skips is an edge needing a state past it, not a state's own label.
@@ -1424,6 +1500,7 @@ public static partial class Check
             var state = states[head];
             var enabled = 0;
             var cutOff = false;
+            outgoing.Clear();
             for (int a = 0; a < spec.Actions.Count; a++)
             {
                 var action = spec.Actions[a];
@@ -1434,17 +1511,48 @@ public static partial class Check
                     var after = action.Apply(state, g);
                     if (!ids.TryGetValue(new(after, 0UL, 0UL, 0UL), out var to))
                     {
-                        if (states.Count == maxStates) { cutOff = truncated = true; omittedEdges++; continue; }
+                        if (states.Count == maxStates) { cutOff = truncated = true; omitted++; continue; }
                         to = states.Count;
                         ids.Add(new(after, 0UL, 0UL, 0UL), to);
                         states.Add(after);
+                        var d = depths[head] + 1;
+                        depths.Add(d);
+                        if (d > depth) depth = d;
                     }
-                    edges++;
-                    var arg = action.ArgName(g);
-                    sb.Append("  n").Append(head).Append(" -->|\"")
-                      .Append(Escape(arg.Length == 0 ? action.Name : $"{action.Name}({arg})"))
-                      .Append("\"| n").Append(to).Append(";\n");
+                    transitions++;
+                    outgoing.Add((to, a, g));
                 }
+            }
+            // Within a target the entries arrive in action order and then argument order, so one action's arguments
+            // are already contiguous and its bracket can close the moment the action changes.
+            drawn.Clear();
+            for (int i = 0; i < outgoing.Count; i++)
+            {
+                var to = outgoing[i].To;
+                if (drawn.Contains(to)) continue;
+                drawn.Add(to);
+                label.Clear();
+                var prevAction = -1;
+                var open = false;
+                for (int j = i; j < outgoing.Count; j++)
+                {
+                    if (outgoing[j].To != to) continue;
+                    var (_, a, g) = outgoing[j];
+                    var arg = spec.Actions[a].ArgName(g);
+                    if (a == prevAction)
+                    {
+                        if (!open) { label.Append('('); open = true; }
+                        label.Append(',').Append(Escape(arg));
+                        continue;
+                    }
+                    if (open) { label.Append(')'); open = false; }
+                    if (prevAction != -1) label.Append(", ");
+                    label.Append(Escape(spec.Actions[a].Name));
+                    if (arg.Length != 0) { label.Append('(').Append(Escape(arg)); open = true; }
+                    prevAction = a;
+                }
+                if (open) label.Append(')');
+                sb.Append("  n").Append(head).Append(" -->|\"").Append(label).Append("\"| n").Append(to).Append(";\n");
             }
             // Dashed says the drawing stops here, which is not the same as the model stopping here - without it a state
             // whose successors were all dropped looks exactly like an intended end.
@@ -1457,13 +1565,14 @@ public static partial class Check
             sb.Append("  n").Append(head).Append("[\"").Append(Escape(spec.Printer(state))).Append("\"];\n");
             if (cssClass.Length != 0) sb.Append("  class n").Append(head).Append(' ').Append(cssClass).Append(";\n");
         }
-        // On whether an edge was actually dropped, not on reaching the cap, so a model of exactly maxStates states that
-        // was drawn in full is not labelled as given up on.
+        // Transitions rather than arrows, which merging makes fewer: this is the number the walk took, which is what
+        // Exhaustive reports and so what this reconciles against.
         sb.Append("  info[\"states: ").Append(states.Count)
-          .Append("<br/>edges: ").Append(edges)
+          .Append("<br/>transitions: ").Append(transitions)
+          .Append("<br/>depth: ").Append(depth)
           .Append("<br/>terminal: ").Append(terminalStates)
           .Append("<br/>deadlock: ").Append(deadlockStates);
-        if (omittedEdges != 0) sb.Append("<br/>omitted edges: ").Append(omittedEdges);
+        if (omitted != 0) sb.Append("<br/>omitted transitions: ").Append(omitted);
         sb.Append("\"];\n  class info note;\n")
           .Append("  subgraph legend[\"Legend\"]\n")
           .Append("    legendTerminal[\"terminal\"];\n")
@@ -1473,15 +1582,76 @@ public static partial class Check
           .Append("  class legendTerminal terminal;\n")
           .Append("  class legendDeadlock deadlock;\n")
           .Append("  class legendTruncated truncated;\n");
+        // On whether an edge was actually dropped, not on reaching the cap, so a model of exactly maxStates states that
+        // was drawn in full is not labelled as given up on.
         if (truncated) sb.Append("  truncatedNote[\"gave up at ").Append(maxStates).Append(" states\"];\n")
             .Append("  class truncatedNote note;\n");
         return sb.ToString();
 
+        // HTML entities rather than Mermaid's own #nnn; codes, because GitHub and Visual Studio render labels as HTML,
+        // which is also why < and > need escaping. Ampersand first so nothing is escaped twice, and both before <br/>.
         static string Escape(string s) => s.Replace("&", "&amp;", StringComparison.Ordinal)
+                                           .Replace("<", "&lt;", StringComparison.Ordinal)
+                                           .Replace(">", "&gt;", StringComparison.Ordinal)
                                            .Replace("\"", "&quot;", StringComparison.Ordinal)
                                            .Replace("|", "&#124;", StringComparison.Ordinal)
                                            .Replace("\r\n", "<br/>", StringComparison.Ordinal)
+                                           .Replace("\r", "<br/>", StringComparison.Ordinal)
                                            .Replace("\n", "<br/>", StringComparison.Ordinal);
+    }
+
+    // Every action is disabled at a dead end by definition, so what is worth naming is not what was blocked there but
+    // what else could have been taken on the way in. Bounded because a wide argument domain would otherwise put the
+    // whole of it on one line, and the point is that there was another way rather than what all of them were.
+    // Shared by Sample and Conform, which both print the count from one line of the report.
+    sealed class DeadEnds<S>(Spec<S> spec, SpecCounters counters)
+    {
+        readonly object _lock = new();
+        Trace<S>? _shortest;
+
+        public void Observe(Trace<S> trace)
+        {
+            // Deadlocked is also true at an intended end.
+            if (!trace.Deadlocked || spec.IsTerminal?.Invoke(
+                trace.Steps.Length == 0 ? trace.Initial : trace.Steps[^1].After) == true) return;
+            Interlocked.Increment(ref counters.Deadlocks);
+            // Shortest, to match the path Exhaustive reports.
+            lock (_lock)
+                if (_shortest is null || trace.Steps.Length < _shortest.Steps.Length) _shortest = trace;
+        }
+
+        public void Report(SpecReport report)
+        {
+            report.DeadlockTraces = counters.Deadlocks;
+            report.DeadlockTrace = PrintTrace(spec, _shortest);
+        }
+    }
+
+    // Reached before the report is written, so a printer that throws here would take the whole report with it.
+    static string? PrintTrace<S>(Spec<S> spec, Trace<S>? trace)
+    {
+        if (trace is null) return null;
+        try { return trace.ToString(spec.Printer, -1, t => Alternatives(spec, t)); }
+        catch (Exception e) { return $"\n    could not be printed: {e.GetType().Name}: {e.Message}"; }
+    }
+
+    static string Alternatives<S>(Spec<S> spec, Transition<S> step)
+    {
+        var sb = new StringBuilder();
+        int shown = 0, more = 0;
+        for (int a = 0; a < spec.Actions.Count; a++)
+        {
+            var action = spec.Actions[a];
+            for (int g = 0; g < action.ArgCount; g++)
+            {
+                if ((a == step.ActionIndex && g == step.ArgIndex) || !action.Enabled(step.Before, g)) continue;
+                if (shown == 8) { more++; continue; }
+                if (shown++ != 0) sb.Append(", ");
+                var arg = action.ArgName(g);
+                sb.Append(arg.Length == 0 ? action.Name : $"{action.Name}({arg})");
+            }
+        }
+        return shown == 0 ? "" : more == 0 ? $"or {sb}" : $"or {sb} +{more} more";
     }
 
     // Which state fields have the most distinct values, sampled from the states already reached. This is the
@@ -1499,7 +1669,10 @@ public static partial class Check
         var step = Math.Max(1, nodes.Count / 5000);
         for (int i = 0; i < nodes.Count; i += step)
         {
-            if (!ParseFields(spec.Printer(nodes[i].State), pairs)) return null;
+            string printed;
+            try { printed = spec.Printer(nodes[i].State); }
+            catch { return null; }
+            if (!ParseFields(printed, pairs)) return null;
             if (names.Count == 0)
                 foreach (var (name, _) in pairs) { names.Add(name); distinct.Add([with(StringComparer.Ordinal)]); }
             else if (pairs.Count != names.Count) return null;
@@ -1605,7 +1778,7 @@ public static partial class Check
             // sampling is caught here too, and the cost is one extra fault-free pass rather than a 10M-state search.
             baseline: () => { var v = SampleFault(spec, new SpecFault<S>("(baseline)", (_, _) => false, (_, a) => a),
                                                    minSteps, maxSteps, seed, iter, time, threads);
-                               if (v is not null) throw new CsCheckException(v.ToString(spec.Printer)); },
+                               if (v is not null) ThrowHelper.Throw(v.ToString(spec.Printer)); },
             // Sampling always concludes (the budget runs out, never "gives up"), so closed is always true.
             fault => (SampleFault(spec, fault, minSteps, maxSteps, seed, iter, time, threads), true));
 
@@ -1638,7 +1811,7 @@ public static partial class Check
         var cut = new Transition<S>[best.StepIndex + 1];
         Array.Copy(steps, cut, cut.Length);
         return new SpecViolation<S>(best.Id, best.Quote, best.Detail, best.StepIndex,
-            new Trace<S>(best.Trace.Initial, cut, false));
+            new Trace<S>(best.Trace.Initial, cut, false), best.Req);
     }
 
     static SpecFaultsReport FaultsReport<S>(Spec<S> spec, string mode, string? caveat, string uncaughtMessage,
@@ -1657,7 +1830,7 @@ public static partial class Check
         var w = 5;
         for (int i = 0; i < spec.FaultList.Count; i++) if (spec.FaultList[i].Name.Length > w) w = spec.FaultList[i].Name.Length;
         // Measured, so an id of any length still lines the table up.
-        var c = 9;
+        var c = "NOT CLOSED".Length;
         for (int i = 0; i < spec.Requirements.Count; i++) if (spec.Requirements[i].Id.Length > c) c = spec.Requirements[i].Id.Length;
         var sb = new StringBuilder(mode)
             .Append("\n  | ").Append("Fault".PadRight(w)).Append(" | ").Append("Caught by".PadRight(c)).Append(" | Steps |");
@@ -1693,9 +1866,9 @@ public static partial class Check
         if (inconclusive.Count != 0)
             sb.Append("\n  inconclusive (search did not close): ").AppendJoin(", ", inconclusive);
         var report = new SpecFaultsReport(results, uncaught, inconclusive, idle, sb.ToString());
-        writeLine?.Invoke(report.ToString());
+        Reporter.Write(writeLine, report);
         if (uncaught.Count != 0 && throwOnUncaught)
-            throw new CsCheckException($"{uncaughtMessage}: {string.Join(", ", uncaught)}");
+            ThrowHelper.Throw($"{uncaughtMessage}: {string.Join(", ", uncaught)}");
         return report;
     }
 
@@ -1729,13 +1902,19 @@ public static partial class Check
                 if (!apply(sut, trace.Steps[i])) return i;
             return -1;
         }
+        var deadEnds = new DeadEnds<S>(spec, counters);
         try
         {
             spec.GenTrace(minSteps, maxSteps).Sample(
-                trace => SpecWalk(spec, trace, counters) is null && Diverged(create, apply, trace) == -1,
+                trace =>
+                {
+                    deadEnds.Observe(trace);
+                    return SpecWalk(spec, trace, counters) is null && Diverged(create, apply, trace) == -1;
+                },
                 null, seed, iter, time, threads,
             trace =>
             {
+                if (trace is null) return "\n  The model threw before a trace could be generated.";
                 var violation = SpecCheck(spec, trace, null);
                 if (violation is not null) return violation.ToString(spec.Printer);
                 // Re-running Diverged here to find the step for the error message. If apply throws deterministically
@@ -1751,7 +1930,8 @@ public static partial class Check
         {
             report.TracesWalked = counters.Traces;
             report.StepsWalked = counters.Steps;
-            writeLine?.Invoke(report.ToString());
+            deadEnds.Report(report);
+            Reporter.Write(writeLine, report);
         }
         return report;
     }

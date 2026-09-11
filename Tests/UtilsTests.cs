@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Collections.Generic;
@@ -66,6 +66,41 @@ public class UtilsTests
         await Assert.That(Check.Print(1E-20m)).IsEqualTo("1E-20");
         await Assert.That(Check.Print(1234E20m)).IsEqualTo("1234E20");
     }
+
+    static List<string> OrderPreservingInterleavings(int[] threadIds)
+    {
+        var results = new List<string>();
+        var taken = new bool[threadIds.Length];
+        var order = new List<int>();
+        void Recurse()
+        {
+            if (order.Count == threadIds.Length) { results.Add(string.Join(",", order)); return; }
+            for (int i = 0; i < threadIds.Length; i++)
+            {
+                if (taken[i] || Enumerable.Range(0, i).Any(j => !taken[j] && threadIds[j] == threadIds[i])) continue;
+                taken[i] = true;
+                order.Add(i);
+                Recurse();
+                order.RemoveAt(order.Count - 1);
+                taken[i] = false;
+            }
+        }
+        Recurse();
+        return results;
+    }
+
+    [Test]
+    public void Permutations_Matches_Interleaving_Oracle()
+    {
+        Gen.Int[0, 2].Array[1, 6].Sample(threadIds =>
+        {
+            var sequence = Enumerable.Range(0, threadIds.Length).ToArray();
+            var actual = Check.Permutations((int[])threadIds.Clone(), sequence)
+                .Select(p => string.Join(",", p)).ToList();
+            var expected = OrderPreservingInterleavings(threadIds);
+            return actual.Count == expected.Count && actual.ToHashSet().SetEquals(expected);
+        });
+    }
 }
 
 public class ThreadStatsTests
@@ -74,7 +109,7 @@ public class ThreadStatsTests
     {
         var seq = new int[ids.Length];
         Array.Copy(ids, seq, ids.Length);
-        await Assert.That(Check.Equal(Check.Permutations(ids, seq), expected)).IsTrue();
+        await Assert.That(Check.EqualUnordered(Check.Permutations(ids, seq), expected)).IsTrue();
     }
 
     [Test]
@@ -100,6 +135,7 @@ public class ThreadStatsTests
         await Test([1, 1, 2], [
             [1, 1, 2],
             [1, 2, 1],
+            [2, 1, 1],
         ]);
     }
 
@@ -135,6 +171,7 @@ public class ThreadStatsTests
             [1, 1, 2, 2],
             [1, 2, 2, 1],
             [2, 1, 2, 1],
+            [2, 2, 1, 1],
         ]);
     }
 
@@ -188,6 +225,26 @@ public class ThreadStatsTests
             var ss = new HashSet<int[]>(ps, IntArrayComparer.Default);
             return ss.Count == ps.Count;
         });
+    }
+
+    /// <summary>The complexity class cannot depend on the unit the times were measured in.</summary>
+    [Test]
+    [Arguments(1e-6)]
+    [Arguments(1.0)]
+    [Arguments(1e3)]
+    [Arguments(1e6)]
+    [Arguments(1e9)]
+    public async Task BigO_Is_Scale_Invariant(double scale)
+    {
+        static double[] Scaled(double[] times, double by) => Array.ConvertAll(times, t => t * by);
+        double[] n = [1, 2, 3];
+        await Assert.That(Check.BigO(n, Scaled([5, 5, 5], scale))).IsEqualTo(BigO.Constant);
+        await Assert.That(Check.BigO(n, Scaled([5, 6, 7], scale))).IsEqualTo(BigO.Linear);
+        await Assert.That(Check.BigO(n, Scaled([5, 8, 13], scale))).IsEqualTo(BigO.Quadratic);
+        await Assert.That(Check.BigO(n, Scaled([1, 8, 27], scale))).IsEqualTo(BigO.Cubic);
+        await Assert.That(Check.BigO(n, Scaled([1, 1 + Math.Log(2), 1 + Math.Log(3)], scale))).IsEqualTo(BigO.Logarithmic);
+        await Assert.That(Check.BigO(n, Scaled([1, 1 + 2 * Math.Log(2), 1 + 3 * Math.Log(3)], scale))).IsEqualTo(BigO.Linearithmic);
+        await Assert.That(Check.BigO(n, Scaled([4, 8, 16], scale))).IsEqualTo(BigO.Exponential);
     }
 
     [Test]

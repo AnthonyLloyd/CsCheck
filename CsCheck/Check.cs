@@ -169,8 +169,8 @@ public static partial class Check
         cde.Dispose();
 
         if (worker.MinPCG is not null)
-            throw new CsCheckException(worker.ExceptionMessage(print ?? Print), worker.MinException);
-        if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
+            ThrowHelper.Throw(worker.ExceptionMessage(print ?? Print), worker.MinException);
+        Reporter.Write(writeLine, $"Passed {worker.Total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -617,8 +617,8 @@ public static partial class Check
             tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
-            throw new CsCheckException(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
-        if (writeLine is not null) writeLine($"Passed {total:#,0} iterations.");
+            ThrowHelper.Throw(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
+        Reporter.Write(writeLine, $"Passed {total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1106,8 +1106,8 @@ public static partial class Check
         worker.Execute();
         cde.Wait();
         cde.Dispose();
-        if (worker.MinPCG is not null) throw new CsCheckException(worker.ExceptionMessage(print ?? Print), worker.MinException);
-        if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
+        if (worker.MinPCG is not null) ThrowHelper.Throw(worker.ExceptionMessage(print ?? Print), worker.MinException);
+        Reporter.Write(writeLine, $"Passed {worker.Total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1348,8 +1348,8 @@ public static partial class Check
             tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
-            throw new CsCheckException(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
-        if (writeLine is not null) writeLine($"Passed {total:#,0} iterations.");
+            ThrowHelper.Throw(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
+        Reporter.Write(writeLine, $"Passed {total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -2163,6 +2163,7 @@ public static partial class Check
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
+        if (threads < 2) threads = 2;
         if (replay == -1) replay = Replay;
         int[]? replayThreads = null;
         if (seed?.Contains('[') == true)
@@ -2425,6 +2426,7 @@ public static partial class Check
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
+        if (threads < 2) threads = 2;
         if (replay == -1) replay = Replay;
         int[]? replayThreads = null;
         printActual ??= Print;
@@ -2675,8 +2677,8 @@ public static partial class Check
     /// <param name="sigma">Sigma, default of 6.</param>
     public static void ChiSquared(int[] expected, int[] actual, double sigma = 6.0)
     {
-        if (expected.Length != actual.Length) throw new CsCheckException("Expected and actual lengths need to be the same.");
-        if (Array.Exists(expected, e => e <= 5)) throw new CsCheckException("Expected frequency for all buckets needs to be above 5.");
+        if (expected.Length != actual.Length) ThrowHelper.Throw("Expected and actual lengths need to be the same.");
+        if (Array.Exists(expected, e => e <= 5)) ThrowHelper.Throw("Expected frequency for all buckets needs to be above 5.");
         double chi = 0.0;
         for (int i = 0; i < expected.Length; i++)
         {
@@ -2687,7 +2689,7 @@ public static partial class Check
         // chi-squared distribution has Mean = k and Variance = 2 k where k is the number of degrees of freedom.
         int k = expected.Length - 1;
         double sigmaSquared = (chi - k) * (chi - k) / k / 2.0;
-        if (sigmaSquared > sigma * sigma) throw new CsCheckException("Chi-squared standard deviation = " + Math.Sqrt(sigmaSquared).ToString("0.0"));
+        if (sigmaSquared > sigma * sigma) ThrowHelper.Throw("Chi-squared standard deviation = " + Math.Sqrt(sigmaSquared).ToString("0.0"));
     }
 
     sealed class FasterActionWorker(ITimerAction fasterTimer, ITimerAction slowerTimer, FasterResult result, long endTimestamp, bool raiseexception) : IThreadPoolWorkItem
@@ -3854,6 +3856,7 @@ public static partial class Check
     internal sealed class FasterResult(double sigma, int repeat, bool allocAll)
     {
         readonly double Limit = sigma * sigma;
+        readonly int Repeat = repeat >= 1 ? repeat : ThrowHelper.Throw<int>($"Faster repeat must be at least 1, was {repeat}");
         public Exception? Exception;
         public int Faster, Slower;
         public long FasterMin = long.MaxValue, SlowerMin = long.MaxValue;
@@ -3868,7 +3871,8 @@ public static partial class Check
             get
             {
                 float d = Faster - Slower;
-                return d * d / (Faster + Slower);
+                var n = Faster + Slower;
+                return n == 0 ? 0f : d * d / n;
             }
         }
 
@@ -3943,13 +3947,13 @@ public static partial class Check
                 times = 1 / times;
                 (q1Times, q3Times) = (1 / q3Times, 1 / q1Times);
             }
-            var (timeString, timeUnit) = TimeFormat((double)Math.Min(FasterMin, SlowerMin) / repeat);
+            var (timeString, timeUnit) = TimeFormat((double)Math.Min(FasterMin, SlowerMin) / Repeat);
             var result = $"{Median.Median:P2}[{Median.Q1:P2}..{Median.Q3:P2}] {times:#0.00}x[{q1Times:#0.00}x..{q3Times:#0.00}x] {faster}";
             if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
             else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
-            result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / repeat)}{timeUnit} vs {timeString((double)SlowerMin / repeat)}{timeUnit}";
-            if (bytesMeasured) result = $"{result}, alloc = {ByteString((double)FasterBytes / repeat)} vs {ByteString((double)SlowerBytes / repeat)}";
-            if (Check.IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
+            result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / Repeat)}{timeUnit} vs {timeString((double)SlowerMin / Repeat)}{timeUnit}";
+            if (bytesMeasured) result = $"{result}, alloc = {ByteString((double)FasterBytes / Repeat)} vs {ByteString((double)SlowerBytes / Repeat)}";
+            if (IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
             return result;
         }
 
@@ -3995,7 +3999,7 @@ public static partial class Check
         }
         catch (Exception e)
         {
-            throw new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\"", e);
+            return ThrowHelper.Throw<T>($"CsCheck_Seed = \"{pcg.ToString(state)}\"", e);
         }
     }
 
@@ -4024,7 +4028,7 @@ public static partial class Check
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
-        throw new CsCheckException(worker.message!);
+        return ThrowHelper.Throw<T>(worker.message!);
     }
 
     /// <summary>Generate a single example using the seed and checking that it still satisfies the predicate.</summary>
@@ -4035,7 +4039,7 @@ public static partial class Check
     {
         var t = gen.Generate(PCG.Parse(seed), null, out _);
         if (predicate(t)) return t;
-        throw new CsCheckException("predicate no longer satisfied");
+        return ThrowHelper.Throw<T>("predicate no longer satisfied");
     }
 
     /// <summary>Check a hash of a series of values. Cache values on a correct run and fail with stack trace at first difference.</summary>
@@ -4056,7 +4060,7 @@ public static partial class Check
             hash = new Hash(null, offset, decimalPlaces, significantFigures);
             action(hash);
             var fullHashCode = CsCheck.Hash.FullHash(offset, hash.GetHashCode());
-            throw new CsCheckException($"Hash is {fullHashCode}");
+            ThrowHelper.Throw($"Hash is {fullHashCode}");
         }
         else
         {
@@ -4071,9 +4075,16 @@ public static partial class Check
             }
 
             var hash = new Hash(expectedHashCode, offset, decimalPlaces, significantFigures, memberName, filePath);
-            action(hash);
-            int actualHashCode = hash.GetHashCode();
-            hash.Close();
+            int actualHashCode;
+            try
+            {
+                action(hash);
+                actualHashCode = hash.GetHashCode();
+            }
+            finally
+            {
+                hash.Close();
+            }
             if (actualHashCode != expectedHashCode)
             {
                 hash = new Hash(null, -1, decimalPlaces, significantFigures);
@@ -4087,7 +4098,7 @@ public static partial class Check
                     actualHashCode = hash.GetHashCode();
                 }
                 var actualFullHash = CsCheck.Hash.FullHash(offset, actualHashCode);
-                throw new CsCheckException($"Actual {actualFullHash} but expected {expected}");
+                ThrowHelper.Throw($"Actual {actualFullHash} but expected {expected}");
             }
         }
     }
@@ -4232,7 +4243,7 @@ public static partial class Check
                     {
                         // Different declared cases must not be equal: the case discriminant is part of equality.
                         if (equals(a, b) || equals(b, a))
-                            throw new CsCheckException($"Instances of different declared cases compare equal: the case discriminant is not part of equality. a = {Print(a)}, b = {Print(b)}");
+                            ThrowHelper.Throw($"Instances of different declared cases compare equal: the case discriminant is not part of equality. a = {Print(a)}, b = {Print(b)}");
                         return true;
                     }
                 }
@@ -4249,7 +4260,7 @@ public static partial class Check
                     b = applies[i].SetPrimary(b);
                 }
                 if (!equals(a, b) || hash(a) != hash(b))
-                    throw new CsCheckException($"Equality or GetHashCode is affected by a field that is not declared as compared or ignored. a = {Print(a)}, b = {Print(b)}");
+                    ThrowHelper.Throw($"Equality or GetHashCode is affected by a field that is not declared as compared or ignored. a = {Print(a)}, b = {Print(b)}");
                 // Change one field at a time on b. Compared fields must break equality; ignored fields must not.
                 for (int i = 0; i < applies.Length; i++)
                 {
@@ -4260,16 +4271,16 @@ public static partial class Check
                     {
                         b = applies[i].SetPrimary(b); // restore for in-place (mutable) setters
                         if (eq)
-                            throw new CsCheckException($"Compared field '{applies[i].Name}' does not affect equality: changing it left the instances equal. a = {Print(a)}, bAlt = {Print(bAlt)}");
+                            ThrowHelper.Throw($"Compared field '{applies[i].Name}' does not affect equality: changing it left the instances equal. a = {Print(a)}, bAlt = {Print(bAlt)}");
                     }
                     else
                     {
                         bool hashEq = hash(a) == hash(bAlt);
                         b = applies[i].SetPrimary(b); // restore for in-place (mutable) setters
                         if (!eq)
-                            throw new CsCheckException($"Ignored field '{applies[i].Name}' affects equality: changing it made the instances unequal. a = {Print(a)}, bAlt = {Print(bAlt)}");
+                            ThrowHelper.Throw($"Ignored field '{applies[i].Name}' affects equality: changing it made the instances unequal. a = {Print(a)}, bAlt = {Print(bAlt)}");
                         if (!hashEq)
-                            throw new CsCheckException($"Ignored field '{applies[i].Name}' affects GetHashCode: changing it changed the hash code while the instances remained equal.");
+                            ThrowHelper.Throw($"Ignored field '{applies[i].Name}' affects GetHashCode: changing it changed the hash code while the instances remained equal.");
                     }
                 }
                 return true;

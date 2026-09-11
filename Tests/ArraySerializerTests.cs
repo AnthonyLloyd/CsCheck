@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System.Numerics;
 using System.Runtime.CompilerServices;

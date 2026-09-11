@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Linq;
@@ -163,7 +163,7 @@ public class ShrinkingChallengeTests
 
         static List<int> Sorted(List<int> l)
         {
-            l = new(l);
+            l = [.. l];
             l.Sort();
             return l;
         }

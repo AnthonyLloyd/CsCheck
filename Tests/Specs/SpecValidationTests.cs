@@ -7,7 +7,7 @@ using CsCheck;
 /// <summary>The mistakes a specification can contain that would otherwise pass silently and prove nothing. Each of
 /// these is rejected before any exploration starts, because the failure mode is a green test rather than a red one:
 /// a requirement that never fires, or a coverage row credited to the wrong requirement.</summary>
-public class SpecValidationTests
+public partial class SpecValidationTests
 {
     static Spec<int> Counter() => Spec.From(0).Action("Inc", i => i + 1);
 
@@ -74,6 +74,84 @@ public class SpecValidationTests
         await Assert.That(report.Results[0].Outcome).IsEqualTo(FaultOutcome.Inconclusive);
     }
 
+    /// <summary>The Caught by column was measured against requirement ids only, so NOT CLOSED overflowed it whenever
+    /// every id was shorter than that label and the row it appeared on no longer lined up.</summary>
+    [Test]
+    public async Task Fault_Table_Lines_Up_With_A_Short_Requirement_Id()
+    {
+        var report = Counter()
+            .Invariant("OK", "the counter never goes negative", i => i >= 0)
+            .Fault("a jump", (_, a) => a == 3, (_, a) => a + 1)
+            .Faults(maxStates: 5, throwOnUncaught: false);
+        string header = "", row = "";
+        foreach (var line in report.ToString().Split('\n'))
+        {
+            if (line.Contains("| Fault ")) header = line;
+            else if (line.Contains("| a jump ")) row = line;
+        }
+        await Assert.That(header).IsNotEmpty();
+        await Assert.That(Pipes(row)).IsEqualTo(Pipes(header));
+
+        static string Pipes(string s)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < s.Length; i++) if (s[i] == '|') sb.Append(i).Append(',');
+            return sb.ToString();
+        }
+    }
+
+    /// <summary>Sample writes its report from a finally, so a writeLine that throws there would replace the violation
+    /// the run exists to report with the sink's own failure.</summary>
+    [Test]
+    public async Task A_Throwing_WriteLine_Does_Not_Hide_A_Sampled_Violation()
+    {
+        var spec = Counter().Invariant("SMALL", "the counter stays below three", i => i < 3);
+        var message = Assert.Throws<CsCheckException>(
+            () => spec.Sample(_ => throw new InvalidOperationException("the sink is gone"), iter: 100))!.Message;
+        await Assert.That(message).Contains("SMALL");
+    }
+
+    /// <summary>Exhaustive writes its report immediately before throwing the violation, so a writeLine that throws
+    /// would pre-empt it and the run would fail for the wrong reason.</summary>
+    [Test]
+    public async Task A_Throwing_WriteLine_Does_Not_Hide_An_Exhaustive_Violation()
+    {
+        var spec = Spec.From(0)
+            .Action("Inc", i => i < 5, i => i + 1)
+            .Invariant("SMALL", "the counter stays below three", i => i < 3);
+        var message = Assert.Throws<CsCheckException>(
+            () => spec.Exhaustive(writeLine: _ => throw new InvalidOperationException("the sink is gone")))!.Message;
+        await Assert.That(message).Contains("SMALL");
+    }
+
+    /// <summary>The requirement, its detail and its quote need no printer, so a printer that throws must cost only the
+    /// trace and not which requirement failed.</summary>
+    [Test]
+    public async Task A_Throwing_Printer_Does_Not_Hide_Which_Requirement_Failed()
+    {
+        var spec = Spec.From(0)
+            .Print(_ => throw new InvalidOperationException("the printer blew up"))
+            .Action("Inc", i => i < 5, i => i + 1)
+            .Invariant("SMALL", "the counter stays below three", i => i < 3);
+        var message = Assert.Throws<CsCheckException>(() => spec.Exhaustive())!.Message;
+        await Assert.That(message).Contains("SMALL");
+        await Assert.That(message).Contains("could not be printed");
+    }
+
+    /// <summary>The deadlock trace is rendered before the report is written, so a printer that throws there would take
+    /// the whole report rather than just that one line.</summary>
+    [Test]
+    public async Task A_Throwing_Printer_Does_Not_Hide_The_Report_Of_A_Deadlock()
+    {
+        var report = Spec.From(0)
+            .Print(_ => throw new InvalidOperationException("the printer blew up"))
+            .Action("Inc", i => i < 5, i => i + 1)
+            .Exhaustive();
+        await Assert.That(report.Closed).IsTrue();
+        await Assert.That(report.DeadlockStates).IsEqualTo(1);
+        await Assert.That(report.ToString()).Contains("could not be printed");
+    }
+
     [Test]
     public async Task Unknown_On_Action_Is_Rejected()
     {
@@ -88,6 +166,16 @@ public class SpecValidationTests
         var spec = Counter().Response("R", "quote", (_, a) => a == 1, (_, a) => a > 1, within: 2, per: "Clock");
         var message = Assert.Throws<CsCheckException>(() => spec.Exhaustive(maxStates: 10))!.Message;
         await Assert.That(message).Contains("Clock");
+    }
+
+    /// <summary>Mermaid gives up at a count that starts at one, so a non-positive cap would never match and an
+    /// unbounded model would walk until it ran out of memory instead of reporting that it gave up.</summary>
+    [Test]
+    public async Task Mermaid_MaxStates_Below_One_Is_Rejected()
+    {
+        var spec = Spec.From(0).Action("Inc", i => i < 5, i => i + 1);
+        var message = Assert.Throws<CsCheckException>(() => spec.Mermaid(maxStates: 0))!.Message;
+        await Assert.That(message).Contains("maxStates");
     }
 
     /// <summary>A Spec is frozen once an engine has run it. Without this, a Spec held in a static field and added to
@@ -177,6 +265,9 @@ public class SpecValidationTests
         await Assert.That(report.Note!.IndexOf("Counter", StringComparison.Ordinal))
             .IsLessThan(report.Note!.IndexOf("Small", StringComparison.Ordinal));
         await Assert.That(report.Note).Contains("Flag (2 values)");
+        // The note as docs/Spec.md quotes it, wrapped there and one line here.
+        await Assert.That(report.Note).IsEqualTo(Docs.Unwrap(
+            Docs.Spec.Single(b => b.StartsWith("gave up at 2,000 states", StringComparison.Ordinal))));
     }
 
     /// <summary>A state with a hand written ToString cannot be parsed into fields, so the diagnostic is omitted rather
@@ -191,6 +282,20 @@ public class SpecValidationTests
         await Assert.That(report.Note).Contains("gave up at 100 states");
         await Assert.That(report.Note).DoesNotContain("widest");
         await Assert.That(report.Note).Contains("no state was ever revisited");
+    }
+
+    /// <summary>The widest field diagnostic formats states with the user's printer, so a printer that throws on one of
+    /// them must lose the diagnostic rather than the whole report the caller asked not to throw.</summary>
+    [Test]
+    public async Task Widest_Field_Diagnostic_Survives_A_Throwing_Printer()
+    {
+        var report = Spec.From(new Wide(0, false, 0))
+            .Print(w => w.Counter == 50 ? throw new InvalidOperationException("printer blew up") : w.ToString())
+            .Action("Grow", w => w with { Counter = w.Counter + 1 })
+            .Exhaustive(maxStates: 200, throwOnViolation: false);
+        await Assert.That(report.Closed).IsFalse();
+        await Assert.That(report.Note).Contains("gave up at 200 states");
+        await Assert.That(report.Note).DoesNotContain("widest");
     }
 
     /// <summary>A model that only ever advances is legitimately a tree, so the note that observes it must not read as an
@@ -226,9 +331,9 @@ public class SpecValidationTests
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.States).IsEqualTo(6);
         await Assert.That(report.Pruned).IsEqualTo(1);
-        // The line quoted in docs/Spec.md, asserted here so the two cannot drift.
-        await Assert.That(report.ToString()).Contains(
-            "state space CLOSED within boundary: 6 states, 6 transitions, depth 5, 0 terminal, 0 deadlock, 1 outside");
+        // Read from docs/Spec.md rather than copied out of it, so editing either side alone fails.
+        await Assert.That(report.ToString()).Contains(Docs.Spec
+            .Single(b => b.StartsWith("state space CLOSED within boundary", StringComparison.Ordinal)).TrimEnd('\n'));
     }
 
     /// <summary>The property that makes a boundary worth having rather than just a smaller maxStates: the step that
@@ -396,9 +501,9 @@ public class SpecValidationTests
 
         var report = Counter().Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
             .Sample(TUnitX.WriteLine, minSteps: 7, maxSteps: 9, iter: 500);
-        await Assert.That(report.TracesWalked).IsEqualTo(500);
-        await Assert.That(report.StepsWalked >= 500 * 7).IsTrue();
-        await Assert.That(report.StepsWalked <= 500 * 9).IsTrue();
+        await Assert.That(report.TracesWalked >= 500).IsTrue();
+        await Assert.That(report.StepsWalked >= report.TracesWalked * 7).IsTrue();
+        await Assert.That(report.StepsWalked <= report.TracesWalked * 9).IsTrue();
     }
 
     /// <summary>Response is about the steps after the trigger: a response holding on the trigger step itself does not
@@ -679,6 +784,436 @@ public class SpecValidationTests
         await Assert.That(mermaid).Contains("n0[\"say &quot;hi&quot; &#124; 0<br/>next\"]");
     }
 
+    /// <summary>Escaping has to be exactly invertible, and the hand written test above only checks the characters
+    /// someone thought of - it passed while &lt; and &gt; went through raw. Two checks, because the round trip catches
+    /// a character escaped into something that no longer says what it said, and the strip catches one that reached the
+    /// label raw and so round trips trivially. The alphabet is dense in the structural characters, which
+    /// <c>Gen.String</c> over all of Unicode almost never produces.</summary>
+    [Test]
+    public void Mermaid_Label_Escaping_Round_Trips()
+    {
+        Gen.String["ab&<>\"|#;/\r\n"].Sample(text =>
+        {
+            var mermaid = Spec.From(0)
+                .Action("Step", [text], (i, _) => i < 1, (i, _) => i + 1)
+                .Print(_ => text)
+                .Mermaid();
+            var node = MyRegex.Match(mermaid);
+            var edge = MyRegex1.Match(mermaid);
+            // A raw newline splits the line in two and neither half matches, so this covers the newline forms as well.
+            if (!node.Success || !edge.Success) return false;
+            // Both line ending forms escape to the same <br/>, so the original cannot be recovered any more exactly.
+            return Unescape(node.Groups[1].Value) == text.Replace("\r\n", "\n").Replace("\r", "\n")
+                && NoRawSyntax(node.Groups[1].Value) && NoRawSyntax(edge.Groups[1].Value);
+        });
+
+        static string Unescape(string s) => s.Replace("<br/>", "\n")
+                                             .Replace("&#124;", "|")
+                                             .Replace("&quot;", "\"")
+                                             .Replace("&gt;", ">")
+                                             .Replace("&lt;", "<")
+                                             .Replace("&amp;", "&");
+
+        static bool NoRawSyntax(string label) => label
+            .Replace("&amp;", "").Replace("&lt;", "").Replace("&gt;", "")
+            .Replace("&quot;", "").Replace("&#124;", "").Replace("<br/>", "")
+            .IndexOfAny(['&', '<', '>', '"', '|', '\n', '\r']) < 0;
+    }
+
+
+    /// <summary>Merged edge labels used a non-empty argument name to decide the action takes arguments at all, so a
+    /// domain whose first element prints as empty dropped every later argument from the label.</summary>
+    [Test]
+    public async Task Mermaid_Merges_Arguments_That_Print_As_Empty()
+    {
+        var mermaid = Spec.From(0)
+            .Action("Set", ["", "y"], (i, _) => i == 0, (_, _) => 1)
+            .Mermaid(maxStates: 10);
+        TUnitX.WriteLine(mermaid);
+        await Assert.That(mermaid).Contains("n0 -->|\"Set(,y)\"| n1;");
+    }
+
+    [GeneratedRegex(@"^  n0\[""(.*)""\];$", RegexOptions.Multiline)]
+    private static partial Regex MyRegex { get; }
+
+    [GeneratedRegex(@"^  n0 -->\|""(.*)""\| n1;$", RegexOptions.Multiline)]
+    private static partial Regex MyRegex1 { get; }
+
+    /// <summary>A dead end needs no requirement to detect it, and that was only true of <c>Exhaustive</c> - a sampled
+    /// walk stopped early and said nothing, so the engine you fall back to on a space too big to close was the one that
+    /// could not see the bug the other finds for free. Counted as walks, not states, since a sampled walk keeps no
+    /// visited set: <c>DeadlockStates</c> stays zero rather than being filled in with a number that would not mean
+    /// what it means for <c>Exhaustive</c>.</summary>
+    [Test]
+    public async Task Sample_Reports_Walks_That_Dead_Ended()
+    {
+        var report = Spec.From(0)
+            .Action("Up", i => i < 3, i => i + 1)
+            .Action("Skip", i => i == 0, _ => 3)
+            .Sample(TUnitX.WriteLine, iter: 100);
+        await Assert.That(report.DeadlockTraces).IsGreaterThan(0);
+        await Assert.That(report.DeadlockStates).IsEqualTo(0);
+        await Assert.That(report.DeadlockTrace).IsNotNull();
+        await Assert.That(report.DeadlockTrace).Contains("no action enabled");
+        // Every walk leaves the initial state by one of two actions, so whichever is reported the first step has the
+        // other beside it - the alternatives come through on this path too.
+        await Assert.That(report.DeadlockTrace).Contains(" or ");
+    }
+
+    /// <summary>One line of the report carries this count for both engines.</summary>
+    [Test]
+    public async Task Conform_Reports_Walks_That_Dead_Ended()
+    {
+        var spec = Spec.From(0)
+            .Action("Up", i => i < 3, i => i + 1)
+            .Action("Skip", i => i == 0, _ => 3);
+        var report = spec.Conform(() => new int[1], (sut, t) => { sut[0] = t.After; return true; },
+            TUnitX.WriteLine, iter: 100);
+        await Assert.That(report.DeadlockTraces).IsGreaterThan(0);
+        await Assert.That(report.DeadlockTrace).IsNotNull();
+        // The number: any count ending in a zero contains "0 deadlocked".
+        await Assert.That(report.ToString()).Contains($"{report.DeadlockTraces:#,0} deadlocked");
+    }
+
+    /// <summary>The same walks with the end declared: nothing was enabled there either, so a count that only asked
+    /// whether the walk stopped early would report every completed walk as a dead end.</summary>
+    [Test]
+    public async Task Sample_Does_Not_Count_An_Intended_End_As_A_Dead_End()
+    {
+        var report = Spec.From(0)
+            .Action("Up", i => i < 3, i => i + 1)
+            .Action("Skip", i => i == 0, _ => 3)
+            .Terminal(i => i == 3)
+            .Sample(TUnitX.WriteLine, iter: 100);
+        await Assert.That(report.DeadlockTraces).IsEqualTo(0);
+        await Assert.That(report.DeadlockTrace).IsNull();
+    }
+
+    sealed class ConformSut { public int N; }
+
+    /// <summary>Conform surfaces a throwing model too, not just a throwing implementation.</summary>
+    [Test]
+    public async Task Conform_Surfaces_A_Model_That_Throws()
+    {
+        var spec = Spec.From(0)
+            .Action("Inc", s => s < 3, s => s == 2 ? throw new InvalidOperationException("effect boom") : s + 1)
+            .Invariant("ANY", "Always true.", _ => true);
+        var message = Assert.Throws<CsCheckException>(() => spec.Conform(() => new ConformSut(),
+            (sut, t) => { sut.N++; return sut.N == t.After; }, writeLine: null, minSteps: 3, maxSteps: 3, iter: 20))!.Message;
+        await Assert.That(message).Contains("effect boom");
+        await Assert.That(message).DoesNotContain("Object reference not set");
+    }
+
+    /// <summary>A model that throws surfaces its own exception rather than a NullReferenceException from the printer.</summary>
+    [Test]
+    public async Task Sample_Surfaces_A_Model_That_Throws()
+    {
+        var spec = Spec.From(0)
+            .Action("Inc", s => s < 3, s => s == 2 ? throw new InvalidOperationException("effect boom") : s + 1)
+            .Invariant("ANY", "Always true.", _ => true);
+        var message = Assert.Throws<CsCheckException>(
+            () => spec.Sample(writeLine: null, minSteps: 3, maxSteps: 3, iter: 20))!.Message;
+        await Assert.That(message).Contains("effect boom");
+        await Assert.That(message).DoesNotContain("Object reference not set");
+    }
+
+    /// <summary>Trace step bounds are rejected up front rather than crashing inside generation.</summary>
+    [Test]
+    [Arguments(4, 2)]
+    [Arguments(1, 0)]
+    [Arguments(-1, 3)]
+    [Arguments(-1, -1)]
+    public async Task Trace_Steps_Out_Of_Order_Are_Rejected(int minSteps, int maxSteps)
+    {
+        var spec = Spec.From(0)
+            .Action("Inc", s => s < 5, s => s + 1)
+            .Invariant("ANY", "Always true.", _ => true);
+        var message = Assert.Throws<CsCheckException>(
+            () => spec.Sample(writeLine: null, minSteps: minSteps, maxSteps: maxSteps, iter: 20))!.Message;
+        await Assert.That(message).Contains("minSteps <= maxSteps");
+        await Assert.That(message).DoesNotContain("Set seed");
+    }
+
+    [Test]
+    [Arguments(0, 0)]
+    [Arguments(0, 3)]
+    [Arguments(3, 3)]
+    public void Trace_Steps_In_Order_Are_Accepted(int minSteps, int maxSteps)
+    {
+        Spec.From(0)
+            .Action("Inc", s => s < 5, s => s + 1)
+            .Invariant("ANY", "Always true.", _ => true)
+            .Sample(writeLine: null, minSteps: minSteps, maxSteps: maxSteps, iter: 20);
+    }
+
+    record struct Stuck(bool Pending);
+
+    static Spec<Stuck> NeverAnswered() => Spec.From(new Stuck(false))
+        .Action("Request", s => !s.Pending, _ => new Stuck(true))
+        .Terminal(s => s.Pending)
+        .Response("MUST-ANSWER", "A request is answered within three steps.",
+            (b, a) => !b.Pending && a.Pending, (_, _) => false, within: 3);
+
+    /// <summary>Exhaustive reports an obligation still outstanding where a trace ends, as the sampled engines do.</summary>
+    [Test]
+    public async Task Exhaustive_Reports_An_Obligation_Outstanding_At_A_Trace_End()
+    {
+        var spec = NeverAnswered();
+        var exhaustive = spec.Exhaustive(out var violation, writeLine: null, maxStates: 10_000);
+        await Assert.That(violation).IsNull();
+        await Assert.That(exhaustive.Closed).IsTrue();
+        await Assert.That(exhaustive.RequirementUnresolved[0]).IsGreaterThan(0);
+        var sampled = NeverAnswered().Sample(writeLine: null, minSteps: 1, maxSteps: 4, iter: 20);
+        await Assert.That(sampled.RequirementUnresolved[0]).IsGreaterThan(0);
+    }
+
+    static Spec<int> Ring() => Spec.From(0)
+        .Action("Ring", i => i == 0, _ => 1)
+        .Action("Tick", i => i > 0, i => i + 1)
+        .Response("MUST-ANSWER", "A ring is answered within two ticks.",
+            (b, a) => a == 1 && b == 0, (_, a) => a == 99, within: 2);
+
+    /// <summary><c>AtMost</c> marks every occurrence, including the one that broke the bound.</summary>
+    [Test]
+    [Arguments("MUST-ANSWER", "raised here", 1)]
+    [Arguments("NO-THIRD-RETRY", "counted", 3)]
+    [Arguments("NO-SEND-AFTER-CLOSE", "scope opens", 1)]
+    public async Task Violation_Marks_Where_The_Obligation_Started(string id, string word, int marks)
+    {
+        var spec = id switch
+        {
+            "MUST-ANSWER" => Ring(),
+            "NO-THIRD-RETRY" => Spec.From(0)
+                .Action("Retry", i => i < 5, i => i + 1)
+                .AtMost(id, "At most two retries.", 2, (b, a) => a > b),
+            _ => Spec.From(0)
+                .Action("Close", i => i == 0, _ => 1)
+                .Action("Send", i => i >= 1, i => i + 1)
+                .NeverAfter(id, "Nothing is sent once closed.",
+                    after: (b, a) => a == 1 && b == 0, never: (b, a) => a > b && b >= 1),
+        };
+        spec.Exhaustive(out var violation);
+        await Assert.That(violation).IsNotNull();
+        await Assert.That(violation!.Id).IsEqualTo(id);
+        var text = violation.ToString(i => $"state={i}");
+        TUnitX.WriteLine(text);
+        await Assert.That(Regex.Count(text, Regex.Escape(word))).IsEqualTo(marks);
+    }
+
+    /// <summary>The mark column is as wide as the longest action, so adding one moves it.</summary>
+    [Test]
+    public async Task Docs_Quote_The_Obligation_Marks()
+    {
+        Ring().Exhaustive(out var violation);
+        var quoted = Docs.Spec.Single(b => b.Contains("raised here", StringComparison.Ordinal));
+        await Assert.That(violation!.ToString(i => $"clock={i}")).Contains(quoted.TrimEnd('\n'));
+    }
+
+    /// <summary>Nothing earlier to point at, so no marks and no change of shape.</summary>
+    [Test]
+    public async Task Violation_On_One_Step_Is_Not_Marked()
+    {
+        Spec.From(0)
+            .Action("Inc", i => i < 4, i => i + 1)
+            .Never("NO-TWO", "the counter never reaches two", (_, a) => a == 2)
+            .Exhaustive(out var violation);
+        var text = violation!.ToString(i => $"state={i}");
+        TUnitX.WriteLine(text);
+        foreach (var line in text.Split('\n').Where(l => l.Contains(" Inc", StringComparison.Ordinal)))
+            await Assert.That(line).EndsWith("Inc");
+    }
+
+    /// <summary>A walk can miss a dead end; it must not invent one.</summary>
+    [Test]
+    public void Sampled_Engines_Do_Not_Invent_A_Dead_End()
+    {
+        Gen.Select(Gen.Int[2, 5], Gen.Int[1, 4], Gen.Bool)
+        .Sample((bound, stop, terminal) =>
+        {
+            Spec<int> Make()
+            {
+                var s = Spec.From(0)
+                    .Action("Up", i => i != stop, i => (i + 1) % bound)
+                    .Action("Jump", i => i == 0, _ => stop);
+                return terminal ? s.Terminal(i => i == stop) : s;
+            }
+            var exhaustive = Make().Exhaustive(maxStates: 64).DeadlockStates;
+            var sampled = Make().Sample(iter: 100).DeadlockTraces;
+            var conformed = Make().Conform(() => new int[1], (sut, t) => { sut[0] = t.After; return true; },
+                iter: 100).DeadlockTraces;
+            return (sampled == 0 || exhaustive > 0) && (conformed == 0 || exhaustive > 0);
+        });
+    }
+
+    /// <summary>"You could have done this instead" needs what you did to be absent from it.</summary>
+    [Test]
+    public void Alternatives_Never_Include_The_Step_Taken()
+    {
+        Gen.Select(Gen.Int[2, 4], Gen.Int[2, 5])
+        .Sample((args, bound) =>
+        {
+            var report = Spec.From(0)
+                .Action("A", Enumerable.Range(0, args).ToArray(), (n, _) => n < bound, (n, v) => (n + v + 1) % bound)
+                .Action("B", n => n == 1, _ => bound)
+                .Exhaustive(maxStates: 64);
+            if (report.DeadlockTrace is null) return true;
+            foreach (var line in report.DeadlockTrace.Split('\n'))
+            {
+                var or = line.IndexOf(" or ", StringComparison.Ordinal);
+                if (or < 0) continue;
+                var taken = line[..or].TrimStart().Split(' ', 2)[1].Trim();
+                foreach (var alternative in line[(or + 4)..].Split(", "))
+                    if (string.Equals(alternative.Trim(), taken, StringComparison.Ordinal)) return false;
+            }
+            return true;
+        });
+    }
+
+    /// <summary>A deadline outliving the trace is neither a pass nor a failure, and the row has to say so.</summary>
+    [Test]
+    public async Task Sample_Reports_An_Obligation_Outstanding_When_The_Trace_Ends()
+    {
+        var report = Spec.From(0)
+            .Action("Ring", i => i == 0, _ => 1)
+            .Action("Tick", i => i > 0, i => i + 1)
+            .Response("MUST-ANSWER", "A ring is answered within nine ticks.",
+                (b, a) => a == 1 && b == 0, (_, a) => a == 99, within: 9)
+            .Sample(TUnitX.WriteLine, maxSteps: 3, iter: 100);
+        // Nine steps of deadline cannot expire inside three, so nothing fails and the obligation is still owed.
+        await Assert.That(report.ToString()).Contains("MUST-ANSWER");
+        var row = report.ToString().Split('\n').Single(l => l.Contains("MUST-ANSWER", StringComparison.Ordinal));
+        await Assert.That(row.Split('|')[3].Trim()).IsNotEmpty();
+    }
+
+    /// <summary>The trace opens with the other key, so the wrong element would mark three where two are owed.</summary>
+    [Test]
+    public async Task Keyed_Marks_Belong_To_The_Element_That_Failed()
+    {
+        Spec.From(new Pair(0, 0))
+            .Print(p => $"a={p.A} b={p.B}")
+            // A needs a B first, so the shortest counterexample against CAP[0] has a B occurrence in it.
+            .Action("BumpA", p => p.B >= 1, p => p with { A = p.A + 1 })
+            .Action("BumpB", p => p.B == 0, p => p with { B = p.B + 1 })
+            .AtMost("CAP", "At most one bump each.", 1, [0, 1],
+                (b, a, k) => k == 0 ? a.A > b.A : a.B > b.B)
+            .Exhaustive(out var violation);
+        await Assert.That(violation).IsNotNull();
+        await Assert.That(violation!.Id).IsEqualTo("CAP[0]");
+        var text = violation.ToString(p => $"a={p.A} b={p.B}");
+        TUnitX.WriteLine(text);
+        await Assert.That(MyRegex2.Count(text)).IsEqualTo(2);
+    }
+
+    [GeneratedRegex("counted")]
+    private static partial Regex MyRegex2 { get; }
+
+    readonly record struct Pair(int A, int B);
+
+    /// <summary>A sampled violation is built on a different path from the exhaustive one.</summary>
+    [Test]
+    public async Task Sampled_Violation_Is_Marked()
+    {
+        var message = Assert.Throws<CsCheckException>(() => Ring().Sample(maxSteps: 12, iter: 1_000))!.Message;
+        TUnitX.WriteLine(message);
+        await Assert.That(message).Contains("raised here");
+    }
+
+    /// <summary>Arguments are rendered on the alternatives the same way they are on the step, and a state with a wide
+    /// domain is bounded so one line cannot run away with the report.</summary>
+    [Test]
+    public async Task Deadlock_Alternatives_Render_Arguments_And_Are_Bounded()
+    {
+        var report = Spec.From(0)
+            .Action("Set", Enumerable.Range(0, 12).ToArray(), (n, _) => n == 0, (_, v) => v)
+            .Exhaustive(writeLine: TUnitX.WriteLine);
+        await Assert.That(report.DeadlockStates).IsGreaterThan(0);
+        await Assert.That(report.DeadlockTrace)
+            .Contains("or Set(0), Set(2), Set(3), Set(4), Set(5), Set(6), Set(7), Set(8) +3 more");
+    }
+
+    /// <summary>A queue abstracted to its count, which is what picking the smallest falsifying domain produces: all
+    /// three Enqueue arguments reach the same state, so one arrow says what three identical ones were saying. Dequeue
+    /// shares no target with Enqueue here, so the two stay separate arrows.</summary>
+    [Test]
+    public async Task Mermaid_Merges_Arrows_To_The_Same_State()
+    {
+        var mermaid = Spec.From(0)
+            .Action("Enqueue", [1, 2, 3], (n, _) => n < 2, (n, _) => n + 1)
+            .Action("Dequeue", n => n > 0, n => n - 1)
+            .Mermaid();
+        TUnitX.WriteLine(mermaid);
+        await Assert.That(mermaid).Contains("n0 -->|\"Enqueue(1,2,3)\"| n1;");
+        await Assert.That(mermaid).Contains("n1 -->|\"Dequeue\"| n0;");
+        await Assert.That(MyRegex3.Count(mermaid)).IsEqualTo(4);
+        await Assert.That(mermaid).Contains("transitions: 8");
+    }
+
+
+    [GeneratedRegex(" -->\\|")]
+    private static partial Regex MyRegex3 { get; }
+
+    /// <summary>Two actions reaching one state share the arrow, and each keeps its own name.</summary>
+    [Test]
+    public async Task Mermaid_Merges_Arrows_From_Different_Actions()
+    {
+        var mermaid = Spec.From(0)
+            .Action("Cancel", n => n == 0, _ => 1)
+            .Action("Timeout", n => n == 0, _ => 1)
+            .Mermaid();
+        TUnitX.WriteLine(mermaid);
+        await Assert.That(mermaid).Contains("n0 -->|\"Cancel, Timeout\"| n1;");
+    }
+
+    /// <summary>Merging must lose nothing, which the examples above cannot show: they only check the labels someone
+    /// predicted. The arrows have to be exactly the distinct source-target pairs, and every argument of every enabled
+    /// action has to appear against the arrow that carried it - a merge that quietly dropped one would still draw a
+    /// plausible diagram. The domains overlap so that different arguments genuinely do share a target.</summary>
+    [Test]
+    public void Mermaid_Merging_Loses_No_Transition()
+    {
+        Gen.Select(Gen.Int[1, 4], Gen.Int[1, 4], Gen.Int[2, 4])
+        .Sample((aArgs, bArgs, bound) =>
+        {
+            var mermaid = Spec.From(0)
+                .Action("A", Enumerable.Range(0, aArgs).ToArray(), (n, v) => (n + v) % bound)
+                .Action("B", Enumerable.Range(0, bArgs).ToArray(), (n, v) => (n * 2 + v) % bound)
+                .Mermaid(maxStates: 64);
+            // Node ids are handed out in discovery order, not by state value, so the labels are the only way across.
+            var ids = MyRegex4.Matches(mermaid)
+                .ToDictionary(m => int.Parse(m.Groups[2].Value), m => m.Groups[1].Value);
+            var arrows = MyRegex5.Matches(mermaid);
+            // One arrow per source-target pair, or the merge did not merge.
+            var pairs = new HashSet<(string, string)>();
+            foreach (Match arrow in arrows)
+                if (!pairs.Add((arrow.Groups[1].Value, arrow.Groups[3].Value))) return false;
+            // Read every transition back out of the labels, so the set they describe can be compared with the model's.
+            var drawn = new HashSet<(string From, string Name, int Arg, string To)>();
+            foreach (Match arrow in arrows)
+                foreach (var segment in arrow.Groups[2].Value.Split(", "))
+                {
+                    var bracket = segment.IndexOf('(', StringComparison.Ordinal);
+                    if (bracket < 0) return false;
+                    foreach (var a in segment[(bracket + 1)..^1].Split(','))
+                        if (!drawn.Add((arrow.Groups[1].Value, segment[..bracket], int.Parse(a),
+                                        arrow.Groups[3].Value)))
+                            return false;
+                }
+            var expected = new HashSet<(string, string, int, string)>();
+            foreach (var (state, id) in ids)
+            {
+                for (int v = 0; v < aArgs; v++) expected.Add((id, "A", v, ids[(state + v) % bound]));
+                for (int v = 0; v < bArgs; v++) expected.Add((id, "B", v, ids[(state * 2 + v) % bound]));
+            }
+            return drawn.SetEquals(expected);
+        });
+    }
+
+    [GeneratedRegex(@"^  (n\d+)\[""(\d+)""\];$", RegexOptions.Multiline)]
+    private static partial Regex MyRegex4 { get; }
+
+    [GeneratedRegex(@"^  (n\d+) -->\|""(.*)""\| (n\d+);$", RegexOptions.Multiline)]
+    private static partial Regex MyRegex5 { get; }
+
     /// <summary>The emitted Mermaid is text people copy into Markdown, so its stable shape is part of the API.</summary>
     [Test]
     public async Task Mermaid_Text_Output_Is_Stable()
@@ -703,7 +1238,7 @@ public class SpecValidationTests
               n0["0"];
               n1["1"];
               class n1 terminal;
-              info["states: 2<br/>edges: 1<br/>terminal: 1<br/>deadlock: 0"];
+              info["states: 2<br/>transitions: 1<br/>depth: 1<br/>terminal: 1<br/>deadlock: 0"];
               class info note;
               subgraph legend["Legend"]
                 legendTerminal["terminal"];
@@ -727,16 +1262,31 @@ public class SpecValidationTests
         TUnitX.WriteLine(mermaid);
         await Assert.That(mermaid).Contains("truncatedNote[\"gave up at 4 states\"]");
         // Four labels for four states, and three edges between them. Every n referenced by an edge is declared.
-#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
-        await Assert.That(Regex.Count(mermaid, @"n\d+\[""\d")).IsEqualTo(4);
-        await Assert.That(Regex.Count(mermaid, " -->\\|")).IsEqualTo(3);
-        foreach (var to in Regex.Matches(mermaid, @" -->\|""[^""]+""\| (n\d+)"))
+        await Assert.That(MyRegex6.Count(mermaid)).IsEqualTo(4);
+        await Assert.That(MyRegex7.Count(mermaid)).IsEqualTo(3);
+        foreach (var to in MyRegex8.Matches(mermaid))
             await Assert.That(mermaid).Contains(((Match)to).Groups[1].Value + "[\"");
         // The state whose successor was dropped is dashed, so it cannot be read as an intended end or a dead one.
-        await Assert.That(Regex.Count(mermaid, @"class n\d+ truncated")).IsEqualTo(1);
-        await Assert.That(Regex.Count(mermaid, @"class n\d+ deadlock")).IsEqualTo(0);
+        await Assert.That(MyRegex9.Count(mermaid)).IsEqualTo(1);
+        await Assert.That(MyRegex10.Count(mermaid)).IsEqualTo(0);
         await Assert.That(mermaid).EndsWith("\n");
     }
+
+
+    [GeneratedRegex(@"n\d+\[""\d")]
+    private static partial Regex MyRegex6 { get; }
+
+    [GeneratedRegex(" -->\\|")]
+    private static partial Regex MyRegex7 { get; }
+
+    [GeneratedRegex(@" -->\|""[^""]+""\| (n\d+)")]
+    private static partial Regex MyRegex8 { get; }
+
+    [GeneratedRegex(@"class n\d+ truncated")]
+    private static partial Regex MyRegex9 { get; }
+
+    [GeneratedRegex(@"class n\d+ deadlock")]
+    private static partial Regex MyRegex10 { get; }
 
     /// <summary>The note says an edge was dropped, so a model that happens to be exactly the size of the cap and was
     /// drawn in full must not claim it gave up.</summary>
@@ -746,10 +1296,15 @@ public class SpecValidationTests
         var mermaid = Spec.From(0).Action("Step", i => i < 3, i => i + 1).Mermaid(maxStates: 4);
         TUnitX.WriteLine(mermaid);
         await Assert.That(mermaid).DoesNotContain("gave up");
-        await Assert.That(Regex.Count(mermaid, @"class n\d+ truncated")).IsEqualTo(0);
-        await Assert.That(Regex.Count(mermaid, @"n\d+\[""\d")).IsEqualTo(4);
-#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
+        await Assert.That(MyRegex11.Count(mermaid)).IsEqualTo(0);
+        await Assert.That(MyRegex12.Count(mermaid)).IsEqualTo(4);
     }
+
+    [GeneratedRegex(@"class n\d+ truncated")]
+    private static partial Regex MyRegex11 { get; }
+
+    [GeneratedRegex(@"n\d+\[""\d")]
+    private static partial Regex MyRegex12 { get; }
 
     /// <summary>Slots eight and above sit in the second counter word, reached through a ref conditional, so only a spec
     /// that spends past the eighth exercises that path at all. The requirement under test here is the ninth, and the
@@ -894,11 +1449,12 @@ public class SpecValidationTests
     public async Task Sample_Coverage_Sums_To_The_Steps_Walked(int threads)
     {
         var report = FixEngineSpec.Create().Sample(iter: 500, threads: threads);
-        await Assert.That(report.TracesWalked).IsEqualTo(500);
+        // At least, not exactly: CsCheck_Time replaces the count with a budget.
+        await Assert.That(report.TracesWalked >= 500).IsTrue();
         var fired = 0L;
         foreach (var f in report.ActionFired) fired += f;
         await Assert.That(fired).IsEqualTo(report.StepsWalked);
         // And the steps are the traces' own lengths, so neither counter can drift from the other.
-        await Assert.That(report.StepsWalked).IsGreaterThan(500);
+        await Assert.That(report.StepsWalked).IsGreaterThan(report.TracesWalked);
     }
 }
