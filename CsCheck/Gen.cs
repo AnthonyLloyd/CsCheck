@@ -2585,7 +2585,7 @@ public sealed class GenDateOnly : Gen<DateOnly>
         get
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-            return new Range((uint)start.GetHashCode(), (uint)(finish.GetHashCode() - start.GetHashCode() + 1));
+            return new Range((uint)start.DayNumber, (uint)(finish.DayNumber - start.DayNumber + 1));
         }
     }
 }

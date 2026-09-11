@@ -691,7 +691,7 @@ public class GenTests
         var min = new Size(0);
         var actual = Gen.Select(new SizedGen<string>("a", 0), new SizedGen<string>("b", 1))
             .Generate(PCG.Parse("0000000000aa"), min, out var size);
-        await Assert.That(actual).IsEqualTo(default((string, string)));
+        await Assert.That(actual).IsEqualTo(default);
         await Assert.That(Size.IsLessThan(size, min)).IsFalse();
     }
 

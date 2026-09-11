@@ -255,7 +255,7 @@ public class CheckTests
         {
             new List<int> { 1, 2, 3, 4 },
             new System.Collections.ObjectModel.Collection<int> { 1, 2, 3, 4 },
-            new System.Collections.ObjectModel.ReadOnlyCollection<int>(new List<int> { 1, 2, 3, 4 }),
+            new System.Collections.ObjectModel.ReadOnlyCollection<int>([1, 2, 3, 4]),
             System.Collections.Immutable.ImmutableArray.Create(1, 2, 3, 4),
             System.Collections.Immutable.ImmutableList.Create(1, 2, 3, 4),
             new System.Collections.ArrayList { 1, 2, 3, 4 },

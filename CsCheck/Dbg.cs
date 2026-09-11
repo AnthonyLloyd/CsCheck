@@ -997,11 +997,6 @@ public static class RegressionExtensions
 //    depends on the user's printer is rendered earlier, which is why SpecViolation.ToString and PrintTrace are guarded
 //    individually. The branch is kept as insurance for other report types, not because it is verified.
 //
-// 6. GenDateOnly's range indexer uses DateOnly.GetHashCode() as the day number, where DayNumber is the documented
-//    property and FromDayNumber is used two lines above. Verified equal at MinValue, MaxValue and a mid date on
-//    .NET 11, so it works today, but it depends on an undocumented GetHashCode contract.
-//
-//
 // 9. Using arg.Length != 0 as a proxy for "this action takes arguments" conflates an argument-less action with one whose
 //    argument prints as empty. It survives in ActionNames and Alternatives, where it costs only a label - Set rather
 //    than Set(). The Mermaid case, where it dropped arguments from a merged edge label, is fixed. A proper fix needs a
@@ -1010,7 +1005,6 @@ public static class RegressionExtensions
 //
 // 10. SpecWalk's thread-static tally reuse compares Triggered.Length and Fired.Length but not Unresolved.Length. Safe
 //     only because both are sized by requirement count and so cannot diverge.
-//
 //
 // WORTH CONSIDERING
 //

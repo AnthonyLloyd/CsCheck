@@ -10,7 +10,7 @@ internal static class TUnitX
 /// <summary>The fenced blocks of the guide and the readme, so the tests that own a report or a diagram can check they
 /// still quote what the code produces. A hand copied example goes stale in silence, and two files quoting one report
 /// go stale independently of each other.</summary>
-internal static class Docs
+internal static partial class Docs
 {
     /// <summary>Every fenced block of docs/Spec.md, in document order, with line endings normalised to the generated
     /// form.</summary>
@@ -28,9 +28,12 @@ internal static class Docs
 
     static IEnumerable<string> Fenced(string text)
     {
-        foreach (var m in Regex.Matches(text, @"(?m)^```[a-z]*\r?\n(.*?)^```", RegexOptions.Singleline))
+        foreach (var m in MyRegex.Matches(text))
             yield return ((Match)m).Groups[1].Value.Replace("\r\n", "\n", StringComparison.Ordinal);
     }
+
+    [GeneratedRegex(@"(?m)^```[a-z]*\r?\n(.*?)^```", RegexOptions.Singleline)]
+    private static partial Regex MyRegex { get; }
 
     // Found by walking up from the test binary rather than from a compile time path, so it does not assume the tests
     // run on the machine that built them.

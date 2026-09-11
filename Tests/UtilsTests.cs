@@ -236,7 +236,7 @@ public class ThreadStatsTests
     [Arguments(1e9)]
     public async Task BigO_Is_Scale_Invariant(double scale)
     {
-        static double[] Scaled(double[] times, double by) => times.Select(t => t * by).ToArray();
+        static double[] Scaled(double[] times, double by) => Array.ConvertAll(times, t => t * by);
         double[] n = [1, 2, 3];
         await Assert.That(Check.BigO(n, Scaled([5, 5, 5], scale))).IsEqualTo(BigO.Constant);
         await Assert.That(Check.BigO(n, Scaled([5, 6, 7], scale))).IsEqualTo(BigO.Linear);
