@@ -103,13 +103,17 @@ public sealed class SpecViolation<S>
     /// <summary>The trace that reached the failure, ending on the step that caused it.</summary>
     public readonly Trace<S> Trace;
 
-    internal SpecViolation(string id, string quote, string detail, int stepIndex, Trace<S> trace)
+    internal readonly Requirement<S>? Req;
+
+    internal SpecViolation(string id, string quote, string detail, int stepIndex, Trace<S> trace,
+        Requirement<S>? req = null)
     {
         Id = id;
         Quote = quote;
         Detail = detail;
         StepIndex = stepIndex;
         Trace = trace;
+        Req = req;
     }
 
     /// <summary>The requirement, its quote and the trace, with each state rendered by <paramref name="print"/> and the
@@ -119,8 +123,24 @@ public sealed class SpecViolation<S>
         => new StringBuilder()
             .Append("\n    Requirement: ").Append(Id).Append(" - ").Append(Detail)
             .Append("\n          Spec: \"").Append(Quote).Append('"')
-            .Append("\n         Trace: ").Append(Trace.ToString(print, StepIndex))
+            .Append("\n         Trace: ").Append(Trace.ToString(print, StepIndex, Obligations()))
             .ToString();
+
+    // Precedes is absent because it fails only when its second holds having never seen its first, so there is nothing
+    // earlier to mark.
+    Func<Transition<S>, string>? Obligations()
+    {
+        if (Req is null) return null;
+        var predicate = Req.Kind == ReqKind.AtMost ? Req.Consequent : Req.Trigger;
+        var word = Req.Kind switch
+        {
+            ReqKind.Response => "raised here",
+            ReqKind.NeverAfter => "scope opens",
+            ReqKind.AtMost => "counted",
+            _ => null,
+        };
+        return predicate is null || word is null ? null : t => predicate(t.Before, t.After) ? word : "";
+    }
 
     /// <summary>The violation with each state rendered by <typeparamref name="S"/>'s own <c>ToString</c>.</summary>
     public override string ToString() => ToString(s => s?.ToString() ?? "null");
@@ -770,7 +790,7 @@ public sealed class SpecFaultsReport
     {
         for (int i = 0; i < Results.Count; i++)
             if (string.Equals(Results[i].Fault, fault, StringComparison.Ordinal)) return Results[i].CaughtBy;
-        throw new CsCheckException($"No fault named '{fault}' was declared");
+        return ThrowHelper.Throw<string?>($"No fault named '{fault}' was declared");
     }
 
     /// <summary>The fault table: one row per declared fault, and the requirements no fault exercised.</summary>
@@ -839,7 +859,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
         {
             var req = _spec.Requirements[edge.ReqIndex];
             _found = new SpecViolation<S>(req.Id, req.Quote, edge.Detail, _depth,
-                Path(head, edge.Action, edge.Arg, edge.After));
+                Path(head, edge.Action, edge.Arg, edge.After), req);
             _report.Depth = _depth + 1;
             _report.States = Nodes.Count;
             return false;
@@ -875,6 +895,15 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
         {
             if (_firstDeadlock < 0) _firstDeadlock = head;
             _report.DeadlockStates++;
+        }
+        if (!_spec.HasResponse) return;
+        var node = Nodes[head];
+        for (int i = 0; i < _reqs; i++)
+        {
+            var r = _spec.Requirements[i];
+            if (r.Kind != ReqKind.Response) continue;
+            var word = r.Shift < 64 ? node.Deadlines : node.Counts;
+            if (((word >> (r.Shift & 63)) & 0xFF) != 0) _counters.Unresolved[i]++;
         }
     }
 
@@ -1132,7 +1161,9 @@ public static partial class Check
     static SpecViolation<S>? SpecCheck<S>(Spec<S> spec, Trace<S> trace, SpecCounters? counters)
     {
         var detail = SpecInitial(spec, counters, out var ri);
-        if (detail is not null) return new SpecViolation<S>(spec.Requirements[ri].Id, spec.Requirements[ri].Quote, detail, -1, trace);
+        if (detail is not null)
+            return new SpecViolation<S>(spec.Requirements[ri].Id, spec.Requirements[ri].Quote, detail, -1, trace,
+                spec.Requirements[ri]);
         ulong deadlines = 0, seen = 0, counts = 0;
         var steps = trace.Steps;
         for (int i = 0; i < steps.Length; i++)
@@ -1140,7 +1171,8 @@ public static partial class Check
             detail = CheckTransition(spec, steps[i].ActionIndex, steps[i].Before, steps[i].After, ref deadlines, ref seen,
                 ref counts, counters?.Triggered, 0, out ri);
             if (detail is not null)
-                return new SpecViolation<S>(spec.Requirements[ri].Id, spec.Requirements[ri].Quote, detail, i, trace);
+                return new SpecViolation<S>(spec.Requirements[ri].Id, spec.Requirements[ri].Quote, detail, i, trace,
+                    spec.Requirements[ri]);
         }
         // Nothing to look for unless the spec has a Response, which only one of the worked examples has.
         if (counters is not null && spec.HasResponse)
@@ -1251,35 +1283,20 @@ public static partial class Check
         var counters = new SpecCounters(spec.Requirements.Count, spec.ArgPairs);
         var report = SpecReportOf(spec, $"Spec.Sample of {Plural(spec.Requirements.Count, "requirement")}", counters);
         // A dead end needs no requirement to detect it, which is the whole of the BlockingQueue example - but only
-        // Exhaustive was saying so, and Sample is what is left when the space is too big to close. Shortest wins, to
-        // match the path Exhaustive reports; the lock is only taken on a walk that actually dead ended.
-        Trace<S>? deadlock = null;
-        var deadlockLock = new object();
+        var deadEnds = new DeadEnds<S>(spec, counters);
         try
         {
             spec.GenTrace(minSteps, maxSteps).Sample(
-                trace =>
-                {
-                    // Deadlocked only says nothing was enabled, which is also true of an intended end, so Terminal has
-                    // to be asked exactly as Exhaustive asks it or every completed walk counts as a dead end.
-                    if (trace.Deadlocked && spec.IsTerminal?.Invoke(
-                        trace.Steps.Length == 0 ? trace.Initial : trace.Steps[^1].After) != true)
-                    {
-                        Interlocked.Increment(ref counters.Deadlocks);
-                        lock (deadlockLock)
-                            if (deadlock is null || trace.Steps.Length < deadlock.Steps.Length) deadlock = trace;
-                    }
-                    return SpecWalk(spec, trace, counters) is null;
-                },
+                trace => { deadEnds.Observe(trace); return SpecWalk(spec, trace, counters) is null; },
                 null, seed, iter, time, threads,
-                trace => SpecCheck(spec, trace, null)?.ToString(spec.Printer) ?? trace.ToString(spec.Printer, -1));
+                trace => trace is null ? "\n  The model threw before a trace could be generated."
+                       : SpecCheck(spec, trace, null)?.ToString(spec.Printer) ?? trace.ToString(spec.Printer, -1));
         }
         finally
         {
             report.TracesWalked = counters.Traces;
             report.StepsWalked = counters.Steps;
-            report.DeadlockTraces = counters.Deadlocks;
-            report.DeadlockTrace = deadlock?.ToString(spec.Printer, -1, t => Alternatives(spec, t));
+            deadEnds.Report(report);
             writeLine?.Invoke(report.ToString());
         }
         return report;
@@ -1345,7 +1362,7 @@ public static partial class Check
                 new Trace<S>(spec.Initial, [], false));
             // Every other failing path reports before it returns or throws; this one was silent.
             writeLine?.Invoke(report.ToString());
-            if (throwOnViolation) throw new CsCheckException(violation.ToString(spec.Printer));
+            if (throwOnViolation) ThrowHelper.Throw(violation.ToString(spec.Printer));
             return report;
         }
         // The frontier owns the visited set, which is a set and not a map: nothing ever looked a node up by index, and
@@ -1363,7 +1380,7 @@ public static partial class Check
         if (walk.Found is not null)
         {
             if (writeLine is not null) writeLine(report.ToString());
-            if (throwOnViolation) throw new CsCheckException(walk.Found.ToString(spec.Printer));
+            if (throwOnViolation) ThrowHelper.Throw(walk.Found.ToString(spec.Printer));
             return report;
         }
         if (walk.GaveUp)
@@ -1416,7 +1433,7 @@ public static partial class Check
                 violation = new SpecViolation<S>(req.Id, req.Quote,
                     "is unreachable: the state space closed without it ever holding", -1, new Trace<S>(spec.Initial, [], false));
                 writeLine?.Invoke(report.ToString());
-                if (throwOnViolation) throw new CsCheckException(violation.ToString(spec.Printer));
+                if (throwOnViolation) ThrowHelper.Throw(violation.ToString(spec.Printer));
                 return report;
             }
             var note = "never held, but states outside the boundary were not explored so this is not a failure: "
@@ -1576,6 +1593,30 @@ public static partial class Check
     // Every action is disabled at a dead end by definition, so what is worth naming is not what was blocked there but
     // what else could have been taken on the way in. Bounded because a wide argument domain would otherwise put the
     // whole of it on one line, and the point is that there was another way rather than what all of them were.
+    // Shared by Sample and Conform, which both print the count from one line of the report.
+    sealed class DeadEnds<S>(Spec<S> spec, SpecCounters counters)
+    {
+        readonly object _lock = new();
+        Trace<S>? _shortest;
+
+        public void Observe(Trace<S> trace)
+        {
+            // Deadlocked is also true at an intended end.
+            if (!trace.Deadlocked || spec.IsTerminal?.Invoke(
+                trace.Steps.Length == 0 ? trace.Initial : trace.Steps[^1].After) == true) return;
+            Interlocked.Increment(ref counters.Deadlocks);
+            // Shortest, to match the path Exhaustive reports.
+            lock (_lock)
+                if (_shortest is null || trace.Steps.Length < _shortest.Steps.Length) _shortest = trace;
+        }
+
+        public void Report(SpecReport report)
+        {
+            report.DeadlockTraces = counters.Deadlocks;
+            report.DeadlockTrace = _shortest?.ToString(spec.Printer, -1, t => Alternatives(spec, t));
+        }
+    }
+
     static string Alternatives<S>(Spec<S> spec, Transition<S> step)
     {
         var sb = new StringBuilder();
@@ -1716,7 +1757,7 @@ public static partial class Check
             // sampling is caught here too, and the cost is one extra fault-free pass rather than a 10M-state search.
             baseline: () => { var v = SampleFault(spec, new SpecFault<S>("(baseline)", (_, _) => false, (_, a) => a),
                                                    minSteps, maxSteps, seed, iter, time, threads);
-                               if (v is not null) throw new CsCheckException(v.ToString(spec.Printer)); },
+                               if (v is not null) ThrowHelper.Throw(v.ToString(spec.Printer)); },
             // Sampling always concludes (the budget runs out, never "gives up"), so closed is always true.
             fault => (SampleFault(spec, fault, minSteps, maxSteps, seed, iter, time, threads), true));
 
@@ -1749,7 +1790,7 @@ public static partial class Check
         var cut = new Transition<S>[best.StepIndex + 1];
         Array.Copy(steps, cut, cut.Length);
         return new SpecViolation<S>(best.Id, best.Quote, best.Detail, best.StepIndex,
-            new Trace<S>(best.Trace.Initial, cut, false));
+            new Trace<S>(best.Trace.Initial, cut, false), best.Req);
     }
 
     static SpecFaultsReport FaultsReport<S>(Spec<S> spec, string mode, string? caveat, string uncaughtMessage,
@@ -1806,7 +1847,7 @@ public static partial class Check
         var report = new SpecFaultsReport(results, uncaught, inconclusive, idle, sb.ToString());
         writeLine?.Invoke(report.ToString());
         if (uncaught.Count != 0 && throwOnUncaught)
-            throw new CsCheckException($"{uncaughtMessage}: {string.Join(", ", uncaught)}");
+            ThrowHelper.Throw($"{uncaughtMessage}: {string.Join(", ", uncaught)}");
         return report;
     }
 
@@ -1840,13 +1881,19 @@ public static partial class Check
                 if (!apply(sut, trace.Steps[i])) return i;
             return -1;
         }
+        var deadEnds = new DeadEnds<S>(spec, counters);
         try
         {
             spec.GenTrace(minSteps, maxSteps).Sample(
-                trace => SpecWalk(spec, trace, counters) is null && Diverged(create, apply, trace) == -1,
+                trace =>
+                {
+                    deadEnds.Observe(trace);
+                    return SpecWalk(spec, trace, counters) is null && Diverged(create, apply, trace) == -1;
+                },
                 null, seed, iter, time, threads,
             trace =>
             {
+                if (trace is null) return "\n  The model threw before a trace could be generated.";
                 var violation = SpecCheck(spec, trace, null);
                 if (violation is not null) return violation.ToString(spec.Printer);
                 // Re-running Diverged here to find the step for the error message. If apply throws deterministically
@@ -1862,6 +1909,7 @@ public static partial class Check
         {
             report.TracesWalked = counters.Traces;
             report.StepsWalked = counters.Steps;
+            deadEnds.Report(report);
             writeLine?.Invoke(report.ToString());
         }
         return report;

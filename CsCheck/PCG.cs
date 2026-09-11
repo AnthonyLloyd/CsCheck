@@ -115,10 +115,13 @@ internal static class SeedString
     static int Index(char c)
     {
         int i = Chars64.IndexOf(c);
-        return i != -1 ? i : throw new CsCheckException($"Invalid seed char: {c}");
+        return i != -1 ? i : ThrowHelper.Throw<int>($"Invalid seed char: {c}");
     }
     internal static ulong Parse(string seed, out uint stream)
     {
+        if (seed.Length is < 12 or > 17)
+            ThrowHelper.Throw(
+                $"Invalid seed '{seed}': {seed.Length} characters, expected 12 to 17 as printed by a failing sample");
         stream = (uint)(seed.Length == 12 ? Index(seed[11])
             : seed.Length == 13 ? Index(seed[11]) + (Index(seed[12]) << 6)
             : seed.Length == 14 ? Index(seed[11]) + (Index(seed[12]) << 6) + (Index(seed[13]) << 12)

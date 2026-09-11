@@ -3,7 +3,6 @@ namespace Tests.Specs;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CsCheck;
-#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
 
 /// <summary>An introduction to <c>Spec</c>, in one file. The subject is the state machine everyone has written: an
 /// order that gets paid, shipped and delivered, or cancelled and refunded. It usually lives in a table on a wiki page
@@ -13,7 +12,7 @@ using CsCheck;
 /// <para>The worked examples that follow this one (FixEngine, RefreshCache, Fencing, BlockingQueue, AlternatingBit,
 /// Disruptor, TerminationDetection) are where the technique gets
 /// interesting and where the abstraction choices start to matter.</para></summary>
-public class SpecIntroTests
+public partial class SpecIntroTests
 {
     public enum Status { New, Paid, Shipped, Delivered, Cancelled }
 
@@ -166,16 +165,31 @@ public class SpecIntroTests
         await Assert.That(mermaid).StartsWith("flowchart LR");
         // Seven nodes and six edges, matching the proof, and three intended ends highlighted: delivered, cancelled
         // after a refund, and cancelled before paying - which is settled too, and which reading the picture corrected.
-        await Assert.That(Regex.Count(mermaid, @"n\d+\[""(New|Paid|Shipped|Delivered|Cancelled)")).IsEqualTo(7);
-        await Assert.That(Regex.Count(mermaid, " -->\\|")).IsEqualTo(6);
-        await Assert.That(Regex.Count(mermaid, @"class n\d+ terminal")).IsEqualTo(3);
-        await Assert.That(Regex.Count(mermaid, @"class n\d+ deadlock")).IsEqualTo(0);
+        await Assert.That(MyRegex.Count(mermaid)).IsEqualTo(7);
+        await Assert.That(MyRegex1.Count(mermaid)).IsEqualTo(6);
+        await Assert.That(MyRegex2.Count(mermaid)).IsEqualTo(3);
+        await Assert.That(MyRegex3.Count(mermaid)).IsEqualTo(0);
 
         // Without the refund the cancelled order is a dead end, so it is highlighted as a deadlock instead.
         var stuck = Create(refundable: false).Mermaid();
         TUnitX.WriteLine(stuck);
-        await Assert.That(Regex.Count(stuck, @"class n\d+ deadlock")).IsEqualTo(1);
+        await Assert.That(MyRegex4.Count(stuck)).IsEqualTo(1);
     }
+
+    [GeneratedRegex(@"n\d+\[""(New|Paid|Shipped|Delivered|Cancelled)")]
+    private static partial Regex MyRegex { get; }
+
+    [GeneratedRegex(" -->\\|")]
+    private static partial Regex MyRegex1 { get; }
+
+    [GeneratedRegex(@"class n\d+ terminal")]
+    private static partial Regex MyRegex2 { get; }
+
+    [GeneratedRegex(@"class n\d+ deadlock")]
+    private static partial Regex MyRegex3 { get; }
+
+    [GeneratedRegex(@"class n\d+ deadlock")]
+    private static partial Regex MyRegex4 { get; }
 
     /// <summary>docs/Spec.md shows this graph twice, once as the text the call returns and once as the diagram a
     /// Markdown renderer makes of it, so both copies have to be what the call returns now.</summary>

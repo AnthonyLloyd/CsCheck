@@ -113,7 +113,7 @@ public static class Logging
 
     public static ILogger CreateTycheLogger([CallerMemberName] string? name = null, string? directory = null, StreamWriter? writer = null, Func<object, string>? print = null)
     {
-        if (name is null) throw new CsCheckException("name is null");
+        if (name is null) ThrowHelper.Throw("name is null");
         var channel = Channel.CreateUnbounded<(object Value, bool Success)>(new() { SingleReader = true, SingleWriter = false });
         return new TycheLogger(async () =>
         {

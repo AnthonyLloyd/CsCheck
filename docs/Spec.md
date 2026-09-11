@@ -64,8 +64,7 @@ parameter, so the configuration measured is named where it is not the only one:
 
 The EWD 998 row is verified against TLC 1.7.4 running `EWD998Small.cfg` (N=3) directly: TLC gives **1,520,618
 distinct states and 11,238,019 generated**, matching this spec's 1,520,691 within 73 states: the scaffold states
-from the three setup actions before any protocol initial state. The "1.3m" note embedded in `EWD998.tla` was
-wrong; the Copilot reviewer on the PR flagged a lower-bound concern, and running TLC settled it.
+from the three setup actions before any protocol initial state.
 
 The four reimplementations are checked against their originals in different ways, and it is worth knowing which is
 available to you: `BlockingQueueSpec` against published trace lengths, an independent transliteration, and a *derived
@@ -224,6 +223,24 @@ time.
 
 is bounded in *clock ticks*, not in steps. Without `per:` a counterparty that keeps sending messages would burn
 the deadline without any time passing, and the requirement would be nonsense.
+
+A `Response` that fails does so several steps after the step that caused it, so the trace marks the step the obligation
+was raised on rather than leaving it to be counted back to:
+
+```
+         clock=0
+     1 Ring  raised here
+         clock=1
+     2 Tick
+         clock=2
+ >>  3 Tick
+         clock=3
+```
+
+`NeverAfter` marks where the scope opened, and `AtMost` marks every occurrence it counted, including the one that broke
+the bound - the report's number as a set of positions. A keyed instance closes over its own element, so the marks belong
+to the subject that failed and not to any of the others. `Precedes` gets none: it fails only when its `second` holds
+having never seen its `first`, so there is nothing earlier to point at.
 
 **The response must land on a later step.** A response holding on the trigger step itself does not discharge the
 obligation, which is stricter than LTL's leads-to, where `F` includes the present, and the opposite of `Precedes`,

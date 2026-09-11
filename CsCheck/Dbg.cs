@@ -409,7 +409,7 @@ public static class Dbg
         public void Dispose()
         {
             if (reading && stream.Length != stream.Position)
-                throw new CsCheckException($"file (length {stream.Length}) contains more data than read (length {stream.Position})");
+                ThrowHelper.Throw($"file (length {stream.Length}) contains more data than read (length {stream.Position})");
             regressionStream = null;
             stream.Dispose();
         }
@@ -428,7 +428,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadBool(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -442,7 +442,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadSByte(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -456,7 +456,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadByte(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -470,7 +470,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadShort(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -484,7 +484,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadUShort(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -498,7 +498,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadInt(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -512,7 +512,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadUInt(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -526,7 +526,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadLong(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -540,7 +540,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadULong(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -554,7 +554,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadDateTime(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -568,7 +568,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadTimeSpan(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -582,7 +582,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadDateTimeOffset(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -596,7 +596,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadGuid(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -610,7 +610,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadChar(stream);
                 if (val != val2)
-                    throw new CsCheckException($"Actual '{val}' but Expected '{val2}'. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual '{val}' but Expected '{val2}'. (last string was {LastString})");
             }
             else
             {
@@ -625,7 +625,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadString(stream);
                 if (!string.Equals(val, val2))
-                    throw new CsCheckException($"Actual '{val}' but Expected '{val2}'. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual '{val}' but Expected '{val2}'. (last string was {LastString})");
             }
             else
             {
@@ -640,7 +640,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadDouble(stream);
                 if (Math.Abs(val - val2) > absolute + relative * (Math.Abs(val) + Math.Abs(val2)))
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -654,7 +654,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadFloat(stream);
                 if (Math.Abs(val - val2) > absolute + relative * (Math.Abs(val) + Math.Abs(val2)))
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. (last string was {LastString})");
             }
             else
             {
@@ -668,7 +668,7 @@ public static class Dbg
             {
                 var val2 = Hash.StreamSerializer.ReadDecimal(stream);
                 if ((double)Math.Abs(val - val2) > absolute + relative * (double)(Math.Abs(val) + Math.Abs(val2)))
-                    throw new CsCheckException($"Actual {val} but Expected {val2}. `");
+                    ThrowHelper.Throw($"Actual {val} but Expected {val2}. `");
             }
             else
             {

@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using CsCheck;
 using Wake = BlockingQueueSpec.Wake;
-#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
 
 /// <summary>Checked against the original three ways, in increasing order of how much it would take to fool.
 /// <para>One, an independent breadth first walk transliterated straight from the TLA+ - a list of producer ids for the
@@ -21,7 +20,7 @@ using Wake = BlockingQueueSpec.Wake;
 /// already a fix, and a model of that finds nothing - as the first attempt here did, oracle and all. The version the
 /// published traces come from notifies one arbitrary thread of <em>either</em> kind, because that is what</para>
 /// <c>Object.notify</c> does, and that is the whole bug.</summary>
-public class BlockingQueueTests
+public partial class BlockingQueueTests
 {
     /// <summary>The bug, found without writing a requirement for it. Every thread waiting is a state with no action
     /// enabled, and no state here is a legitimate end - a running thread always has either a Put or a Get to do - so
@@ -42,8 +41,11 @@ public class BlockingQueueTests
         // available and the last had none, so the trace ends on a forced move.
         var steps = report.DeadlockTrace!.Split('\n');
         await Assert.That(steps.Count(s => s.Contains(" or ", StringComparison.Ordinal))).IsGreaterThan(1);
-        await Assert.That(steps.Last(s => Regex.IsMatch(s, @"^\s+\d+ "))).DoesNotContain(" or ");
+        await Assert.That(steps.Last(MyRegex.IsMatch)).DoesNotContain(" or ");
     }
+
+    [GeneratedRegex(@"^\s+\d+ ")]
+    private static partial Regex MyRegex { get; }
 
     /// <summary>docs/Spec.md quotes the tail of this trace to show the alternatives column, and the indentation is
     /// load bearing: the step numbers are right padded to two, so a copy typed by hand does not line up.</summary>

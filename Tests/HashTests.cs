@@ -108,6 +108,21 @@ public class StreamSerializerTests
     {
         TestRoundtrip(Gen.UInt, Hash.StreamSerializer.WriteVarint, Hash.StreamSerializer.ReadVarint);
     }
+
+    [Test]
+    public async Task Varint_Truncated_Does_Not_Hang()
+    {
+        foreach (var bytes in new[] { Array.Empty<byte>(), [200], [200, 200, 200] })
+        {
+            var thread = new Thread(() =>
+            {
+                try { Hash.StreamSerializer.ReadVarint(new MemoryStream(bytes)); } catch { }
+            })
+            { IsBackground = true };
+            thread.Start();
+            await Assert.That(thread.Join(10000)).IsTrue();
+        }
+    }
 }
 
 public class HashTests
@@ -193,6 +208,21 @@ public class HashTests
         h.Add(1.03);
         h.Add(1.05);
         await Assert.That(h.BestOffset()).IsEqualTo(100000001);
+    }
+
+    [Test]
+    public void SignificantFigures_Handles_NonFinite()
+    {
+        foreach (var offset in new[] { -1, 500 })
+        {
+            var h = new Hash(null, offset, significantFigures: 2);
+            h.Add(double.PositiveInfinity);
+            h.Add(double.NegativeInfinity);
+            h.Add(double.NaN);
+            h.Add(float.PositiveInfinity);
+            h.Add(float.NegativeInfinity);
+            h.Add(float.NaN);
+        }
     }
 
     [Test]

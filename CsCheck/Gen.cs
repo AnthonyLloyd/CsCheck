@@ -1352,7 +1352,7 @@ public static class Gen
 
     static void ShuffleInPlace<T>(IList<T> a, PCG pcg, int lower)
     {
-        for (int i = a.Count - 1; i > lower; i--)
+        for (int i = a.Count - 1; i >= lower && i > 0; i--)
         {
             int j = (int)pcg.Next((uint)(i + 1));
             if (i != j)
@@ -1479,8 +1479,8 @@ public static class Gen
             int lower = Math.Max(gens.Length - length, 0);
             ShuffleInPlace(array, pcg, lower);
             size = new Size(0);
-            var r = new T[length];
-            for (int i = 0; i < length; i++)
+            var r = new T[gens.Length - lower];
+            for (int i = 0; i < r.Length; i++)
             {
                 r[i] = array[i + lower].Generate(pcg, min, out var s);
                 size.Add(s);
@@ -1524,8 +1524,9 @@ public static class Gen
             int lower = Math.Max(array.Length - length, 0);
             ShuffleInPlace(array, pcg, lower);
             size = new Size(0);
-            var r = new List<T>(length);
-            for (int i = 0; i < length; i++)
+            var count = array.Length - lower;
+            var r = new List<T>(count);
+            for (int i = 0; i < count; i++)
             {
                 r.Add(array[i + lower].Generate(pcg, min, out var s));
                 size.Add(s);
@@ -2694,7 +2695,13 @@ public sealed class GenChar : Gen<char>
 
     /// <summary>Generate char uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<char> this[char start, char finish]
-        => new Range(start, finish + 1U - start);
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range(start, finish + 1U - start);
+        }
+    }
     sealed class GenChars(string chars) : Gen<char>
     {
         public override char Generate(PCG pcg, Size? min, out Size size)

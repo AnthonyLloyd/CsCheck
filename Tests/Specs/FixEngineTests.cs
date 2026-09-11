@@ -3,7 +3,7 @@ namespace Tests.Specs;
 using System;
 using System.Linq;
 using CsCheck;
-using Seq = Tests.Specs.FixEngineSpec.Seq;
+using Seq = FixEngineSpec.Seq;
 
 /// <summary>The FIX 4.4 session core, specified once and then checked four ways: proved exhaustively, sampled
 /// randomly, mutation tested to show the requirements are strong enough, and used to check a hand written engine

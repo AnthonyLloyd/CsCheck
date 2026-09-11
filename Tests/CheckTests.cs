@@ -209,6 +209,33 @@ public class CheckTests
     }
 
     [Test]
+    public async Task Equal_ConcurrentBag_Counts_Duplicates()
+    {
+        await Assert.That(Check.Equal<ConcurrentBag<int>>([with([1, 1, 2])], [with([2, 1, 1])])).IsTrue();
+        await Assert.That(Check.Equal<ConcurrentBag<int>>([with([1, 1, 2])], [with([1, 2, 2])])).IsFalse();
+    }
+
+    [Test]
+    public async Task EqualUnordered_Counts_Duplicates()
+    {
+        await Assert.That(Check.EqualUnordered(new[] { 1, 1, 2 }, new[] { 1, 2, 1 })).IsTrue();
+        await Assert.That(Check.EqualUnordered(new[] { 1, 1, 2 }, new[] { 1, 2, 2 })).IsFalse();
+    }
+
+    [Test]
+    public async Task Equal_Array2D_Compares_Elements_Structurally()
+    {
+        await Assert.That(Check.Equal(
+            new List<int>[,] { { [1], [2] } },
+            new List<int>[,] { { [1], [2] } }
+        )).IsTrue();
+        await Assert.That(Check.Equal(
+            new List<int>[,] { { [1], [2] } },
+            new List<int>[,] { { [1], [3] } }
+        )).IsFalse();
+    }
+
+    [Test]
     public async Task ModelEqual_HashSet()
     {
         await Assert.That(Check.ModelEqual(
@@ -362,6 +389,28 @@ public class CheckTests
     }
 
     [Test]
+    public void FasterResult_Ties_Are_Never_Enough_To_Conclude()
+    {
+        Gen.Int[1, 50].Sample(ties =>
+        {
+            var result = new Check.FasterResult(6.0, 1, false);
+            for (int i = 0; i < ties; i++)
+                if (result.Add(100, 100)) return false;
+            return true;
+        });
+    }
+
+    [Test]
+    public void SampleParallel_Works_With_One_Thread_Available()
+    {
+        Gen.Const(() => new ConcurrentQueue<int>())
+        .SampleParallel(
+            Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
+            Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _)),
+            threads: 1, iter: 20);
+    }
+
+    [Test]
     public void SampleParallel_ConcurrentQueue()
     {
         Gen.Const(() => new ConcurrentQueue<int>())
@@ -399,6 +448,18 @@ public class CheckTests
             Gen.Int[1, 5].Operation<ConcurrentDictionary<int, int>, Dictionary<int, int>>(i => $"Set ({i})", (q, i) => q[i] = i, (q, i) => q[i] = i),
             Gen.Int[1, 5].Operation<ConcurrentDictionary<int, int>, Dictionary<int, int>>(i => $"TryRemove ({i})", (q, i) => q.TryRemove(i, out _), (q, i) => q.Remove(i))
         );
+    }
+
+    [Test]
+    public void MedianEstimator_Minimum_And_Maximum_Are_Exact()
+    {
+        Gen.Int[1, 40].SelectMany(n => Gen.Int[-50, 50].Select(i => (double)i).Array[n])
+        .Sample(a =>
+        {
+            var estimator = new MedianEstimator();
+            foreach (var d in a) estimator.Add(d);
+            return estimator.Minimum == a.Min() && estimator.Maximum == a.Max();
+        });
     }
 
     [Test]

@@ -66,6 +66,41 @@ public class UtilsTests
         await Assert.That(Check.Print(1E-20m)).IsEqualTo("1E-20");
         await Assert.That(Check.Print(1234E20m)).IsEqualTo("1234E20");
     }
+
+    static List<string> OrderPreservingInterleavings(int[] threadIds)
+    {
+        var results = new List<string>();
+        var taken = new bool[threadIds.Length];
+        var order = new List<int>();
+        void Recurse()
+        {
+            if (order.Count == threadIds.Length) { results.Add(string.Join(",", order)); return; }
+            for (int i = 0; i < threadIds.Length; i++)
+            {
+                if (taken[i] || Enumerable.Range(0, i).Any(j => !taken[j] && threadIds[j] == threadIds[i])) continue;
+                taken[i] = true;
+                order.Add(i);
+                Recurse();
+                order.RemoveAt(order.Count - 1);
+                taken[i] = false;
+            }
+        }
+        Recurse();
+        return results;
+    }
+
+    [Test]
+    public void Permutations_Matches_Interleaving_Oracle()
+    {
+        Gen.Int[0, 2].Array[1, 6].Sample(threadIds =>
+        {
+            var sequence = Enumerable.Range(0, threadIds.Length).ToArray();
+            var actual = Check.Permutations((int[])threadIds.Clone(), sequence)
+                .Select(p => string.Join(",", p)).ToList();
+            var expected = OrderPreservingInterleavings(threadIds);
+            return actual.Count == expected.Count && actual.ToHashSet().SetEquals(expected);
+        });
+    }
 }
 
 public class ThreadStatsTests
@@ -74,7 +109,7 @@ public class ThreadStatsTests
     {
         var seq = new int[ids.Length];
         Array.Copy(ids, seq, ids.Length);
-        await Assert.That(Check.Equal(Check.Permutations(ids, seq), expected)).IsTrue();
+        await Assert.That(Check.EqualUnordered(Check.Permutations(ids, seq), expected)).IsTrue();
     }
 
     [Test]
@@ -100,6 +135,7 @@ public class ThreadStatsTests
         await Test([1, 1, 2], [
             [1, 1, 2],
             [1, 2, 1],
+            [2, 1, 1],
         ]);
     }
 
@@ -135,6 +171,7 @@ public class ThreadStatsTests
             [1, 1, 2, 2],
             [1, 2, 2, 1],
             [2, 1, 2, 1],
+            [2, 2, 1, 1],
         ]);
     }
 

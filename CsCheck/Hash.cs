@@ -70,7 +70,7 @@ public sealed class Hash : IRegression
             {
                 var val2 = deserialize(stream);
                 if (!val.Equals(val2))
-                    throw new CsCheckException($"Actual '{val}' but Expected '{val2}'. (last string was {LastString})");
+                    ThrowHelper.Throw($"Actual '{val}' but Expected '{val2}'. (last string was {LastString})");
             }
         }
     }
@@ -274,7 +274,7 @@ public sealed class Hash : IRegression
             }
             else if (SignificantFigures.HasValue)
             {
-                if (val == 0.0)
+                if (val == 0.0 || !double.IsFinite(val))
                 {
                     roundingFractions!.Add(0);
                 }
@@ -294,7 +294,7 @@ public sealed class Hash : IRegression
             }
             else if (SignificantFigures.HasValue)
             {
-                if (val != 0.0)
+                if (val != 0.0 && double.IsFinite(val))
                 {
                     var scale = Pow10Double(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
                     val = Math.Floor(val * scale + ((double)Offset / OFFSET_SIZE)) / scale;
@@ -321,7 +321,7 @@ public sealed class Hash : IRegression
             }
             else if (SignificantFigures.HasValue)
             {
-                if (val == 0.0f)
+                if (val == 0.0f || !float.IsFinite(val))
                 {
                     roundingFractions!.Add(0);
                 }
@@ -341,7 +341,7 @@ public sealed class Hash : IRegression
             }
             else if (SignificantFigures.HasValue)
             {
-                if (val != 0.0f)
+                if (val != 0.0f && float.IsFinite(val))
                 {
                     var scale = Pow10Float(SignificantFigures.Value - 1 - (int)Math.Floor(Math.Log10(Math.Abs(val))));
                     val = (float)Math.Floor(val * scale + ((float)Offset / OFFSET_SIZE)) / scale;
@@ -683,9 +683,9 @@ public sealed class Hash : IRegression
             uint i = 0;
             while (true)
             {
-                var b = (uint)stream.ReadByte();
-                if (b < 128u) return i + b;
-                i = (i + (b & 127u)) << 7;
+                var b = stream.ReadByte();
+                if (b < 128) return i + (uint)b;
+                i = (i + ((uint)b & 127u)) << 7;
             }
         }
     }
