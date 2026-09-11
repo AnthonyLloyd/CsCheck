@@ -358,8 +358,9 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
             return false;
         if (a is IEquatable<T> aieq)
             return aieq.Equals(b);
-        if (a is Array aa2 && b is Array ba2 && aa2.Rank == 2)
+        if (a is Array aa2 && b is Array ba2 && (aa2.Rank == 2 || ba2.Rank == 2))
         {
+            if (aa2.Rank != ba2.Rank) return false;
             int I = aa2.GetLength(0), J = aa2.GetLength(1);
             if (I != ba2.GetLength(0) || J != ba2.GetLength(1)) return false;
             for (int i = 0; i < I; i++)
@@ -572,13 +573,11 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
             yield return (T[])order.Clone();
             yield break;
         }
-        for (int i = 0; i < threadIds.Length; i++)
+loop_i: for (int i = 0; i < threadIds.Length; i++)
         {
             if (taken[i]) continue;
-            var earlierOnSameThread = false;
             for (int j = 0; j < i; j++)
-                if (!taken[j] && threadIds[j] == threadIds[i]) { earlierOnSameThread = true; break; }
-            if (earlierOnSameThread) continue;
+                if (!taken[j] && threadIds[j] == threadIds[i]) { continue loop_i; }
             taken[i] = true;
             order[depth] = sequence[i];
             foreach (var permutation in Interleavings(threadIds, sequence, taken, order, depth + 1))
@@ -707,7 +706,7 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         if (error < bestError)
         {
             bestError = error;
-            bestResult = (n.Max() - n.Min()) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Exponential;
+            bestResult = Math.Exp(a * (n.Max() - n.Min())) - 1.0 < constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Exponential;
         }
         return bestResult;
     }
@@ -1156,6 +1155,22 @@ public static class ThrowHelper
     public static T Throw<T>(string message, Exception? exception)
     {
         throw new CsCheckException(message, exception);
+    }
+}
+
+internal static class Reporter
+{
+    // Formatting and writing fail differently: a report that cannot be formatted can still be written about, but a
+    // writeLine that throws leaves nowhere to say so, and throwing from the finally it is called in would replace the
+    // violation the run exists to report.
+    public static void Write(Action<string>? writeLine, object report)
+    {
+        if (writeLine is null) return;
+        string text;
+        try { text = report.ToString() ?? ""; }
+        catch (Exception e) { text = $"The report could not be formatted: {e.GetType().Name}: {e.Message}"; }
+        try { writeLine(text); }
+        catch { }
     }
 }
 

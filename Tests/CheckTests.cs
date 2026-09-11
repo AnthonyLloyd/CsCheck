@@ -222,6 +222,70 @@ public class CheckTests
         await Assert.That(Check.EqualUnordered(new[] { 1, 1, 2 }, new[] { 1, 2, 2 })).IsFalse();
     }
 
+    /// <summary>Sample writes its passed line after the property has already succeeded, so a sink that throws there
+    /// would turn a passing property into a failing test for a formatting problem.</summary>
+    [Test]
+    public void A_Throwing_WriteLine_Does_Not_Fail_A_Passing_Sample()
+    {
+        Gen.Int[0, 10].Sample(i => i >= 0, writeLine: _ => throw new InvalidOperationException("the sink is gone"), iter: 10);
+    }
+
+    /// <summary>Arrays of different rank are unequal rather than throwing out of the rank 2 comparison.</summary>
+    [Test]
+    public async Task Equal_Arrays_Of_Different_Rank_Are_Unequal()
+    {
+        object oneD = new[] { 1, 2 };
+        object twoD = new[,] { { 1, 2 } };
+        await Assert.That(Check.Equal(twoD, oneD)).IsFalse();
+        await Assert.That(Check.Equal(oneD, twoD)).IsFalse();
+        await Assert.That(Check.Equal(twoD, new[,] { { 1, 2 } })).IsTrue();
+        await Assert.That(Check.Equal(oneD, new[] { 1, 2 })).IsTrue();
+    }
+
+    /// <summary>A rank 2 array is an IList whose IList indexer throws, and the rank 2 branch above only fires when both
+    /// sides are Array, so every IList that is not an array falls through to indexing it. Measured: throws
+    /// ArgumentException for List, Collection, ReadOnlyCollection, ImmutableArray, ImmutableList and ArrayList, in both
+    /// directions.</summary>
+    [Test]
+    [Skip("Known: throws ArgumentException instead of returning false. Reported, not yet triaged.")]
+    public async Task Equal_2D_Array_Versus_IList_Is_Unequal_Rather_Than_Throwing()
+    {
+        object twoD = new[,] { { 1, 2 }, { 3, 4 } };
+        foreach (object other in new object[]
+        {
+            new List<int> { 1, 2, 3, 4 },
+            new System.Collections.ObjectModel.Collection<int> { 1, 2, 3, 4 },
+            new System.Collections.ObjectModel.ReadOnlyCollection<int>(new List<int> { 1, 2, 3, 4 }),
+            System.Collections.Immutable.ImmutableArray.Create(1, 2, 3, 4),
+            System.Collections.Immutable.ImmutableList.Create(1, 2, 3, 4),
+            new System.Collections.ArrayList { 1, 2, 3, 4 },
+        })
+        {
+            await Assert.That(Check.Equal(twoD, other)).IsFalse();
+            await Assert.That(Check.Equal(other, twoD)).IsFalse();
+        }
+    }
+
+    /// <summary>A sequence that is not an IList reaches the flattening comparison, which casts the rank 2 array to a
+    /// four element sequence and finds it equal. Measured: returns true for HashSet, Queue and Enumerable.Range, in
+    /// both directions, while the same contents as a one dimensional array correctly return false.</summary>
+    [Test]
+    [Skip("Known: returns true for a shape mismatch. Reported, not yet triaged.")]
+    public async Task Equal_2D_Array_Versus_A_Flat_Sequence_Is_Unequal()
+    {
+        object twoD = new[,] { { 1, 2 }, { 3, 4 } };
+        foreach (object other in new object[]
+        {
+            new HashSet<int> { 1, 2, 3, 4 },
+            new Queue<int>(new[] { 1, 2, 3, 4 }),
+            Enumerable.Range(1, 4),
+        })
+        {
+            await Assert.That(Check.Equal(twoD, other)).IsFalse();
+            await Assert.That(Check.Equal(other, twoD)).IsFalse();
+        }
+    }
+
     [Test]
     public async Task Equal_Array2D_Compares_Elements_Structurally()
     {
@@ -389,6 +453,30 @@ public class CheckTests
     }
 
     [Test]
+    [Arguments(0)]
+    [Arguments(-1)]
+    public async Task Faster_Repeat_Below_One_Is_Rejected(int repeat)
+    {
+        static void Same() { }
+        var message = Assert.Throws<CsCheckException>(
+            () => Check.Faster(Same, Same, timeout: 1, repeat: repeat))!.Message;
+        await Assert.That(message).Contains("repeat must be at least 1");
+    }
+
+    /// <summary>Rejected at construction, so it holds for a run that never renders a report.</summary>
+    [Test]
+    [Arguments(0)]
+    [Arguments(-1)]
+    public async Task FasterAsync_Repeat_Below_One_Is_Rejected(int repeat)
+    {
+        static Task Quick() => Task.CompletedTask;
+        static Task Slow() { for (int i = 0; i < 400; i++) _ = i * i; return Task.CompletedTask; }
+        var message = (await Assert.ThrowsAsync<CsCheckException>(
+            () => Check.FasterAsync(Quick, Slow, timeout: 1, repeat: repeat)))!.Message;
+        await Assert.That(message).Contains("repeat must be at least 1");
+    }
+
+    [Test]
     public void FasterResult_Ties_Are_Never_Enough_To_Conclude()
     {
         Gen.Int[1, 50].Sample(ties =>
@@ -418,6 +506,17 @@ public class CheckTests
             Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
             Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
         );
+    }
+
+    /// <summary>The one thread clamp applies to the model overload too, not just the single state one.</summary>
+    [Test]
+    public void SampleParallelModel_Works_With_One_Thread_Available()
+    {
+        Gen.Const(() => (new ConcurrentQueue<int>(), new Queue<int>()))
+        .SampleParallel(
+            Gen.Int.Operation<ConcurrentQueue<int>, Queue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i), (q, i) => q.Enqueue(i)),
+            Gen.Operation<ConcurrentQueue<int>, Queue<int>>("TryDequeue()", q => q.TryDequeue(out _), q => q.TryDequeue(out _)),
+            threads: 1, iter: 20);
     }
 
     [Test]

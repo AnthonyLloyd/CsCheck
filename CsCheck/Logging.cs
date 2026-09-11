@@ -96,8 +96,11 @@ internal sealed class TycheLogger : ILogger
 
     public void Dispose()
     {
-        _channel.Writer.Complete();
-        _loggingTask.Wait();
+        if (!_channel.Writer.TryComplete()) return;
+        // Dispose runs in the implicit finally of a using, so a faulting log task here would replace the failure the
+        // test exists to report. Wait for the flush, observe the fault, do not raise it.
+        try { _loggingTask.Wait(); }
+        catch (AggregateException) { }
     }
 }
 

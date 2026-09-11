@@ -74,6 +74,84 @@ public partial class SpecValidationTests
         await Assert.That(report.Results[0].Outcome).IsEqualTo(FaultOutcome.Inconclusive);
     }
 
+    /// <summary>The Caught by column was measured against requirement ids only, so NOT CLOSED overflowed it whenever
+    /// every id was shorter than that label and the row it appeared on no longer lined up.</summary>
+    [Test]
+    public async Task Fault_Table_Lines_Up_With_A_Short_Requirement_Id()
+    {
+        var report = Counter()
+            .Invariant("OK", "the counter never goes negative", i => i >= 0)
+            .Fault("a jump", (_, a) => a == 3, (_, a) => a + 1)
+            .Faults(maxStates: 5, throwOnUncaught: false);
+        string header = "", row = "";
+        foreach (var line in report.ToString().Split('\n'))
+        {
+            if (line.Contains("| Fault ")) header = line;
+            else if (line.Contains("| a jump ")) row = line;
+        }
+        await Assert.That(header).IsNotEmpty();
+        await Assert.That(Pipes(row)).IsEqualTo(Pipes(header));
+
+        static string Pipes(string s)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < s.Length; i++) if (s[i] == '|') sb.Append(i).Append(',');
+            return sb.ToString();
+        }
+    }
+
+    /// <summary>Sample writes its report from a finally, so a writeLine that throws there would replace the violation
+    /// the run exists to report with the sink's own failure.</summary>
+    [Test]
+    public async Task A_Throwing_WriteLine_Does_Not_Hide_A_Sampled_Violation()
+    {
+        var spec = Counter().Invariant("SMALL", "the counter stays below three", i => i < 3);
+        var message = Assert.Throws<CsCheckException>(
+            () => spec.Sample(_ => throw new InvalidOperationException("the sink is gone"), iter: 100))!.Message;
+        await Assert.That(message).Contains("SMALL");
+    }
+
+    /// <summary>Exhaustive writes its report immediately before throwing the violation, so a writeLine that throws
+    /// would pre-empt it and the run would fail for the wrong reason.</summary>
+    [Test]
+    public async Task A_Throwing_WriteLine_Does_Not_Hide_An_Exhaustive_Violation()
+    {
+        var spec = Spec.From(0)
+            .Action("Inc", i => i < 5, i => i + 1)
+            .Invariant("SMALL", "the counter stays below three", i => i < 3);
+        var message = Assert.Throws<CsCheckException>(
+            () => spec.Exhaustive(writeLine: _ => throw new InvalidOperationException("the sink is gone")))!.Message;
+        await Assert.That(message).Contains("SMALL");
+    }
+
+    /// <summary>The requirement, its detail and its quote need no printer, so a printer that throws must cost only the
+    /// trace and not which requirement failed.</summary>
+    [Test]
+    public async Task A_Throwing_Printer_Does_Not_Hide_Which_Requirement_Failed()
+    {
+        var spec = Spec.From(0)
+            .Print(_ => throw new InvalidOperationException("the printer blew up"))
+            .Action("Inc", i => i < 5, i => i + 1)
+            .Invariant("SMALL", "the counter stays below three", i => i < 3);
+        var message = Assert.Throws<CsCheckException>(() => spec.Exhaustive())!.Message;
+        await Assert.That(message).Contains("SMALL");
+        await Assert.That(message).Contains("could not be printed");
+    }
+
+    /// <summary>The deadlock trace is rendered before the report is written, so a printer that throws there would take
+    /// the whole report rather than just that one line.</summary>
+    [Test]
+    public async Task A_Throwing_Printer_Does_Not_Hide_The_Report_Of_A_Deadlock()
+    {
+        var report = Spec.From(0)
+            .Print(_ => throw new InvalidOperationException("the printer blew up"))
+            .Action("Inc", i => i < 5, i => i + 1)
+            .Exhaustive();
+        await Assert.That(report.Closed).IsTrue();
+        await Assert.That(report.DeadlockStates).IsEqualTo(1);
+        await Assert.That(report.ToString()).Contains("could not be printed");
+    }
+
     [Test]
     public async Task Unknown_On_Action_Is_Rejected()
     {
@@ -88,6 +166,16 @@ public partial class SpecValidationTests
         var spec = Counter().Response("R", "quote", (_, a) => a == 1, (_, a) => a > 1, within: 2, per: "Clock");
         var message = Assert.Throws<CsCheckException>(() => spec.Exhaustive(maxStates: 10))!.Message;
         await Assert.That(message).Contains("Clock");
+    }
+
+    /// <summary>Mermaid gives up at a count that starts at one, so a non-positive cap would never match and an
+    /// unbounded model would walk until it ran out of memory instead of reporting that it gave up.</summary>
+    [Test]
+    public async Task Mermaid_MaxStates_Below_One_Is_Rejected()
+    {
+        var spec = Spec.From(0).Action("Inc", i => i < 5, i => i + 1);
+        var message = Assert.Throws<CsCheckException>(() => spec.Mermaid(maxStates: 0))!.Message;
+        await Assert.That(message).Contains("maxStates");
     }
 
     /// <summary>A Spec is frozen once an engine has run it. Without this, a Spec held in a static field and added to
@@ -194,6 +282,20 @@ public partial class SpecValidationTests
         await Assert.That(report.Note).Contains("gave up at 100 states");
         await Assert.That(report.Note).DoesNotContain("widest");
         await Assert.That(report.Note).Contains("no state was ever revisited");
+    }
+
+    /// <summary>The widest field diagnostic formats states with the user's printer, so a printer that throws on one of
+    /// them must lose the diagnostic rather than the whole report the caller asked not to throw.</summary>
+    [Test]
+    public async Task Widest_Field_Diagnostic_Survives_A_Throwing_Printer()
+    {
+        var report = Spec.From(new Wide(0, false, 0))
+            .Print(w => w.Counter == 50 ? throw new InvalidOperationException("printer blew up") : w.ToString())
+            .Action("Grow", w => w with { Counter = w.Counter + 1 })
+            .Exhaustive(maxStates: 200, throwOnViolation: false);
+        await Assert.That(report.Closed).IsFalse();
+        await Assert.That(report.Note).Contains("gave up at 200 states");
+        await Assert.That(report.Note).DoesNotContain("widest");
     }
 
     /// <summary>A model that only ever advances is legitimately a tree, so the note that observes it must not read as an
@@ -719,6 +821,18 @@ public partial class SpecValidationTests
     }
 
 
+    /// <summary>Merged edge labels used a non-empty argument name to decide the action takes arguments at all, so a
+    /// domain whose first element prints as empty dropped every later argument from the label.</summary>
+    [Test]
+    public async Task Mermaid_Merges_Arguments_That_Print_As_Empty()
+    {
+        var mermaid = Spec.From(0)
+            .Action("Set", ["", "y"], (i, _) => i == 0, (_, _) => 1)
+            .Mermaid(maxStates: 10);
+        TUnitX.WriteLine(mermaid);
+        await Assert.That(mermaid).Contains("n0 -->|\"Set(,y)\"| n1;");
+    }
+
     [GeneratedRegex(@"^  n0\[""(.*)""\];$", RegexOptions.Multiline)]
     private static partial Regex MyRegex { get; }
 
@@ -801,6 +915,35 @@ public partial class SpecValidationTests
             () => spec.Sample(writeLine: null, minSteps: 3, maxSteps: 3, iter: 20))!.Message;
         await Assert.That(message).Contains("effect boom");
         await Assert.That(message).DoesNotContain("Object reference not set");
+    }
+
+    /// <summary>Trace step bounds are rejected up front rather than crashing inside generation.</summary>
+    [Test]
+    [Arguments(4, 2)]
+    [Arguments(1, 0)]
+    [Arguments(-1, 3)]
+    [Arguments(-1, -1)]
+    public async Task Trace_Steps_Out_Of_Order_Are_Rejected(int minSteps, int maxSteps)
+    {
+        var spec = Spec.From(0)
+            .Action("Inc", s => s < 5, s => s + 1)
+            .Invariant("ANY", "Always true.", _ => true);
+        var message = Assert.Throws<CsCheckException>(
+            () => spec.Sample(writeLine: null, minSteps: minSteps, maxSteps: maxSteps, iter: 20))!.Message;
+        await Assert.That(message).Contains("minSteps <= maxSteps");
+        await Assert.That(message).DoesNotContain("Set seed");
+    }
+
+    [Test]
+    [Arguments(0, 0)]
+    [Arguments(0, 3)]
+    [Arguments(3, 3)]
+    public void Trace_Steps_In_Order_Are_Accepted(int minSteps, int maxSteps)
+    {
+        Spec.From(0)
+            .Action("Inc", s => s < 5, s => s + 1)
+            .Invariant("ANY", "Always true.", _ => true)
+            .Sample(writeLine: null, minSteps: minSteps, maxSteps: maxSteps, iter: 20);
     }
 
     record struct Stuck(bool Pending);

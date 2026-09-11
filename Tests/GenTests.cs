@@ -596,6 +596,12 @@ public class GenTests
     }
 
     [Test]
+    public void TimeSpan_MinMax()
+    {
+        Gen.TimeSpan[TimeSpan.MinValue, TimeSpan.MaxValue].Single();
+    }
+
+    [Test]
     public void TimeSpan_Range()
     {
         (from t in Gen.TimeSpan.Select(Gen.TimeSpan)
@@ -640,6 +646,14 @@ public class GenTests
     {
         var message = Assert.Throws<CsCheckException>(() => _ = Gen.Char['z', 'a'])!.Message;
         await Assert.That(message).Contains("finish");
+    }
+
+    [Test]
+    public async Task Char_Chars_Rejects_Empty_And_Null()
+    {
+        await Assert.That(Assert.Throws<CsCheckException>(() => _ = Gen.Char[""])!.Message).Contains("empty");
+        await Assert.That(Assert.Throws<CsCheckException>(() => _ = Gen.Char[null!])!.Message).Contains("null");
+        await Assert.That(Assert.Throws<CsCheckException>(() => _ = Gen.String[""])!.Message).Contains("empty");
     }
 
     [Test]
@@ -792,6 +806,15 @@ public class GenTests
                         .Select(sample => Tally(3, sample))
          select (expected, actual))
         .Sample(t => Check.ChiSquared(t.expected, t.actual, 10), iter: 1, time: -2);
+    }
+
+    [Test]
+    public async Task Frequency_Total_Zero_Is_Rejected()
+    {
+        var constants = Assert.Throws<CsCheckException>(() => Gen.FrequencyConst((0, "a"), (0, "b")))!.Message;
+        await Assert.That(constants).Contains("zero");
+        var gens = Assert.Throws<CsCheckException>(() => Gen.Frequency((0, Gen.Const("a")), (0, Gen.Const("b"))))!.Message;
+        await Assert.That(gens).Contains("zero");
     }
 
     [Test]

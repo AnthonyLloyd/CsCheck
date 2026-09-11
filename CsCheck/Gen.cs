@@ -1218,6 +1218,7 @@ public static class Gen
         if (constants.Length == 0) ThrowHelper.Throw("Gen.FrequencyConst constants is empty");
         uint total = 0;
         foreach (var (i, _) in constants) total += (uint)i;
+        if (total == 0) ThrowHelper.Throw("Gen.FrequencyConst total frequency is zero");
         return HashHelper.IsPow2(total) ? new GenFrequencyConstPow2<T>(total, constants) : new GenFrequencyConst<T>(total, constants);
     }
 
@@ -1270,6 +1271,7 @@ public static class Gen
         if (gens.Length == 0) ThrowHelper.Throw("Gen.Frequency gens is empty");
         uint total = 0;
         foreach (var (i, _) in gens) total += (uint)i;
+        if (total == 0) ThrowHelper.Throw("Gen.Frequency total frequency is zero");
         return HashHelper.IsPow2(total) ? new GenFrequencyPow2<T>(total, gens) : new GenFrequency<T>(total, gens);
     }
 
@@ -2641,7 +2643,8 @@ public sealed class GenTimeSpan : Gen<TimeSpan>
         get
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-            return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
+            return start == TimeSpan.MinValue && finish == TimeSpan.MaxValue ? this
+                 : new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
         }
     }
 }
@@ -2712,7 +2715,15 @@ public sealed class GenChar : Gen<char>
         }
     }
     /// <summary>Generate char from chars in the string.</summary>
-    public Gen<char> this[string chars] => new GenChars(chars);
+    public Gen<char> this[string chars]
+    {
+        get
+        {
+            if (chars is null) ThrowHelper.Throw("Gen.Char chars is null");
+            if (chars.Length == 0) ThrowHelper.Throw("Gen.Char chars is empty");
+            return new GenChars(chars);
+        }
+    }
     public readonly Gen<char> AlphaNumeric = new GenChars("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
 }
 

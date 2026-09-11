@@ -973,3 +973,99 @@ public static class RegressionExtensions
         foreach (var v in col) r.Add(v);
     }
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Observations from a bug-hunting pass, parked here for later. Nothing below is acted on. Everything is measured rather
+// than inferred unless it says otherwise. Delete this block once it has been read.
+//
+// FOUND, NOT FIXED
+//
+// 1. Check.Equal on a rank 2 array versus a non-array is three-way inconsistent. Measured over 20 ordered pairs of a
+//    2x2 int[,] against collections holding 1,2,3,4:
+//        vs int[]                                                          -> false (correct)
+//        vs List, Collection, ReadOnlyCollection, ImmutableArray,
+//           ImmutableList, ArrayList                          (12 pairs)   -> throws ArgumentException
+//        vs HashSet, Queue, Enumerable.Range                  (6 pairs)    -> true
+//    Cause is in Utils.Equal: the rank 2 branch only fires when both sides are Array, so a T[,] falls through to
+//    "a is IList ail", and a rank 2 array's IList indexer throws. Anything that is not an IList falls further to the
+//    flattening compare, which casts the 2x2 to [1,2,3,4] and calls it equal. The true cases look worse than the
+//    throwing ones: the answer depends on the concrete type of the other side. Two skipped tests in CheckTests.cs
+//    (Equal_2D_Array_Versus_IList_..., Equal_2D_Array_Versus_A_Flat_Sequence_...) assert what I would expect instead.
+//
+// 2. Causal's Time% column disagrees with its speedup columns by a factor of ProcessorCount. One of the two is wrong;
+//    I could not tell which was intended.
+//
+// 3. Negative collection lengths surface raw framework exceptions rather than CsCheck ones:
+//        Gen.Int.Array[-3]      -> OverflowException          Gen.Int.List[-3]   -> ArgumentOutOfRangeException
+//        Gen.Char.Array[-5,-1]  -> OverflowException          Gen.String[-5,-1]  -> OverflowException
+//    The [start, finish] indexers only check finish < start, which -5,-1 satisfies. The guard wanted is start < 0, not
+//    start <= 0, because Array[0] is legitimately an empty array. This is uniform across roughly eight indexers in
+//    GenArray, GenArrayUnique, GenArray2D, GenList and GenString, so it may well be a deliberate "caller error fails
+//    loudly" choice rather than an oversight. Contrast Gen.Char[""], which was fixed because its own siblings all
+//    validated and it alone did not.
+//
+// 4. Gen.Frequency and Gen.FrequencyConst still accept negative weights, which wrap the total through (uint)i. Given
+//    (-1, "a"), (2, "b") the total comes to 1 and the generator always returns "b". Nothing invalid is emitted, only a
+//    meaningless distribution. Spec.Action enforces weight >= 1 for the same reason, so a per-element guard would match
+//    that convention. A zero total is now rejected, which was the case that silently emitted default(T).
+//
+// 5. The formatting branch of Reporter.Write in Utils.cs is unreachable from the Spec engines and therefore unpinned by
+//    any test. SpecReport.ToString is pure string building over precomputed values, so it cannot throw; everything that
+//    depends on the user's printer is rendered earlier, which is why SpecViolation.ToString and PrintTrace are guarded
+//    individually. The branch is kept as insurance for other report types, not because it is verified.
+//
+// 6. GenDateOnly's range indexer uses DateOnly.GetHashCode() as the day number, where DayNumber is the documented
+//    property and FromDayNumber is used two lines above. Verified equal at MinValue, MaxValue and a mid date on
+//    .NET 11, so it works today, but it depends on an undocumented GetHashCode contract.
+//
+// 7. Hash.cs handles non-finite values under DecimalPlaces correctly only by accident of .NET's saturating conversions:
+//    val - Math.Floor(val) is NaN and (int)NaN is 0, which is exactly what the SignificantFigures branch does
+//    deliberately. SignificantFigures needs its explicit guard for a different reason - Math.Log10(Infinity) feeds
+//    (int)Math.Floor into an integer overflow and then a garbage Pow10Double index. No test was added because it would
+//    be asserting the framework's conversion semantics rather than CsCheck's behaviour.
+//
+// 8. Spec.cs still says "the limit is eight" in the AtMost and Response summaries. The enforced limit is sixteen, shared
+//    across both forms.
+//
+// 9. Using arg.Length != 0 as a proxy for "this action takes arguments" conflates an argument-less action with one whose
+//    argument prints as empty. It survives in ActionNames and Alternatives, where it costs only a label - Set rather
+//    than Set(). The Mermaid case, where it dropped arguments from a merged edge label, is fixed. A proper fix needs a
+//    hasArguments flag on SpecAction, since ArgCount == 1 cannot distinguish an argument-less action from a
+//    single-element domain.
+//
+// 10. SpecWalk's thread-static tally reuse compares Triggered.Length and Fired.Length but not Unresolved.Length. Safe
+//     only because both are sized by requirement count and so cannot diverge.
+//
+// 11. PCG.Stream returns the canonical representative rather than the constructor argument for stream >= 2^31, because
+//     Inc = (stream << 1) | 1 leaves 31 usable bits. This is NOT a bug: PCG's own reference implementation drops the top
+//     bit of the sequence selector for the same reason, an LCG's increment having to be odd. I changed this and reverted
+//     it. Documenting the limit is the only thing worth considering.
+//
+// WORTH CONSIDERING
+//
+// A. One property test over the Gen indexer surface would be worth more than any of the above: for any bounds, either
+//    construction throws CsCheckException or every generated value is in range. That single Sample would have caught
+//    Gen.TimeSpan[MinValue, MaxValue] (divide by zero), Gen.Char[""] (divide by zero), Frequency with a zero total
+//    (emitting default(T)) and the negative-length family, all of which were found one at a time by reading.
+//
+// B. The comment at Spec.cs:505 claims Validate is "called by every engine". That is currently true at all six call
+//    sites, but nothing enforces it. A reflection test enumerating the public engine entry points and asserting each one
+//    validates would keep it true as engines are added.
+//
+// C. Mutation-check multi-site fixes per site, not per fix. Two multi-site changes were half-unpinned when first
+//     written: the SampleParallel thread clamp, and the PCG Parse site, where the test only exercised the constructor
+//     and reverting the other half left the suite green.
+//
+// D. Utils.Interleavings uses a labelled continue (loop_i), which needs LangVersion preview. Fine for consumers, since
+//    it only affects compiling CsCheck itself, but it does mean the library cannot be built on a stable LangVersion.
+//
+// PROCESS
+//
+// E. BOM state differs per file and scripted edits do not preserve it. No BOM: Check.cs, Gen.cs, Spec.cs (Logging.cs
+//    starts at namespace). BOM: PCG.cs, Utils.cs, Dbg.cs, Hash.cs, Causal.cs, Timer.cs. Set-Content and
+//    File.WriteAllText each default differently, and both silently rewrote the first three bytes during this pass. Any
+//    scripted edit needs a git diff afterwards.
+//
+// F. Two tests fail only when CsCheck_Time is set globally, from wall-clock starvation across the parallel suite rather
+//    than from anything they assert: Classify_Table_Survives_A_Failure and SampleModelBasedAsync_Classify.
+// ---------------------------------------------------------------------------------------------------------------------

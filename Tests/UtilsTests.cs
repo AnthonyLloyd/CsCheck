@@ -227,6 +227,26 @@ public class ThreadStatsTests
         });
     }
 
+    /// <summary>The complexity class cannot depend on the unit the times were measured in.</summary>
+    [Test]
+    [Arguments(1e-6)]
+    [Arguments(1.0)]
+    [Arguments(1e3)]
+    [Arguments(1e6)]
+    [Arguments(1e9)]
+    public async Task BigO_Is_Scale_Invariant(double scale)
+    {
+        static double[] Scaled(double[] times, double by) => times.Select(t => t * by).ToArray();
+        double[] n = [1, 2, 3];
+        await Assert.That(Check.BigO(n, Scaled([5, 5, 5], scale))).IsEqualTo(BigO.Constant);
+        await Assert.That(Check.BigO(n, Scaled([5, 6, 7], scale))).IsEqualTo(BigO.Linear);
+        await Assert.That(Check.BigO(n, Scaled([5, 8, 13], scale))).IsEqualTo(BigO.Quadratic);
+        await Assert.That(Check.BigO(n, Scaled([1, 8, 27], scale))).IsEqualTo(BigO.Cubic);
+        await Assert.That(Check.BigO(n, Scaled([1, 1 + Math.Log(2), 1 + Math.Log(3)], scale))).IsEqualTo(BigO.Logarithmic);
+        await Assert.That(Check.BigO(n, Scaled([1, 1 + 2 * Math.Log(2), 1 + 3 * Math.Log(3)], scale))).IsEqualTo(BigO.Linearithmic);
+        await Assert.That(Check.BigO(n, Scaled([4, 8, 16], scale))).IsEqualTo(BigO.Exponential);
+    }
+
     [Test]
     public async Task BigO_Exact_Examples()
     {

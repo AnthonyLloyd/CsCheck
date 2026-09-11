@@ -170,7 +170,7 @@ public static partial class Check
 
         if (worker.MinPCG is not null)
             ThrowHelper.Throw(worker.ExceptionMessage(print ?? Print), worker.MinException);
-        if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
+        Reporter.Write(writeLine, $"Passed {worker.Total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -618,7 +618,7 @@ public static partial class Check
         await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
             ThrowHelper.Throw(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
-        if (writeLine is not null) writeLine($"Passed {total:#,0} iterations.");
+        Reporter.Write(writeLine, $"Passed {total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1107,7 +1107,7 @@ public static partial class Check
         cde.Wait();
         cde.Dispose();
         if (worker.MinPCG is not null) ThrowHelper.Throw(worker.ExceptionMessage(print ?? Print), worker.MinException);
-        if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
+        Reporter.Write(writeLine, $"Passed {worker.Total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1349,7 +1349,7 @@ public static partial class Check
         await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
             ThrowHelper.Throw(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
-        if (writeLine is not null) writeLine($"Passed {total:#,0} iterations.");
+        Reporter.Write(writeLine, $"Passed {total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -3856,6 +3856,7 @@ public static partial class Check
     internal sealed class FasterResult(double sigma, int repeat, bool allocAll)
     {
         readonly double Limit = sigma * sigma;
+        readonly int Repeat = repeat >= 1 ? repeat : ThrowHelper.Throw<int>($"Faster repeat must be at least 1, was {repeat}");
         public Exception? Exception;
         public int Faster, Slower;
         public long FasterMin = long.MaxValue, SlowerMin = long.MaxValue;
@@ -3946,13 +3947,13 @@ public static partial class Check
                 times = 1 / times;
                 (q1Times, q3Times) = (1 / q3Times, 1 / q1Times);
             }
-            var (timeString, timeUnit) = TimeFormat((double)Math.Min(FasterMin, SlowerMin) / repeat);
+            var (timeString, timeUnit) = TimeFormat((double)Math.Min(FasterMin, SlowerMin) / Repeat);
             var result = $"{Median.Median:P2}[{Median.Q1:P2}..{Median.Q3:P2}] {times:#0.00}x[{q1Times:#0.00}x..{q3Times:#0.00}x] {faster}";
             if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
             else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
-            result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / repeat)}{timeUnit} vs {timeString((double)SlowerMin / repeat)}{timeUnit}";
-            if (bytesMeasured) result = $"{result}, alloc = {ByteString((double)FasterBytes / repeat)} vs {ByteString((double)SlowerBytes / repeat)}";
-            if (Check.IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
+            result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / Repeat)}{timeUnit} vs {timeString((double)SlowerMin / Repeat)}{timeUnit}";
+            if (bytesMeasured) result = $"{result}, alloc = {ByteString((double)FasterBytes / Repeat)} vs {ByteString((double)SlowerBytes / Repeat)}";
+            if (IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
             return result;
         }
 
@@ -4074,9 +4075,16 @@ public static partial class Check
             }
 
             var hash = new Hash(expectedHashCode, offset, decimalPlaces, significantFigures, memberName, filePath);
-            action(hash);
-            int actualHashCode = hash.GetHashCode();
-            hash.Close();
+            int actualHashCode;
+            try
+            {
+                action(hash);
+                actualHashCode = hash.GetHashCode();
+            }
+            finally
+            {
+                hash.Close();
+            }
             if (actualHashCode != expectedHashCode)
             {
                 hash = new Hash(null, -1, decimalPlaces, significantFigures);

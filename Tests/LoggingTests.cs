@@ -80,4 +80,17 @@ public class LoggingTests
         }
         catch {}
     }
+
+    /// <summary>Dispose must tolerate being called more than once, as IDisposable requires.</summary>
+    [Test]
+    public async Task TycheLogger_Dispose_Is_Idempotent()
+    {
+        await using var memoryStream = new MemoryStream();
+        await using var writer = new StreamWriter(memoryStream);
+        var logger = Logging.CreateTycheLogger(writer: writer);
+        Gen.Int[0, 10].Sample(_ => true, iter: 5, logger: logger);
+        logger.Dispose();
+        logger.Dispose();
+        logger.Dispose();
+    }
 }

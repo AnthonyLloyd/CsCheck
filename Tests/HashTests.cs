@@ -173,6 +173,36 @@ public class HashTests
         });
     }
 
+    /// <summary>A mismatch must release the cache file lock so a later check on the same file still works.</summary>
+    [Test]
+    public async Task Hash_Mismatch_Releases_The_Cache_Lock()
+    {
+        const string member = "HashLockRelease";
+        static void Values(Hash h, int last) { h.Add(1); h.Add("two"); h.Add(3.5); h.Add(last); }
+        static void DeleteCache()
+        {
+            if (!Directory.Exists(Hash.CacheDir)) return;
+            foreach (var f in Directory.GetFiles(Hash.CacheDir, "*" + member + "*", SearchOption.AllDirectories))
+                File.Delete(f);
+        }
+        DeleteCache();
+        var discovered = 0L;
+        try { Check.Hash(h => Values(h, 4), 0, memberName: member); }
+        catch (CsCheckException e) { discovered = long.Parse(e.Message.Split(' ')[^1]); }
+        try
+        {
+            Check.Hash(h => Values(h, 4), discovered, memberName: member);
+            Assert.Throws<CsCheckException>(() => Check.Hash(h => Values(h, 99), discovered, memberName: member));
+            var second = Assert.Throws<CsCheckException>(() => Check.Hash(h => Values(h, 98), discovered, memberName: member));
+            await Assert.That(second).IsNotNull();
+            await Assert.That(second!.Message).DoesNotContain("Recursive");
+        }
+        finally
+        {
+            DeleteCache();
+        }
+    }
+
     [Test]
     public void Hash_Offset_No_Rounding()
     {
