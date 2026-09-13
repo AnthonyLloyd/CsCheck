@@ -24,9 +24,9 @@ CsCheck also makes specification, performance and regression testing simple and 
         <PackageTags>quickcheck;random;model-based;metamorphic;specification;model-checking;temporal;parallel;performance;causal-profiling;regression;testing</PackageTags>
         <Version>4.9.0</Version>
         <PackageReleaseNotes>
+Added NEW Spec specification testing.
 Added allocation comparison to Faster.
 Added operation coverage and classify output to SampleModelBased.
-Added NEW Spec specification testing.
         </PackageReleaseNotes>
         <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>

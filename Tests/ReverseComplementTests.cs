@@ -2,7 +2,7 @@
 #pragma warning disable IDE0300 // Simplify collection initialization
 #pragma warning disable IDE0028 // Simplify collection initialization
 #pragma warning disable IDE0230 // Use UTF-8 string literal
-#pragma warning disable CA1861 // Avoid constant arrays as arguments
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 
 namespace Tests
 {
