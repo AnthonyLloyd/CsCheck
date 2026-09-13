@@ -14,7 +14,7 @@ public sealed class FixEngine
     /// <summary>HeartBtInt, in ticks.</summary>
     public const int Interval = 2;
     /// <summary>Counters saturate here. That is a concession to the specification rather than something a real engine
-    /// would do, and it is what keeps the two comparable under <c>Conform</c>.</summary>
+    /// would do, and it is what keeps the two comparable under <see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>.</summary>
     public const int Cap = 3;
 
     /// <summary>Where one connection is in its life. The only name here that is not FIX vocabulary, deliberately:
@@ -33,19 +33,14 @@ public sealed class FixEngine
 
     /// <summary>What the session emitted during a step.</summary>
     [Flags]
-    public enum Out
-    {
-        None = 0, Logon = 1, Heartbeat = 2, TestRequest = 4, ResendRequest = 8, Resend = 16, Logout = 32,
-        Reject = 64, App = 128,
-    }
+    public enum Out { None = 0, Logon = 1, Heartbeat = 2, TestRequest = 4, ResendRequest = 8, Resend = 16, Logout = 32, Reject = 64, App = 128 }
 
     /// <summary>An inbound message from the wire: the message kind, its MsgSeqNum, and the PossDupFlag fields.
     /// For a bare SequenceReset (GapFillFlag=N), <see cref="SeqNum"/> carries NewSeqNo instead, since MsgSeqNum
     /// is ignored by that message type.</summary>
     public readonly record struct Msg(In Kind, int SeqNum, bool PossDup = false, bool GoodOrig = true)
     {
-        public override string ToString() =>
-            PossDup ? $"{Kind} {SeqNum} {(GoodOrig ? "dup" : "dupBadOrig")}" : $"{Kind} {SeqNum}";
+        public override string ToString() => PossDup ? $"{Kind} {SeqNum} {(GoodOrig ? "dup" : "dupBadOrig")}" : $"{Kind} {SeqNum}";
     }
 
     ConnectionStatus _status = ConnectionStatus.AwaitingLogon;

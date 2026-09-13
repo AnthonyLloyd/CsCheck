@@ -169,8 +169,8 @@ public static partial class Check
         cde.Dispose();
 
         if (worker.MinPCG is not null)
-            throw new CsCheckException(worker.ExceptionMessage(print ?? Print), worker.MinException);
-        if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
+            ThrowHelper.Throw(worker.ExceptionMessage(print ?? Print), worker.MinException);
+        Reporter.Write(writeLine, $"Passed {worker.Total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -617,8 +617,8 @@ public static partial class Check
             tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
-            throw new CsCheckException(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
-        if (writeLine is not null) writeLine($"Passed {total:#,0} iterations.");
+            ThrowHelper.Throw(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
+        Reporter.Write(writeLine, $"Passed {total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1106,8 +1106,8 @@ public static partial class Check
         worker.Execute();
         cde.Wait();
         cde.Dispose();
-        if (worker.MinPCG is not null) throw new CsCheckException(worker.ExceptionMessage(print ?? Print), worker.MinException);
-        if (writeLine is not null) writeLine($"Passed {worker.Total:#,0} iterations.");
+        if (worker.MinPCG is not null) ThrowHelper.Throw(worker.ExceptionMessage(print ?? Print), worker.MinException);
+        Reporter.Write(writeLine, $"Passed {worker.Total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1348,8 +1348,8 @@ public static partial class Check
             tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
-            throw new CsCheckException(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
-        if (writeLine is not null) writeLine($"Passed {total:#,0} iterations.");
+            ThrowHelper.Throw(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
+        Reporter.Write(writeLine, $"Passed {total:#,0} iterations.");
     }
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1551,7 +1551,7 @@ public static partial class Check
             }, writeLine, seed, iter, time, threads,
             p =>
             {
-                if (p == null) return "";
+                if (p is null) return "";
                 var sb = new StringBuilder();
                 sb.Append("\n    Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
                 var initialState = initial.Generate(new PCG(p.Stream, p.Seed), null, out _);
@@ -1827,7 +1827,7 @@ public static partial class Check
         }, writeLine, seed, iter, time, threads,
         p =>
         {
-            if (p == null) return "";
+            if (p is null) return "";
             var sb = new StringBuilder();
             sb.Append("\n    Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
             if (p.InitialMaterialized)
@@ -2163,6 +2163,7 @@ public static partial class Check
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
+        if (threads < 2) threads = 2;
         if (replay == -1) replay = Replay;
         int[]? replayThreads = null;
         if (seed?.Contains('[') == true)
@@ -2228,7 +2229,7 @@ public static partial class Check
         spd =>
         {
             print ??= Print;
-            if (spd == null) return "";
+            if (spd is null) return "";
             var sb = new StringBuilder();
             sb.Append("\n        Initial state: ").Append(print(initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _)));
             sb.Append("\nSequential Operations: ").Append(Print(spd.SequentialOperations.Select(i => i.Item1).ToList()));
@@ -2425,6 +2426,7 @@ public static partial class Check
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
         if (threads == -1) threads = Threads;
+        if (threads < 2) threads = 2;
         if (replay == -1) replay = Replay;
         int[]? replayThreads = null;
         printActual ??= Print;
@@ -2495,7 +2497,7 @@ public static partial class Check
         }, writeLine, seed, iter, time, threads: 1,
         spd =>
         {
-            if (spd == null) return "";
+            if (spd is null) return "";
             var sb = new StringBuilder();
             sb.Append("\n        Initial state: ").Append(printActual(initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _).Item1));
             sb.Append("\nSequential Operations: ").Append(Print(spd.SequentialOperations.Select(i => i.Item1).ToList()));
@@ -2675,8 +2677,8 @@ public static partial class Check
     /// <param name="sigma">Sigma, default of 6.</param>
     public static void ChiSquared(int[] expected, int[] actual, double sigma = 6.0)
     {
-        if (expected.Length != actual.Length) throw new CsCheckException("Expected and actual lengths need to be the same.");
-        if (Array.Exists(expected, e => e <= 5)) throw new CsCheckException("Expected frequency for all buckets needs to be above 5.");
+        if (expected.Length != actual.Length) ThrowHelper.Throw("Expected and actual lengths need to be the same.");
+        if (Array.Exists(expected, e => e <= 5)) ThrowHelper.Throw("Expected frequency for all buckets needs to be above 5.");
         double chi = 0.0;
         for (int i = 0; i < expected.Length; i++)
         {
@@ -2687,7 +2689,7 @@ public static partial class Check
         // chi-squared distribution has Mean = k and Variance = 2 k where k is the number of degrees of freedom.
         int k = expected.Length - 1;
         double sigmaSquared = (chi - k) * (chi - k) / k / 2.0;
-        if (sigmaSquared > sigma * sigma) throw new CsCheckException("Chi-squared standard deviation = " + Math.Sqrt(sigmaSquared).ToString("0.0"));
+        if (sigmaSquared > sigma * sigma) ThrowHelper.Throw("Chi-squared standard deviation = " + Math.Sqrt(sigmaSquared).ToString("0.0"));
     }
 
     sealed class FasterActionWorker(ITimerAction fasterTimer, ITimerAction slowerTimer, FasterResult result, long endTimestamp, bool raiseexception) : IThreadPoolWorkItem
@@ -3854,6 +3856,7 @@ public static partial class Check
     internal sealed class FasterResult(double sigma, int repeat, bool allocAll)
     {
         readonly double Limit = sigma * sigma;
+        readonly int Repeat = repeat >= 1 ? repeat : ThrowHelper.Throw<int>($"Faster repeat must be at least 1, was {repeat}");
         public Exception? Exception;
         public int Faster, Slower;
         public long FasterMin = long.MaxValue, SlowerMin = long.MaxValue;
@@ -3868,7 +3871,8 @@ public static partial class Check
             get
             {
                 float d = Faster - Slower;
-                return d * d / (Faster + Slower);
+                var n = Faster + Slower;
+                return n == 0 ? 0f : d * d / n;
             }
         }
 
@@ -3943,13 +3947,13 @@ public static partial class Check
                 times = 1 / times;
                 (q1Times, q3Times) = (1 / q3Times, 1 / q1Times);
             }
-            var (timeString, timeUnit) = TimeFormat((double)Math.Min(FasterMin, SlowerMin) / repeat);
+            var (timeString, timeUnit) = TimeFormat((double)Math.Min(FasterMin, SlowerMin) / Repeat);
             var result = $"{Median.Median:P2}[{Median.Q1:P2}..{Median.Q3:P2}] {times:#0.00}x[{q1Times:#0.00}x..{q3Times:#0.00}x] {faster}";
             if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
             else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
-            result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / repeat)}{timeUnit} vs {timeString((double)SlowerMin / repeat)}{timeUnit}";
-            if (bytesMeasured) result = $"{result}, alloc = {ByteString((double)FasterBytes / repeat)} vs {ByteString((double)SlowerBytes / repeat)}";
-            if (Check.IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
+            result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / Repeat)}{timeUnit} vs {timeString((double)SlowerMin / Repeat)}{timeUnit}";
+            if (bytesMeasured) result = $"{result}, alloc = {ByteString((double)FasterBytes / Repeat)} vs {ByteString((double)SlowerBytes / Repeat)}";
+            if (IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
             return result;
         }
 
@@ -3995,7 +3999,7 @@ public static partial class Check
         }
         catch (Exception e)
         {
-            throw new CsCheckException($"CsCheck_Seed = \"{pcg.ToString(state)}\"", e);
+            return ThrowHelper.Throw<T>($"CsCheck_Seed = \"{pcg.ToString(state)}\"", e);
         }
     }
 
@@ -4024,7 +4028,7 @@ public static partial class Check
         while (--threads > 0)
             ThreadPool.UnsafeQueueUserWorkItem(worker, false);
         worker.Execute();
-        throw new CsCheckException(worker.message!);
+        return ThrowHelper.Throw<T>(worker.message!);
     }
 
     /// <summary>Generate a single example using the seed and checking that it still satisfies the predicate.</summary>
@@ -4035,7 +4039,7 @@ public static partial class Check
     {
         var t = gen.Generate(PCG.Parse(seed), null, out _);
         if (predicate(t)) return t;
-        throw new CsCheckException("predicate no longer satisfied");
+        return ThrowHelper.Throw<T>("predicate no longer satisfied");
     }
 
     /// <summary>Check a hash of a series of values. Cache values on a correct run and fail with stack trace at first difference.</summary>
@@ -4056,7 +4060,7 @@ public static partial class Check
             hash = new Hash(null, offset, decimalPlaces, significantFigures);
             action(hash);
             var fullHashCode = CsCheck.Hash.FullHash(offset, hash.GetHashCode());
-            throw new CsCheckException($"Hash is {fullHashCode}");
+            ThrowHelper.Throw($"Hash is {fullHashCode}");
         }
         else
         {
@@ -4071,9 +4075,16 @@ public static partial class Check
             }
 
             var hash = new Hash(expectedHashCode, offset, decimalPlaces, significantFigures, memberName, filePath);
-            action(hash);
-            int actualHashCode = hash.GetHashCode();
-            hash.Close();
+            int actualHashCode;
+            try
+            {
+                action(hash);
+                actualHashCode = hash.GetHashCode();
+            }
+            finally
+            {
+                hash.Close();
+            }
             if (actualHashCode != expectedHashCode)
             {
                 hash = new Hash(null, -1, decimalPlaces, significantFigures);
@@ -4087,7 +4098,7 @@ public static partial class Check
                     actualHashCode = hash.GetHashCode();
                 }
                 var actualFullHash = CsCheck.Hash.FullHash(offset, actualHashCode);
-                throw new CsCheckException($"Actual {actualFullHash} but expected {expected}");
+                ThrowHelper.Throw($"Actual {actualFullHash} but expected {expected}");
             }
         }
     }
@@ -4114,7 +4125,7 @@ public static partial class Check
     /// where changing it <em>never</em> affects equality. Fields whose effect on equality is conditional or derived from a
     /// combination of fields (e.g. equality on <c>Math.Max(A, B)</c>) do not fit this binary and should not be declared.
     /// For a field whose equality is normalized (rounding, tolerance, case-insensitive, etc.) ensure the two values are
-    /// meaningfully different by either the <c>Gen</c> (generate values that stay distinct once set) or a matching comparer,
+    /// meaningfully different by either the <see cref="Gen"/> (generate values that stay distinct once set) or a matching comparer,
     /// or both. A field that affects equality but is not declared is detected as a failure.
     /// </remarks>
     /// <param name="gen">The sample input data generator.</param>
@@ -4232,7 +4243,7 @@ public static partial class Check
                     {
                         // Different declared cases must not be equal: the case discriminant is part of equality.
                         if (equals(a, b) || equals(b, a))
-                            throw new CsCheckException($"Instances of different declared cases compare equal: the case discriminant is not part of equality. a = {Print(a)}, b = {Print(b)}");
+                            ThrowHelper.Throw($"Instances of different declared cases compare equal: the case discriminant is not part of equality. a = {Print(a)}, b = {Print(b)}");
                         return true;
                     }
                 }
@@ -4249,7 +4260,7 @@ public static partial class Check
                     b = applies[i].SetPrimary(b);
                 }
                 if (!equals(a, b) || hash(a) != hash(b))
-                    throw new CsCheckException($"Equality or GetHashCode is affected by a field that is not declared as compared or ignored. a = {Print(a)}, b = {Print(b)}");
+                    ThrowHelper.Throw($"Equality or GetHashCode is affected by a field that is not declared as compared or ignored. a = {Print(a)}, b = {Print(b)}");
                 // Change one field at a time on b. Compared fields must break equality; ignored fields must not.
                 for (int i = 0; i < applies.Length; i++)
                 {
@@ -4260,16 +4271,16 @@ public static partial class Check
                     {
                         b = applies[i].SetPrimary(b); // restore for in-place (mutable) setters
                         if (eq)
-                            throw new CsCheckException($"Compared field '{applies[i].Name}' does not affect equality: changing it left the instances equal. a = {Print(a)}, bAlt = {Print(bAlt)}");
+                            ThrowHelper.Throw($"Compared field '{applies[i].Name}' does not affect equality: changing it left the instances equal. a = {Print(a)}, bAlt = {Print(bAlt)}");
                     }
                     else
                     {
                         bool hashEq = hash(a) == hash(bAlt);
                         b = applies[i].SetPrimary(b); // restore for in-place (mutable) setters
                         if (!eq)
-                            throw new CsCheckException($"Ignored field '{applies[i].Name}' affects equality: changing it made the instances unequal. a = {Print(a)}, bAlt = {Print(bAlt)}");
+                            ThrowHelper.Throw($"Ignored field '{applies[i].Name}' affects equality: changing it made the instances unequal. a = {Print(a)}, bAlt = {Print(bAlt)}");
                         if (!hashEq)
-                            throw new CsCheckException($"Ignored field '{applies[i].Name}' affects GetHashCode: changing it changed the hash code while the instances remained equal.");
+                            ThrowHelper.Throw($"Ignored field '{applies[i].Name}' affects GetHashCode: changing it changed the hash code while the instances remained equal.");
                     }
                 }
                 return true;
@@ -4343,7 +4354,7 @@ sealed class EqualityField<T, V> : EqualityField<T>
     }
 }
 
-/// <summary>A builder for the compared and ignored fields tested by <see cref="Check.Equality{T}(Gen{T}, Func{EqualityFields{T}, EqualityFields{T}}, string, long, int, int, Func{ValueTuple{T, T}, string})"/>. Each field takes a setter (a functional <c>with</c> setter or an in-place <see cref="Action{T, V}"/>) and a value generator. To test a compared field the generator must be able to produce two meaningfully-different values for it; for a field with normalized equality (rounding, tolerance, case) either generate values that stay distinct once set or pass a matching comparer.</summary>
+/// <summary>A builder for the compared and ignored fields tested by <see cref="Check.Equality{T}(Gen{T}, Func{EqualityFields{T}, EqualityFields{T}}, string, long, int, int, Func{ValueTuple{T, T}, string})"/>. Each field takes a setter (a functional <see langword="with"/> setter or an in-place <see cref="Action{T, V}"/>) and a value generator. To test a compared field the generator must be able to produce two meaningfully-different values for it; for a field with normalized equality (rounding, tolerance, case) either generate values that stay distinct once set or pass a matching comparer.</summary>
 public sealed class EqualityFields<T>
 {
     internal readonly List<EqualityField<T>> ComparedFields = [];
@@ -4351,7 +4362,7 @@ public sealed class EqualityFields<T>
     internal readonly List<Func<T, bool>> CasePredicates = [];
 
     /// <summary>Add a field that is expected to be included in equality. Changing it must make two equal instances unequal.</summary>
-    /// <param name="set">A functional setter that returns the instance with the field value set (e.g. a record <c>with</c> expression).</param>
+    /// <param name="set">A functional setter that returns the instance with the field value set (e.g. a record <see langword="with"/> expression).</param>
     /// <param name="gen">The generator for the field value.</param>
     /// <param name="comparer">When two field values are considered the same for equality (default EqualityComparer.Default). For a field whose setter transforms the value (e.g. rounds or clamps), pass a comparer that reflects that transform so the two generated values stay distinct once set.</param>
     /// <param name="name">The field name for failure messages (defaults to the setter expression).</param>
@@ -4373,7 +4384,7 @@ public sealed class EqualityFields<T>
     }
 
     /// <summary>Add a field that is expected to be excluded from equality. Changing it must keep two equal instances equal.</summary>
-    /// <param name="set">A functional setter that returns the instance with the field value set (e.g. a record <c>with</c> expression).</param>
+    /// <param name="set">A functional setter that returns the instance with the field value set (e.g. a record <see langword="with"/> expression).</param>
     /// <param name="gen">The generator for the field value.</param>
     /// <param name="comparer">When two field values are considered the same for equality (default EqualityComparer.Default). For a field whose setter transforms the value (e.g. rounds or clamps), pass a comparer that reflects that transform so the two generated values stay distinct once set.</param>
     /// <param name="name">The field name for failure messages (defaults to the setter expression).</param>
@@ -4430,14 +4441,12 @@ public sealed class EqualityFields<T>
     /// <typeparamref name="T"/> (e.g. an abstract record hierarchy, class hierarchy, or subtype-based One-of). The case
     /// predicate and the down/up projections are derived automatically, so only the arm's fields need to be declared.
     /// Use the four-argument overload for sum types whose arms are not subtypes of <typeparamref name="T"/> (e.g. a C#
-    /// <c>union</c> whose members are distinct types).</summary>
+    /// <see langword="union"/> whose members are distinct types).</summary>
     /// <param name="armFields">Declares the compared/ignored fields (and any nested cases) of the arm payload.</param>
     public EqualityFields<T> Case<TArm>(Func<EqualityFields<TArm>, EqualityFields<TArm>> armFields) where TArm : T
         => Case(static t => t is TArm, static t => (TArm)(object)t!, static (_, a) => a, armFields);
 
-    /// <summary>Descend into a sub-component (field) of <typeparamref name="T"/> that is itself a sum type (or record),
-    /// without splitting on a case, to declare its cases and/or compared/ignored fields. Equivalent to the
-    /// four-argument <c>Case</c> with an always-true predicate. Useful for a record whose field is a union or record.</summary>
+    /// <summary>Descend into a sub-component (field) of <typeparamref name="T"/> that is itself a sum type (or record), without splitting on a case, to declare its cases and/or compared/ignored fields. Equivalent to the four-argument <see cref="Case{TArm}(Func{T, bool}, Func{T, TArm}, Func{T, TArm, T}, Func{EqualityFields{TArm}, EqualityFields{TArm}})">Case</see> with an always-true predicate. Useful for a record whose field is a union or record.</summary>
     /// <param name="down">Projects an instance to the sub-component.</param>
     /// <param name="up">Rebuilds an instance from a (possibly modified) sub-component.</param>
     /// <param name="fieldFields">Declares the cases and/or compared/ignored fields of the sub-component.</param>
@@ -4445,18 +4454,14 @@ public sealed class EqualityFields<T>
         Func<EqualityFields<TField>, EqualityFields<TField>> fieldFields)
         => Case(static _ => true, down, up, fieldFields);
 
-    /// <summary>Descend into a sum-typed field of <typeparamref name="T"/> and return a builder whose <c>Case</c>
-    /// declares each arm. The arm type is constrained to be a subtype of the field type <typeparamref name="TField"/>,
-    /// giving compile-time safety that only real arms are declared. For a field that is a C# <c>union</c> (arms not
-    /// subtypes) use the three-argument <c>Union</c> and declare the arms with the four-argument <c>Case</c>.</summary>
+    /// <summary>Descend into a sum-typed field of <typeparamref name="T"/> and return a builder whose <see cref="UnionFields{T, TField}.Case{TArm}(Func{EqualityFields{TArm}, EqualityFields{TArm}})">Case</see> declares each arm. The arm type is constrained to be a subtype of the field type <typeparamref name="TField"/>, giving compile-time safety that only real arms are declared. For a field that is a C# <see langword="union"/> (arms not subtypes) use the three-argument <see cref="Union{TField}(Func{T, TField}, Func{T, TField, T}, Func{EqualityFields{TField}, EqualityFields{TField}})">Union</see> and declare the arms with the four-argument <see cref="Case{TArm}(Func{T, bool}, Func{T, TArm}, Func{T, TArm, T}, Func{EqualityFields{TArm}, EqualityFields{TArm}})">Case</see>.</summary>
     /// <param name="down">Projects an instance to the sum-typed field.</param>
     /// <param name="up">Rebuilds an instance from a (possibly modified) field value.</param>
     public UnionFields<T, TField> Union<TField>(Func<T, TField> down, Func<T, TField, T> up)
         => new(this, down, up);
 }
 
-/// <summary>A builder returned by <see cref="EqualityFields{T}.Union{TField}(Func{T, TField}, Func{T, TField, T})"/>
-/// that declares the arms of a sum-typed field. Implicitly converts back to the parent <see cref="EqualityFields{T}"/>.</summary>
+/// <summary>A builder returned by <see cref="EqualityFields{T}.Union{TField}(Func{T, TField}, Func{T, TField, T})">Union</see> that declares the arms of a sum-typed field. Implicitly converts back to the parent <see cref="EqualityFields{T}"/>.</summary>
 public sealed class UnionFields<T, TField>
 {
     readonly EqualityFields<T> fields;

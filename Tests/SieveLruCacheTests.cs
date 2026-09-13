@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System.Diagnostics.CodeAnalysis;
 using CsCheck;

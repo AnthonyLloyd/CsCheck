@@ -12,12 +12,12 @@ using CsCheck;
 /// <para>The worked examples that follow this one (FixEngine, RefreshCache, Fencing, BlockingQueue, AlternatingBit,
 /// Disruptor, TerminationDetection) are where the technique gets
 /// interesting and where the abstraction choices start to matter.</para></summary>
-public class SpecIntroTests
+public partial class SpecIntroTests
 {
     public enum Status { New, Paid, Shipped, Delivered, Cancelled }
 
     /// <summary>The model state. It must be immutable with value equality - a record or record struct - because
-    /// <c>Exhaustive</c> compares and hashes states to know when it has seen one before. Money is one unit, so
+    /// <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> compares and hashes states to know when it has seen one before. Money is one unit, so
     /// <c>Paid</c> and <c>Refunded</c> are 0 or 1: the requirements below are about the relationship between them,
     /// not about the amount - except REFUND-IS-ONE-STEP, which turns out to be about the amount after all. Give
     /// <c>Pay</c> two amounts and it is false in three steps. docs/Spec.md works that through, because choosing a
@@ -101,8 +101,8 @@ public class SpecIntroTests
     /// <summary>Enumerate every reachable state and check every requirement on every transition out of every one of
     /// them. When the frontier empties the state space is closed, so this is a proof for the model rather than a
     /// sample of it, and the report is the certificate.
-    /// <para>Read the report as well as the assertions. Triggered says how often each requirement's antecedent actually</para>
-    /// fired - a NEVER there means the requirement passed vacuously and proves nothing.</summary>
+    /// <para>Read the report as well as the assertions. Triggered says how often each requirement's antecedent actually
+    /// fired - a NEVER there means the requirement passed vacuously and proves nothing.</para></summary>
     [Test]
     public async Task Exhaustive_Proof()
     {
@@ -134,12 +134,12 @@ public class SpecIntroTests
     /// without it ever holding; that is what Reachable is for. And the deadlock count is 1, which costs no requirement
     /// at all - Exhaustive knows which states have nothing enabled, and Terminal said which of those were intended.
     /// The second signal is the more interesting one, because nobody writes a requirement for a transition they forgot.</para>
-    /// <para>Refund and REFUND-IS-ONE-STEP report NEVER here, which is correct: with the action disabled there is nothing</para>
-    /// for them to do. That is what the coverage table is for.</summary>
+    /// <para>Refund and REFUND-IS-ONE-STEP report NEVER here, which is correct: with the action disabled there is nothing
+    /// for them to do. That is what the coverage table is for.</para></summary>
     [Test]
     public async Task Missing_Transition_Is_A_Dead_End()
     {
-        var report = Create(refundable: false).Exhaustive(out var violation, TUnitX.WriteLine);
+        var report = Create(refundable: false).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsEqualTo(1);
         await Assert.That(violation).IsNotNull();
@@ -149,6 +149,8 @@ public class SpecIntroTests
         await Assert.That(report.DeadlockTrace).IsNotNull();
         await Assert.That(report.DeadlockTrace).Contains("Cancelled paid=1 refunded=0");
         await Assert.That(report.DeadlockTrace).Contains("no action enabled");
+        // The wrong turn named rather than left to be inferred: the step that took Cancel could have taken Ship.
+        await Assert.That(report.DeadlockTrace).Contains("Cancel  or Ship");
     }
 
     /// <summary>Seven states is small enough to look at, so this is the one example where a picture beats a table.
@@ -163,17 +165,44 @@ public class SpecIntroTests
         await Assert.That(mermaid).StartsWith("flowchart LR");
         // Seven nodes and six edges, matching the proof, and three intended ends highlighted: delivered, cancelled
         // after a refund, and cancelled before paying - which is settled too, and which reading the picture corrected.
-#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
-        await Assert.That(Regex.Count(mermaid, @"n\d+\[""(New|Paid|Shipped|Delivered|Cancelled)")).IsEqualTo(7);
-        await Assert.That(Regex.Count(mermaid, " -->\\|")).IsEqualTo(6);
-        await Assert.That(Regex.Count(mermaid, @"class n\d+ terminal")).IsEqualTo(3);
-        await Assert.That(Regex.Count(mermaid, @"class n\d+ deadlock")).IsEqualTo(0);
+        await Assert.That(MyRegex.Count(mermaid)).IsEqualTo(7);
+        await Assert.That(MyRegex1.Count(mermaid)).IsEqualTo(6);
+        await Assert.That(MyRegex2.Count(mermaid)).IsEqualTo(3);
+        await Assert.That(MyRegex3.Count(mermaid)).IsEqualTo(0);
 
         // Without the refund the cancelled order is a dead end, so it is highlighted as a deadlock instead.
         var stuck = Create(refundable: false).Mermaid();
         TUnitX.WriteLine(stuck);
-        await Assert.That(Regex.Count(stuck, @"class n\d+ deadlock")).IsEqualTo(1);
-#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
+        await Assert.That(MyRegex4.Count(stuck)).IsEqualTo(1);
+    }
+
+    [GeneratedRegex(@"n\d+\[""(New|Paid|Shipped|Delivered|Cancelled)")]
+    private static partial Regex MyRegex { get; }
+
+    [GeneratedRegex(" -->\\|")]
+    private static partial Regex MyRegex1 { get; }
+
+    [GeneratedRegex(@"class n\d+ terminal")]
+    private static partial Regex MyRegex2 { get; }
+
+    [GeneratedRegex(@"class n\d+ deadlock")]
+    private static partial Regex MyRegex3 { get; }
+
+    [GeneratedRegex(@"class n\d+ deadlock")]
+    private static partial Regex MyRegex4 { get; }
+
+    /// <summary>docs/Spec.md shows this graph twice, once as the text the call returns and once as the diagram a
+    /// Markdown renderer makes of it, so both copies have to be what the call returns now.</summary>
+    [Test]
+    public async Task Docs_Quote_The_Generated_State_Graph()
+    {
+        var stuck = Create(refundable: false).Mermaid();
+        // Matched on the generator's own opening lines, not on "flowchart", so a hand drawn diagram elsewhere in the
+        // guide is neither mistaken for this one nor able to hide a copy of it that has fallen behind.
+        var head = string.Join('\n', stuck.Split('\n')[..2]);
+        var quoted = Docs.Spec.Where(b => b.StartsWith(head, StringComparison.Ordinal)).ToArray();
+        await Assert.That(quoted.Length).IsEqualTo(2);
+        foreach (var block in quoted) await Assert.That(block).IsEqualTo(stuck);
     }
 
     /// <summary>The same specification as a random walk. For a model this small it adds nothing over the proof, but it

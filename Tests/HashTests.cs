@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.IO;
@@ -108,6 +108,21 @@ public class StreamSerializerTests
     {
         TestRoundtrip(Gen.UInt, Hash.StreamSerializer.WriteVarint, Hash.StreamSerializer.ReadVarint);
     }
+
+    [Test]
+    public async Task Varint_Truncated_Does_Not_Hang()
+    {
+        foreach (var bytes in new[] { Array.Empty<byte>(), [200], [200, 200, 200] })
+        {
+            var thread = new Thread(() =>
+            {
+                try { Hash.StreamSerializer.ReadVarint(new MemoryStream(bytes)); } catch { }
+            })
+            { IsBackground = true };
+            thread.Start();
+            await Assert.That(thread.Join(10000)).IsTrue();
+        }
+    }
 }
 
 public class HashTests
@@ -158,6 +173,36 @@ public class HashTests
         });
     }
 
+    /// <summary>A mismatch must release the cache file lock so a later check on the same file still works.</summary>
+    [Test]
+    public async Task Hash_Mismatch_Releases_The_Cache_Lock()
+    {
+        const string member = "HashLockRelease";
+        static void Values(Hash h, int last) { h.Add(1); h.Add("two"); h.Add(3.5); h.Add(last); }
+        static void DeleteCache()
+        {
+            if (!Directory.Exists(Hash.CacheDir)) return;
+            foreach (var f in Directory.GetFiles(Hash.CacheDir, "*" + member + "*", SearchOption.AllDirectories))
+                File.Delete(f);
+        }
+        DeleteCache();
+        var discovered = 0L;
+        try { Check.Hash(h => Values(h, 4), 0, memberName: member); }
+        catch (CsCheckException e) { discovered = long.Parse(e.Message.Split(' ')[^1]); }
+        try
+        {
+            Check.Hash(h => Values(h, 4), discovered, memberName: member);
+            Assert.Throws<CsCheckException>(() => Check.Hash(h => Values(h, 99), discovered, memberName: member));
+            var second = Assert.Throws<CsCheckException>(() => Check.Hash(h => Values(h, 98), discovered, memberName: member));
+            await Assert.That(second).IsNotNull();
+            await Assert.That(second!.Message).DoesNotContain("Recursive");
+        }
+        finally
+        {
+            DeleteCache();
+        }
+    }
+
     [Test]
     public void Hash_Offset_No_Rounding()
     {
@@ -193,6 +238,21 @@ public class HashTests
         h.Add(1.03);
         h.Add(1.05);
         await Assert.That(h.BestOffset()).IsEqualTo(100000001);
+    }
+
+    [Test]
+    public void SignificantFigures_Handles_NonFinite()
+    {
+        foreach (var offset in new[] { -1, 500 })
+        {
+            var h = new Hash(null, offset, significantFigures: 2);
+            h.Add(double.PositiveInfinity);
+            h.Add(double.NegativeInfinity);
+            h.Add(double.NaN);
+            h.Add(float.PositiveInfinity);
+            h.Add(float.NegativeInfinity);
+            h.Add(float.NaN);
+        }
     }
 
     [Test]

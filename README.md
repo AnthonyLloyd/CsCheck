@@ -493,11 +493,12 @@ says `NEVER` instead of quietly passing:
 ```
 Spec.Exhaustive of 31 requirements
   state space CLOSED: 2,438 states, 51,569 transitions, depth 11, 131 terminal, 0 deadlock
-  | Requirement            |   Triggered | Unresolved |
-  | CAN-LOG-ON             |      13,798 |            |
-  | SEQ-TOO-LOW-FATAL      |       4,420 |            |
-  | LOGOUT-COMPLETES       |         922 |            |
-  | DISCONNECTED-SILENT    |  every step |            |
+  | Requirement             |   Triggered | Unresolved |
+  | CAN-LOG-ON              |      13,798 |            |
+  | SEQ-TOO-LOW-FATAL       |       4,420 |            |
+  | DISCONNECTED-SILENT     |  every step |            |
+  | LOGOUT-COMPLETES        |         922 |            |
+  ...
 ```
 
 (`every step` means the requirement has no antecedent that could fail to fire, so vacuity does not apply to it.)

@@ -13,7 +13,7 @@ public sealed class RefreshCache
     /// <summary>Ticks before a loaded value is considered stale and worth refreshing.</summary>
     public const int Ttl = 2;
     /// <summary>Ages and versions saturate here. A concession to the specification, which is what keeps the two
-    /// comparable under <c>Conform</c>.</summary>
+    /// comparable under <see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>.</summary>
     public const int Cap = 3;
 
     /// <summary>What a read handed back. <c>Miss</c> means the caller got nothing and has to wait for a load, which

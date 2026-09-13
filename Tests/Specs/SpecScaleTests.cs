@@ -162,7 +162,7 @@ public class SpecScaleTests
     static Gen<Spec<Tiny>> GenSpec =>
         from acts in Gen.Select(Gen.Int[0, 2], Gen.Int[0, 2], Gen.Int[0, Cap],
                                 (dA, dB, g) => new ActSpec(dA, dB, g)).Array[1, 3]
-        from reqs in Gen.Select(Gen.Int[0, 5], Gen.Int[0, 3], Gen.Int[1, 3],
+        from reqs in Gen.Select(Gen.Int[0, 6], Gen.Int[0, 3], Gen.Int[1, 3],
                                 (kind, k, n) => new ReqSpec(kind, k, n)).Array[0, 4]
         select Build(acts, reqs);
 
@@ -185,10 +185,69 @@ public class SpecScaleTests
                 case 2: spec.Rule($"R{i}", "q", (b, a) => a.A >= b.A); break;
                 case 3: spec.AtMost($"M{i}", "q", r.N, (b, a) => a.A > b.A); break;
                 case 4: spec.Response($"P{i}", "q", (_, a) => a.A == r.K, (_, a) => a.B > r.K, within: r.N); break;
-                default: spec.NeverAfter($"Z{i}", "q", (_, a) => a.A >= r.K, (b, a) => a.B < b.B); break;
+                case 5: spec.NeverAfter($"Z{i}", "q", (_, a) => a.A >= r.K, (b, a) => a.B < b.B); break;
+                default: spec.Precedes($"C{i}", "q", (_, a) => a.B > r.K, (_, a) => a.A > r.K); break;
             }
         }
         return spec;
+    }
+
+    /// <summary>Only the sound direction: a walk that finds nothing proves nothing.</summary>
+    [Test]
+    public async Task A_Closed_Proof_Cannot_Be_Refuted_By_Sampling()
+    {
+        int seen = 0, proved = 0;
+        GenSpec.Sample(spec =>
+        {
+            seen++;
+            if (!spec.Exhaustive(out var violation, maxStates: 5_000).Closed || violation is not null) return true;
+            proved++;
+            try { spec.Sample(maxSteps: 20, iter: 200); return true; }
+            catch (CsCheckException) { return false; }
+        }, iter: 200, threads: 1);
+        // A share of those drawn, not of the iterations asked for, since CsCheck_Time decides how many that is.
+        TUnitX.WriteLine($"{proved} of {seen} specs closed clean and were then sampled");
+        await Assert.That(proved * 10).IsGreaterThan(seen);
+    }
+
+    /// <summary>Conform drives real code down a trace, so a gap would step it from a state it was never in.</summary>
+    [Test]
+    public void Every_Trace_Is_Contiguous()
+    {
+        GenSpec.Sample(spec =>
+        {
+            var contiguous = true;
+            // About half of these violate something; the traces walked before that are what is under test.
+            try
+            {
+                spec.Conform(() => new Tiny[1] { new(0, 0) }, (sut, t) =>
+                {
+                    contiguous &= t.Before.Equals(sut[0]);
+                    sut[0] = t.After;
+                    return true;
+                }, maxSteps: 20, iter: 100);
+            }
+            catch (CsCheckException) { }
+            return contiguous;
+        }, iter: 100, threads: 1);
+    }
+
+    /// <summary>Arithmetic the report owes itself.</summary>
+    [Test]
+    public void A_Closed_Report_Is_Internally_Consistent()
+    {
+        GenSpec.Sample(spec =>
+        {
+            var report = spec.Exhaustive(out _, maxStates: 5_000);
+            if (!report.Closed) return true;
+            var fired = 0L;
+            foreach (var f in report.ActionFired) fired += f;
+            return fired == report.Transitions
+                && report.TerminalStates + report.DeadlockStates <= report.States
+                && report.Depth < report.States
+                && report.DeadlockTraces == 0
+                && (report.DeadlockTrace is null) == (report.DeadlockStates == 0);
+        }, iter: 200, threads: 1);
     }
 
     /// <summary>The thread agreement tests above pick their models by hand, so they only prove it for the shapes someone

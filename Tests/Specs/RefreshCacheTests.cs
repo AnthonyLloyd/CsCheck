@@ -65,8 +65,8 @@ public class RefreshCacheTests
     /// <summary>The cache has no liveness property of its own: a stale value only becomes fresh if something reads it
     /// and the loader returns, and neither is bounded by anything the cache controls. Asserting the property anyway
     /// puts the counterexample on the record, which is the argument for whichever behaviour you choose to ship.
-    /// <para>The requirement is stated per key. A single Response over both would carry one deadline between them, so a</para>
-    /// refresh completing for one key would discharge the obligation raised by the other.</summary>
+    /// <para>The requirement is stated per key. A single Response over both would carry one deadline between them, so a
+    /// refresh completing for one key would discharge the obligation raised by the other.</para></summary>
     [Test]
     public async Task Stale_Is_Unbounded_While_Loader_Fails()
     {
@@ -77,7 +77,7 @@ public class RefreshCacheTests
             trigger: (_, a, k) => a.Started && a.Touched == k,
             response: (_, a, k) => !a.Of(k).Stale,
             within: RefreshCache.Ttl, per: "Tick")
-        .Exhaustive(out var violation, TUnitX.WriteLine);
+        .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("STALE-ALWAYS-CLEARS[A]");
         TUnitX.WriteLine(violation.ToString(s => s.ToString()));

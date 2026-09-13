@@ -209,6 +209,53 @@ public class CheckTests
     }
 
     [Test]
+    public async Task Equal_ConcurrentBag_Counts_Duplicates()
+    {
+        await Assert.That(Check.Equal<ConcurrentBag<int>>([with([1, 1, 2])], [with([2, 1, 1])])).IsTrue();
+        await Assert.That(Check.Equal<ConcurrentBag<int>>([with([1, 1, 2])], [with([1, 2, 2])])).IsFalse();
+    }
+
+    [Test]
+    public async Task EqualUnordered_Counts_Duplicates()
+    {
+        await Assert.That(Check.EqualUnordered(new[] { 1, 1, 2 }, new[] { 1, 2, 1 })).IsTrue();
+        await Assert.That(Check.EqualUnordered(new[] { 1, 1, 2 }, new[] { 1, 2, 2 })).IsFalse();
+    }
+
+    /// <summary>Sample writes its passed line after the property has already succeeded, so a sink that throws there
+    /// would turn a passing property into a failing test for a formatting problem.</summary>
+    [Test]
+    public void A_Throwing_WriteLine_Does_Not_Fail_A_Passing_Sample()
+    {
+        Gen.Int[0, 10].Sample(i => i >= 0, writeLine: _ => throw new InvalidOperationException("the sink is gone"), iter: 10);
+    }
+
+    /// <summary>Arrays of different rank are unequal rather than throwing out of the rank 2 comparison.</summary>
+    [Test]
+    public async Task Equal_Arrays_Of_Different_Rank_Are_Unequal()
+    {
+        object oneD = new[] { 1, 2 };
+        object twoD = new[,] { { 1, 2 } };
+        await Assert.That(Check.Equal(twoD, oneD)).IsFalse();
+        await Assert.That(Check.Equal(oneD, twoD)).IsFalse();
+        await Assert.That(Check.Equal(twoD, new[,] { { 1, 2 } })).IsTrue();
+        await Assert.That(Check.Equal(oneD, new[] { 1, 2 })).IsTrue();
+    }
+
+    [Test]
+    public async Task Equal_Array2D_Compares_Elements_Structurally()
+    {
+        await Assert.That(Check.Equal(
+            new List<int>[,] { { [1], [2] } },
+            new List<int>[,] { { [1], [2] } }
+        )).IsTrue();
+        await Assert.That(Check.Equal(
+            new List<int>[,] { { [1], [2] } },
+            new List<int>[,] { { [1], [3] } }
+        )).IsFalse();
+    }
+
+    [Test]
     public async Task ModelEqual_HashSet()
     {
         await Assert.That(Check.ModelEqual(
@@ -220,7 +267,6 @@ public class CheckTests
     [Test]
     public async Task ModelEqual_List()
     {
-#pragma warning disable CA1861 // Avoid constant arrays as arguments
         await Assert.That(Check.ModelEqual(
             new List<int> { 1, 2, 3, 4 },
             new int[] { 1, 2, 3, 4 }
@@ -229,7 +275,6 @@ public class CheckTests
             new List<int> { 1, 2, 3, 4 },
             new int[] { 1, 2, 4, 3 }
         )).IsFalse();
-#pragma warning restore CA1861 // Avoid constant arrays as arguments
     }
 
     [Test]
@@ -362,6 +407,52 @@ public class CheckTests
     }
 
     [Test]
+    [Arguments(0)]
+    [Arguments(-1)]
+    public async Task Faster_Repeat_Below_One_Is_Rejected(int repeat)
+    {
+        static void Same() { }
+        var message = Assert.Throws<CsCheckException>(
+            () => Check.Faster(Same, Same, repeat: repeat, timeout: 1))!.Message;
+        await Assert.That(message).Contains("repeat must be at least 1");
+    }
+
+    /// <summary>Rejected at construction, so it holds for a run that never renders a report.</summary>
+    [Test]
+    [Arguments(0)]
+    [Arguments(-1)]
+    public async Task FasterAsync_Repeat_Below_One_Is_Rejected(int repeat)
+    {
+        static Task Quick() => Task.CompletedTask;
+        static Task Slow() { for (int i = 0; i < 400; i++) _ = i * i; return Task.CompletedTask; }
+        var message = (await Assert.ThrowsAsync<CsCheckException>(
+            () => Check.FasterAsync(Quick, Slow, repeat: repeat, timeout: 1)))!.Message;
+        await Assert.That(message).Contains("repeat must be at least 1");
+    }
+
+    [Test]
+    public void FasterResult_Ties_Are_Never_Enough_To_Conclude()
+    {
+        Gen.Int[1, 50].Sample(ties =>
+        {
+            var result = new Check.FasterResult(6.0, 1, false);
+            for (int i = 0; i < ties; i++)
+                if (result.Add(100, 100)) return false;
+            return true;
+        });
+    }
+
+    [Test]
+    public void SampleParallel_Works_With_One_Thread_Available()
+    {
+        Gen.Const(() => new ConcurrentQueue<int>())
+        .SampleParallel(
+            Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
+            Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _)),
+            iter: 20, threads: 1);
+    }
+
+    [Test]
     public void SampleParallel_ConcurrentQueue()
     {
         Gen.Const(() => new ConcurrentQueue<int>())
@@ -369,6 +460,17 @@ public class CheckTests
             Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
             Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
         );
+    }
+
+    /// <summary>The one thread clamp applies to the model overload too, not just the single state one.</summary>
+    [Test]
+    public void SampleParallelModel_Works_With_One_Thread_Available()
+    {
+        Gen.Const(() => (new ConcurrentQueue<int>(), new Queue<int>()))
+        .SampleParallel(
+            Gen.Int.Operation<ConcurrentQueue<int>, Queue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i), (q, i) => q.Enqueue(i)),
+            Gen.Operation<ConcurrentQueue<int>, Queue<int>>("TryDequeue()", q => q.TryDequeue(out _), q => q.TryDequeue(out _)),
+            iter: 20, threads: 1);
     }
 
     [Test]
@@ -399,6 +501,18 @@ public class CheckTests
             Gen.Int[1, 5].Operation<ConcurrentDictionary<int, int>, Dictionary<int, int>>(i => $"Set ({i})", (q, i) => q[i] = i, (q, i) => q[i] = i),
             Gen.Int[1, 5].Operation<ConcurrentDictionary<int, int>, Dictionary<int, int>>(i => $"TryRemove ({i})", (q, i) => q.TryRemove(i, out _), (q, i) => q.Remove(i))
         );
+    }
+
+    [Test]
+    public void MedianEstimator_Minimum_And_Maximum_Are_Exact()
+    {
+        Gen.Int[1, 40].SelectMany(n => Gen.Int[-50, 50].Select(i => (double)i).Array[n])
+        .Sample(a =>
+        {
+            var estimator = new MedianEstimator();
+            foreach (var d in a) estimator.Add(d);
+            return estimator.Minimum == a.Min() && estimator.Maximum == a.Max();
+        });
     }
 
     [Test]

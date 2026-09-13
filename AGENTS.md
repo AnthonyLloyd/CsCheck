@@ -169,7 +169,7 @@ Rules for generating this:
 - `Response` is for consequences that take time: a response holding on the trigger step itself does **not** discharge
   the obligation. A property whose consequence happens in the triggering step (answer a TestRequest with a Heartbeat)
   is a `Rule`. `Precedes` is the opposite: its two predicates holding on one step satisfies it.
-- Read `Triggered` in the report: `NEVER` means the requirement passed vacuously. `Fired` is per (action, argument) case, so `NEVER` there means that case is dead. A non-zero `deadlock` count prints a path to the first one.
+- Read `Triggered` in the report: `NEVER` means the requirement passed vacuously. `Fired` is per (action, argument) case, so `NEVER` there means that case is dead. A non-zero `deadlock` count prints a path to one, each step naming what else was enabled where it was taken, since every action is disabled at the dead end itself. `Sample` reports `deadlocked` as a count of walks rather than of states, and leaves `DeadlockStates` zero.
 - Assert the size of the space (`report.States`, `report.Transitions`), not only that it closed. Every other assertion
   has the form "no counterexample was found", which a search that explored too little also satisfies.
 - Assert which requirement caught each fault, not just that something did:

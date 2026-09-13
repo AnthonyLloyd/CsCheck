@@ -3,7 +3,7 @@ namespace Tests.Specs;
 using System;
 using System.Linq;
 using CsCheck;
-using Seq = Tests.Specs.FixEngineSpec.Seq;
+using Seq = FixEngineSpec.Seq;
 
 /// <summary>The FIX 4.4 session core, specified once and then checked four ways: proved exhaustively, sampled
 /// randomly, mutation tested to show the requirements are strong enough, and used to check a hand written engine
@@ -16,8 +16,8 @@ public class FixEngineTests
     /// deadlines are carried in the search state.
     /// <para>The size of the space is pinned as well. Every other assertion here has the form "no counterexample was
     /// found", which a search that explored too little also satisfies, so without this a change that dropped a whole
-    /// class of successor would leave the test green while proving strictly less. A model change that legitimately</para>
-    /// moves these numbers should update them in the same commit, deliberately.</summary>
+    /// class of successor would leave the test green while proving strictly less. A model change that legitimately
+    /// moves these numbers should update them in the same commit, deliberately.</para></summary>
     [Test]
     public async Task Exhaustive_Proof()
     {
@@ -28,6 +28,17 @@ public class FixEngineTests
         await Assert.That(report.NeverFired).IsEmpty();
         await Assert.That(report.States).IsEqualTo(2_438);
         await Assert.That(report.Transitions).IsEqualTo(51_569);
+        // docs/Spec.md and README.md each quote this report to explain how to read one, abridged to a different
+        // handful of rows. The two lines above the tables are not abridged, and every row either file does quote has
+        // to be a row this produces - the readme's had drifted a column wide without anything noticing.
+        var text = report.ToString();
+        foreach (var blocks in new[] { Docs.Spec, Docs.Readme })
+        {
+            var quoted = blocks.Single(b => b.StartsWith("Spec.Exhaustive of 31 requirements", StringComparison.Ordinal));
+            await Assert.That(text).StartsWith(string.Join('\n', quoted.Split('\n')[..2]));
+            foreach (var row in quoted.Split('\n').Where(l => l.StartsWith("  | ", StringComparison.Ordinal)))
+                await Assert.That(text).Contains(row);
+        }
     }
 
     /// <summary>The same specification driven as a random walk. This is what you run when the model is too big to
@@ -43,8 +54,8 @@ public class FixEngineTests
     /// space re-explored; the table shows which requirement caught it and how many steps the shortest counterexample
     /// took. Faults throws if any defect escapes every requirement, so this fails when a requirement is missing.
     /// <para>The two pairings asserted below are the ones worth pinning. Being caught by something is not enough: a fault
-    /// caught by the wrong requirement passes while leaving the intended one unproven, which is what happened to the</para>
-    /// test request fault before it was rewritten to perturb only the termination.</summary>
+    /// caught by the wrong requirement passes while leaving the intended one unproven, which is what happened to the
+    /// test request fault before it was rewritten to perturb only the termination.</para></summary>
     [Test]
     public async Task Faults_Are_All_Caught()
     {
@@ -77,7 +88,7 @@ public class FixEngineTests
             trigger: (b, a) => a.GapOpen && !b.GapOpen,
             response: (_, a) => !a.GapOpen || a.Status == FixEngine.ConnectionStatus.Disconnected,
             within: FixEngine.Interval * 2, per: "Tick")
-        .Exhaustive(out var violation, TUnitX.WriteLine);
+        .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("GAP-RESOLVED");
         TUnitX.WriteLine(violation.ToString(s => s.ToString()));

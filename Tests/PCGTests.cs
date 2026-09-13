@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Diagnostics;
@@ -183,6 +183,21 @@ public class PCGTests
             var seed = SeedString.ToString(state, stream);
             var state2 = SeedString.Parse(seed, out var stream2);
             return state == state2 && stream == stream2;
+        });
+    }
+
+    [Test]
+    public async Task SeedString_Rejects_A_Seed_Of_The_Wrong_Length()
+    {
+        foreach (var bad in new[] { "", "0", "0000000000", "00000000000", "000000000000000000" })
+        {
+            var message = Assert.Throws<CsCheckException>(() => SeedString.Parse(bad, out _))!.Message;
+            await Assert.That(message).Contains("Invalid seed");
+        }
+        Gen.Select(Gen.ULong, Gen.UInt).Sample((state, stream) =>
+        {
+            SeedString.Parse(SeedString.ToString(state, stream), out _);
+            return true;
         });
     }
 

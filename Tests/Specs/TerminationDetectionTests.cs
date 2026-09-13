@@ -26,8 +26,7 @@ public class TerminationDetectionTests
         await Assert.That(report.NeverTriggered).IsEmpty();
         await Assert.That(report.NeverFired).IsEmpty();
         await Assert.That(report.States).IsEqualTo(1_520_691);
-        await Assert.That(report.Transitions).IsGreaterThan(10_000_000);
-        await Assert.That(report.Transitions).IsLessThan(11_000_000);
+        await Assert.That(report.Transitions).IsEqualTo(10_507_707);
         await Assert.That(report.Depth).IsEqualTo(61);
     }
 

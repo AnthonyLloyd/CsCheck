@@ -1,4 +1,4 @@
-﻿namespace Tests;
+namespace Tests;
 
 using System;
 using System.Linq;
@@ -142,7 +142,7 @@ public class ShrinkingChallengeTests
             while (s.Count != 0)
             {
                 var h = s.Pop();
-                if (h == null) continue;
+                if (h is null) continue;
                 r.Add(h.Head);
                 s.Push(h.Left);
                 s.Push(h.Right);
@@ -163,7 +163,7 @@ public class ShrinkingChallengeTests
 
         static List<int> Sorted(List<int> l)
         {
-            l = new(l);
+            l = [.. l];
             l.Sort();
             return l;
         }

@@ -5,11 +5,11 @@ using CsCheck;
 /// <summary>The Alternating Bit Protocol: how to get reliable, in-order, exactly-once delivery over a channel that
 /// loses, duplicates and possibly reorders, using one bit of sequence number. Bartlett, Scantlebury and Wilkinson,
 /// 1969, and the standard first example in every protocol verification course since.
-/// <para>This is the example that <c>AtMost</c> exists for, and the reason is worth stating because the other four worked
+/// <para>This is the example that <see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> exists for, and the reason is worth stating because the other four worked
 /// examples could not use it. The property is <b>at-most-once delivery</b>: a frame handed to the application once,
 /// never twice, however many copies of it the channel makes. Counting deliveries per frame is not something the
 /// protocol does - a real receiver keeps one bit, not a tally - so putting the count in the model would be adding
-/// bookkeeping that no implementation has, purely to state the requirement. <c>AtMost</c> puts it in the <em>search</em>
+/// bookkeeping that no implementation has, purely to state the requirement. <see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> puts it in the <em>search</em>
 /// state instead, which is exactly the distinction its documentation draws: without that, a state reached once and the
 /// same state reached for the second time would be one search node and the duplicate would go unreported. The
 /// per-element overload gives each frame its own count, because one shared count would let a duplicate of frame 0
@@ -143,12 +143,13 @@ public static class AlternatingBitSpec
     /// ToString, which shows the channel slots as the integers they are encoded as.</summary>
     public static string Show(State s)
     {
-        var sb = new System.Text.StringBuilder("snd f").Append(s.NextFrame).Append(s.SenderBit ? "/1" : "/0")
-            .Append(" data[");
+        var sb = new System.Text.StringBuilder("snd f").Append(s.NextFrame).Append(s.SenderBit ? "/1" : "/0").Append(" data[");
+        bool needsSpace = false;
         foreach (var v in new[] { s.D0, s.D1 })
-            if (v != 0) sb.Append('f').Append(FrameOf(v)).Append(BitOf(v) ? "/1 " : "/0 ");
+            if (v != 0) { if (needsSpace) sb.Append(' '); sb.Append('f').Append(FrameOf(v)).Append(BitOf(v) ? "/1" : "/0"); needsSpace = true; }
         sb.Append("] ack[");
-        foreach (var v in new[] { s.A0, s.A1 }) if (v != 0) sb.Append(v == 2 ? "1 " : "0 ");
+        needsSpace = false;
+        foreach (var v in new[] { s.A0, s.A1 }) if (v != 0) { if (needsSpace) sb.Append(' '); sb.Append(v == 2 ? "1" : "0"); needsSpace = true; }
         sb.Append("] rcv want").Append(s.ExpectedBit ? "1" : "0").Append(" got=").Append(s.Delivered);
         if (s.JustDelivered >= 0) sb.Append(" >>deliver f").Append(s.JustDelivered);
         return sb.ToString();

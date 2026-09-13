@@ -3,6 +3,7 @@ namespace Tests.Specs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using CsCheck;
 using Wake = BlockingQueueSpec.Wake;
 
@@ -17,9 +18,9 @@ using Wake = BlockingQueueSpec.Wake;
 /// family rather than about one trace, so the sweep checks this reimplementation against a theorem.</para>
 /// <para>Reading the original mattered. Its final version notifies one thread of the <em>opposite</em> kind, which is
 /// already a fix, and a model of that finds nothing - as the first attempt here did, oracle and all. The version the
-/// published traces come from notifies one arbitrary thread of <em>either</em> kind, because that is what</para>
-/// <c>Object.notify</c> does, and that is the whole bug.</summary>
-public class BlockingQueueTests
+/// published traces come from notifies one arbitrary thread of <em>either</em> kind, because that is what
+/// <c>Object.notify</c> does, and that is the whole bug.</para></summary>
+public partial class BlockingQueueTests
 {
     /// <summary>The bug, found without writing a requirement for it. Every thread waiting is a state with no action
     /// enabled, and no state here is a legitimate end - a running thread always has either a Put or a Get to do - so
@@ -36,6 +37,24 @@ public class BlockingQueueTests
         await Assert.That(report.TerminalStates).IsEqualTo(0);
         await Assert.That(report.DeadlockTrace).Contains("waiting={p0,p1,c0,c1}");
         await Assert.That(report.DeadlockTrace).Contains("no action enabled");
+        // Asserted on the shape rather than on this interleaving, which is incidental: several steps had another wake
+        // available and the last had none, so the trace ends on a forced move.
+        var steps = report.DeadlockTrace!.Split('\n');
+        await Assert.That(steps.Count(s => s.Contains(" or ", StringComparison.Ordinal))).IsGreaterThan(1);
+        await Assert.That(steps.Last(MyRegex.IsMatch)).DoesNotContain(" or ");
+    }
+
+    [GeneratedRegex(@"^\s+\d+ ")]
+    private static partial Regex MyRegex { get; }
+
+    /// <summary>docs/Spec.md quotes the tail of this trace to show the alternatives column, and the indentation is
+    /// load bearing: the step numbers are right padded to two, so a copy typed by hand does not line up.</summary>
+    [Test]
+    public async Task Docs_Quote_The_Generated_Deadlock_Trace()
+    {
+        var report = BlockingQueueSpec.Create(Wake.Any, producers: 2, consumers: 2, capacity: 1).Exhaustive();
+        var quoted = Docs.Spec.Single(b => b.Contains("no action enabled", StringComparison.Ordinal));
+        await Assert.That(report.DeadlockTrace).Contains(quoted.TrimEnd('\n'));
     }
 
     /// <summary>Both fixes, proved rather than assumed, and they are different fixes: notifyAll wakes everything, while
@@ -64,7 +83,7 @@ public class BlockingQueueTests
         var all = (1 << (producers + consumers)) - 1;
         BlockingQueueSpec.Create(Wake.Any, producers, consumers, capacity)
             .Invariant("NO-DEADLOCK", "Not every thread may be in the wait set at once.", s => s.Waiting != all)
-            .Exhaustive(out var violation, TUnitX.WriteLine);
+            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NO-DEADLOCK");
         // TLC counts the initial state, so its published length is one more than the number of steps.
@@ -103,8 +122,8 @@ public class BlockingQueueTests
     /// producer ids that filled it and the wait set is a set of names, so nothing here shares an assumption or a line
     /// of bit arithmetic with the specification. It has to agree on the shortest number of steps to a deadlock.
     /// <para>It also prices the one abstraction. This keeps the producer ids the original carries; the specification keeps
-    /// only the length, because nothing ever reads a value out of the buffer - Get takes the tail and discards the head,</para>
-    /// and a notify picks a thread rather than the datum's owner. The ratio is what that distinction would have cost.</summary>
+    /// only the length, because nothing ever reads a value out of the buffer - Get takes the tail and discards the head,
+    /// and a notify picks a thread rather than the datum's owner. The ratio is what that distinction would have cost.</para></summary>
     [Test]
     public async Task Agrees_With_A_Transliteration_Of_The_Original()
     {

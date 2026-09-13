@@ -96,8 +96,11 @@ internal sealed class TycheLogger : ILogger
 
     public void Dispose()
     {
-        _channel.Writer.Complete();
-        _loggingTask.Wait();
+        if (!_channel.Writer.TryComplete()) return;
+        // Dispose runs in the implicit finally of a using, so a faulting log task here would replace the failure the
+        // test exists to report. Wait for the flush, observe the fault, do not raise it.
+        try { _loggingTask.Wait(); }
+        catch (AggregateException) { }
     }
 }
 
@@ -113,7 +116,7 @@ public static class Logging
 
     public static ILogger CreateTycheLogger([CallerMemberName] string? name = null, string? directory = null, StreamWriter? writer = null, Func<object, string>? print = null)
     {
-        if (name is null) throw new CsCheckException("name is null");
+        if (name is null) ThrowHelper.Throw("name is null");
         var channel = Channel.CreateUnbounded<(object Value, bool Success)>(new() { SingleReader = true, SingleWriter = false });
         return new TycheLogger(async () =>
         {
