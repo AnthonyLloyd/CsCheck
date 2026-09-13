@@ -62,7 +62,7 @@ public void Version_Same()
             return false;
         }
         return true;
-    }, size: 100_000_000);
+    }, iter: 100_000_000);
 }
 
 >

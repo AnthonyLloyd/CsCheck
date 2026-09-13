@@ -157,7 +157,7 @@ element, reported as `id[element]`. Use it whenever the requirement has more tha
 instance carries one deadline, count or history bit, so an obligation raised by one key gets discharged by another.
 Both keyed examples needed this and both produced a counterexample without it.
 
-Two ids that clash, or an `on:`/`per:` naming an action that does not exist, are rejected before exploration
+Two ids that clash, two faults with the same name, or an `on:`/`per:` naming an action that does not exist, are rejected before exploration
 starts; see `Tests/Specs/SpecValidationTests.cs`. The failure mode for all three is a green test that proves nothing,
 which is worse than a red one.
 
@@ -290,9 +290,11 @@ Spec.Exhaustive of 31 requirements
 
 `CLOSED` is a claim about every reachable state, so it is a proof for the abstracted model. Read alongside it:
 
-- **`Triggered`**: how many times each requirement's case actually happened (when, on, or the Response trigger). `NEVER` means the then / forbidden step was never checked, so a green row proves nothing. This is the single most useful number in the table and no
-  other property-based testing library reports it. An `Invariant`, and a `Never` or `Rule` with no when / on / trigger at
+- **`Triggered`**: how many times each requirement's case actually happened (when, on, or the Response trigger). `NEVER` means the then / forbidden step was never checked, so a green row proves nothing.
+  This is the single most useful number in the table.
+  An `Invariant`, and a `Never` or `Rule` with no when / on / trigger at
   all, apply to every step and so have nothing to count; they read `every step` rather than a misleading number.
+  For `Reachable` the number is how often the predicate held, not how often a when fired.
 - **`Unresolved`** (`Sample` only): response obligations still outstanding when the trace ended. Neither pass
   nor fail: run longer traces.
 - **`deadlock`**: states with no enabled action that were not declared `Terminal`. For a protocol this should be

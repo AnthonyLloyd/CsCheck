@@ -483,9 +483,10 @@ Spec.From(State.Connected)
   Mutation testing for the specification: a defect nothing catches means a requirement is missing, and a defect
   caught by the *wrong* requirement means one of them is not what you thought. This is the one to reach for second:
   a proof says the requirements hold, `Faults` says whether they were worth holding. `SampleFaults` produces the same
-  table by walking each fault instead of proving it, for a model too large to close.
-- **`Conform`** drives a real implementation down the same walk and checks it conforms to the specification on those traces.
-- **`Mermaid`** returns the reachable state graph as a Mermaid flowchart, with intended ends, dead ends and cut-off states styled differently, for a model small enough to look at.
+  table by walking each fault instead of proving it, for a model too large to close. For `SampleFaults`, NOTHING means no requirement was seen to catch it, not that none can.
+- **`Conform`** drives a real implementation down the same walk and checks it conforms to the specification on those traces. Exhaustive proves the model. Conform checks the real object on the traces it walked.
+
+`Mermaid` returns the reachable state graph as a Mermaid flowchart, with intended ends, dead ends and cut-off states styled differently, for a model small enough to look at.
 
 Every run prints how often each requirement's when / on / trigger actually happened. If that never happened the row says NEVER: the check passed only because it was never in a position to fail:
 

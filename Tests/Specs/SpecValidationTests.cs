@@ -31,6 +31,18 @@ public partial class SpecValidationTests
         await Assert.That(message).Contains("Inc");
     }
 
+    /// <summary>Two faults with the same name make CaughtBy and the Faults table credit the wrong row.</summary>
+    [Test]
+    public async Task Duplicate_Fault_Name_Is_Rejected()
+    {
+        var spec = Counter()
+            .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
+            .Fault("same", (_, _) => false, (_, a) => a)
+            .Fault("same", (_, _) => false, (_, a) => a);
+        var message = Assert.Throws<CsCheckException>(() => spec.Exhaustive(maxStates: 10))!.Message;
+        await Assert.That(message).Contains("same");
+    }
+
     /// <summary>If the spec already violates a requirement without any fault injected, every mutation would appear
     /// "caught" regardless of whether it caused anything. Faults detects this and fails before running mutations.</summary>
     [Test]

@@ -38,16 +38,16 @@ public sealed class Trace<S>
 {
     /// <summary>The model state the trace starts from.</summary>
     public readonly S Initial;
-    /// <summary>The steps in order. Shorter than the length asked for when the walk deadlocked.</summary>
+    /// <summary>The steps in order. Shorter than requested when no further action was enabled.</summary>
     public readonly Transition<S>[] Steps;
-    /// <summary>True when the walk stopped early because no action was enabled. Equally true at a state <see cref="Spec{S}.Terminal(Func{S, bool})">Terminal</see> declared to be an intended end, so ask <see cref="Spec{S}.Terminal(Func{S, bool})">Terminal</see> to tell a dead end from a finished one.</summary>
-    public readonly bool Deadlocked;
+    /// <summary><see langword="true"/> when the walk stopped because nothing was enabled (including an intended <see cref="Spec{S}.Terminal(Func{S, bool})">Terminal</see> end). <see langword="false"/> when the walk reached the requested length. A deadlock is a no-action end that was not declared Terminal; that split lives on <see cref="SpecReport"/>, not here. </summary>
+    public readonly bool NoActionEnabled;
 
     internal Trace(S initial, Transition<S>[] steps, bool deadlocked)
     {
         Initial = initial;
         Steps = steps;
-        Deadlocked = deadlocked;
+        NoActionEnabled = deadlocked;
     }
 
     /// <summary>The trace with each state rendered by <paramref name="print"/>, one step per line.</summary>
@@ -72,7 +72,7 @@ public sealed class Trace<S>
             // Unpadded when there is no note, so a step cannot gain trailing whitespace.
             sb.Append(note.Length == 0 ? step : step.PadRight(actionWidth) + "  " + note).Append('\n').Append(indent).Append(print(Steps[i].After));
         }
-        if (Deadlocked) sb.Append('\n').Append(indent).Append("(no action enabled - trace ends here)");
+        if (NoActionEnabled) sb.Append('\n').Append(indent).Append("(no action enabled - trace ends here)");
         return sb.ToString();
     }
 
@@ -160,7 +160,7 @@ sealed class Requirement<S>(ReqKind kind, string id, string quote)
     public int Within;
     // Which byte of the two counter words this requirement owns, as a bit offset into their concatenation: 0 to 63 is
     // the deadlines word, 64 to 127 the counts word. Response and AtMost draw from one pool of sixteen such bytes, so
-    // a spec can spend them in any mix rather than 16 of each.
+    // a spec can spend them in any mix, up to 16 in total.
     public int Shift = -1;
     // Precedes and NeverAfter share one history word, and so share its sixty four bits between them.
     public ulong Bit;
@@ -315,7 +315,7 @@ public sealed class Spec<S>(S initial)
         return Add(new(ReqKind.AtMost, id, quote) { Consequent = occurs, Within = times, Shift = ByteSlots++ * 8 });
     }
 
-    /// <summary>One <see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> per element of <paramref name="over"/>, each with its own count, reported as <c>id[element]</c>. Needed whenever the subject of the requirement is one of several things: a single instance counts occurrences across all of them, so three retries of one key would exhaust the budget for another. Costs one of the 16 <see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> slots per element.</summary>
+    /// <summary>One <see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> per element of <paramref name="over"/>, each with its own count, reported as <c>id[element]</c>. Needed whenever the subject of the requirement is one of several things: a single instance counts occurrences across all of them, so three retries of one key would exhaust the budget for another. Costs one of the 16 shared <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see>/<see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> slots per element.</summary>
     public Spec<S> AtMost<T>(string id, string quote, int times, T[] over, Func<S, S, T, bool> occurs)
     {
         if (over is null || over.Length == 0) ThrowHelper.Throw($"Spec AtMost '{id}' over is null or empty");
@@ -334,7 +334,7 @@ public sealed class Spec<S>(S initial)
         return Add(new(ReqKind.Response, id, quote) { Trigger = trigger, Consequent = response, Cancel = cancel, Within = within, Shift = ByteSlots++ * 8, PerAction = per });
     }
 
-    /// <summary>One <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see> per element of <paramref name="over"/>, each with its own deadline, reported as <c>id[element]</c>. Needed whenever the subject of the requirement is one of several things: a single requirement over a keyed store carries one deadline, so a response for one key discharges the obligation raised by another. Costs one of the 16 <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see> slots per element.</summary>
+    /// <summary>One <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see> per element of <paramref name="over"/>, each with its own deadline, reported as <c>id[element]</c>. Needed whenever the subject of the requirement is one of several things: a single requirement over a keyed store carries one deadline, so a response for one key discharges the obligation raised by another. Costs one of the 16 shared <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see>/<see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> slots per element.</summary>
     public Spec<S> Response<T>(string id, string quote, T[] over, Func<S, S, T, bool> trigger, Func<S, S, T, bool> response, int within, Func<S, S, T, bool>? cancel = null, string? per = null)
     {
         if (over is null || over.Length == 0) ThrowHelper.Throw($"Spec Response '{id}' over is null or empty");
@@ -405,6 +405,9 @@ public sealed class Spec<S>(S initial)
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var r in Requirements)
             if (!ids.Add(r.Id)) ThrowHelper.Throw($"Spec has more than one requirement with the id '{r.Id}'");
+        var faultNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var f in FaultList)
+            if (!faultNames.Add(f.Name)) ThrowHelper.Throw($"Spec has more than one fault with the name '{f.Name}'");
         foreach (var r in Requirements)
         {
             if (r.OnAction is not null && r.OnActionIndex == -1)
@@ -1405,7 +1408,7 @@ public static partial class Check
         public void Observe(Trace<S> trace)
         {
             // Deadlocked is also true at an intended end.
-            if (!trace.Deadlocked || spec.IsTerminal?.Invoke(
+            if (!trace.NoActionEnabled || spec.IsTerminal?.Invoke(
                 trace.Steps.Length == 0 ? trace.Initial : trace.Steps[^1].After) == true) return;
             Interlocked.Increment(ref counters.Deadlocks);
             // Shortest, to match the path Exhaustive reports.
