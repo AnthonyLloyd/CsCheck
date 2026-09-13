@@ -488,7 +488,7 @@ Spec.From(State.Connected)
 
 `Mermaid` returns the reachable state graph as a Mermaid flowchart, with intended ends, dead ends and cut-off states styled differently, for a model small enough to look at.
 
-Every run prints how often each requirement's when / on / trigger actually happened. If that never happened the row says NEVER: the check passed only because it was never in a position to fail:
+Every run prints how often each requirement's `when` / `on` / `trigger` actually happened. If that never happened the row says NEVER: the check passed only because it was never in a position to fail:
 
 ```
 Spec.Exhaustive of 31 requirements
@@ -501,12 +501,12 @@ Spec.Exhaustive of 31 requirements
   ...
 ```
 
-(`every step` means this requirement is checked on every step. There is no when / on / trigger that can be missed.)
+(`every step` means this requirement is checked on every step. There is no `when` / `on` / `trigger` that can be missed.)
 
 Start with [Tests/Specs/SpecIntroTests.cs](Tests/Specs/SpecIntroTests.cs), an order lifecycle in one file, seven reachable
 states, small enough to check by hand. Then [docs/Spec.md](docs/Spec.md) for the seven worked examples: the FIX 4.4
 session core, a refresh-on-access cache, a distributed lease specified in three configurations to show which one is
-actually safe, and four reimplementations of published specifications: a `wait`/`notify` queue that deadlocks, the
+actually safe, and four reimplementations of published specifications: a `wait` / `notify` queue that deadlocks, the
 Alternating Bit Protocol, the LMAX Disruptor and Safra's EWD 998 termination detection, each checked against the
 original's own published results.
 
