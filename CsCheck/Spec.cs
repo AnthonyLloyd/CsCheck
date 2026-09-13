@@ -160,7 +160,7 @@ sealed class Requirement<S>(ReqKind kind, string id, string quote)
     public int Within;
     // Which byte of the two counter words this requirement owns, as a bit offset into their concatenation: 0 to 63 is
     // the deadlines word, 64 to 127 the counts word. Response and AtMost draw from one pool of sixteen such bytes, so
-    // a spec can spend them in any mix rather than eight of each.
+    // a spec can spend them in any mix rather than 16 of each.
     public int Shift = -1;
     // Precedes and NeverAfter share one history word, and so share its sixty four bits between them.
     public ulong Bit;
@@ -306,7 +306,7 @@ public sealed class Spec<S>(S initial)
     public Spec<S> Never(string id, string quote, string on, Func<S, S, bool> forbidden) =>
         Add(new(ReqKind.Never, id, quote) { OnAction = on, Consequent = forbidden });
 
-    /// <summary>May hold on at most <paramref name="times"/> steps of any one execution: "at most three retries", "the resource is created once". <see cref="Spec{S}.Never(string, string, Func{S, S, bool})">Never</see> is the <paramref name="times"/> of zero case, expressed separately because it needs no counter.</summary>
+    /// <summary>May hold on at most <paramref name="times"/> steps of any one execution: "at most three retries", "the resource is created at most once". <see cref="Spec{S}.Never(string, string, Func{S, S, bool})">Never</see> is the <paramref name="times"/> of zero case, expressed separately because it needs no counter.</summary>
     /// <remarks>The count so far becomes part of the search state, so this is proved rather than sampled: without that, a state reached once and a state reached for the fourth time would be the same search node and the excess would go unreported.<br/><br/> Costs one byte of node per requirement, so unlike <see cref="Spec{S}.Precedes(string, string, Func{S, S, bool}, Func{S, S, bool})">Precedes</see> the limit is 16.</remarks>
     public Spec<S> AtMost(string id, string quote, int times, Func<S, S, bool> occurs)
     {
@@ -315,7 +315,7 @@ public sealed class Spec<S>(S initial)
         return Add(new(ReqKind.AtMost, id, quote) { Consequent = occurs, Within = times, Shift = ByteSlots++ * 8 });
     }
 
-    /// <summary>One <see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> per element of <paramref name="over"/>, each with its own count, reported as <c>id[element]</c>. Needed whenever the subject of the requirement is one of several things: a single instance counts occurrences across all of them, so three retries of one key would exhaust the budget for another. Costs one of the eight <see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> slots per element.</summary>
+    /// <summary>One <see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> per element of <paramref name="over"/>, each with its own count, reported as <c>id[element]</c>. Needed whenever the subject of the requirement is one of several things: a single instance counts occurrences across all of them, so three retries of one key would exhaust the budget for another. Costs one of the 16 <see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> slots per element.</summary>
     public Spec<S> AtMost<T>(string id, string quote, int times, T[] over, Func<S, S, T, bool> occurs)
     {
         if (over is null || over.Length == 0) ThrowHelper.Throw($"Spec AtMost '{id}' over is null or empty");
@@ -334,7 +334,7 @@ public sealed class Spec<S>(S initial)
         return Add(new(ReqKind.Response, id, quote) { Trigger = trigger, Consequent = response, Cancel = cancel, Within = within, Shift = ByteSlots++ * 8, PerAction = per });
     }
 
-    /// <summary>One <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see> per element of <paramref name="over"/>, each with its own deadline, reported as <c>id[element]</c>. Needed whenever the subject of the requirement is one of several things: a single requirement over a keyed store carries one deadline, so a response for one key discharges the obligation raised by another. Costs one of the eight <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see> slots per element.</summary>
+    /// <summary>One <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see> per element of <paramref name="over"/>, each with its own deadline, reported as <c>id[element]</c>. Needed whenever the subject of the requirement is one of several things: a single requirement over a keyed store carries one deadline, so a response for one key discharges the obligation raised by another. Costs one of the 16 <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see> slots per element.</summary>
     public Spec<S> Response<T>(string id, string quote, T[] over, Func<S, S, T, bool> trigger, Func<S, S, T, bool> response, int within, Func<S, S, T, bool>? cancel = null, string? per = null)
     {
         if (over is null || over.Length == 0) ThrowHelper.Throw($"Spec Response '{id}' over is null or empty");
@@ -360,7 +360,7 @@ public sealed class Spec<S>(S initial)
     }
 
     /// <summary>Once <paramref name="after"/> has held, <paramref name="never"/> must not hold on any later step. The mirror of <see cref="Spec{S}.Precedes(string, string, Func{S, S, bool}, Func{S, S, bool})">Precedes</see>, for the many specifications that say a state is reached and then never left: once initialised never uninitialised, once committed never rolled back, once a value is cached never a miss. Holding on the same step is not a violation.</summary>
-    /// <remarks>Give <paramref name="until"/> and the obligation lifts again when it holds, and returns when <paramref name="after"/> next does - "not between one and the other, every time round". The opening and closing steps are both outside the scope. Before reaching for it, check whether the state already says whether the scope is open: a field costs the same search state, reads in the printed counterexample where a history bit does not, and can be shared with other requirements. Every worked example is better off with the field.</remarks>
+    /// <remarks>Give <paramref name="until"/> and the obligation lifts again when it holds, and returns when <paramref name="after"/> next does - "not between one and the other, every time round". The opening and closing steps are both outside the scope. Before reaching for it, check whether the state already says whether the scope is open: a field costs the same search state, reads in the printed counterexample where a history bit does not, and can be shared with other requirements.</remarks>
     public Spec<S> NeverAfter(string id, string quote, Func<S, S, bool> after, Func<S, S, bool> never, Func<S, S, bool>? until = null)
     {
         if (HistoryBits == 64) ThrowHelper.Throw($"Spec NeverAfter '{id}' exceeds the limit of 64 Precedes and NeverAfter requirements");
@@ -531,10 +531,10 @@ public sealed class SpecReport
     internal string[] RequirementIds = [];
     internal long[] RequirementTriggered = [];
     internal long[] RequirementUnresolved = [];
-    // True when the requirement has a `when`/`on`trigger that might never happen. Invariant, and Never without `on:`, run on every step, so their Triggered count is just the number of steps and does not mean “the interesting case was hit.”
+    // True when the requirement has a when / on / trigger that might never happen. Invariant, and Never without `on:`, run on every step, so their Triggered count is just the number of steps and does not mean “the interesting case was hit.”
     internal bool[] RequirementGuarded = [];
 
-    /// <summary>Requirements whose <c>when</c> / <c>on</c> trigger never happened, so the check never ran and a pass proves nothing. Requirements that apply to every step are omitted.</summary>
+    /// <summary>Requirements whose <c>when</c> / <c>on</c> trigger never happened, so the interesting case never happened and a pass proves nothing. Requirements that apply to every step are omitted.</summary>
     public IEnumerable<string> NeverTriggered
     {
         get

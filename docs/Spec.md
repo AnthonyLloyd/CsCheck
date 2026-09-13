@@ -148,7 +148,7 @@ evaluated; both report `every step` instead. A raw step count would look like co
 `Rule` rather than a `when:` of `true`; the claim is the same and only one of them says what it is.
 
 `Never` is `AtMost` with a bound of zero, expressed separately because it needs no counter. Going the other way,
-`AtMost("...", 3, ...)` is how you say "at most three retries" or "created exactly once", and the count so far is
+`AtMost("...", 3, ...)` is how you say "at most three retries", and the count so far is
 part of the search state so it is proved rather than sampled; without that, a state reached once and the same state
 reached for the fourth time would be one search node and the excess would go unreported.
 

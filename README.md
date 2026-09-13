@@ -487,7 +487,7 @@ Spec.From(State.Connected)
 - **`Conform`** drives a real implementation down the same walk and checks it conforms to the specification on those traces.
 - **`Mermaid`** returns the reachable state graph as a Mermaid flowchart, with intended ends, dead ends and cut-off states styled differently, for a model small enough to look at.
 
-Every run prints how often each requirement's when / on / trigger actually happened. If that never happened the row says NEVER: the check passed only because it was never in a position to fail.:
+Every run prints how often each requirement's when / on / trigger actually happened. If that never happened the row says NEVER: the check passed only because it was never in a position to fail:
 
 ```
 Spec.Exhaustive of 31 requirements

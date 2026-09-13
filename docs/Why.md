@@ -5,7 +5,7 @@
 Well it did originate with the Haskell library QuickCheck, but there isn't anything particularly functional about random testing.
 
 We should also drop the term property-based. Developers often get stuck trying to think what 'property' their code has.
-Random testing is lot more than validating a property. The most powerful random tests are model-based followed by metamorphic.
+Random testing is a lot more than validating a property. The most powerful random tests are model-based followed by metamorphic.
 We should be thinking of those first.
 
 It's better to think of it as a more automated and powerful way of doing example based testing.
@@ -46,6 +46,6 @@ Fluent style composition similar to LINQ is a much more robust and extensible op
 
 CsCheck has been used to help test serialization in Microsoft Orleans and Hagar, and high performance immutable collections in ImTools.
 
-It has given me the ability to write safe native code and interop, high performance collections, faster and simpler servers code and much more.
+It has given me the ability to write safe native code and interop, high performance collections, faster and simpler server code and much more.
 
 I noticed that it increased the quality of solutions I can attempt. It basically raised my game.
