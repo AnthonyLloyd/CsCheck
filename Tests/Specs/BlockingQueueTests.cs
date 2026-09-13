@@ -83,7 +83,7 @@ public partial class BlockingQueueTests
         var all = (1 << (producers + consumers)) - 1;
         BlockingQueueSpec.Create(Wake.Any, producers, consumers, capacity)
             .Invariant("NO-DEADLOCK", "Not every thread may be in the wait set at once.", s => s.Waiting != all)
-            .Exhaustive(out var violation, TUnitX.WriteLine);
+            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NO-DEADLOCK");
         // TLC counts the initial state, so its published length is one more than the number of steps.

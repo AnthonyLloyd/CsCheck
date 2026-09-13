@@ -14,7 +14,7 @@ public sealed class FixEngine
     /// <summary>HeartBtInt, in ticks.</summary>
     public const int Interval = 2;
     /// <summary>Counters saturate here. That is a concession to the specification rather than something a real engine
-    /// would do, and it is what keeps the two comparable under <c>Conform</c>.</summary>
+    /// would do, and it is what keeps the two comparable under <see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>.</summary>
     public const int Cap = 3;
 
     /// <summary>Where one connection is in its life. The only name here that is not FIX vocabulary, deliberately:

@@ -8,7 +8,7 @@ using CsCheck;
 /// termination when a white token comes home with the balances cancelling out. The safety property is that a detection
 /// is never announced while a message is still in flight.</para>
 /// <para>Its counters are unbounded in both directions (a node's counter is sends minus receives), so the original bounds
-/// them with a <c>StateConstraint</c>; that is <c>Boundary</c> here. The bound is the original's verbatim.</para>
+/// them with a <c>StateConstraint</c>; that is <see cref="Spec{S}.Boundary">Boundary</see> here. The bound is the original's verbatim.</para>
 /// <para>It also carries Safra's inductive invariant, which is the argument for why the safety property holds rather than
 /// merely the conclusion. Checking it proves the algorithm rather than just testing it.</para>
 /// <para>TLA+ lets the initial state be a set; a Spec starts from one state. So the 192 configurations (any activity, any

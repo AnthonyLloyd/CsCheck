@@ -31,7 +31,7 @@ public class AlternatingBitTests
     public async Task Without_The_Bit_A_Frame_Is_Delivered_Twice()
     {
         var spec = AlternatingBitSpec.Create(Seq.None, Order.Fifo);
-        spec.Exhaustive(out var violation, TUnitX.WriteLine);
+        spec.Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("DELIVERED-ONCE[0]");
         await Assert.That(violation.Detail).Contains("more than 1 times");
@@ -46,7 +46,7 @@ public class AlternatingBitTests
     public async Task Reordering_Defeats_One_Bit()
     {
         var spec = AlternatingBitSpec.Create(Seq.OneBit, Order.Reorder);
-        spec.Exhaustive(out var violation, TUnitX.WriteLine);
+        spec.Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         TUnitX.WriteLine($"caught by {violation!.Id}: {violation.Detail}");
         TUnitX.WriteLine(violation.ToString(AlternatingBitSpec.Show));
@@ -67,11 +67,11 @@ public class AlternatingBitTests
             }
     }
 
-    /// <summary>Mutation testing the requirements, and it turns one of them in. <c>AtMost</c> catches the duplicate, which
+    /// <summary>Mutation testing the requirements, and it turns one of them in. <see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> catches the duplicate, which
     /// is what it is here for. But <b>no fault exercises STOP-AND-WAIT</b>, and the reason is a flaw in how it is written
     /// rather than in the protocol: its <c>until</c> is "the acknowledgement has moved the sender past this frame", which
     /// is the same condition that would let a second send happen at all. A step that both closes the scope and does the
-    /// forbidden thing counts as a close, so the scope is always shut before <c>never</c> can look. The requirement is
+    /// forbidden thing counts as a close, so the scope is always shut before <see cref="Spec{S}.Never(string, string, Func{S, S, bool})">Never</see> can look. The requirement is
     /// therefore true by construction and proves nothing, which is exactly the "candidate for being too weak" that the
     /// unexercised list exists to report. Left in and documented rather than quietly deleted, because it is the clearest
     /// demonstration in these examples of Faults finding a bad requirement instead of a bad design.</summary>

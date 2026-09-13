@@ -361,7 +361,7 @@ public partial class SpecValidationTests
             .Action("Inc", i => i + 1)
             .Boundary(i => i <= 5)
             .Reachable("TEN", "the counter can reach ten", i => i == 10)
-            .Exhaustive(out var violation, TUnitX.WriteLine);
+            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNull();
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.Note).Contains("TEN");
@@ -394,7 +394,7 @@ public partial class SpecValidationTests
                 trigger: (b, a) => b == 0 && a == 1,
                 response: (_, _) => false,
                 within: 3, per: "Tick")
-            .Exhaustive(out var violation, TUnitX.WriteLine);
+            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NEVER-SETTLES");
         await Assert.That(violation.Trace.Steps.Length).IsEqualTo(4);
@@ -408,7 +408,7 @@ public partial class SpecValidationTests
     {
         var report = Counter()
             .Invariant("POSITIVE", "the counter is always positive", i => i > 0)
-            .Exhaustive(out var violation, TUnitX.WriteLine);
+            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("POSITIVE");
         await Assert.That(violation.Detail).Contains("initial state");
@@ -435,11 +435,11 @@ public partial class SpecValidationTests
             .Response("ANSWERED", "a raised request is answered",
                 trigger: (_, a) => a == 1, response: (_, a) => a == 3, within: 1, cancel: cancel);
 
-        Waiting(null).Exhaustive(out var violation, TUnitX.WriteLine);
+        Waiting(null).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("ANSWERED");
 
-        var report = Waiting((_, a) => a == 2).Exhaustive(out var none, TUnitX.WriteLine);
+        var report = Waiting((_, a) => a == 2).Exhaustive(out var none, writeLine: TUnitX.WriteLine);
         await Assert.That(none).IsNull();
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.NeverTriggered).IsEmpty();
@@ -517,7 +517,7 @@ public partial class SpecValidationTests
             .Action("Go", i => i < 4, i => i + 1)
             .Response("SAME-STEP", "reaching one is answered by reaching one",
                 trigger: (_, a) => a == 1, response: (_, a) => a == 1, within: 1)
-            .Exhaustive(out var violation, TUnitX.WriteLine);
+            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("SAME-STEP");
 
@@ -543,7 +543,7 @@ public partial class SpecValidationTests
         var ok = Retries(4).Exhaustive();
         await Assert.That(ok.Closed).IsTrue();
 
-        Retries(3).Exhaustive(out var violation, TUnitX.WriteLine);
+        Retries(3).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("AT-MOST-THREE");
         await Assert.That(violation.Detail).Contains("more than 3 times");
@@ -560,7 +560,7 @@ public partial class SpecValidationTests
         Spec.From(0)
             .Action("Tick", i => (i + 1) % 2)
             .AtMost("AT-MOST-TWICE", "at most twice", 2, (b, a) => b == 0 && a == 1)
-            .Exhaustive(out var violation, TUnitX.WriteLine);
+            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("AT-MOST-TWICE");
         await Assert.That(violation.Trace.Steps.Length).IsEqualTo(5);
@@ -654,7 +654,7 @@ public partial class SpecValidationTests
         static bool ClosingStep(Lap _, Lap a) => a.Pos == 0 && a.Count == 1;   // reached from Pos 3, which closed it
         static bool InsideSecond(Lap _, Lap a) => a.Pos == 2 && a.Count == 1;  // reached from Pos 1, which reopened it
 
-        var closed = Scoped((_, a) => a.Pos == 3, ClosingStep).Exhaustive(out var none, TUnitX.WriteLine);
+        var closed = Scoped((_, a) => a.Pos == 3, ClosingStep).Exhaustive(out var none, writeLine: TUnitX.WriteLine);
         await Assert.That(none).IsNull();
         await Assert.That(closed.Closed).IsTrue();
 
@@ -662,7 +662,7 @@ public partial class SpecValidationTests
         await Assert.That(unscoped).IsNotNull();
         await Assert.That(unscoped!.Detail).Contains("after the point");
 
-        Scoped((_, a) => a.Pos == 3, InsideSecond).Exhaustive(out var reopened, TUnitX.WriteLine);
+        Scoped((_, a) => a.Pos == 3, InsideSecond).Exhaustive(out var reopened, writeLine: TUnitX.WriteLine);
         await Assert.That(reopened).IsNotNull();
         await Assert.That(reopened!.Id).IsEqualTo("SCOPED");
         await Assert.That(reopened.Detail).Contains("between the step that opens");
@@ -765,7 +765,7 @@ public partial class SpecValidationTests
         for (int i = 0; i < 8; i++) spec.AtMost($"PAD{i}", "cannot occur", 3, (_, _) => false);
         spec.Response("NINTH", "entering one must be followed by settling",
             trigger: (b, a) => b == 0 && a == 1, response: (_, _) => false, within: 3, per: "Tick");
-        spec.Exhaustive(out var violation, TUnitX.WriteLine);
+        spec.Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NINTH");
         await Assert.That(violation.Trace.Steps.Length).IsEqualTo(4);
@@ -839,11 +839,11 @@ public partial class SpecValidationTests
     [GeneratedRegex(@"^  n0 -->\|""(.*)""\| n1;$", RegexOptions.Multiline)]
     private static partial Regex MyRegex1 { get; }
 
-    /// <summary>A dead end needs no requirement to detect it, and that was only true of <c>Exhaustive</c> - a sampled
+    /// <summary>A dead end needs no requirement to detect it, and that was only true of <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> - a sampled
     /// walk stopped early and said nothing, so the engine you fall back to on a space too big to close was the one that
     /// could not see the bug the other finds for free. Counted as walks, not states, since a sampled walk keeps no
-    /// visited set: <c>DeadlockStates</c> stays zero rather than being filled in with a number that would not mean
-    /// what it means for <c>Exhaustive</c>.</summary>
+    /// visited set: <see cref="SpecReport.DeadlockStates">DeadlockStates</see> stays zero rather than being filled in with a number that would not mean
+    /// what it means for <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see>.</summary>
     [Test]
     public async Task Sample_Reports_Walks_That_Dead_Ended()
     {
@@ -959,7 +959,7 @@ public partial class SpecValidationTests
     public async Task Exhaustive_Reports_An_Obligation_Outstanding_At_A_Trace_End()
     {
         var spec = NeverAnswered();
-        var exhaustive = spec.Exhaustive(out var violation, writeLine: null, maxStates: 10_000);
+        var exhaustive = spec.Exhaustive(out var violation, maxStates: 10_000, writeLine: null);
         await Assert.That(violation).IsNull();
         await Assert.That(exhaustive.Closed).IsTrue();
         await Assert.That(exhaustive.RequirementUnresolved[0]).IsGreaterThan(0);
@@ -973,7 +973,7 @@ public partial class SpecValidationTests
         .Response("MUST-ANSWER", "A ring is answered within two ticks.",
             (b, a) => a == 1 && b == 0, (_, a) => a == 99, within: 2);
 
-    /// <summary><c>AtMost</c> marks every occurrence, including the one that broke the bound.</summary>
+    /// <summary><see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> marks every occurrence, including the one that broke the bound.</summary>
     [Test]
     [Arguments("MUST-ANSWER", "raised here", 1)]
     [Arguments("NO-THIRD-RETRY", "counted", 3)]
@@ -1322,7 +1322,7 @@ public partial class SpecValidationTests
         var ok = Ninth(6).Exhaustive();
         await Assert.That(ok.Closed).IsTrue();
 
-        Ninth(3).Exhaustive(out var violation, TUnitX.WriteLine);
+        Ninth(3).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NINTH");
         await Assert.That(violation.Detail).Contains("more than 3 times");
@@ -1439,7 +1439,7 @@ public partial class SpecValidationTests
     }
 
     /// <summary>The same arithmetic for the random walk, where it is checking something the exhaustive engine does not
-    /// have: a thread static tally per walk, flushed into the shared counters with interlocked adds. <c>Sample</c> runs
+    /// have: a thread static tally per walk, flushed into the shared counters with interlocked adds. <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see> runs
     /// on every core by default, so that code is always threaded and nothing else measures whether it loses or double
     /// counts. Every step of every trace fires exactly one case, so the sum has to be the step count, and the walk count
     /// has to be the iterations asked for.</summary>

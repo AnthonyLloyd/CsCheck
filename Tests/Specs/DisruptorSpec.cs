@@ -9,7 +9,7 @@ using CsCheck;
 /// is reading it.
 /// <para>It earns its place here for a reason none of the other examples can: <b>its state space is genuinely infinite, and no
 /// abstraction makes it finite</b>. The sequence counter only ever goes up. The original is in the same position and
-/// deals with it the same way, by supplying a bound from outside the module, which is what <c>Boundary</c> is. What
+/// deals with it the same way, by supplying a bound from outside the module, which is what <see cref="Spec{S}.Boundary">Boundary</see> is. What
 /// closure means here is therefore weaker than elsewhere and worth saying out loud: <em>no data race is reachable
 /// within the first N sequences</em>. <c>DisruptorTests</c> raises N and shows the answer stops changing, which is
 /// evidence the bound hides nothing rather than a proof that it does not.</para>
@@ -87,7 +87,7 @@ public static class DisruptorSpec
             .Boundary(s => s.Next <= sequences);
     }
 
-    /// <summary>Three ways an implementation of this could be wrong, for <c>Faults</c> to inject one at a time. Each is
+    /// <summary>Three ways an implementation of this could be wrong, for <see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see> to inject one at a time. Each is
     /// a mistake someone could plausibly make in the Rust or the Java, not an arbitrary corruption: publish before the
     /// write has finished, keep hold of a slot after publishing it, and advance a read cursor past a slot that was never
     /// consumed. All three should be caught by the invariant the specification exists for, and a fault that is not is a

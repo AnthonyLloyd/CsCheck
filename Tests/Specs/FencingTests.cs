@@ -13,7 +13,7 @@ public class FencingTests
     [Test]
     public async Task Lease_Alone_Loses_Updates()
     {
-        FencingSpec.Create(FencingSpec.Fence.None).Exhaustive(out var violation, TUnitX.WriteLine);
+        FencingSpec.Create(FencingSpec.Fence.None).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NO-LOST-UPDATE");
         TUnitX.WriteLine(violation.ToString(s => s.ToString()));
@@ -28,7 +28,7 @@ public class FencingTests
     [Test]
     public async Task Writes_Only_Is_Not_Enough()
     {
-        FencingSpec.Create(FencingSpec.Fence.Writes).Exhaustive(out var violation, TUnitX.WriteLine);
+        FencingSpec.Create(FencingSpec.Fence.Writes).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("SUPERSEDED-TOKEN-REFUSED[1]");
         TUnitX.WriteLine(violation.ToString(s => s.ToString()));

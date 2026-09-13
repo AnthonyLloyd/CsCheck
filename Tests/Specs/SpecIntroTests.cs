@@ -17,7 +17,7 @@ public partial class SpecIntroTests
     public enum Status { New, Paid, Shipped, Delivered, Cancelled }
 
     /// <summary>The model state. It must be immutable with value equality - a record or record struct - because
-    /// <c>Exhaustive</c> compares and hashes states to know when it has seen one before. Money is one unit, so
+    /// <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> compares and hashes states to know when it has seen one before. Money is one unit, so
     /// <c>Paid</c> and <c>Refunded</c> are 0 or 1: the requirements below are about the relationship between them,
     /// not about the amount - except REFUND-IS-ONE-STEP, which turns out to be about the amount after all. Give
     /// <c>Pay</c> two amounts and it is false in three steps. docs/Spec.md works that through, because choosing a
@@ -139,7 +139,7 @@ public partial class SpecIntroTests
     [Test]
     public async Task Missing_Transition_Is_A_Dead_End()
     {
-        var report = Create(refundable: false).Exhaustive(out var violation, TUnitX.WriteLine);
+        var report = Create(refundable: false).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsEqualTo(1);
         await Assert.That(violation).IsNotNull();

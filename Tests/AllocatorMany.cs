@@ -51,8 +51,8 @@ public static class AllocatorMany
                 long r = ((-e % PF) + PF) % PF;
                 if (r > PF / 2) r -= PF;
                 long d = (e + r) / PF;
-                if (lo != null && d <= lo[j]) canRemove = false;
-                if (hi != null && d >= hi[j]) canAdd = false;
+                if (lo is not null && d <= lo[j]) canRemove = false;
+                if (hi is not null && d >= hi[j]) canAdd = false;
             }
             if (canRemove && (!hasRem || (Int128)rem * maxRemDen > (Int128)maxRemNum * den)) { maxRemNum = rem; maxRemDen = den; hasRem = true; }
             if (canAdd   && (!hasAdd  || (Int128)add * minAddDen < (Int128)minAddNum * den)) { minAddNum = add; minAddDen = den; hasAdd  = true; }

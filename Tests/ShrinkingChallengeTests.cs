@@ -142,7 +142,7 @@ public class ShrinkingChallengeTests
             while (s.Count != 0)
             {
                 var h = s.Pop();
-                if (h == null) continue;
+                if (h is null) continue;
                 r.Add(h.Head);
                 s.Push(h.Left);
                 s.Push(h.Right);

@@ -88,7 +88,7 @@ public class FixEngineTests
             trigger: (b, a) => a.GapOpen && !b.GapOpen,
             response: (_, a) => !a.GapOpen || a.Status == FixEngine.ConnectionStatus.Disconnected,
             within: FixEngine.Interval * 2, per: "Tick")
-        .Exhaustive(out var violation, TUnitX.WriteLine);
+        .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("GAP-RESOLVED");
         TUnitX.WriteLine(violation.ToString(s => s.ToString()));

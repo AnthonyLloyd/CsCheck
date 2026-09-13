@@ -11,7 +11,7 @@ namespace Tests
 
     public class ReverseComplementTests()
     {
-        [Test][Skip("Long running test.")]
+        [Test, Skip("Long running test.")]
         public void ReverseComplement_Faster()
         {
             if (!File.Exists(FastaUtils.Fasta.Filename)) FastaUtils.Fasta.NotMain(25_000_000, FastaUtils.Fasta.Filename);
@@ -25,7 +25,7 @@ namespace Tests
 
     public class CausalTests
     {
-        [Test]
+        [Test, Skip("Long running test.")]
         public void Fasta()
         {
             Causal.Profile(() => FastaUtils.Fasta.NotMain(10_000_000, null)).Output(TUnitX.WriteLine);
@@ -503,7 +503,7 @@ namespace   FastaUtils
 
         public static void NotMain(int n, string filename)
         {
-            using var o = filename == null ? (Stream)new MemoryStream() : File.Create(filename);
+            using var o = filename is null ? (Stream)new MemoryStream() : File.Create(filename);
             var blocks = new Tuple<byte[], int>[
                 (3 * n - 1) / BlockSize + (5 * n - 1) / BlockSize + 3];
 
@@ -555,7 +555,7 @@ namespace   FastaUtils
             for (int i = 0; i < blocks.Length; i++)
             {
                 Tuple<byte[], int> t;
-                while ((t = blocks[i]) == null) Thread.Sleep(0);
+                while ((t = blocks[i]) is null) Thread.Sleep(0);
                 region = Causal.RegionStart("write");
                 t.Item1[0] = (byte)'\n';
                 o.Write(t.Item1, 0, t.Item2);

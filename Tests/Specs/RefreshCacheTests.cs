@@ -77,7 +77,7 @@ public class RefreshCacheTests
             trigger: (_, a, k) => a.Started && a.Touched == k,
             response: (_, a, k) => !a.Of(k).Stale,
             within: RefreshCache.Ttl, per: "Tick")
-        .Exhaustive(out var violation, TUnitX.WriteLine);
+        .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("STALE-ALWAYS-CLEARS[A]");
         TUnitX.WriteLine(violation.ToString(s => s.ToString()));

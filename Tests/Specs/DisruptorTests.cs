@@ -78,7 +78,7 @@ public class DisruptorTests
     public async Task Loosening_The_Gate_By_One_Produces_A_Race()
     {
         var spec = DisruptorSpec.CreateWithGate(size: 3, sequences: 9, slack: 1);
-        spec.Exhaustive(out var violation, TUnitX.WriteLine, maxStates: 2_000_000);
+        spec.Exhaustive(out var violation, maxStates: 2_000_000, writeLine: TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NO-DATA-RACES");
         TUnitX.WriteLine(violation.ToString(s => DisruptorSpec.Show(s, 3)));
