@@ -43,11 +43,11 @@ public sealed class Trace<S>
     /// <summary><see langword="true"/> when the walk stopped because nothing was enabled (including an intended <see cref="Spec{S}.Terminal(Func{S, bool})">Terminal</see> end). <see langword="false"/> when the walk reached the requested length. A deadlock is a no-action end that was not declared Terminal; that split lives on <see cref="SpecReport"/>, not here. </summary>
     public readonly bool NoActionEnabled;
 
-    internal Trace(S initial, Transition<S>[] steps, bool deadlocked)
+    internal Trace(S initial, Transition<S>[] steps, bool noActionEnabled)
     {
         Initial = initial;
         Steps = steps;
-        NoActionEnabled = deadlocked;
+        NoActionEnabled = noActionEnabled;
     }
 
     /// <summary>The trace with each state rendered by <paramref name="print"/>, one step per line.</summary>
@@ -456,7 +456,7 @@ sealed class GenSpecTrace<S>(Spec<S> spec, int minSteps, int maxSteps, SpecFault
             enabledActions = actionBuf = new int[actions.Count];
         var steps = new Transition<S>[length];
         var state = spec.Initial;
-        var deadlocked = false;
+        var noActionEnabled = false;
         int n = 0;
         for (; n < length; n++)
         {
@@ -468,7 +468,7 @@ sealed class GenSpecTrace<S>(Spec<S> spec, int minSteps, int maxSteps, SpecFault
                 for (int g = 0; g < action.ArgCount; g++)
                     if (action.Enabled(state, g)) { enabledActions[na++] = a; weight += action.Weight; break; }
             }
-            if (na == 0) { deadlocked = true; break; }
+            if (na == 0) { noActionEnabled = true; break; }
             var ai = enabledActions[na - 1];
             var pick = (int)pcg.Next((uint)weight);
             for (int i = 0; i < na; i++)
@@ -493,7 +493,7 @@ sealed class GenSpecTrace<S>(Spec<S> spec, int minSteps, int maxSteps, SpecFault
         }
         size.I = (ulong)n << 32;
         if (n != length) System.Array.Resize(ref steps, n); // Gen<T>.Array shadows the type name here
-        return new(spec.Initial, steps, deadlocked);
+        return new(spec.Initial, steps, noActionEnabled);
     }
 }
 
@@ -1407,7 +1407,7 @@ public static partial class Check
 
         public void Observe(Trace<S> trace)
         {
-            // Deadlocked is also true at an intended end.
+            // NoActionEnabled is also true at an intended end.
             if (!trace.NoActionEnabled || spec.IsTerminal?.Invoke(
                 trace.Steps.Length == 0 ? trace.Initial : trace.Steps[^1].After) == true) return;
             Interlocked.Increment(ref counters.Deadlocks);

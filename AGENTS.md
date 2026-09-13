@@ -159,7 +159,7 @@ Rules for generating this:
   to a model that already closes.
 - Put the last observation (message received, messages emitted) **in the state**. That is what makes every
   requirement a pure predicate over `(before, after)`.
-- Requirement forms: `Invariant`, `Reachable`, `Rule(then)`, `Rule(when/then)`, `Rule(on:/when:/then:)`, `Never`, `AtMost`, `Response`, `Precedes`, `NeverAfter`. For a claim about every step use `Rule(then)`, never a `when:` of `true`: the first reports `every step`, the second a count that looks like vacuity information and is not.
+- Requirement forms: `Invariant`, `Reachable`, `Rule(then)`, `Rule(when/then)`, `Rule(on:/when:/then:)`, `Never`, `AtMost`, `Response`, `Precedes`, `NeverAfter`. For a claim about every step use `Rule(then)`, never a `when:` of `true`: the first reports "every step", the second prints a step count that looks like “how often the interesting case happened” and is only how many steps ran.
 - `NeverAfter(until:)` scopes the obligation between two events, reopening on the next `after`. Prefer a state field
   when the state can say whether the scope is open: it costs the same search state, prints in the counterexample, and
   other requirements can read it. Six of the seven worked examples use a field; the one that uses `until:` had the
@@ -169,7 +169,7 @@ Rules for generating this:
 - `Response` is for consequences that take time: a response holding on the trigger step itself does **not** discharge
   the obligation. A property whose consequence happens in the triggering step (answer a TestRequest with a Heartbeat)
   is a `Rule`. `Precedes` is the opposite: its two predicates holding on one step satisfies it.
-- Read `Triggered` in the report: `NEVER` means the requirement passed vacuously. `Fired` is per (action, argument) case, so `NEVER` there means that case is dead. A non-zero `deadlock` count prints a path to one, each step naming what else was enabled where it was taken, since every action is disabled at the dead end itself. `Sample` reports `deadlocked` as a count of walks rather than of states, and leaves `DeadlockStates` zero.
+- Read `Triggered` in the report: `NEVER` means the when / on / trigger never happened, so a green row proves nothing. `Fired` is per (action, argument) case, so `NEVER` there means that case is dead. A non-zero `deadlock` count prints a path to one, each step naming what else was enabled where it was taken, since every action is disabled at the dead end itself. `Sample` reports `deadlocked` as a count of walks rather than of states, and leaves `DeadlockStates` zero.
 - Assert the size of the space (`report.States`, `report.Transitions`), not only that it closed. Every other assertion
   has the form "no counterexample was found", which a search that explored too little also satisfies.
 - Assert which requirement caught each fault, not just that something did:

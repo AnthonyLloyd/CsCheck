@@ -590,9 +590,7 @@ public partial class SpecValidationTests
         await Assert.That(report.NeverTriggered).Contains("AT-MOST-THREE");
     }
 
-    /// <summary>A Rule with neither on: nor when: is the transition counterpart of an Invariant, and reports every step
-    /// rather than a count - the count a when: of true produces looks like vacuity information but is only the number of
-    /// steps evaluated, which is what this overload exists to stop.</summary>
+    /// <summary>A Rule with neither on: nor when: is the transition counterpart of an Invariant, and reports every step rather than a count - the count a when: of true produces looks like “how often the interesting case happened” but is only the number of steps evaluated.</summary>
     [Test]
     public async Task Rule_Over_Every_Step_Reports_Every_Step()
     {
@@ -750,8 +748,7 @@ public partial class SpecValidationTests
 
     /// <summary>The reason coverage is counted per (action, argument) case and not per action. Set(2) is never enabled,
     /// and the other two cases keep Set busy - so counting per action would report a healthy total and NeverFired could
-    /// not see the dead case at all. This is the argument-level half of the vacuity story, and it is exactly the shape
-    /// of the hole the per-action count left in the FIX example's twenty inbound cases.</summary>
+    /// not see the dead case at all. This is the argument-level half of the same problem: a busy total can hide a case that never ran.</summary>
     [Test]
     public async Task NeverFired_Detects_A_Dead_Argument_Case()
     {
