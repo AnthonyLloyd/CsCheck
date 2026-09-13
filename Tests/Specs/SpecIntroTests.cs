@@ -101,8 +101,8 @@ public partial class SpecIntroTests
     /// <summary>Enumerate every reachable state and check every requirement on every transition out of every one of
     /// them. When the frontier empties the state space is closed, so this is a proof for the model rather than a
     /// sample of it, and the report is the certificate.
-    /// <para>Read the report as well as the assertions. Triggered says how often each requirement's antecedent actually</para>
-    /// fired - a NEVER there means the requirement passed vacuously and proves nothing.</summary>
+    /// <para>Read the report as well as the assertions. Triggered says how often each requirement's antecedent actually
+    /// fired - a NEVER there means the requirement passed vacuously and proves nothing.</para></summary>
     [Test]
     public async Task Exhaustive_Proof()
     {
@@ -134,8 +134,8 @@ public partial class SpecIntroTests
     /// without it ever holding; that is what Reachable is for. And the deadlock count is 1, which costs no requirement
     /// at all - Exhaustive knows which states have nothing enabled, and Terminal said which of those were intended.
     /// The second signal is the more interesting one, because nobody writes a requirement for a transition they forgot.</para>
-    /// <para>Refund and REFUND-IS-ONE-STEP report NEVER here, which is correct: with the action disabled there is nothing</para>
-    /// for them to do. That is what the coverage table is for.</summary>
+    /// <para>Refund and REFUND-IS-ONE-STEP report NEVER here, which is correct: with the action disabled there is nothing
+    /// for them to do. That is what the coverage table is for.</para></summary>
     [Test]
     public async Task Missing_Transition_Is_A_Dead_End()
     {

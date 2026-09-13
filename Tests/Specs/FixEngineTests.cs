@@ -16,8 +16,8 @@ public class FixEngineTests
     /// deadlines are carried in the search state.
     /// <para>The size of the space is pinned as well. Every other assertion here has the form "no counterexample was
     /// found", which a search that explored too little also satisfies, so without this a change that dropped a whole
-    /// class of successor would leave the test green while proving strictly less. A model change that legitimately</para>
-    /// moves these numbers should update them in the same commit, deliberately.</summary>
+    /// class of successor would leave the test green while proving strictly less. A model change that legitimately
+    /// moves these numbers should update them in the same commit, deliberately.</para></summary>
     [Test]
     public async Task Exhaustive_Proof()
     {
@@ -54,8 +54,8 @@ public class FixEngineTests
     /// space re-explored; the table shows which requirement caught it and how many steps the shortest counterexample
     /// took. Faults throws if any defect escapes every requirement, so this fails when a requirement is missing.
     /// <para>The two pairings asserted below are the ones worth pinning. Being caught by something is not enough: a fault
-    /// caught by the wrong requirement passes while leaving the intended one unproven, which is what happened to the</para>
-    /// test request fault before it was rewritten to perturb only the termination.</summary>
+    /// caught by the wrong requirement passes while leaving the intended one unproven, which is what happened to the
+    /// test request fault before it was rewritten to perturb only the termination.</para></summary>
     [Test]
     public async Task Faults_Are_All_Caught()
     {

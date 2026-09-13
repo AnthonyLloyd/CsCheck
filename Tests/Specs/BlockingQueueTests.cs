@@ -18,8 +18,8 @@ using Wake = BlockingQueueSpec.Wake;
 /// family rather than about one trace, so the sweep checks this reimplementation against a theorem.</para>
 /// <para>Reading the original mattered. Its final version notifies one thread of the <em>opposite</em> kind, which is
 /// already a fix, and a model of that finds nothing - as the first attempt here did, oracle and all. The version the
-/// published traces come from notifies one arbitrary thread of <em>either</em> kind, because that is what</para>
-/// <c>Object.notify</c> does, and that is the whole bug.</summary>
+/// published traces come from notifies one arbitrary thread of <em>either</em> kind, because that is what
+/// <c>Object.notify</c> does, and that is the whole bug.</para></summary>
 public partial class BlockingQueueTests
 {
     /// <summary>The bug, found without writing a requirement for it. Every thread waiting is a state with no action
@@ -122,8 +122,8 @@ public partial class BlockingQueueTests
     /// producer ids that filled it and the wait set is a set of names, so nothing here shares an assumption or a line
     /// of bit arithmetic with the specification. It has to agree on the shortest number of steps to a deadlock.
     /// <para>It also prices the one abstraction. This keeps the producer ids the original carries; the specification keeps
-    /// only the length, because nothing ever reads a value out of the buffer - Get takes the tail and discards the head,</para>
-    /// and a notify picks a thread rather than the datum's owner. The ratio is what that distinction would have cost.</summary>
+    /// only the length, because nothing ever reads a value out of the buffer - Get takes the tail and discards the head,
+    /// and a notify picks a thread rather than the datum's owner. The ratio is what that distinction would have cost.</para></summary>
     [Test]
     public async Task Agrees_With_A_Transliteration_Of_The_Original()
     {

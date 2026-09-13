@@ -383,8 +383,7 @@ public partial class SpecValidationTests
     /// <para>This model has exactly two concrete states and Tick cycles between them, so the whole space is visited in two
     /// steps. If the deadline were not part of the node key the frontier would empty with the obligation still owed
     /// and nothing would be reported - which is precisely the unsoundness stateright documents for its eventually.
-    /// The violation being found at all is the property; the depth shows the deadline counting down across the</para>
-    /// cycle.</summary>
+    /// The violation being found at all is the property; the depth shows the deadline counting down across the cycle.</para></summary>
     [Test]
     public async Task Response_Obligation_Survives_A_Cycle()
     {
@@ -641,8 +640,8 @@ public partial class SpecValidationTests
     /// Absence Before and NeverAfter is Absence After, but nothing said "not between one thing and the next, every time
     /// round". Pos 1 opens the scope and Pos 3 closes it, twice.
     /// <para>The three cases are only conclusive together. Closed proves until closes the scope, because the same predicate
-    /// with no until is a violation. Reopened then proves it reopens, because closed has already established that the</para>
-    /// scope was shut when the second lap began, so nothing else can explain a violation inside it.</summary>
+    /// with no until is a violation. Reopened then proves it reopens, because closed has already established that the
+    /// scope was shut when the second lap began, so nothing else can explain a violation inside it.</para></summary>
     [Test]
     public async Task NeverAfter_Until_Closes_The_Scope_And_Reopens_It()
     {
