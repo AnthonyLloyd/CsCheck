@@ -101,8 +101,8 @@ public partial class SpecIntroTests
     /// <summary>Enumerate every reachable state and check every requirement on every transition out of every one of
     /// them. When the frontier empties the state space is closed, so this is a proof for the model rather than a
     /// sample of it, and the report is the certificate.
-    /// <para>Read the report as well as the assertions. Triggered says how often each requirement's antecedent actually
-    /// fired - a NEVER there means the requirement passed vacuously and proves nothing.</para></summary>
+    /// <para>Read the report as well as the assertions. Triggered says how often each requirement's when / on / trigger actually
+    /// fired - a NEVER there means the requirement passed without ever being checked and proves nothing.</para></summary>
     [Test]
     public async Task Exhaustive_Proof()
     {

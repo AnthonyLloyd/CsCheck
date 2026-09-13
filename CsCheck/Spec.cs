@@ -282,7 +282,7 @@ public sealed class Spec<S>(S initial)
     public Spec<S> Reachable(string id, string quote, Func<S, bool> holds) =>
         Add(new(ReqKind.Reachable, id, quote) { Holds = holds });
 
-    /// <summary>Must hold over every step. The transition counterpart of <see cref="Spec{S}.Invariant">Invariant</see>, for a claim about what changed rather than about a single state, and reported as <c>every step</c> in the coverage table because there is no antecedent that could fail to fire. Prefer this to a <c>when</c> of <see langword="true"/>, which reports a count that looks like vacuity information and is only the number of steps evaluated.</summary>
+    /// <summary>Must hold over every step. Shown as `every step` in the coverage table: there is no <c>when:</c> / <c>on:</c> that can be missed. Prefer this to <c>when: true</c>, which prints a step count that looks like “how often the interesting case happened” and is only how many steps were evaluated.</summary>
     public Spec<S> Rule(string id, string quote, Func<S, S, bool> then) =>
         Add(new(ReqKind.Rule, id, quote) { Consequent = then });
 
@@ -298,7 +298,7 @@ public sealed class Spec<S>(S initial)
     public Spec<S> Rule(string id, string quote, string on, Func<S, S, bool> when, Func<S, S, bool> then) =>
         Add(new(ReqKind.Rule, id, quote) { OnAction = on, Trigger = when, Consequent = then });
 
-    /// <summary>Must never hold over any step. Coverage counts steps evaluated rather than steps that could have failed, so this form cannot report vacuity; use the <c>on:</c> overload when you want that signal.</summary>
+    /// <summary>Must never hold over any step. Coverage is “every step”, so this form cannot tell you the interesting case was missed. Use the <c>on:</c> overload when you want a "NEVER" if that action never ran.</summary>
     public Spec<S> Never(string id, string quote, Func<S, S, bool> forbidden) =>
         Add(new(ReqKind.Never, id, quote) { Consequent = forbidden });
 
@@ -531,10 +531,10 @@ public sealed class SpecReport
     internal string[] RequirementIds = [];
     internal long[] RequirementTriggered = [];
     internal long[] RequirementUnresolved = [];
-    // Whether the requirement has an antecedent that can fail to fire. An Invariant, and a Never without on:, apply to every step, so their triggered count is just the number of steps evaluated and says nothing about vacuity.
+    // True when the requirement has a `when`/`on`trigger that might never happen. Invariant, and Never without `on:`, run on every step, so their Triggered count is just the number of steps and does not mean “the interesting case was hit.”
     internal bool[] RequirementGuarded = [];
 
-    /// <summary>Requirements whose antecedent never fired, so they passed vacuously. Requirements that apply to every step have no antecedent to count and are not included.</summary>
+    /// <summary>Requirements whose <c>when</c> / <c>on</c> trigger never happened, so the check never ran and a pass proves nothing. Requirements that apply to every step are omitted.</summary>
     public IEnumerable<string> NeverTriggered
     {
         get

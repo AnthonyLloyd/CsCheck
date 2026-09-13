@@ -487,8 +487,7 @@ Spec.From(State.Connected)
 - **`Conform`** drives a real implementation down the same walk and checks it conforms to the specification on those traces.
 - **`Mermaid`** returns the reachable state graph as a Mermaid flowchart, with intended ends, dead ends and cut-off states styled differently, for a model small enough to look at.
 
-Every run prints how often each requirement's antecedent actually fired, so a requirement that passed vacuously
-says `NEVER` instead of quietly passing:
+Every run prints how often each requirement's when / on / trigger actually happened. If that never happened the row says NEVER: the check passed only because it was never in a position to fail.:
 
 ```
 Spec.Exhaustive of 31 requirements
@@ -501,7 +500,7 @@ Spec.Exhaustive of 31 requirements
   ...
 ```
 
-(`every step` means the requirement has no antecedent that could fail to fire, so vacuity does not apply to it.)
+(`every step` means this requirement is checked on every step. There is no when / on / trigger that can be missed.)
 
 Start with [Tests/Specs/SpecIntroTests.cs](Tests/Specs/SpecIntroTests.cs), an order lifecycle in one file, seven reachable
 states, small enough to check by hand. Then [docs/Spec.md](docs/Spec.md) for the seven worked examples: the FIX 4.4

@@ -143,7 +143,7 @@ variant that can be decided as you go. No pattern other than Absence has a scope
 ```
 
 The bare `Never` and the bare `Rule` apply to every step, so their coverage count would just be the number of steps
-evaluated; both report `every step` instead, because a number there reads like vacuity information and is not. The
+evaluated; both report `every step` instead. A raw step count would look like coverage of an interesting case, and it is not. The
 `on:` overload of `Never` counts how often that action ran, so a `Never` that could not fire says so. Write the bare
 `Rule` rather than a `when:` of `true`; the claim is the same and only one of them says what it is.
 
@@ -290,9 +290,8 @@ Spec.Exhaustive of 31 requirements
 
 `CLOSED` is a claim about every reachable state, so it is a proof for the abstracted model. Read alongside it:
 
-- **`Triggered`**: how many times each requirement's antecedent actually fired. A `NEVER` here means the
-  requirement passed vacuously and proves nothing. This is the single most useful number in the table and no
-  other property-based testing library reports it. An `Invariant`, and a `Never` or `Rule` with no antecedent at
+- **`Triggered`**: how many times each requirement's case actually happened (when, on, or the Response trigger). `NEVER` means the then / forbidden step was never checked, so a green row proves nothing. This is the single most useful number in the table and no
+  other property-based testing library reports it. An `Invariant`, and a `Never` or `Rule` with no when / on / trigger at
   all, apply to every step and so have nothing to count; they read `every step` rather than a misleading number.
 - **`Unresolved`** (`Sample` only): response obligations still outstanding when the trace ended. Neither pass
   nor fail: run longer traces.
@@ -304,7 +303,7 @@ Spec.Exhaustive of 31 requirements
   than states since it keeps no visited set - which matters, because it is the engine left when a space will not close.
 - **`Fired`**: one row per **(action, argument) case**, not per action. That matters: FIX has twenty inbound cases
   behind a single `Recv`, and counting per action hid a dead case behind a busy total; `NeverFired` could not see
-  any of them. A `NEVER` here means that case is dead, which is the argument-level half of the vacuity story.
+  any of them. A `NEVER` here means that argument case never ran. Same problem as a requirement that never triggered: a busy total can hide a dead case.
 
 The tail of `BlockingQueueSpec` at `Wake.Any` with two producers, two consumers and a capacity of one:
 
