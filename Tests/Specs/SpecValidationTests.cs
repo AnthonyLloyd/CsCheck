@@ -11,6 +11,16 @@ public partial class SpecValidationTests
 {
     static Spec<int> Counter() => Spec.From(0).Action("Inc", i => i + 1);
 
+    private record S(int V);
+
+    [Test]
+    public async Task Mermaid_CurlyBraces_In_Record_ToString_Are_Escaped()
+    {
+        var mermaid = Spec.From(new S(0)).Action("Inc", s => new S(s.V + 1)).Mermaid();
+        await Assert.That(mermaid).Contains("&#123;");
+        await Assert.That(mermaid).DoesNotContain("S { V");
+    }
+
     [Test]
     public async Task Duplicate_Requirement_Id_Is_Rejected()
     {
@@ -110,6 +120,48 @@ public partial class SpecValidationTests
             for (int i = 0; i < s.Length; i++) if (s[i] == '|') sb.Append(i).Append(',');
             return sb.ToString();
         }
+    }
+
+    [Test]
+    public async Task Fault_On_Unknown_Action_Is_Rejected()
+    {
+        var spec = Counter()
+            .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
+            .Fault("broken", on: "NoSuchAction", perturb: (_, a) => a - 10);
+        var message = Assert.Throws<CsCheckException>(() => spec.Faults())!.Message;
+        await Assert.That(message).Contains("NoSuchAction");
+    }
+
+    [Test]
+    public async Task Fault_On_ActionName_Is_Caught_When_That_Action_Fires()
+    {
+        var report = Spec.From(0)
+            .Action("Inc", i => i + 1)
+            .Action("Dec", i => i > 0, i => i - 1)
+            .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
+            .Fault("inc-broken", on: "Inc", perturb: (before, _) => before - 1)
+            .Faults();
+        await Assert.That(report.CaughtBy("inc-broken")).IsEqualTo("NON-NEGATIVE");
+    }
+
+    [Test]
+    public async Task Fault_On_ActionName_With_When_Predicate_Is_Caught()
+    {
+        var report = Spec.From(0)
+            .Action("Inc", i => i + 1)
+            .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
+            .Fault("inc-overflow", on: "Inc", when: (_, a) => a > 5, perturb: (_, _) => -1)
+            .Faults();
+        await Assert.That(report.CaughtBy("inc-overflow")).IsEqualTo("NON-NEGATIVE");
+    }
+
+    [Test]
+    public async Task Conform_Omits_Generic_Type_Name_From_Report()
+    {
+        var spec = Counter();
+        var report = spec.Conform(create: () => (0, false), apply: (_, _) => true);
+        await Assert.That(report.ToString()).Contains("Spec.Conform to");
+        await Assert.That(report.ToString()).DoesNotContain("ValueTuple");
     }
 
     /// <summary>Sample writes its report from a finally, so a writeLine that throws there would replace the violation
