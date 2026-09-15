@@ -145,6 +145,18 @@ public partial class SpecValidationTests
     }
 
     [Test]
+    public async Task Fault_On_Disabled_Action_Is_Uncaught()
+    {
+        var report = Spec.From(0)
+            .Action("A", i => i < 3, i => i + 1)
+            .Action("B", _ => false, i => i - 100)
+            .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
+            .Fault("b-broken", on: "B", perturb: (_, a) => a - 1000)
+            .Faults(throwOnUncaught: false);
+        await Assert.That(report.Uncaught).Contains("b-broken");
+    }
+
+    [Test]
     public async Task Fault_On_ActionName_With_When_Predicate_Is_Caught()
     {
         var report = Spec.From(0)
