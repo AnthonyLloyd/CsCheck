@@ -181,17 +181,20 @@ sealed class SpecFault<S>(string name, Func<S, S, bool> when, Func<S, S, S> pert
     public readonly string Name = name;
     public readonly Func<S, S, bool> When = when;
     public readonly Func<S, S, S> Perturb = perturb;
+    public string? OnAction;
+    public int OnActionIndex = -1;
 }
 
 /// <summary>Entry point for building a <see cref="Spec{S}"/>.</summary>
 public static class Spec
 {
-    /// <summary>Start a specification from an initial model state. <typeparamref name="S"/> must be immutable with value equality (a record or record struct) for <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> to close the state space.</summary>
+    /// <summary>Start a specification from an initial model state.</summary>
+    /// <remarks><typeparamref name="S"/> equality decides which states are the same. <typeparamref name="S"/> must be immutable so a seen state cannot change.</remarks>
     public static Spec<S> From<S>(S initial) => new(initial);
 }
 
-/// <summary>An executable specification: a pure transition system plus named requirements quoted from a document. The same object can be explored randomly (<see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see>), exhaustively (<see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see>), mutated (<see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see>) or run against a real implementation (<see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>).</summary>
-/// <remarks>The builder methods add to this instance and return it, rather than returning a new <see cref="Spec{S}"/>. So a <see cref="Spec{S}"/> is frozen the first time an engine runs it and adding to it after that throws: without that, one held in a static field and added to by one test would silently change what every other test checked. Return a fresh Spec from a method, as every example does, and derive variants from that.</remarks>
+/// <summary>An executable specification: a pure transition system plus named requirements quoted from a document. The same spec can be explored exhaustively (<see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see>) or randomly (<see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see>), mutated (<see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see>), or run against a real implementation (<see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>).</summary>
+/// <remarks>The builder methods add to this instance and return it. The spec freezes the first time an engine runs it; adding after that throws. Return a fresh Spec from a method and derive variants from that.</remarks>
 public sealed class Spec<S>(S initial)
 {
     internal readonly S Initial = initial;
@@ -384,6 +387,22 @@ public sealed class Spec<S>(S initial)
         return this;
     }
 
+    /// <summary>A deliberate defect used by <see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see> to check the requirements are strong enough. On every step applying the action named <paramref name="on"/> the resulting state is replaced by <paramref name="perturb"/>.</summary>
+    public Spec<S> Fault(string name, string on, Func<S, S, S> perturb)
+    {
+        ThrowIfFrozen($"fault '{name}'");
+        FaultList.Add(new(name, (_, _) => true, perturb) { OnAction = on });
+        return this;
+    }
+
+    /// <summary>A deliberate defect used by <see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see> to check the requirements are strong enough. When the action named <paramref name="on"/> is applied and <paramref name="when"/> holds over that step, the resulting state is replaced by <paramref name="perturb"/>.</summary>
+    public Spec<S> Fault(string name, string on, Func<S, S, bool> when, Func<S, S, S> perturb)
+    {
+        ThrowIfFrozen($"fault '{name}'");
+        FaultList.Add(new(name, when, perturb) { OnAction = on });
+        return this;
+    }
+
     /// <summary>Generator for random walks of the specification, for composing into other tests.</summary>
     public Gen<Trace<S>> GenTrace(int minSteps = 1, int maxSteps = 24)
     {
@@ -407,7 +426,16 @@ public sealed class Spec<S>(S initial)
             if (!ids.Add(r.Id)) ThrowHelper.Throw($"Spec has more than one requirement with the id '{r.Id}'");
         var faultNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var f in FaultList)
+        {
             if (!faultNames.Add(f.Name)) ThrowHelper.Throw($"Spec has more than one fault with the name '{f.Name}'");
+            if (f.OnAction is not null && f.OnActionIndex == -1)
+            {
+                for (int a = 0; a < Actions.Count; a++)
+                    if (string.Equals(Actions[a].Name, f.OnAction, StringComparison.Ordinal)) { f.OnActionIndex = a; break; }
+                if (f.OnActionIndex == -1)
+                    ThrowHelper.Throw($"Spec fault '{f.Name}' refers to action '{f.OnAction}' which does not exist");
+            }
+        }
         foreach (var r in Requirements)
         {
             if (r.OnAction is not null && r.OnActionIndex == -1)
@@ -620,7 +648,7 @@ public sealed class SpecFaultsReport
     public IReadOnlyList<string> Uncaught { get; }
     /// <summary>Faults whose exhaustive search gave up before the state space closed, so it is not known whether the fault is detectable. These are not thrown on, because the search was incomplete; they show as NOT CLOSED in the table. Declare a <see cref="Spec{S}.Boundary">Boundary</see> or reduce the model to make the search conclusive.</summary>
     public IReadOnlyList<string> Inconclusive { get; }
-    /// <summary>Requirements that no declared fault exercises: a list of faults worth writing rather than a failure. <see cref="Spec{S}.Reachable">Reachable</see> requirements are excluded, and not because a fault cannot break one. Perturbing the model away from the state does exactly that, and <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> then reports the <see cref="Spec{S}.Reachable">Reachable</see> as the violation. They are excluded because a fault written to do that says nothing about whether a requirement is strong enough, which is the only question this list is asking.</summary>
+    /// <summary>Requirements not targeted by any declared fault: a list of faults worth writing rather than a failure. <see cref="Spec{S}.Reachable">Reachable</see> requirements are excluded, and not because a fault cannot break one. Perturbing the model away from the state does exactly that, and <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> then reports the <see cref="Spec{S}.Reachable">Reachable</see> as the violation. They are excluded because a fault written to do that says nothing about whether a requirement is strong enough, which is the only question this list is asking.</summary>
     public IReadOnlyList<string> Unexercised { get; }
 
     readonly string _table;
@@ -777,7 +805,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
             var (ai, arg) = back[back.Count - 1 - i];
             var action = _actions[ai];
             var after = action.Apply(state, arg);
-            if (_fault?.When(state, after) == true) after = _fault.Perturb(state, after);
+            if (_fault is not null && (_fault.OnActionIndex < 0 || _fault.OnActionIndex == ai) && _fault.When(state, after)) after = _fault.Perturb(state, after);
             steps[i] = new(i, ai, arg, action.Name, action.ArgName(arg), state, after);
             state = after;
         }
@@ -818,7 +846,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
                     enabled++;
                     _counters.Fired[_argBase[a] + g]++;
                     var after = action.Apply(node.State, g);
-                    if (_fault?.When(node.State, after) == true) after = _fault.Perturb(node.State, after);
+                    if (_fault is not null && (_fault.OnActionIndex < 0 || _fault.OnActionIndex == a) && _fault.When(node.State, after)) after = _fault.Perturb(node.State, after);
                     ulong d = node.Deadlines, s = node.Seen, k = node.Counts;
                     var det = Check.CheckTransition(_spec, a, node.State, after, ref d, ref s, ref k, _counters.Triggered, 0, out var r);
                     if (!stopInserting && !Insert(head, new(a, g, after, d, s, k, det, r)))
@@ -868,7 +896,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
                             enabled++;
                             fired[slot + _argBase[a] + g]++;
                             var after = action.Apply(node.State, g);
-                            if (_fault?.When(node.State, after) == true) after = _fault.Perturb(node.State, after);
+                            if (_fault is not null && (_fault.OnActionIndex < 0 || _fault.OnActionIndex == a) && _fault.When(node.State, after)) after = _fault.Perturb(node.State, after);
                             ulong d = node.Deadlines, s = node.Seen, k = node.Counts;
                             var det = Check.CheckTransition(_spec, a, node.State, after, ref d, ref s, ref k, triggered, i * _reqs, out var r);
                             edges[slot + n++] = new(a, g, after, d, s, k, det, r);
@@ -1391,6 +1419,8 @@ public static partial class Check
                                            .Replace(">", "&gt;", StringComparison.Ordinal)
                                            .Replace("\"", "&quot;", StringComparison.Ordinal)
                                            .Replace("|", "&#124;", StringComparison.Ordinal)
+                                           .Replace("{", "&#123;", StringComparison.Ordinal)
+                                           .Replace("}", "&#125;", StringComparison.Ordinal)
                                            .Replace("\r\n", "<br/>", StringComparison.Ordinal)
                                            .Replace("\r", "<br/>", StringComparison.Ordinal)
                                            .Replace("\n", "<br/>", StringComparison.Ordinal);
@@ -1639,7 +1669,7 @@ public static partial class Check
             // fault written to do that says nothing about whether a requirement is strong enough.
             if (r.Kind != ReqKind.Reachable && !caught.Contains(r.Id)) idle.Add(r.Id);
         if (idle.Count != 0)
-            sb.Append("\n  no declared fault exercises: ").AppendJoin(", ", idle);
+            sb.Append("\n  requirements not targeted by any declared fault: ").AppendJoin(", ", idle);
         if (caveat is not null) sb.Append("\n  ").Append(caveat);
         if (inconclusive.Count != 0)
             sb.Append("\n  inconclusive (search did not close): ").AppendJoin(", ", inconclusive);
@@ -1667,7 +1697,9 @@ public static partial class Check
     {
         spec.Validate();
         var counters = new SpecCounters(spec.Requirements.Count, spec.ArgPairs);
-        var report = SpecReportOf(spec, $"Spec.Conform of {typeof(TSut).Name} to {Plural(spec.Requirements.Count, "requirement")}", counters);
+        var sutClause = $" of {typeof(TSut).Name}";
+        if (sutClause.Contains('`')) sutClause = ""; // Generic types (ValueTuple`4, anonymous types) produce unreadable names; omit the type.
+        var report = SpecReportOf(spec, $"Spec.Conform{sutClause} to {Plural(spec.Requirements.Count, "requirement")}", counters);
         static int Diverged<S2, TSut2>(Func<TSut2> create, Func<TSut2, Transition<S2>, bool> apply, Trace<S2> trace)
         {
             var sut = create();
