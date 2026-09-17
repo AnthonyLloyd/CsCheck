@@ -82,21 +82,16 @@ public partial class SpecIntroTests
             then: (before, after) => after.Refunded == before.Refunded + 1 && after.Settled)
 
         // Deliberate defects, so the requirements above can be shown to be strong enough to catch something.
-        .Fault("payment is not recorded",
-            (before, after) => after.Paid > before.Paid,
-            (before, after) => after with { Paid = before.Paid })
-        .Fault("cancelling discards the payment",
-            (_, after) => after.Status == Status.Cancelled,
-            (_, after) => after with { Paid = 0 })
-        .Fault("refund pays out twice",
-            (before, after) => after.Refunded > before.Refunded,
-            (before, after) => after with { Refunded = before.Refunded + 2 })
-        .Fault("cancel is allowed too late",
-            (before, _) => before.Status == Status.Shipped,
-            (_, after) => after with { Status = Status.Cancelled })
-        .Fault("refund does not settle the order",
-            (before, after) => after.Refunded > before.Refunded,
-            (before, after) => after with { Refunded = before.Refunded });
+        .Fault("payment is not recorded", on: "Pay",
+            perturb: (before, after) => after with { Paid = before.Paid })
+        .Fault("cancelling discards the payment", on: "Cancel",
+            perturb: (_, after) => after with { Paid = 0 })
+        .Fault("refund pays out twice", on: "Refund",
+            perturb: (before, after) => after with { Refunded = before.Refunded + 2 })
+        .Fault("cancel is allowed too late", on: "Deliver",
+            perturb: (_, after) => after with { Status = Status.Cancelled })
+        .Fault("refund does not settle the order", on: "Refund",
+            perturb: (before, after) => after with { Refunded = before.Refunded });
 
     /// <summary>Enumerate every reachable state and check every requirement on every transition out of every one of
     /// them. When the frontier empties the state space is closed, so this is a proof for the model rather than a
