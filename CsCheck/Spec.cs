@@ -1694,18 +1694,27 @@ public static partial class Check
     public static SpecReport Conform<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, bool> apply,
         Action<string>? writeLine = null, int minSteps = 1, int maxSteps = 24, string? seed = null, long iter = -1,
         int time = -1, int threads = -1)
+        => Conform(spec, create, (sut, t) => apply(sut, t) ? null : "", writeLine, minSteps, maxSteps, seed, iter, time, threads);
+
+    /// <summary>Check that a real implementation conforms to the <paramref name="spec"/>. The <paramref name="apply"/> function drives one action on the SUT and returns <see langword="null"/> if the SUT state matches the model, or a short description of the divergence that will appear in the failure trace.</summary>
+    public static SpecReport Conform<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, string?> apply,
+        Action<string>? writeLine = null, int minSteps = 1, int maxSteps = 24, string? seed = null, long iter = -1,
+        int time = -1, int threads = -1)
     {
         spec.Validate();
         var counters = new SpecCounters(spec.Requirements.Count, spec.ArgPairs);
         var sutClause = $" of {typeof(TSut).Name}";
         if (sutClause.Contains('`')) sutClause = ""; // Generic types (ValueTuple`4, anonymous types) produce unreadable names; omit the type.
         var report = SpecReportOf(spec, $"Spec.Conform{sutClause} to {Plural(spec.Requirements.Count, "requirement")}", counters);
-        static int Diverged<S2, TSut2>(Func<TSut2> create, Func<TSut2, Transition<S2>, bool> apply, Trace<S2> trace)
+        static (int Step, string? Reason) Diverged<S2, TSut2>(Func<TSut2> create, Func<TSut2, Transition<S2>, string?> apply, Trace<S2> trace)
         {
             var sut = create();
             for (int i = 0; i < trace.Steps.Length; i++)
-                if (!apply(sut, trace.Steps[i])) return i;
-            return -1;
+            {
+                var reason = apply(sut, trace.Steps[i]);
+                if (reason is not null) return (i, reason);
+            }
+            return (-1, null);
         }
         var deadEnds = new DeadEnds<S>(spec, counters);
         try
@@ -1714,7 +1723,7 @@ public static partial class Check
                 trace =>
                 {
                     deadEnds.Observe(trace);
-                    return SpecWalk(spec, trace, counters) is null && Diverged(create, apply, trace) == -1;
+                    return SpecWalk(spec, trace, counters) is null && Diverged(create, apply, trace).Step == -1;
                 },
                 null, seed, iter, time, threads,
             trace =>
@@ -1724,11 +1733,12 @@ public static partial class Check
                 if (violation is not null) return violation.ToString(spec.Printer);
                 // Re-running Diverged here to find the step for the error message. If apply throws deterministically
                 // the printer would throw too and Sample could not produce the shrunk CsCheckException with the trace.
-                int i;
-                try { i = Diverged(create, apply, trace); }
-                catch (Exception e) { i = -1; return $"\n  Implementation threw during conformance check: {e.Message}"; }
-                return new StringBuilder("\n  Implementation diverged from the specification at step ").Append(i + 1)
-                    .Append("\n         Trace: ").Append(trace.ToString(spec.Printer, i)).ToString();
+                int i; string? reason;
+                try { (i, reason) = Diverged(create, apply, trace); }
+                catch (Exception e) { i = -1; reason = null; return $"\n  Implementation threw during conformance check: {e.Message}"; }
+                var sb = new StringBuilder("\n  Implementation diverged from the specification at step ").Append(i + 1);
+                if (!string.IsNullOrEmpty(reason)) sb.Append("\n        Reason: ").Append(reason);
+                return sb.Append("\n         Trace: ").Append(trace.ToString(spec.Printer, i)).ToString();
             });
         }
         finally

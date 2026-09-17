@@ -105,7 +105,7 @@ public class FixEngineTests
         // The spec expresses inbound messages as (kind, Seq relation); the engine takes a wire-level message
         // with a real sequence number and PossDup fields. The translation uses the engine's current Expect to
         // produce a sequence number that satisfies the intended relation.
-        static bool Apply(FixEngine e, Transition<FixEngineSpec.State> t)
+        static string? Apply(FixEngine e, Transition<FixEngineSpec.State> t)
         {
             switch (t.Action)
             {
@@ -127,9 +127,13 @@ public class FixEngineTests
                 case "Reconnect": e.Reconnect(); break;
                 default: e.Drop(); break;
             }
-            return e.Status == t.After.Status && e.Sent == t.After.Sent
-                && e.Expect == t.After.Expect && e.Next == t.After.Next
-                && e.GapOpen == t.After.GapOpen && e.Queued == t.After.Queued;
+            if (e.Status != t.After.Status) return $"Status: got {e.Status}, expected {t.After.Status}";
+            if (e.Sent != t.After.Sent) return $"Sent: got {e.Sent}, expected {t.After.Sent}";
+            if (e.Expect != t.After.Expect) return $"Expect: got {e.Expect}, expected {t.After.Expect}";
+            if (e.Next != t.After.Next) return $"Next: got {e.Next}, expected {t.After.Next}";
+            if (e.GapOpen != t.After.GapOpen) return $"GapOpen: got {e.GapOpen}, expected {t.After.GapOpen}";
+            if (e.Queued != t.After.Queued) return $"Queued: got {e.Queued}, expected {t.After.Queued}";
+            return null;
         }
         var message = Assert.Throws<CsCheckException>(
             () => FixEngineSpec.Create().Conform(() => new FixEngine(), Apply, TUnitX.WriteLine, iter: 100_000))!.Message;

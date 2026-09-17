@@ -963,6 +963,26 @@ public partial class SpecValidationTests
 
     sealed class ConformSut { public int N; }
 
+    /// <summary>When apply returns a non-null string that reason appears in the failure trace so the divergence is
+    /// immediately clear without adding debug output to the apply function.</summary>
+    [Test]
+    public async Task Conform_String_Reason_Appears_In_Failure_Message()
+    {
+        var spec = Spec.From(0)
+            .Action("Inc", s => s < 3, s => s + 1)
+            .Invariant("ANY", "Always true.", _ => true);
+        var message = Assert.Throws<CsCheckException>(() => spec.Conform(
+            () => new int[1],
+            (sut, t) =>
+            {
+                sut[0] += 2; // bug: increments by 2 instead of 1
+                return sut[0] != t.After ? $"got {sut[0]}, expected {t.After}" : null;
+            },
+            writeLine: null))!.Message;
+        await Assert.That(message).Contains("Reason: got 2, expected 1");
+        await Assert.That(message).Contains("Trace:");
+    }
+
     /// <summary>Conform surfaces a throwing model too, not just a throwing implementation.</summary>
     [Test]
     public async Task Conform_Surfaces_A_Model_That_Throws()

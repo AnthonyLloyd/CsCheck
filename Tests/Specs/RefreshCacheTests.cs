@@ -41,7 +41,7 @@ public class RefreshCacheTests
     [Test]
     public async Task Conforms_To_Spec()
     {
-        static bool Apply(RefreshCache c, Transition<RefreshCacheSpec.State> t)
+        static string? Apply(RefreshCache c, Transition<RefreshCacheSpec.State> t)
         {
             var key = RefreshCacheSpec.Keys[t.ArgIndex];
             var served = RefreshCache.Served.None;
@@ -52,10 +52,11 @@ public class RefreshCacheTests
                 case "Fail": c.Fail(key); break;
                 default: c.Tick(); break;
             }
-            return served == t.After.Served
-                && c.Version(key) == t.After.Of(key).Version
-                && c.Age(key) == t.After.Of(key).Age
-                && c.Loads(key) == t.After.Of(key).Loads;
+            if (served != t.After.Served) return $"Served: got {served}, expected {t.After.Served}";
+            if (c.Version(key) != t.After.Of(key).Version) return $"Version[{key}]: got {c.Version(key)}, expected {t.After.Of(key).Version}";
+            if (c.Age(key) != t.After.Of(key).Age) return $"Age[{key}]: got {c.Age(key)}, expected {t.After.Of(key).Age}";
+            if (c.Loads(key) != t.After.Of(key).Loads) return $"Loads[{key}]: got {c.Loads(key)}, expected {t.After.Of(key).Loads}";
+            return null;
         }
         var report = RefreshCacheSpec.Create()
             .Conform(() => new RefreshCache(), Apply, TUnitX.WriteLine, maxSteps: 30, iter: 20_000);
