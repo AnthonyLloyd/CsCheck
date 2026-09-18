@@ -62,9 +62,8 @@ parameter, so the configuration measured is named where it is not the only one:
 | [`DisruptorSpec`](../Tests/Specs/DisruptorSpec.cs) | a lock-free ring buffer whose space is genuinely infinite | 3 slots, first 20 sequences | 31,517 | 88,646 |
 | [`TerminationDetectionSpec`](../Tests/Specs/TerminationDetectionSpec.cs) | Safra's EWD 998, and the largest by two orders of magnitude | ring of 3, the original's own bound | 1,520,691 | 10,507,707 |
 
-The EWD 998 row is verified against TLC 1.7.4 running `EWD998Small.cfg` (N=3) directly: TLC gives **1,520,618
-distinct states and 11,238,019 generated**, matching this spec's 1,520,691 within 73 states: the scaffold states
-from the three setup actions before any protocol initial state.
+The EWD 998 row is verified against TLC 1.7.4 running `EWD998Small.cfg` (N=3) directly: TLC gives 1,520,618 plus
+73 scaffold matching this spec's 1,520,691. The scaffold states from the three setup actions before any protocol initial state.
 
 The four reimplementations are checked against their originals in different ways, and it is worth knowing which is
 available to you: `BlockingQueueSpec` against published trace lengths, an independent transliteration, and a *derived
