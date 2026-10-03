@@ -82,8 +82,8 @@ Return `false` or throw to signal failure.
 public void Long_Range()
 {
     (from t in Gen.Select(Gen.Long, Gen.Long)
-     let start = Math.Min(t.V0, t.V1)
-     let finish = Math.Max(t.V0, t.V1)
+     let start = Math.Min(t.Item1, t.Item2)
+     let finish = Math.Max(t.Item1, t.Item2)
      from value in Gen.Long[start, finish]
      select (value, start, finish))
     .Sample(i => i.start <= i.value && i.value <= i.finish);
@@ -101,9 +101,10 @@ Gen.Int.Array.Select(a => (new SetSlim<int>(a), new HashSet<int>(a)))
         (hs, i) => hs.Add(i)));
 ```
 
-With `writeLine:` set a table of how often each operation ran is written, rows named `Op0`, `Op1` by argument position.
-Add `classify:` over the model state to split each operation by the state it acted on, which is how to check the
-interesting cases were reached and not just the easy one. Both are inert without `writeLine:`.
+With `classify:` over the model state and `writeLine:` set, a table of how often each operation ran is written, rows
+named `Op0`, `Op1` by argument position and split by the state each acted on, which is how to check the interesting
+cases were reached and not just the easy one. `classify:` is inert without `writeLine:`, and `writeLine:` alone only
+writes the iteration count.
 
 ### Metamorphic testing: `SampleMetamorphic`
 Do the same thing two different ways from one initial sample; assert equal.
@@ -113,8 +114,8 @@ Gen.Dictionary(Gen.Int, Gen.Byte)
 .Select(d => new MapSlim<int, byte>(d))
 .SampleMetamorphic(
     Gen.Select(Gen.Int[0, 100], Gen.Byte, Gen.Int[0, 100], Gen.Byte).Metamorphic<MapSlim<int, byte>>(
-        (d, t) => { d[t.V0] = t.V1; d[t.V2] = t.V3; },
-        (d, t) => { if (t.V0 == t.V2) d[t.V2] = t.V3; else { d[t.V2] = t.V3; d[t.V0] = t.V1; } }));
+        (d, t) => { d[t.Item1] = t.Item2; d[t.Item3] = t.Item4; },
+        (d, t) => { if (t.Item1 == t.Item3) d[t.Item3] = t.Item4; else { d[t.Item3] = t.Item4; d[t.Item1] = t.Item2; } }));
 ```
 
 ### Specification testing: `Spec` + `Exhaustive` / `Sample` / `Faults` / `Conform`
@@ -220,9 +221,15 @@ Check.Hash(h =>
   `Gen.Int.Uniform`.
 - Collections: `gen.Array`, `gen.Array[n]`, `gen.Array[min, max]`, `gen.List`,
   `gen.Array2D`, `Gen.Dictionary(keyGen, valGen)`.
-- Combinators: `Gen.Select(...)` (tuples expose `.V0`, `.V1`, ...),
+- Combinators: `Gen.Select(...)` (tuples expose `.Item1`, `.Item2`, ...),
   `Gen.SelectMany`, `gen.Where(...)`, `Gen.OneOf(...)`, `Gen.Const(() => ...)`,
   `gen.Null()`, `Gen.Recursive<T>((depth, self) => ...)`.
+- Many generators: `Gen.Select` takes up to 16 generators with a selector (up to
+  8 without one, giving a tuple). For more, nest them:
+  `Gen.Select(Gen.Select(a, b, c, d), Gen.Select(e, f, g, h), (x, y) => ...)`,
+  which shrinks the same as one flat `Select`. Query syntax
+  (`from a in ga from b in gb ... select`) has no limit but shrinks the earlier
+  values first, so keep it for values that depend on earlier ones.
 
 ## Configuration parameters (optional args on Check methods)
 

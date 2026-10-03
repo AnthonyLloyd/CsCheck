@@ -109,8 +109,8 @@ public void Single_Unit_Range()
 public void Long_Range()
 {
     (from t in Gen.Select(Gen.Long, Gen.Long)
-     let start = Math.Min(t.V0, t.V1)
-     let finish = Math.Max(t.V0, t.V1)
+     let start = Math.Min(t.Item1, t.Item2)
+     let finish = Math.Max(t.Item1, t.Item2)
      from value in Gen.Long[start, finish]
      select (value, start, finish))
     .Sample(i => i.start <= i.value && i.value <= i.finish);
@@ -262,9 +262,9 @@ SetSlim_ModelBased()
 
 ### Operation coverage
 
-Set `writeLine` and a table of how often each operation ran is written, which is the cheapest way to see that a random
-walk has starved one. Add `classify` over the model state and each operation is split by the state it acted on, which
-answers whether the interesting cases were reached at all or only the easy one.
+Set `classify` over the model state along with `writeLine` and a table of how often each operation ran is written, split
+by the state it acted on. This shows a random walk that has starved an operation, and answers whether the interesting
+cases were reached at all or only the easy one.
 
 ```csharp
 Gen.Int[0, 5].List[0, 3].Select(l => (new ConcurrentBag<int>(l), l))
@@ -276,19 +276,19 @@ Gen.Int[0, 5].List[0, 3].Select(l => (new ConcurrentBag<int>(l), l))
     writeLine: Console.WriteLine);
 ```
 
-|             | Count |       % |    Median |   Lower Q |   Upper Q |   Minimum |    Maximum |
-|-------------|------:|--------:|----------:|----------:|----------:|----------:|-----------:|
-| Op0         | 3,388 |  50.27% |           |           |           |           |            |
-|   non-empty | 2,907 |  43.14% |  0.1000μs |  0.0059μs |  0.1095μs |  0.0000μs | 285.6000μs |
-|   empty     |   481 |   7.14% |  0.1000μs |  0.0992μs |  0.1018μs |  0.0000μs |   2.3000μs |
-| Op1         | 3,351 |  49.73% |           |           |           |           |            |
-|   non-empty | 2,910 |  43.18% |  0.0997μs |  0.0072μs |  0.1082μs |  0.0000μs | 362.6000μs |
-|   empty     |   441 |   6.54% |  0.1000μs |  0.0300μs |  0.1001μs |  0.0000μs |   0.8000μs |
+|             | Count |       % |
+|-------------|------:|--------:|
+| Op0         | 3,495 |  51.17% |
+|   non-empty | 3,098 |  45.36% |
+|   empty     |   397 |   5.81% |
+| Op1         | 3,335 |  48.83% |
+|   non-empty | 2,963 |  43.38% |
+|   empty     |   372 |   5.45% |
 
-Rows are named by the operation's position in the argument list, and the times are of the actual operation rather than
-the model. The initial list is bounded here because the default `List` Count is uniform over 0 to 127, so a bag starting
-near 64 with balanced adds and takes reaches empty only in the rare iteration that starts there. Nothing is written and
-nothing is measured when `writeLine` is not set.
+Rows are named by the operation's position in the argument list. The initial list is bounded here because the default
+`List` Count is uniform over 0 to 127, so a bag starting near 64 with balanced adds and takes reaches empty only in the
+rare iteration that starts there. `classify` is only called when `writeLine` is also set, and `writeLine` on its own only
+writes the iteration count.
 
 ## Metamorphic testing
 
@@ -307,8 +307,8 @@ public void MapSlim_Metamorphic()
     .Select(d => new MapSlim<int, byte>(d))
     .SampleMetamorphic(
         Gen.Select(Gen.Int[0, 100], Gen.Byte, Gen.Int[0, 100], Gen.Byte).Metamorphic<MapSlim<int, byte>>(
-            (d, t) => { d[t.V0] = t.V1; d[t.V2] = t.V3; },
-            (d, t) => { if (t.V0 == t.V2) d[t.V2] = t.V3; else { d[t.V2] = t.V3; d[t.V0] = t.V1; } }
+            (d, t) => { d[t.Item1] = t.Item2; d[t.Item3] = t.Item4; },
+            (d, t) => { if (t.Item1 == t.Item3) d[t.Item3] = t.Item4; else { d[t.Item3] = t.Item4; d[t.Item1] = t.Item2; } }
         )
     );
 }

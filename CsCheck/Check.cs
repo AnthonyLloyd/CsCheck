@@ -1460,23 +1460,38 @@ public static partial class Check
         ILogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print, logger);
 
-    sealed class ModelBasedData<Actual, Model>(Actual actualState, Model modelState, uint stream, ulong seed, (string, Action<Actual>, Action<Model>)[] operations)
+    sealed class ModelBasedData<Actual, Model>(Actual actualState, Model modelState, uint stream, ulong seed, Size? min, (int, Action<Actual>, Action<Model>)[] operations)
     {
-        public Actual ActualState = actualState; public Model ModelState = modelState; public uint Stream = stream; public ulong Seed = seed; public (string, Action<Actual>, Action<Model>)[] Operations = operations; public Exception? Exception;
+        public Actual ActualState = actualState; public Model ModelState = modelState; public uint Stream = stream; public ulong Seed = seed; public Size? Min = min; public (int, Action<Actual>, Action<Model>)[] Operations = operations; public Exception? Exception;
     }
 
-    sealed class GenInitial<Actual, Model>(Gen<(Actual, Model)> initial) : Gen<(Actual Actual, Model Model, uint Stream, ulong Seed)>
+    sealed class GenInitial<Actual, Model>(Gen<(Actual, Model)> initial) : Gen<(Actual Actual, Model Model, uint Stream, ulong Seed, Size? Min)>
     {
-        public override (Actual Actual, Model Model, uint Stream, ulong Seed) Generate(PCG pcg, Size? min, out Size size)
+        public override (Actual Actual, Model Model, uint Stream, ulong Seed, Size? Min) Generate(PCG pcg, Size? min, out Size size)
         {
             var stream = pcg.Stream;
             var seed = pcg.Seed;
             var (actual, model) = initial.Generate(pcg, null, out size);
-            return (actual, model, stream, seed);
+            return (actual, model, stream, seed, min);
         }
     }
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+
+    /// <summary>Counts are kept per thread and merged when printed, as one shared count is contended on every operation.</summary>
+    sealed class ModelBasedClassifier<Model>(Func<Model, string> classify) : IDisposable
+    {
+        readonly ThreadLocal<Dictionary<(int, string), long>> counts = new(() => [], trackAllValues: true);
+        public void Add(int op, Model model) => CollectionsMarshal.GetValueRefOrAddDefault(counts.Value!, (op, classify(model)), out _)++;
+        public void Print(Action<string> writeLine)
+        {
+            var classifier = new Classifier();
+            foreach (var threadCounts in counts.Values)
+                foreach (var ((op, classification), count) in threadCounts)
+                    classifier.AddCount("Op" + op + "/" + classification, count);
+            classifier.Print(writeLine);
+        }
+        public void Dispose() => counts.Dispose();
+    }
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operations">The operation generators that can act on the state.</param>
     /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
@@ -1486,8 +1501,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model>[] operations,
@@ -1503,35 +1517,22 @@ public static partial class Check
         printActual ??= Print;
         printModel ??= Print;
 
-        var classifier = writeLine is null ? null : new Classifier();
-        var opNameActions = new Gen<(string, Action<Actual>, Action<Model>)>[operations.Length];
+        var opActions = new Gen<(int, Action<Actual>, Action<Model>)>[operations.Length];
+        var opNames = new Gen<string>[operations.Length];
         for (int i = 0; i < operations.Length; i++)
         {
             var op = operations[i];
+            var opIndex = i;
             var opName = "Op" + i;
-            if (classifier is null)
-                opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2, t.Item3)) : op;
-            else
-                // start is captured by both actions so the time recorded is of the actual operation, and classify runs
-                // before the model action so it sees the state the operation was applied to.
-                opNameActions[i] = op.Select(t =>
-                {
-                    var start = 0L;
-                    return (op.AddOpNumber ? opName + t.Item1 : t.Item1,
-                        actual: (Action<Actual>)(a => { start = Stopwatch.GetTimestamp(); t.Item2(a); }),
-                        model: (Action<Model>)(m =>
-                        {
-                            var elapsed = Stopwatch.GetTimestamp() - start;
-                            classifier.Add(classify is null ? opName : opName + "/" + classify(m), elapsed);
-                            t.Item3(m);
-                        }));
-                });
+            opActions[i] = op.Actions.Select((actual, model) => (opIndex, actual, model));
+            opNames[i] = op.AddOpNumber ? op.Select(t => opName + t.Item1) : op.Select(t => t.Item1);
         }
 
+        using var classifier = classify is null || writeLine is null ? null : new ModelBasedClassifier<Model>(classify);
         try
         {
             new GenInitial<Actual, Model>(initial)
-            .Select(Gen.OneOf(opNameActions).Array, (a, b) => new ModelBasedData<Actual, Model>(a.Actual, a.Model, a.Stream, a.Seed, b))
+            .Select(Gen.OneOf(opActions).Array, (a, b) => new ModelBasedData<Actual, Model>(a.Actual, a.Model, a.Stream, a.Seed, a.Min, b))
             .Sample(d =>
             {
                 try
@@ -1539,6 +1540,8 @@ public static partial class Check
                     foreach (var operation in d.Operations)
                     {
                         operation.Item2(d.ActualState);
+                        // Before the model action so classify sees the state the operation was applied to.
+                        classifier?.Add(operation.Item1, d.ModelState);
                         operation.Item3(d.ModelState);
                     }
                     return equal(d.ActualState, d.ModelState);
@@ -1552,9 +1555,11 @@ public static partial class Check
             p =>
             {
                 if (p is null) return "";
+                // The names are only built for a failure, by generating the same operations again from the same state.
+                var pcg = new PCG(p.Stream, p.Seed);
+                var initialState = initial.Generate(pcg, null, out _);
                 var sb = new StringBuilder();
-                sb.Append("\n    Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
-                var initialState = initial.Generate(new PCG(p.Stream, p.Seed), null, out _);
+                sb.Append("\n    Operations: ").Append(Print(Gen.OneOf(opNames).Array.Generate(pcg, p.Min, out _)));
                 sb.Append("\nInitial Actual: ").Append(printActual(initialState.Item1));
                 sb.Append("\nInitial  Model: ").Append(printModel(initialState.Item2));
                 if (p.Exception is null)
@@ -1575,8 +1580,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation">The operation generator that can act on the state.</param>
     /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
@@ -1586,8 +1590,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1597,8 +1600,7 @@ public static partial class Check
         Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBased(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
@@ -1609,8 +1611,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1621,8 +1622,7 @@ public static partial class Check
         Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
@@ -1634,8 +1634,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1646,8 +1645,7 @@ public static partial class Check
         Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
@@ -1660,8 +1658,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1672,8 +1669,7 @@ public static partial class Check
         Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
@@ -1687,8 +1683,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1701,8 +1696,7 @@ public static partial class Check
         => SampleModelBased(initial, [operation1, operation2, operation3, operation4, operation5],
             equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
@@ -1717,8 +1711,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1731,24 +1724,22 @@ public static partial class Check
         => SampleModelBased(initial, [operation1, operation2, operation3, operation4, operation5, operation6],
             equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    sealed class ModelBasedDataAsync<Actual, Model>(Task<(Actual, Model)> initial, uint stream, ulong seed, (string, Func<Actual, Task>, Func<Model, Task>)[] operations)
+    sealed class ModelBasedDataAsync<Actual, Model>(Task<(Actual, Model)> initial, uint stream, ulong seed, Size? min, (int, Func<Actual, Task>, Func<Model, Task>)[] operations)
     {
         public Task<(Actual, Model)> Initial = initial; public Actual InitialActual = default!; public Model InitialModel = default!; public bool InitialMaterialized;
-        public Actual ActualState = default!; public Model ModelState = default!; public uint Stream = stream; public ulong Seed = seed; public (string, Func<Actual, Task>, Func<Model, Task>)[] Operations = operations; public Exception? Exception;
+        public Actual ActualState = default!; public Model ModelState = default!; public uint Stream = stream; public ulong Seed = seed; public Size? Min = min; public (int, Func<Actual, Task>, Func<Model, Task>)[] Operations = operations; public Exception? Exception;
     }
 
-    sealed class GenInitialAsync<Actual, Model>(Gen<Task<(Actual, Model)>> initial) : Gen<(Task<(Actual, Model)> Task, uint Stream, ulong Seed)>
+    sealed class GenInitialAsync<Actual, Model>(Gen<Task<(Actual, Model)>> initial) : Gen<(Task<(Actual, Model)> Task, uint Stream, ulong Seed, Size? Min)>
     {
-        public override (Task<(Actual, Model)> Task, uint Stream, ulong Seed) Generate(PCG pcg, Size? min, out Size size)
+        public override (Task<(Actual, Model)> Task, uint Stream, ulong Seed, Size? Min) Generate(PCG pcg, Size? min, out Size size)
         {
-            var stream = pcg.Stream;
-            var seed = pcg.Seed;
             var task = initial.Generate(pcg, null, out size);
-            return (task, stream, seed);
+            // The state after the initial task, so the operation names can be generated again without starting another task.
+            return (task, pcg.Stream, pcg.Seed, min);
         }
     }
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operations">The operation generators that can act on the state.</param>
     /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
@@ -1758,11 +1749,10 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
-    public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model>[] operations,
+    public static async Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model>[] operations,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
         Action<string>? writeLine = null, ILogger? logger = null)
@@ -1775,95 +1765,78 @@ public static partial class Check
         printActual ??= Print;
         printModel ??= Print;
 
-        var classifier = writeLine is null ? null : new Classifier();
-        var opNameActions = new Gen<(string, Func<Actual, Task>, Func<Model, Task>)>[operations.Length];
+        var opActions = new Gen<(int, Func<Actual, Task>, Func<Model, Task>)>[operations.Length];
+        var opNames = new Gen<string>[operations.Length];
         for (int i = 0; i < operations.Length; i++)
         {
             var op = operations[i];
+            var opIndex = i;
             var opName = "Op" + i;
-            if (classifier is null)
-                opNameActions[i] = op.AddOpNumber ? op.Select(t => (opName + t.Item1, t.Item2, t.Item3)) : op;
-            else
-                // start is captured by both actions so the time recorded is of the actual operation, and classify runs
-                // before the model action so it sees the state the operation was applied to.
-                opNameActions[i] = op.Select(t =>
-                {
-                    var start = 0L;
-                    return (op.AddOpNumber ? opName + t.Item1 : t.Item1,
-                        actual: (Func<Actual, Task>)(async a => { start = Stopwatch.GetTimestamp(); await t.Item2(a).ConfigureAwait(false); }),
-                        model: (Func<Model, Task>)(m =>
-                        {
-                            var elapsed = Stopwatch.GetTimestamp() - start;
-                            classifier.Add(classify is null ? opName : opName + "/" + classify(m), elapsed);
-                            return t.Item3(m);
-                        }));
-                });
+            opActions[i] = op.Actions.Select((actual, model) => (opIndex, actual, model));
+            opNames[i] = op.AddOpNumber ? op.Select(t => opName + t.Item1) : op.Select(t => t.Item1);
         }
 
-        var task = new GenInitialAsync<Actual, Model>(initial)
-        .Select(Gen.OneOf(opNameActions).Array, (a, b) => new ModelBasedDataAsync<Actual, Model>(a.Task, a.Stream, a.Seed, b))
-        .SampleAsync(async d =>
+        using var classifier = classify is null || writeLine is null ? null : new ModelBasedClassifier<Model>(classify);
+        try
         {
-            try
+            await new GenInitialAsync<Actual, Model>(initial)
+            .Select(Gen.OneOf(opActions).Array, (a, b) => new ModelBasedDataAsync<Actual, Model>(a.Task, a.Stream, a.Seed, a.Min, b))
+            .SampleAsync(async d =>
             {
-                var (actual, model) = await d.Initial.ConfigureAwait(false);
-                d.InitialActual = actual;
-                d.InitialModel = model;
-                d.InitialMaterialized = true;
-                d.ActualState = actual;
-                d.ModelState = model;
-                foreach (var operation in d.Operations)
+                try
                 {
-                    await operation.Item2(d.ActualState).ConfigureAwait(false);
-                    await operation.Item3(d.ModelState).ConfigureAwait(false);
+                    var (actual, model) = await d.Initial.ConfigureAwait(false);
+                    d.InitialActual = actual;
+                    d.InitialModel = model;
+                    d.InitialMaterialized = true;
+                    d.ActualState = actual;
+                    d.ModelState = model;
+                    foreach (var operation in d.Operations)
+                    {
+                        await operation.Item2(d.ActualState).ConfigureAwait(false);
+                        // Before the model action so classify sees the state the operation was applied to.
+                        classifier?.Add(operation.Item1, d.ModelState);
+                        await operation.Item3(d.ModelState).ConfigureAwait(false);
+                    }
+                    return equal(d.ActualState, d.ModelState);
                 }
-                return equal(d.ActualState, d.ModelState);
-            }
-            catch (Exception e)
+                catch (Exception e)
+                {
+                    d.Exception = e;
+                    return false;
+                }
+            }, writeLine, seed, iter, time, threads,
+            p =>
             {
-                d.Exception = e;
-                return false;
-            }
-        }, writeLine, seed, iter, time, threads,
-        p =>
+                if (p is null) return "";
+                var sb = new StringBuilder();
+                // The names are only built for a failure, by generating the same operations again from the same state.
+                sb.Append("\n    Operations: ").Append(Print(Gen.OneOf(opNames).Array.Generate(new PCG(p.Stream, p.Seed), p.Min, out _)));
+                if (p.InitialMaterialized)
+                {
+                    sb.Append("\nInitial Actual: ").Append(printActual(p.InitialActual));
+                    sb.Append("\nInitial  Model: ").Append(printModel(p.InitialModel));
+                }
+                if (p.Exception is null)
+                {
+                    sb.Append("\n  Final Actual: ").Append(printActual(p.ActualState));
+                    sb.Append("\n  Final  Model: ").Append(printModel(p.ModelState));
+                }
+                else
+                {
+                    sb.Append("\n     Exception: ").Append(p.Exception);
+                }
+                return sb.ToString();
+            }, logger).ConfigureAwait(false);
+        }
+        finally
         {
-            if (p is null) return "";
-            var sb = new StringBuilder();
-            sb.Append("\n    Operations: ").Append(Print(p.Operations.Select(i => i.Item1).ToList()));
-            if (p.InitialMaterialized)
-            {
-                sb.Append("\nInitial Actual: ").Append(printActual(p.InitialActual));
-                sb.Append("\nInitial  Model: ").Append(printModel(p.InitialModel));
-            }
-            if (p.Exception is null)
-            {
-                sb.Append("\n  Final Actual: ").Append(printActual(p.ActualState));
-                sb.Append("\n  Final  Model: ").Append(printModel(p.ModelState));
-            }
-            else
-            {
-                sb.Append("\n     Exception: ").Append(p.Exception);
-            }
-            return sb.ToString();
-        }, logger);
-        return classifier is null ? task : PrintAfter(task, classifier, writeLine!);
-
-        // Printed in a finally, because a failing sample is exactly when the classification is worth reading.
-        static async Task PrintAfter(Task task, Classifier classifier, Action<string> writeLine)
-        {
-            try
-            {
-                await task.ConfigureAwait(false);
-            }
-            finally
-            {
-                classifier.Print(writeLine);
-            }
+            // A failing sample is exactly when the classification is worth reading.
+            classifier?.Print(writeLine!);
         }
     }
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation">The operation generator that can act on the state.</param>
     /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
@@ -1873,8 +1846,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1884,8 +1856,7 @@ public static partial class Check
         Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBasedAsync(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
@@ -1896,8 +1867,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1908,8 +1878,7 @@ public static partial class Check
         Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
@@ -1921,8 +1890,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1933,8 +1901,7 @@ public static partial class Check
         Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
@@ -1947,8 +1914,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1959,8 +1925,7 @@ public static partial class Check
         Action<string>? writeLine = null, ILogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
@@ -1974,8 +1939,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1988,8 +1952,7 @@ public static partial class Check
         => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4, operation5],
             equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
@@ -2004,8 +1967,7 @@ public static partial class Check
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
     /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
     /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is set a
-    /// table of how often each operation ran is written, split by classification if this is given.</param>
+    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
     /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2034,8 +1996,7 @@ public static partial class Check
             return new MetamorphicData<T>(i1, i2, stream, seed);
         }
     }
-    /// <summary>Sample metamorphic (two path) operations on a random initial state checking that both paths are equal.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample metamorphic (two path) operations on a random initial state checking that both paths are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operations">A metamorphic operation generator that can act on the state.</param>
     /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
@@ -2139,10 +2100,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample operations on a random initial state in parallel.
-    /// The result is compared against the result of the possible sequential permutations.
-    /// At least one of these permutations result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on a random initial state in parallel. The result is compared against the result of the possible sequential permutations. At least one of these permutations result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operations">The operation generators that can act on the state in parallel.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
@@ -2260,10 +2218,7 @@ public static partial class Check
         });
     }
 
-    /// <summary>Sample operations on a random initial state in parallel.
-    /// The result is compared against the result of the possible sequential permutations.
-    /// At least one of these permutations result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on a random initial state in parallel. The result is compared against the result of the possible sequential permutations. At least one of these permutations result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation">An operation generator that can act on the state in parallel.</param>
     /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
@@ -2281,10 +2236,7 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
-    /// <summary>Sample operations on a random initial state in parallel.
-    /// The result is compared against the result of the possible sequential permutations.
-    /// At least one of these permutations result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on a random initial state in parallel. The result is compared against the result of the possible sequential permutations. At least one of these permutations result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state in parallel.</param>
     /// <param name="operation2">An operation generator that can act on the state in parallel.</param>
@@ -2303,10 +2255,7 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
-    /// <summary>Sample operations on a random initial state in parallel.
-    /// The result is compared against the result of the possible sequential permutations.
-    /// At least one of these permutations result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on a random initial state in parallel. The result is compared against the result of the possible sequential permutations. At least one of these permutations result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state in parallel.</param>
     /// <param name="operation2">An operation generator that can act on the state in parallel.</param>
@@ -2326,10 +2275,7 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
-    /// <summary>Sample operations on a random initial state in parallel.
-    /// The result is compared against the result of the possible sequential permutations.
-    /// At least one of these permutations result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on a random initial state in parallel. The result is compared against the result of the possible sequential permutations. At least one of these permutations result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state in parallel.</param>
     /// <param name="operation2">An operation generator that can act on the state in parallel.</param>
@@ -2350,10 +2296,7 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3, operation4], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
-    /// <summary>Sample operations on a random initial state in parallel.
-    /// The result is compared against the result of the possible sequential permutations.
-    /// At least one of these permutations result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on a random initial state in parallel. The result is compared against the result of the possible sequential permutations. At least one of these permutations result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state in parallel.</param>
     /// <param name="operation2">An operation generator that can act on the state in parallel.</param>
@@ -2376,10 +2319,7 @@ public static partial class Check
         int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3, operation4, operation5], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
-    /// <summary>Sample operations on a random initial state in parallel.
-    /// The result is compared against the result of the possible sequential permutations.
-    /// At least one of these permutations result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on a random initial state in parallel. The result is compared against the result of the possible sequential permutations. At least one of these permutations result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state in parallel.</param>
     /// <param name="operation2">An operation generator that can act on the state in parallel.</param>
@@ -2402,9 +2342,7 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3, operation4, operation5, operation6], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
-    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state.
-    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial actual and model state generator.</param>
     /// <param name="operations">The actual and model operation generators that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
@@ -2530,9 +2468,7 @@ public static partial class Check
         });
     }
 
-    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state.
-    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial actual and model state generator.</param>
     /// <param name="operation">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
@@ -2551,9 +2487,7 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
 
-    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state.
-    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial actual and model state generator.</param>
     /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
@@ -2573,9 +2507,7 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
 
-    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state.
-    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial actual and model state generator.</param>
     /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
@@ -2596,9 +2528,7 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
 
-    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state.
-    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial actual and model state generator.</param>
     /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
@@ -2620,9 +2550,7 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3, operation4], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
 
-    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state.
-    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial actual and model state generator.</param>
     /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
@@ -2645,9 +2573,7 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3, operation4, operation5], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
 
-    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state.
-    /// At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully.
-    /// If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
+    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial actual and model state generator.</param>
     /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>

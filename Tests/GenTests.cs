@@ -711,6 +711,47 @@ public class GenTests
         await Assert.That(Size.IsLessThan(size, min)).IsFalse();
     }
 
+    /// <summary>A Select of 9 to 16 generators draws them in order and adds their sizes, the same as generating each in turn.</summary>
+    [Test]
+    public void Select_9_To_16_Matches_Generating_Each_In_Turn()
+    {
+        var g = Gen.Int;
+        Gen.Select(Gen.UInt, Gen.ULong).Sample((stream, seed) =>
+            InTurn(stream, seed, Gen.Select(g, g, g, g, g, g, g, g, g, (v1, v2, v3, v4, v5, v6, v7, v8, v9) => new[] { v1, v2, v3, v4, v5, v6, v7, v8, v9 }))
+         && InTurn(stream, seed, Gen.Select(g, g, g, g, g, g, g, g, g, g, (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) => new[] { v1, v2, v3, v4, v5, v6, v7, v8, v9, v10 }))
+         && InTurn(stream, seed, Gen.Select(g, g, g, g, g, g, g, g, g, g, g, (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) => new[] { v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11 }))
+         && InTurn(stream, seed, Gen.Select(g, g, g, g, g, g, g, g, g, g, g, g, (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12) => new[] { v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12 }))
+         && InTurn(stream, seed, Gen.Select(g, g, g, g, g, g, g, g, g, g, g, g, g, (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13) => new[] { v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13 }))
+         && InTurn(stream, seed, Gen.Select(g, g, g, g, g, g, g, g, g, g, g, g, g, g, (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14) => new[] { v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14 }))
+         && InTurn(stream, seed, Gen.Select(g, g, g, g, g, g, g, g, g, g, g, g, g, g, g, (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15) => new[] { v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15 }))
+         && InTurn(stream, seed, Gen.Select(g, g, g, g, g, g, g, g, g, g, g, g, g, g, g, g, (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => new[] { v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16 })));
+    }
+
+    static bool InTurn(uint stream, ulong seed, Gen<int[]> select)
+    {
+        var selectPcg = new PCG(stream, seed);
+        var values = select.Generate(selectPcg, null, out var size);
+        var pcg = new PCG(stream, seed);
+        var total = new Size(0);
+        foreach (var value in values)
+        {
+            if (Gen.Int.Generate(pcg, null, out var s) != value) return false;
+            total.Add(s);
+        }
+        return size.I == total.I && selectPcg.State == pcg.State;
+    }
+
+    [Test]
+    public async Task Select_16_Skips_When_Intermediate_Field_Is_Not_Smaller()
+    {
+        var min = new Size(0);
+        var z = new SizedGen<int>(0, 0);
+        var actual = Gen.Select(z, z, z, z, z, z, z, z, z, z, z, z, new SizedGen<int>(13, 1), z, z, z,
+            static (_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) => 123)
+            .Generate(PCG.Parse("0000000000aa"), min, out var size);
+        await Assert.That(actual).IsEqualTo(0);
+        await Assert.That(Size.IsLessThan(size, min)).IsFalse();
+    }
     [Test]
     public async Task SelectMany_Skips_When_Result_Is_Not_Smaller()
     {
