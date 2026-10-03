@@ -22,11 +22,15 @@ CsCheck also makes specification, performance and regression testing simple and 
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;specification;model-checking;temporal;parallel;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>4.9.1</Version>
+        <Version>4.9.2</Version>
         <PackageReleaseNotes>
-Fixed Spec mermaid { } encoding.
-Added Spec.Fault on action name parameters overload.
-Added Spec.Conform apply string? reason return instead of bool.
+Fixed SampleModelBased writing an operation table and timing every operation when only writeLine is set.
+SampleModelBased classify table is now counts only, kept per thread, so it no longer slows the sample down.
+SampleModelBased only builds operation names when reporting a failure.
+Fixed a Classifier summary row counting the rows it is a prefix of, such as Op1 counting Op10.
+Fixed a throwing writeLine in a classify table failing a passing sample or replacing its failure.
+Classifier totals are now long, so a long classify run no longer throws OverflowException.
+Added Gen.Select overloads for 9 to 16 generators with a selector.
         </PackageReleaseNotes>
         <TargetFramework>net8.0</TargetFramework>
         <LangVersion>preview</LangVersion>

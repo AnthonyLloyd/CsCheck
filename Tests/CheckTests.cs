@@ -3,6 +3,7 @@ namespace Tests;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using CsCheck;
 
@@ -319,7 +320,64 @@ public class CheckTests
         await Assert.That(lines.Any(l => l.Contains("| Op1"))).IsTrue();
         await Assert.That(lines.Any(l => l.Contains(Leaf("empty")))).IsTrue();
         await Assert.That(lines.Any(l => l.Contains(Leaf("non-empty")))).IsTrue();
+        // Counts only, the operations are not timed.
+        await Assert.That(lines.Any(l => l.Contains("Median"))).IsFalse();
     }
+
+    /// <summary>Counted per thread and merged, so every operation is counted once, and Op1's row does not take in Op10's.</summary>
+    [Test]
+    public async Task SampleModelBased_Classify_Counts_Every_Operation_Once()
+    {
+        var ran = 0;
+        var lines = new List<string>();
+        Gen.Const(() => (new List<int>(), new List<int>()))
+        .SampleModelBased(
+            [.. Enumerable.Range(0, 11).Select(i => Gen.Operation<List<int>, List<int>>(a => { Interlocked.Increment(ref ran); a.Add(i); }, m => m.Add(i)))],
+            classify: m => m.Count % 2 == 0 ? "even" : "odd", writeLine: lines.Add);
+        foreach (var line in lines) TUnitX.WriteLine(line);
+        var rows = lines.Where(l => l.StartsWith("| ", StringComparison.Ordinal)).Skip(1).Select(l => l.Split('|'))
+            .Select(c => (Leaf: c[1][1] == '\u00A0', Count: int.Parse(c[2], NumberStyles.Number))).ToList();
+        await Assert.That(rows.Count(r => !r.Leaf)).IsEqualTo(11);
+        var total = 0;
+        for (int i = 0; i < rows.Count;)
+        {
+            var parent = rows[i++].Count;
+            var leaves = 0;
+            while (i < rows.Count && rows[i].Leaf) leaves += rows[i++].Count;
+            await Assert.That(leaves).IsEqualTo(parent);
+            total += parent;
+        }
+        await Assert.That(total).IsEqualTo(ran);
+    }
+
+    /// <summary>The names are only built for a failure, by generating the operations again, so they must match the values that ran.</summary>
+    [Test]
+    public async Task SampleModelBased_Failure_Names_The_Operations_That_Ran()
+    {
+        var message = Assert.Throws<CsCheckException>(() => Gen.Const(() => (new List<int>(), new List<int>()))
+            .SampleModelBased(
+                Gen.Int[0, 9].Operation<List<int>, List<int>>((a, i) => a.Add(i), (m, i) => m.Add(i)),
+                Gen.Int[10, 99].Operation<List<int>, List<int>>(i => "Big " + i, (a, i) => a.Add(i), (m, i) => m.Add(i)),
+                equal: (a, _) => a.Distinct().Count() < 3 || !a.Exists(i => i >= 10), printActual: a => string.Join(",", a)))!.Message;
+        TUnitX.WriteLine(message);
+        await Assert.That(MessageLine(message, "Operations: ")).IsEqualTo(ExpectedNames(MessageLine(message, "Final Actual: ")));
+    }
+
+    [Test]
+    public async Task SampleModelBasedAsync_Failure_Names_The_Operations_That_Ran()
+    {
+        var message = (await Assert.ThrowsAsync<CsCheckException>(() => Gen.Const(() => Task.FromResult((new List<int>(), new List<int>())))
+            .SampleModelBasedAsync(
+                Gen.Int[0, 9].Operation<List<int>, List<int>>((a, i) => { a.Add(i); return Task.CompletedTask; }, (m, i) => { m.Add(i); return Task.CompletedTask; }),
+                Gen.Int[10, 99].Operation<List<int>, List<int>>(i => "Big " + i, (a, i) => { a.Add(i); return Task.CompletedTask; }, (m, i) => { m.Add(i); return Task.CompletedTask; }),
+                equal: (a, _) => a.Distinct().Count() < 3 || !a.Exists(i => i >= 10), printActual: a => string.Join(",", a))))!.Message;
+        TUnitX.WriteLine(message);
+        await Assert.That(MessageLine(message, "Operations: ")).IsEqualTo(ExpectedNames(MessageLine(message, "Final Actual: ")));
+    }
+
+    static string MessageLine(string message, string label) => message.Split('\n').Single(l => l.Contains(label)).Split(label)[1];
+
+    static string ExpectedNames(string actual) => Check.Print(actual.Split(',').Select(int.Parse).Select(i => i < 10 ? "Op0 " + i : "Big " + i).ToList());
 
     /// <summary>Classifier indents nested rows with U+00A0 non breaking spaces, which is the character in the literal
     /// below, so matching on an ordinary space finds nothing. It also keeps "empty" off the "non-empty" row.</summary>
@@ -375,11 +433,38 @@ public class CheckTests
         await Assert.That(async.Any(l => l.Contains("| low"))).IsTrue();
     }
 
-    /// <summary>Without a classify the table is still written, one row per operation, which is the cheap signal that a
-    /// random walk has starved an operation. Nothing is written at all when writeLine is left unset, so the default
-    /// path pays nothing.</summary>
+    /// <summary>The table is written from a finally, so a throwing sink must neither fail a passing sample nor replace a failure.</summary>
     [Test]
-    public async Task SampleModelBased_Operation_Counts()
+    public void Classify_Table_Throwing_WriteLine()
+    {
+        static void Throw(string _) => throw new InvalidOperationException("the sink is gone");
+        Gen.Int[0, 9].Sample(i => i < 5 ? "low" : "high", Throw, iter: 100);
+        var initial = Gen.Int[0, 5].List.Select(l => (new List<int>(l), l));
+        var add = Gen.Int[0, 5].Operation<List<int>, List<int>>((a, i) => a.Add(i), (m, i) => m.Add(i));
+        initial.SampleModelBased(add, classify: m => m.Count == 0 ? "empty" : "non-empty", writeLine: Throw);
+        Assert.Throws<CsCheckException>(() => initial.SampleModelBased(add, equal: (_, m) => m.Count < 3,
+            classify: m => m.Count == 0 ? "empty" : "non-empty", writeLine: Throw));
+    }
+
+    /// <summary>Counts are long, so a table past int.MaxValue prints rather than overflowing the total.</summary>
+    [Test]
+    public async Task Classifier_Counts_Past_Int_MaxValue()
+    {
+        var classifier = new Classifier();
+        classifier.AddCount("Op0/a", 3_000_000_000);
+        classifier.AddCount("Op0/b", 2_000_000_000);
+        classifier.AddCount("Op0/b", 1_000_000_000);
+        classifier.AddCount("Op1/a", 1);
+        var lines = new List<string>();
+        classifier.Print(lines.Add);
+        foreach (var line in lines) TUnitX.WriteLine(line);
+        await Assert.That(lines.Count(l => l.Contains(6_000_000_000L.ToString("#,##0")) && l.Contains("100.00%"))).IsEqualTo(1);
+        await Assert.That(lines.Count(l => l.Contains(3_000_000_000L.ToString("#,##0")) && l.Contains("50.00%"))).IsEqualTo(2);
+    }
+
+    /// <summary>Without a classify, writeLine only gets the iteration count, as it did before classify existed.</summary>
+    [Test]
+    public async Task SampleModelBased_WriteLine_Without_Classify_Writes_No_Table()
     {
         var lines = new List<string>();
         Gen.Int[0, 5].List.Select(l => (new ConcurrentBag<int>(l), l))
@@ -387,10 +472,14 @@ public class CheckTests
             Gen.Int.Operation<ConcurrentBag<int>, List<int>>((bag, i) => bag.Add(i), (list, i) => list.Add(i)),
             Gen.Operation<ConcurrentBag<int>, List<int>>(bag => bag.TryTake(out _), list => { if (list.Count > 0) list.RemoveAt(0); }),
             equal: (bag, list) => bag.Count == list.Count, threads: 1, writeLine: lines.Add);
+        await Gen.Int[0, 5].List.Select(l => Task.FromResult((new ConcurrentBag<int>(l), l)))
+        .SampleModelBasedAsync(
+            Gen.Int.Operation<ConcurrentBag<int>, List<int>>(async (bag, i) => { await Task.Yield(); bag.Add(i); }, async (list, i) => { await Task.Yield(); list.Add(i); }),
+            Gen.Operation<ConcurrentBag<int>, List<int>>(async bag => { await Task.Yield(); bag.TryTake(out _); }, async list => { await Task.Yield(); if (list.Count > 0) list.RemoveAt(0); }),
+            equal: (bag, list) => bag.Count == list.Count, threads: 1, writeLine: lines.Add);
         foreach (var line in lines) TUnitX.WriteLine(line);
-        await Assert.That(lines.Any(l => l.Contains("| Op0"))).IsTrue();
-        await Assert.That(lines.Any(l => l.Contains("| Op1"))).IsTrue();
-        await Assert.That(lines.Any(l => l.Contains("empty"))).IsFalse();
+        await Assert.That(lines.Count).IsEqualTo(2);
+        await Assert.That(lines.All(l => l.StartsWith("Passed ", StringComparison.Ordinal))).IsTrue();
     }
 
     [Test, Skip("failing")]

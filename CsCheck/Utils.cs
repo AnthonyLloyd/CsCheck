@@ -982,8 +982,10 @@ public struct MedianEstimate(MedianEstimator e)
 public sealed class Classifier
 {
     readonly ConcurrentDictionary<string, MedianEstimator> estimators = new(StringComparer.Ordinal);
+    // Counts without times, in a long because a long run can count past int.MaxValue, which MedianEstimator.N cannot hold.
+    readonly ConcurrentDictionary<string, long> counts = new(StringComparer.Ordinal);
     [ThreadStatic] static MedianEstimator? nextEstimator;
-    int nullCount;
+    long nullCount;
     public void Add(string name, long time)
     {
         if (name is not null)
@@ -999,61 +1001,69 @@ public sealed class Classifier
         else
             Interlocked.Increment(ref nullCount);
     }
+    internal void AddCount(string name, long count) => counts.AddOrUpdate(name, static (_, c) => c, static (_, n, c) => n + c, count);
+    /// <summary>Each line goes through the same guard as the passed line, so a throwing writeLine cannot fail a passing sample or replace its failure.</summary>
     public void Print(Action<string> writeLine)
     {
-        if (estimators.IsEmpty)
+        var rows = new Dictionary<string, (long Count, MedianEstimator? Times)>(StringComparer.Ordinal);
+        foreach (var kv in estimators) rows[kv.Key] = (kv.Value.N, kv.Value);
+        foreach (var kv in counts) rows[kv.Key] = (kv.Value, null);
+        if (rows.Count == 0)
         {
-            if (nullCount > 0) writeLine($"Null Count: {nullCount:#,##0}");
+            if (nullCount > 0) Reporter.Write(writeLine, $"Null Count: {nullCount:#,##0}");
             return;
         }
-        long total = estimators.Values.Sum(i => i.N);
-        foreach (var (summary, s) in estimators.SelectMany(kv =>
-                                        {
-                                            var a = kv.Key.Split('/');
-                                            return Enumerable.Range(1, a.Length - 1).Select(i => string.Join('/', a.Take(i)));
-                                        }).ToHashSet(StringComparer.Ordinal)
-                                        .Select(summary =>
-                                        {
-                                            var total = new MedianEstimator();
-                                            foreach (var kv in estimators)
-                                            {
-                                                if (kv.Key.StartsWith(summary, StringComparison.Ordinal))
-                                                    total.N += kv.Value.N;
-                                            }
-                                            return (summary, total);
-                                        }).ToList())
-            estimators[summary] = s;
+        long total = rows.Values.Sum(r => r.Count);
+        var leaves = rows.ToList();
+        foreach (var summary in leaves.SelectMany(kv =>
+                                {
+                                    var a = kv.Key.Split('/');
+                                    return Enumerable.Range(1, a.Length - 1).Select(i => string.Join('/', a.Take(i)));
+                                }).ToHashSet(StringComparer.Ordinal))
+        {
+            long n = 0;
+            foreach (var kv in leaves)
+            {
+                if (kv.Key.StartsWith(summary, StringComparison.Ordinal)
+                 && (kv.Key.Length == summary.Length || kv.Key[summary.Length] == '/'))
+                    n += kv.Value.Count;
+            }
+            rows[summary] = (n, null);
+        }
 
         int maxLength = 0;
-        foreach (var kv in estimators)
+        foreach (var key in rows.Keys)
         {
-            var a = kv.Key.Split('/');
+            var a = key.Split('/');
             var l = (a.Length - 1) * 2 + a[^1].Length;
             if (l > maxLength) maxLength = l;
         }
 
-        var (timeString, timeUnit) = TimeFormat(estimators.Values.Max(i => i.Median));
+        // A table of counts has no times, so the time columns would all be blank.
+        var timed = rows.Values.Any(r => r.Times is not null && r.Times.Q2 != 0);
+        double MaxTime(Func<MedianEstimator, double> time) => rows.Values.Max(r => r.Times is null ? 0 : time(r.Times));
+        var (timeString, timeUnit) = TimeFormat(MaxTime(i => i.Median));
 
-        var nLength = Math.Max(estimators.Values.Max(i => i.N).ToString("#,##0").Length, 5);
-        var lowerLength = Math.Max(timeString(estimators.Values.Max(i => i.LowerQuartile)).Length, 7);
-        var medianLength = Math.Max(timeString(estimators.Values.Max(i => i.Median)).Length, 7);
-        var upperLength = Math.Max(timeString(estimators.Values.Max(i => i.UpperQuartile)).Length, 7);
-        var minimumLength = Math.Max(timeString(estimators.Values.Max(i => i.Minimum)).Length, 7);
-        var maximumLength = Math.Max(timeString(estimators.Values.Max(i => i.Maximum)).Length, 7);
-        writeLine($"| {new string(' ', maxLength)} | {"Count".PadLeft(nLength)} |       % |   {"Median".PadLeft(medianLength)} |   {"Lower Q".PadLeft(lowerLength)} |   {"Upper Q".PadLeft(upperLength)} |   {"Minimum".PadLeft(minimumLength)} |   {"Maximum".PadLeft(maximumLength)} |");
-        writeLine($"|-{new string('-', maxLength)}-|-{new string('-', nLength)}:|--------:|-{new string('-', medianLength)}--:|-{new string('-', lowerLength)}--:|-{new string('-', upperLength)}--:|-{new string('-', minimumLength)}--:|-{new string('-', maximumLength)}--:|");
-        foreach (var kv in estimators.OrderByDescending(kv =>
+        var nLength = Math.Max(rows.Values.Max(r => r.Count).ToString("#,##0").Length, 5);
+        var lowerLength = Math.Max(timeString(MaxTime(i => i.LowerQuartile)).Length, 7);
+        var medianLength = Math.Max(timeString(MaxTime(i => i.Median)).Length, 7);
+        var upperLength = Math.Max(timeString(MaxTime(i => i.UpperQuartile)).Length, 7);
+        var minimumLength = Math.Max(timeString(MaxTime(i => i.Minimum)).Length, 7);
+        var maximumLength = Math.Max(timeString(MaxTime(i => i.Maximum)).Length, 7);
+        Reporter.Write(writeLine, $"| {new string(' ', maxLength)} | {"Count".PadLeft(nLength)} |       % |" + (timed ? $"   {"Median".PadLeft(medianLength)} |   {"Lower Q".PadLeft(lowerLength)} |   {"Upper Q".PadLeft(upperLength)} |   {"Minimum".PadLeft(minimumLength)} |   {"Maximum".PadLeft(maximumLength)} |" : ""));
+        Reporter.Write(writeLine, $"|-{new string('-', maxLength)}-|-{new string('-', nLength)}:|--------:|" + (timed ? $"-{new string('-', medianLength)}--:|-{new string('-', lowerLength)}--:|-{new string('-', upperLength)}--:|-{new string('-', minimumLength)}--:|-{new string('-', maximumLength)}--:|" : ""));
+        foreach (var (key, (count, times)) in rows.OrderByDescending(kv =>
                             {
                                 var a = kv.Key.Split('/');
-                                var r = new (int, string)[a.Length];
+                                var r = new (long, string)[a.Length];
                                 for (int i = 0; i < a.Length - 1; i++)
                                 {
                                     var prefix = string.Join('/', a.Take(i + 1));
-                                    r[i] = (estimators[prefix].N, prefix);
+                                    r[i] = (rows[prefix].Count, prefix);
                                 }
-                                r[^1] = (kv.Value.N, kv.Key);
+                                r[^1] = (kv.Value.Count, kv.Key);
                                 return r;
-                            }, Comparer<(int, string)[]>.Create((x, y) =>
+                            }, Comparer<(long, string)[]>.Create((x, y) =>
                                 {
                                     int c;
                                     for (int i = 0; i < Math.Min(x.Length, y.Length); i++)
@@ -1068,29 +1078,29 @@ public sealed class Classifier
                                     return -x.Length.CompareTo(y.Length);
                                 })))
         {
-            var a = kv.Key.Split('/');
+            var a = key.Split('/');
             var name = (new string((char)160, 2 * (a.Length - 1)) + a[^1]).PadRight(maxLength);
-            var output = $"| {name} | {kv.Value.N.ToString("#,##0").PadLeft(nLength)} | {(float)kv.Value.N / total,7:0.00%} |";
-            if (kv.Value.Q2 != 0)
+            var output = $"| {name} | {count.ToString("#,##0").PadLeft(nLength)} | {(float)count / total,7:0.00%} |";
+            if (times is not null && times.Q2 != 0)
             {
-                var median = timeString(kv.Value.Median).PadLeft(medianLength);
-                if (kv.Value.N < 5)
+                var median = timeString(times.Median).PadLeft(medianLength);
+                if (times.N < 5)
                     output += $" {median}{timeUnit} | {new string(' ', lowerLength)}   | {new string(' ', upperLength)}   | {new string(' ', minimumLength)}   | {new string(' ', maximumLength)}   |";
                 else
                 {
-                    var lower = timeString(kv.Value.LowerQuartile).PadLeft(lowerLength);
-                    var upper = timeString(kv.Value.UpperQuartile).PadLeft(upperLength);
-                    var minimum = timeString(kv.Value.Minimum).PadLeft(minimumLength);
-                    var maximum = timeString(kv.Value.Maximum).PadLeft(maximumLength);
+                    var lower = timeString(times.LowerQuartile).PadLeft(lowerLength);
+                    var upper = timeString(times.UpperQuartile).PadLeft(upperLength);
+                    var minimum = timeString(times.Minimum).PadLeft(minimumLength);
+                    var maximum = timeString(times.Maximum).PadLeft(maximumLength);
                     output += $" {median}{timeUnit} | {lower}{timeUnit} | {upper}{timeUnit} | {minimum}{timeUnit} | {maximum}{timeUnit} |";
                 }
             }
-            else
+            else if (timed)
                 output += $" {new string(' ', medianLength)}   | {new string(' ', lowerLength)}   | {new string(' ', upperLength)}   | {new string(' ', minimumLength)}   | {new string(' ', maximumLength)}   |";
-            writeLine(output);
+            Reporter.Write(writeLine, output);
         }
         if (nullCount > 0)
-            writeLine($"Null Count: {nullCount:#,##0}");
+            Reporter.Write(writeLine, $"Null Count: {nullCount:#,##0}");
     }
 
     static (Func<double, string>, string) TimeFormat(double maxValue) =>

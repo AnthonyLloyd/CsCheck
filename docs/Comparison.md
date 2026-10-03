@@ -53,7 +53,7 @@ Property.print <| property {
 public void Version_Same()
 {
     Gen.Select(Gen.Byte, Gen.Byte, Gen.Byte)
-    .Select(t => new Version(t.V0, t.V1, t.V2))
+    .Select(t => new Version(t.Item1, t.Item2, t.Item3))
     .Sample(v =>
     {
         if(v.Major == v.Minor && v.Minor == v.Build)

@@ -419,6 +419,418 @@ public static class Gen
         Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> selector)
         => new GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, selector);
 
+    sealed class GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> selector) : Gen<R>
+    {
+        public override R Generate(PCG pcg, Size? min, out Size size)
+        {
+            var v1 = gen1.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v7 = gen7.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v8 = gen8.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v9 = gen9.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9);
+        }
+    }
+    /// <summary>Projects each element of a generator into a new form.</summary>
+    public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> selector)
+        => new GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, gen9, selector);
+
+    sealed class GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> selector) : Gen<R>
+    {
+        public override R Generate(PCG pcg, Size? min, out Size size)
+        {
+            var v1 = gen1.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v7 = gen7.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v8 = gen8.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v9 = gen9.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v10 = gen10.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10);
+        }
+    }
+    /// <summary>Projects each element of a generator into a new form.</summary>
+    public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> selector)
+        => new GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, gen9, gen10, selector);
+
+    sealed class GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R> selector) : Gen<R>
+    {
+        public override R Generate(PCG pcg, Size? min, out Size size)
+        {
+            var v1 = gen1.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v7 = gen7.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v8 = gen8.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v9 = gen9.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v10 = gen10.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v11 = gen11.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11);
+        }
+    }
+    /// <summary>Projects each element of a generator into a new form.</summary>
+    public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R> selector)
+        => new GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, gen9, gen10, gen11, selector);
+
+    sealed class GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R> selector) : Gen<R>
+    {
+        public override R Generate(PCG pcg, Size? min, out Size size)
+        {
+            var v1 = gen1.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v7 = gen7.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v8 = gen8.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v9 = gen9.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v10 = gen10.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v11 = gen11.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v12 = gen12.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12);
+        }
+    }
+    /// <summary>Projects each element of a generator into a new form.</summary>
+    public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R> selector)
+        => new GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, gen9, gen10, gen11, gen12, selector);
+
+    sealed class GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R> selector) : Gen<R>
+    {
+        public override R Generate(PCG pcg, Size? min, out Size size)
+        {
+            var v1 = gen1.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v7 = gen7.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v8 = gen8.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v9 = gen9.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v10 = gen10.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v11 = gen11.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v12 = gen12.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v13 = gen13.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13);
+        }
+    }
+    /// <summary>Projects each element of a generator into a new form.</summary>
+    public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R> selector)
+        => new GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, gen9, gen10, gen11, gen12, gen13, selector);
+
+    sealed class GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R> selector) : Gen<R>
+    {
+        public override R Generate(PCG pcg, Size? min, out Size size)
+        {
+            var v1 = gen1.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v7 = gen7.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v8 = gen8.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v9 = gen9.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v10 = gen10.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v11 = gen11.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v12 = gen12.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v13 = gen13.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v14 = gen14.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14);
+        }
+    }
+    /// <summary>Projects each element of a generator into a new form.</summary>
+    public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R> selector)
+        => new GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, gen9, gen10, gen11, gen12, gen13, gen14, selector);
+
+    sealed class GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14, Gen<T15> gen15,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R> selector) : Gen<R>
+    {
+        public override R Generate(PCG pcg, Size? min, out Size size)
+        {
+            var v1 = gen1.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v7 = gen7.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v8 = gen8.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v9 = gen9.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v10 = gen10.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v11 = gen11.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v12 = gen12.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v13 = gen13.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v14 = gen14.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v15 = gen15.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15);
+        }
+    }
+    /// <summary>Projects each element of a generator into a new form.</summary>
+    public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12, Gen<T13> gen13, Gen<T14> gen14, Gen<T15> gen15,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R> selector)
+        => new GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, gen9, gen10, gen11, gen12, gen13, gen14, gen15, selector);
+
+    sealed class GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12,
+        Gen<T13> gen13, Gen<T14> gen14, Gen<T15> gen15, Gen<T16> gen16,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R> selector) : Gen<R>
+    {
+        public override R Generate(PCG pcg, Size? min, out Size size)
+        {
+            var v1 = gen1.Generate(pcg, min, out size);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v2 = gen2.Generate(pcg, min, out var s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v3 = gen3.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v4 = gen4.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v5 = gen5.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v6 = gen6.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v7 = gen7.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v8 = gen8.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v9 = gen9.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v10 = gen10.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v11 = gen11.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v12 = gen12.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v13 = gen13.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v14 = gen14.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v15 = gen15.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            var v16 = gen16.Generate(pcg, min, out s);
+            size.Add(s);
+            if (Size.IsLessThan(min, size)) return default!;
+            return selector(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16);
+        }
+    }
+    /// <summary>Projects each element of a generator into a new form. For more than 16 generators, nest Select calls.</summary>
+    public static Gen<R> Select<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4,
+        Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Gen<T9> gen9, Gen<T10> gen10, Gen<T11> gen11, Gen<T12> gen12,
+        Gen<T13> gen13, Gen<T14> gen14, Gen<T15> gen15, Gen<T16> gen16,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R> selector)
+        => new GenSelect<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, gen9, gen10, gen11, gen12, gen13, gen14, gen15, gen16, selector);
+
     sealed class GenSelectTupleCreate<T1, T2>(Gen<T1> gen1, Gen<T2> gen2) : Gen<(T1, T2)>
     {
         public override (T1, T2) Generate(PCG pcg, Size? min, out Size size)
@@ -3209,10 +3621,13 @@ public sealed class GenOperation<T> : Gen<(string, Action<T>)>
 public sealed class GenOperation<Actual, Model> : Gen<(string, Action<Actual>, Action<Model>)>
 {
     readonly Gen<(string, Action<Actual>, Action<Model>)> gen;
+    /// <summary>The same operation without the name, as building the name can cost more than running the operation.</summary>
+    internal readonly Gen<(Action<Actual>, Action<Model>)> Actions;
     public bool AddOpNumber;
-    internal GenOperation(Gen<(string, Action<Actual>, Action<Model>)> gen, bool addOpNumber)
+    internal GenOperation(Gen<(string, Action<Actual>, Action<Model>)> gen, Gen<(Action<Actual>, Action<Model>)> actions, bool addOpNumber)
     {
         this.gen = gen;
+        Actions = actions;
         AddOpNumber = addOpNumber;
     }
     public override (string, Action<Actual>, Action<Model>) Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
@@ -3233,10 +3648,13 @@ public sealed class GenOperationAsync<T> : Gen<(string, Func<T, Task>)>
 public sealed class GenOperationAsync<Actual, Model> : Gen<(string, Func<Actual, Task>, Func<Model, Task>)>
 {
     readonly Gen<(string, Func<Actual, Task>, Func<Model, Task>)> gen;
+    /// <summary>The same operation without the name, as building the name can cost more than running the operation.</summary>
+    internal readonly Gen<(Func<Actual, Task>, Func<Model, Task>)> Actions;
     public bool AddOpNumber;
-    internal GenOperationAsync(Gen<(string, Func<Actual, Task>, Func<Model, Task>)> gen, bool addOpNumber)
+    internal GenOperationAsync(Gen<(string, Func<Actual, Task>, Func<Model, Task>)> gen, Gen<(Func<Actual, Task>, Func<Model, Task>)> actions, bool addOpNumber)
     {
         this.gen = gen;
+        Actions = actions;
         AddOpNumber = addOpNumber;
     }
     public override (string, Func<Actual, Task>, Func<Model, Task>) Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
@@ -3256,13 +3674,15 @@ public static class GenOperation
     public static GenOperation<S> Create<S, T>(Gen<T> gen, Func<T, string> name, Action<S, T> action) =>
         new(gen.Select<T, (string, Action<S>)>(t => (name(t), s => action(s, t))), false);
     public static GenOperation<Actual, Model> Create<Actual, Model, T>(Gen<T> gen, Action<Actual, T> actual, Action<Model, T> model) =>
-        new(gen.Select<T, (string, Action<Actual>, Action<Model>)>(t => (" " + Check.Print(t), a => actual(a, t), m => model(m, t))), true);
+        new(gen.Select<T, (string, Action<Actual>, Action<Model>)>(t => (" " + Check.Print(t), a => actual(a, t), m => model(m, t))),
+            gen.Select<T, (Action<Actual>, Action<Model>)>(t => (a => actual(a, t), m => model(m, t))), true);
     public static GenOperation<Actual, Model> Create<Actual, Model, T>(Gen<T> gen, Func<T, string> name, Action<Actual, T> actual, Action<Model, T> model) =>
-        new(gen.Select<T, (string, Action<Actual>, Action<Model>)>(t => (name(t), a => actual(a, t), m => model(m, t))), false);
+        new(gen.Select<T, (string, Action<Actual>, Action<Model>)>(t => (name(t), a => actual(a, t), m => model(m, t))),
+            gen.Select<T, (Action<Actual>, Action<Model>)>(t => (a => actual(a, t), m => model(m, t))), false);
     public static GenOperation<Actual, Model> Create<Actual, Model>(Action<Actual> actual, Action<Model> model)
-        => new(Gen.Const(("", actual, model)), true);
+        => new(Gen.Const(("", actual, model)), Gen.Const((actual, model)), true);
     public static GenOperation<Actual, Model> Create<Actual, Model>(string name, Action<Actual> actual, Action<Model> model)
-        => new(Gen.Const((name, actual, model)), false);
+        => new(Gen.Const((name, actual, model)), Gen.Const((actual, model)), false);
     public static GenOperation<T> Create<T>(Action<T> action)
         => new(Gen.Const(("", action)), true);
     public static GenOperation<T> Create<T>(string name, Action<T> action)
@@ -3276,13 +3696,15 @@ public static class GenOperationAsync
     public static GenOperationAsync<S> Create<S, T>(Gen<T> gen, Func<T, string> name, Func<S, T, Task> action) =>
         new(gen.Select<T, (string, Func<S, Task>)>(t => (name(t), s => action(s, t))), false);
     public static GenOperationAsync<Actual, Model> Create<Actual, Model, T>(Gen<T> gen, Func<Actual, T, Task> actual, Func<Model, T, Task> model) =>
-        new(gen.Select<T, (string, Func<Actual, Task>, Func<Model, Task>)>(t => (" " + Check.Print(t), a => actual(a, t), m => model(m, t))), true);
+        new(gen.Select<T, (string, Func<Actual, Task>, Func<Model, Task>)>(t => (" " + Check.Print(t), a => actual(a, t), m => model(m, t))),
+            gen.Select<T, (Func<Actual, Task>, Func<Model, Task>)>(t => (a => actual(a, t), m => model(m, t))), true);
     public static GenOperationAsync<Actual, Model> Create<Actual, Model, T>(Gen<T> gen, Func<T, string> name, Func<Actual, T, Task> actual, Func<Model, T, Task> model) =>
-        new(gen.Select<T, (string, Func<Actual, Task>, Func<Model, Task>)>(t => (name(t), a => actual(a, t), m => model(m, t))), false);
+        new(gen.Select<T, (string, Func<Actual, Task>, Func<Model, Task>)>(t => (name(t), a => actual(a, t), m => model(m, t))),
+            gen.Select<T, (Func<Actual, Task>, Func<Model, Task>)>(t => (a => actual(a, t), m => model(m, t))), false);
     public static GenOperationAsync<Actual, Model> Create<Actual, Model>(Func<Actual, Task> actual, Func<Model, Task> model)
-        => new(Gen.Const(("", actual, model)), true);
+        => new(Gen.Const(("", actual, model)), Gen.Const((actual, model)), true);
     public static GenOperationAsync<Actual, Model> Create<Actual, Model>(string name, Func<Actual, Task> actual, Func<Model, Task> model)
-        => new(Gen.Const((name, actual, model)), false);
+        => new(Gen.Const((name, actual, model)), Gen.Const((actual, model)), false);
     public static GenOperationAsync<T> Create<T>(Func<T, Task> action)
         => new(Gen.Const(("", action)), true);
     public static GenOperationAsync<T> Create<T>(string name, Func<T, Task> action)
