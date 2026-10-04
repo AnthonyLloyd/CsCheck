@@ -825,13 +825,13 @@ public class GenTests
     }
 
     [Test]
-    public void OneOfConst()
+    public void OneOf_Const()
     {
-        Gen.OneOfConst(0, 1, 2).Sample(i => i is >= 0 and <= 2);
+        Gen.OneOf(0, 1, 2).Sample(i => i is >= 0 and <= 2);
     }
 
     [Test]
-    public void OneOf()
+    public void OneOf_IGen()
     {
         Gen.OneOf(Gen.Const(0), Gen.Const(1), Gen.Const(2)).Sample(i => i is >= 0 and <= 2);
     }
@@ -842,7 +842,7 @@ public class GenTests
         const int frequency = 10;
         (from f in Gen.Select(Gen.Int[1, 5], Gen.Int[1, 5], Gen.Int[1, 5])
          let expected = new[] { f.Item1 * frequency, f.Item2 * frequency, f.Item3 * frequency }
-         from actual in Gen.FrequencyConst((f.Item1, 0), (f.Item2, 1), (f.Item3, 2))
+         from actual in Gen.Frequency((f.Item1, 0), (f.Item2, 1), (f.Item3, 2))
                         .Array[frequency * (f.Item1 + f.Item2 + f.Item3)]
                         .Select(sample => Tally(3, sample))
          select (expected, actual))
@@ -852,7 +852,7 @@ public class GenTests
     [Test]
     public async Task Frequency_Total_Zero_Is_Rejected()
     {
-        var constants = Assert.Throws<CsCheckException>(() => Gen.FrequencyConst((0, "a"), (0, "b")))!.Message;
+        var constants = Assert.Throws<CsCheckException>(() => Gen.Frequency((0, "a"), (0, "b")))!.Message;
         await Assert.That(constants).Contains("zero");
         var gens = Assert.Throws<CsCheckException>(() => Gen.Frequency((0, Gen.Const("a")), (0, Gen.Const("b"))))!.Message;
         await Assert.That(gens).Contains("zero");
