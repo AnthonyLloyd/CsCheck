@@ -19,18 +19,18 @@ using System.Runtime.CompilerServices;
 
 #pragma warning disable IDE0059 // Unnecessary assignment of a value
 
-public interface ITimerAction { long Time(); }
-public interface ITimerAction<T> { long Time(T t); }
-public interface ITimerFunc<R> { long Time(out R r); }
-public interface ITimerFunc<T, R> { long Time(T t, out R r); }
-public interface ITimerTaskAction { Task<long> Time(); }
-public interface ITimerTaskAction<T> { Task<long> Time(T t); }
-public interface ITimerTaskFunc<R> { Task<(long, R)> Time(); }
-public interface ITimerTaskFunc<T, R> { Task<(long, R)> Time(T t); }
+internal interface ITimerAction { long Time(); }
+internal interface ITimerAction<T> { long Time(T t); }
+internal interface ITimerFunc<R> { long Time(out R r); }
+internal interface ITimerFunc<T, R> { long Time(T t, out R r); }
+internal interface ITimerTaskAction { Task<long> Time(); }
+internal interface ITimerTaskAction<T> { Task<long> Time(T t); }
+internal interface ITimerTaskFunc<R> { Task<(long, R)> Time(); }
+internal interface ITimerTaskFunc<T, R> { Task<(long, R)> Time(T t); }
 public interface IInvoke { void Invoke(); }
 public interface IInvoke<T, R> { R Invoke(T t); }
 
-public static class Timer
+internal static class Timer
 {
     public static ITimerAction Create(Action call, int count)
         => count == 1 ? new TimerActionOne(call)
