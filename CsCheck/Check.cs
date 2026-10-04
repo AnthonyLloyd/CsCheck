@@ -26,21 +26,23 @@ public static partial class Check
     /// <summary>The number of iterations to run in the sample (default 100).</summary>
     public static long Iter = ParseEnvironmentVariableToLong("CsCheck_Iter", 100);
     /// <summary>The number of seconds to run the sample.</summary>
-    public static int Time = ParseEnvironmentVariableToInt("CsCheck_Time" , -1);
+    public static int Time = ParseEnvironmentVariableToInt("CsCheck_Time" , -1, -1);
     /// <summary>The number of times to retry the seed to reproduce a SampleParallel fail (default 100).</summary>
-    public static int Replay = ParseEnvironmentVariableToInt("CsCheck_Replay", 100);
+    public static int Replay = ParseEnvironmentVariableToInt("CsCheck_Replay", 100, 0);
     /// <summary>The number of threads to run the sample on (default number logical CPUs).</summary>
-    public static int Threads = ParseEnvironmentVariableToInt("CsCheck_Threads", Environment.ProcessorCount);
+    public static int Threads = ParseEnvironmentVariableToInt("CsCheck_Threads", Environment.ProcessorCount, 1);
     /// <summary>The initial seed to use for the first iteration.</summary>
     public static string? Seed = ParseEnvironmentVariableToSeed("CsCheck_Seed");
     /// <summary>The sigma to use for Faster (default 6).</summary>
     public static double Sigma = ParseEnvironmentVariableToDouble("CsCheck_Sigma", 6.0);
     /// <summary>The timeout in seconds to use for Faster (default 60 seconds).</summary>
-    public static int Timeout = ParseEnvironmentVariableToInt("CsCheck_Timeout", 60);
+    public static int Timeout = ParseEnvironmentVariableToInt("CsCheck_Timeout", 60, 0);
     /// <summary>The number of ulps to approximate to when printing doubles and floats.</summary>
-    public static int Ulps = ParseEnvironmentVariableToInt("CsCheck_Ulps", 4);
-    /// <summary>The number of Where Gne iterations before throwing an exception.</summary>
-    public static int WhereLimit = ParseEnvironmentVariableToInt("CsCheck_WhereLimit", 100);
+    public static int Ulps = ParseEnvironmentVariableToInt("CsCheck_Ulps", 4, 0);
+    /// <summary>The number of Where Gen iterations before throwing an exception.</summary>
+    public static int WhereLimit = ParseEnvironmentVariableToInt("CsCheck_WhereLimit", 100, 1);
+    /// <summary>The number of Single Gen iterations before throwing an exception.</summary>
+    public static int SingleLimit = ParseEnvironmentVariableToInt("CsCheck_SingleLimit", 1_000_000, 1);
     /// <summary>Measure Faster allocations across all threads rather than just the measuring thread (default false).</summary>
     public static bool AllocAll = ParseEnvironmentVariableToBool("CsCheck_AllocAll", false);
     internal static bool IsDebug = Assembly.GetCallingAssembly().GetCustomAttribute<DebuggableAttribute>()?.IsJITTrackingEnabled ?? false;
@@ -3932,15 +3934,28 @@ public static partial class Check
     sealed class SingleWorker<T>(Gen<T> gen, Func<T, bool> predicate) : IThreadPoolWorkItem
     {
         public volatile string? message;
+        int i = SingleLimit;
         public void Execute()
         {
             var pcg = PCG.ThreadPCG;
-            while (message is null)
+            ulong state = pcg.State;
+            try
             {
-                var state = pcg.State;
-                var t = gen.Generate(pcg, null, out var _);
-                if (predicate(t))
-                    message = $"Example {typeof(T).Name} seed = \"{pcg.ToString(state)}\"";
+                while (message is not null && Interlocked.Decrement(ref i) >= 0)
+                {
+                    var t = gen.Generate(pcg, null, out var _);
+                    if (predicate(t))
+                    {
+                        message = $"Single {typeof(T).Name} seed = \"{pcg.ToString(state)}\"";
+                        return;
+                    }
+                    state = pcg.State;
+                }
+                message ??= $"Single not found after {SingleLimit} tries";
+            }
+            catch (Exception e)
+            {
+                message = $"Single exception with seed = \"{pcg.ToString(state)}\": {e}";
             }
         }
     }

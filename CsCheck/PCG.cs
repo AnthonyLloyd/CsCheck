@@ -34,7 +34,7 @@ public sealed class PCG
     }
     public PCG(uint stream, ulong seed)
     {
-        Inc = (stream << 1) | 1UL;
+        Inc = ((ulong)stream << 1) | 1UL;
         State = Inc + seed;
     }
     public PCG(uint stream) : this(stream, (ulong)Stopwatch.GetTimestamp()) { }
@@ -68,7 +68,7 @@ public sealed class PCG
     public static PCG Parse(string seed)
     {
         var state = SeedString.Parse(seed, out var stream);
-        return new PCG((stream << 1) | 1UL, state);
+        return new PCG(((ulong)stream << 1) | 1UL, state);
     }
 }
 

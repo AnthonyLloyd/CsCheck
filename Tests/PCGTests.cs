@@ -294,7 +294,7 @@ public class PCGTests
         }
         public PCGTest(uint stream, ulong seed)
         {
-            Inc = (stream << 1) | 1UL;
+            Inc = ((ulong)stream << 1) | 1UL;
             State = Inc + seed;
         }
         public PCGTest(uint stream) : this(stream, (ulong)Stopwatch.GetTimestamp()) { }
@@ -365,7 +365,7 @@ public class PCGTests
         public static PCGTest Parse(string seed)
         {
             var state = SeedString.Parse(seed, out var stream);
-            return new PCGTest((stream << 1) | 1UL, state);
+            return new PCGTest(((ulong)stream << 1) | 1UL, state);
         }
     }
 }

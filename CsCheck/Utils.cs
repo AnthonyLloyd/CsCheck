@@ -59,10 +59,10 @@ public static partial class Check
         return string.IsNullOrWhiteSpace(value) ? defaultValue : long.Parse(value);
     }
 
-    static int ParseEnvironmentVariableToInt(string variable, int defaultValue)
+    static int ParseEnvironmentVariableToInt(string variable, int defaultValue, int minValue)
     {
         var value = Environment.GetEnvironmentVariable(variable);
-        return string.IsNullOrWhiteSpace(value) ? defaultValue : int.Parse(value);
+        return string.IsNullOrWhiteSpace(value) ? defaultValue : Math.Max(int.Parse(value), minValue);
     }
 
     static double ParseEnvironmentVariableToDouble(string variable, double defaultValue)
@@ -973,10 +973,10 @@ public struct MedianEstimate(MedianEstimator e)
     public static MedianEstimate operator /(MedianEstimate a, MedianEstimate b) => new()
     {
         Median = a.Median / b.Median,
-        Error = Math.Sqrt(Sqr(a.Error / a.Median) * Sqr(b.Error / b.Median)) * Math.Abs(a.Median / b.Median),
+        Error = Math.Sqrt(Sqr(a.Error / a.Median) + Sqr(b.Error / b.Median)) * Math.Abs(a.Median / b.Median),
     };
-    public override readonly string ToString() => Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0").PadLeft(5)
-                                       + " ±" + Math.Min(Error, 99.9).ToString("0.0").PadLeft(4);
+    public override readonly string ToString() =>
+        Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0").PadLeft(5) + " ±" + Math.Min(Error, 99.9).ToString("0.0").PadLeft(4);
 }
 
 public sealed class Classifier

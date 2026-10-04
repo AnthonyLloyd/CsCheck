@@ -97,7 +97,7 @@ public sealed class Hash : IRegression
         }
         rwLock.EnterWriteLock();
         threadId = Environment.CurrentManagedThreadId.ToString();
-        var tempfile = filename + threadId;
+        var tempfile = $"{filename}_{Environment.ProcessId}_{threadId}";
         if (File.Exists(tempfile)) File.Delete(tempfile);
         Directory.CreateDirectory(Path.GetDirectoryName(tempfile)!);
         stream = File.Create(tempfile);
@@ -156,11 +156,11 @@ public sealed class Hash : IRegression
                 if (actualHash == ExpectedHash)
                 {
                     if (File.Exists(filename)) File.Delete(filename);
-                    File.Move(filename + threadId, filename!);
+                    File.Move($"{filename}_{Environment.ProcessId}_{threadId}", filename!);
                 }
                 else
                 {
-                    File.Delete(filename + threadId);
+                    File.Delete($"{filename}_{Environment.ProcessId}_{threadId}");
                 }
 
                 replaceLock[filename!].ExitWriteLock();
