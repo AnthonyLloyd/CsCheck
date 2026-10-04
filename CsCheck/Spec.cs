@@ -183,6 +183,7 @@ sealed class SpecFault<S>(string name, Func<S, S, bool> when, Func<S, S, S> pert
     public readonly Func<S, S, S> Perturb = perturb;
     public string? OnAction;
     public int OnActionIndex = -1;
+    public bool AppliesTo(int action, S before, S after) => (OnActionIndex < 0 || OnActionIndex == action) && When(before, after);
 }
 
 /// <summary>Entry point for building a <see cref="Spec{S}"/>.</summary>
@@ -513,7 +514,7 @@ sealed class GenSpecTrace<S>(Spec<S> spec, int minSteps, int maxSteps, SpecFault
                 if (chosen.Enabled(state, g)) enabledArgs[ng++] = g;
             var gi = enabledArgs[(int)pcg.Next((uint)ng)];
             var after = chosen.Apply(state, gi);
-            if (fault?.When(state, after) == true) after = fault.Perturb(state, after);
+            if (fault?.AppliesTo(ai, state, after) == true) after = fault.Perturb(state, after);
             steps[n] = new Transition<S>(n, ai, gi, chosen.Name, chosen.ArgName(gi), state, after);
             state = after;
             total.Add(new Size(((ulong)ai << 20) + (ulong)gi));
@@ -805,7 +806,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
             var (ai, arg) = back[back.Count - 1 - i];
             var action = _actions[ai];
             var after = action.Apply(state, arg);
-            if (_fault is not null && (_fault.OnActionIndex < 0 || _fault.OnActionIndex == ai) && _fault.When(state, after)) after = _fault.Perturb(state, after);
+            if (_fault?.AppliesTo(ai, state, after) == true) after = _fault.Perturb(state, after);
             steps[i] = new(i, ai, arg, action.Name, action.ArgName(arg), state, after);
             state = after;
         }
@@ -846,7 +847,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
                     enabled++;
                     _counters.Fired[_argBase[a] + g]++;
                     var after = action.Apply(node.State, g);
-                    if (_fault is not null && (_fault.OnActionIndex < 0 || _fault.OnActionIndex == a) && _fault.When(node.State, after)) after = _fault.Perturb(node.State, after);
+                    if (_fault?.AppliesTo(a, node.State, after) == true) after = _fault.Perturb(node.State, after);
                     ulong d = node.Deadlines, s = node.Seen, k = node.Counts;
                     var det = Check.CheckTransition(_spec, a, node.State, after, ref d, ref s, ref k, _counters.Triggered, 0, out var r);
                     if (!stopInserting && !Insert(head, new(a, g, after, d, s, k, det, r)))
@@ -896,7 +897,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
                             enabled++;
                             fired[slot + _argBase[a] + g]++;
                             var after = action.Apply(node.State, g);
-                            if (_fault is not null && (_fault.OnActionIndex < 0 || _fault.OnActionIndex == a) && _fault.When(node.State, after)) after = _fault.Perturb(node.State, after);
+                            if (_fault?.AppliesTo(a, node.State, after) == true) after = _fault.Perturb(node.State, after);
                             ulong d = node.Deadlines, s = node.Seen, k = node.Counts;
                             var det = Check.CheckTransition(_spec, a, node.State, after, ref d, ref s, ref k, triggered, i * _reqs, out var r);
                             edges[slot + n++] = new(a, g, after, d, s, k, det, r);
