@@ -3941,7 +3941,7 @@ public static partial class Check
             ulong state = pcg.State;
             try
             {
-                while (message is not null && Interlocked.Decrement(ref i) >= 0)
+                while (message is null && Interlocked.Decrement(ref i) >= 0)
                 {
                     var t = gen.Generate(pcg, null, out var _);
                     if (predicate(t))
