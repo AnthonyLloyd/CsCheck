@@ -163,7 +163,7 @@ public static partial class Check
         }
 
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
         cde.Wait();
         cde.Dispose();
@@ -1102,7 +1102,7 @@ public static partial class Check
             }
         }
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
         cde.Wait();
         cde.Dispose();
@@ -2673,7 +2673,7 @@ public static partial class Check
             raiseexception);
         if (threads == -1) threads = Threads;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
@@ -2705,7 +2705,7 @@ public static partial class Check
             raiseexception);
         if (threads == -1) threads = Threads;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
@@ -2782,7 +2782,7 @@ public static partial class Check
             raiseexception);
         if (threads == -1) threads = Threads;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
@@ -2990,7 +2990,7 @@ public static partial class Check
             raiseexception);
         if (threads == -1) threads = Threads;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
@@ -3391,7 +3391,7 @@ public static partial class Check
             raiseexception);
         if (threads == -1) threads = Threads;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
@@ -3430,7 +3430,7 @@ public static partial class Check
             raiseexception);
         if (threads == -1) threads = Threads;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
@@ -3952,7 +3952,7 @@ public static partial class Check
         var worker = new SingleWorker<T>(gen, predicate);
         var threads = Environment.ProcessorCount;
         while (--threads > 0)
-            ThreadPool.UnsafeQueueUserWorkItem(worker, false);
+            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
         return ThrowHelper.Throw<T>(worker.message!);
     }
