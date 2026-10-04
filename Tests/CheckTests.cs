@@ -841,6 +841,9 @@ public class CheckTests
                     .Compared((r, y) => r with { Y = y }, Gen.Int)));
     }
 
+
+
+#if NET11_0_OR_GREATER
     sealed record Cat(string Name, int Whiskers)
     {
         public bool Equals(Cat? other) => other is not null && Name == other.Name; // Whiskers ignored
@@ -920,6 +923,7 @@ public class CheckTests
                     .Compared((x, v) => x with { Value = v }, Gen.Double.Unit)
                     .Ignored((x, t) => x with { Timestamp = t }, Gen.Long))));
     }
+#endif
 
     sealed class MutableAccount(int id, string note)
     {
@@ -958,6 +962,7 @@ public class CheckTests
     }
 }
 
+#if NET11_0_OR_GREATER
 // Builds the member -> union conversion (a public constructor `T(TArm)`) once per (T, TArm) pair.
 static class UnionCtor<T, TArm> where T : System.Runtime.CompilerServices.IUnion
 {
@@ -1003,3 +1008,4 @@ static class UnionEqualityFields
         where TField : System.Runtime.CompilerServices.IUnion
         => fields.Union(down, up, sf => fieldFields(new UnionFields<TField>(sf)));
 }
+#endif

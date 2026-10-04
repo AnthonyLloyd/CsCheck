@@ -1432,7 +1432,7 @@ public static partial class Check
     // Shared by Sample and Conform, which both print the count from one line of the report.
     sealed class DeadEnds<S>(Spec<S> spec, SpecCounters counters)
     {
-        readonly object _lock = new();
+        readonly Lock _lock = new();
         Trace<S>? _shortest;
 
         public void Observe(Trace<S> trace)
@@ -1599,7 +1599,7 @@ public static partial class Check
     static SpecViolation<S>? SampleFault<S>(Spec<S> spec, SpecFault<S> fault, int minSteps, int maxSteps, string? seed,
         long iter, int time, int threads)
     {
-        var gate = new object();
+        var gate = new Lock();
         SpecViolation<S>? best = null;
         var bestStep = int.MaxValue;
         new GenSpecTrace<S>(spec, minSteps, maxSteps, fault).Sample(trace =>
