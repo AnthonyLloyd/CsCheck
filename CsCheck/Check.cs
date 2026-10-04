@@ -3955,7 +3955,7 @@ public static partial class Check
             }
             catch (Exception e)
             {
-                message = $"Single exception with seed = \"{pcg.ToString(state)}\": {e}";
+                message ??= $"Single exception with seed = \"{pcg.ToString(state)}\": {e}";
             }
         }
     }
