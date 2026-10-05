@@ -506,7 +506,11 @@ public class GenTests
     [Test]
     public void Decimal_Range()
     {
-        (from t in Gen.Decimal.Unit.Select(Gen.Decimal.Unit)
+        var end = Gen.Frequency(
+            (2, Gen.Select(Gen.Int, Gen.Int, Gen.Int, Gen.Bool, Gen.Byte[0, 28]).Select((lo, mid, hi, isNegative, scale) => new decimal(lo, mid, hi, isNegative, scale))),
+            (1, Gen.Decimal),
+            (1, Gen.Decimal.Unit));
+        (from t in end.Select(end)
          let start = Math.Min(t.Item1, t.Item2)
          let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.Decimal[start, finish]
@@ -514,6 +518,14 @@ public class GenTests
         .Sample(i => i.value >= i.start && i.value <= i.finish);
     }
 
+    [Test]
+    public void Decimal_Range_Edges()
+    {
+        (decimal, decimal)[] ranges = [(0M, 0M), (0M, 1M), (-100M, 0M), (0M, 0.00000000000000000000000002M), (2.0000000000000000001M, 3M),
+            (2.0000000000000000001M, 2.0000000000000000002M), (decimal.MaxValue, decimal.MaxValue), (decimal.MinValue, decimal.MinValue)];
+        foreach (var (start, finish) in ranges)
+            Gen.Decimal[start, finish].Sample(d => d >= start && d <= finish, iter: 1000);
+    }
     [Test]
     public void Decimal_Distribution()
     {
