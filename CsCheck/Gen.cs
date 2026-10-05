@@ -2025,27 +2025,6 @@ public static class Gen
     public static readonly GenInt Int = new();
     internal static readonly Gen<int> Int9999 = Int[1, 9999];
     public static readonly GenUInt UInt = new();
-    /// <summary>Generator for uint in the range 0 to 3 inclusive.</summary>
-    public static readonly GenUInt4 UInt4 = new();
-    /// <summary>Generator for uint in the range 0 to 7 inclusive.</summary>
-    public static readonly GenUInt8 UInt8 = new();
-    /// <summary>Generator for uint in the range 0 to 15 inclusive.</summary>
-    public static readonly GenUInt16 UInt16 = new();
-    /// <summary>Generator for uint in the range 0 to 31 inclusive.</summary>
-    public static readonly GenUInt32 UInt32 = new();
-    /// <summary>Generator for uint in the range 0 to 63 inclusive.</summary>
-    public static readonly GenUInt64 UInt64 = new();
-    /// <summary>Generator for uint in the range 0 to 127 inclusive.</summary>
-    public static readonly GenUInt128 UInt128 = new();
-    /// <summary>Generator for uint in the range 0 to 255 inclusive.</summary>
-    public static readonly GenUInt256 UInt256 = new();
-    /// <summary>Generator for uint in the range 0 to 511 inclusive.</summary>
-    public static readonly GenUInt512 UInt512 = new();
-    /// <summary>Generator for uint in the range 0 to 1023 inclusive.</summary>
-    public static readonly GenUInt1024 UInt1024 = new();
-    /// <summary>Generator for uint in the range 0 to 2047 inclusive.</summary>
-    public static readonly GenUInt2048 UInt2048 = new();
-    /// <summary>Generator for long.</summary>
     public static readonly GenLong Long = new();
     /// <summary>Generator for ulong.</summary>
     public static readonly GenULong ULong = new();
@@ -2339,96 +2318,7 @@ public sealed class GenUInt : Gen<uint>
     /// <summary>Generate a uint uniformly distributed with all values.</summary>
     public Gen<uint> Uniform = new GenUniform();
 }
-public sealed class GenUInt4 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 3;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt8 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 7;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt16 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 15;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt32 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 31;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt64 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 63;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt128 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 127;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt256 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 255;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt512 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 511;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt1024 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 1023;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt2048 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 2047;
-        size = new Size(i);
-        return i;
-    }
-}
+
 public sealed class GenLong : Gen<long>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
