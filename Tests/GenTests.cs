@@ -408,6 +408,38 @@ public class GenTests
     }
 
     [Test]
+    public void Single_Range_Beyond_The_Unit_Interval()
+    {
+        var g = Gen.Frequency(
+            (2, Gen.UInt.Uniform.Select(BitConverter.UInt32BitsToSingle).Where(float.IsFinite)),
+            (1, Gen.Single),
+            (1, Gen.Single.Unit),
+            (1, Gen.OneOf(0f, float.Epsilon, float.MinValue, float.MaxValue)));
+        (from t in Gen.Select(g, g)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
+         from value in Gen.Single[start, finish]
+         select (value, start, finish))
+        .Sample(i => i.value >= i.start && i.value <= i.finish);
+    }
+
+    [Test]
+    public void Single_Range_Edges()
+    {
+        (float, float)[] ranges = [(0f, 0f), (0f, float.Epsilon), (float.MinValue, float.MaxValue), (-1e38f, 1e38f), (3e8f, float.MaxValue),
+            (1f, float.MaxValue), (float.MaxValue, float.MaxValue), (float.MinValue, float.MinValue)];
+        foreach (var (start, finish) in ranges)
+            Gen.Single[start, finish].Sample(f => f >= start && f <= finish, iter: 1000);
+    }
+
+    [Test]
+    public void Single_Zero()
+    {
+        Gen.Single.Array[1000].Sample(fs => fs.Contains(0f));
+        Gen.Single[-1000f, 1000f].Array[1000].Sample(fs => fs.Contains(0f));
+    }
+
+    [Test]
     public void Single_Distribution()
     {
         const int buckets = 70;
@@ -442,7 +474,11 @@ public class GenTests
     [Test]
     public void Double_Range_Beyond_The_Unit_Interval()
     {
-        var g = Gen.Double.Where(double.IsFinite);
+        var g = Gen.Frequency(
+            (2, Gen.ULong.Uniform.Select(BitConverter.UInt64BitsToDouble).Where(double.IsFinite)),
+            (1, Gen.Double),
+            (1, Gen.Double.Unit),
+            (1, Gen.OneOf(0.0, double.Epsilon, double.MinValue, double.MaxValue)));
         (from t in Gen.Select(g, g)
          let start = Math.Min(t.Item1, t.Item2)
          let finish = Math.Max(t.Item1, t.Item2)
@@ -460,6 +496,22 @@ public class GenTests
          from value in Gen.Double[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish, seed: "89rtRQWk16go", iter: 1);
+    }
+
+    [Test]
+    public void Double_Range_Edges()
+    {
+        (double, double)[] ranges = [(0.0, 0.0), (0.0, 1e-100), (0.0, double.Epsilon), (double.MinValue, double.MaxValue), (-1e308, 1e308), (3e8, double.MaxValue),
+            (1.0, double.MaxValue), (double.MaxValue, double.MaxValue), (double.MinValue, double.MinValue)];
+        foreach (var (start, finish) in ranges)
+            Gen.Double[start, finish].Sample(d => d >= start && d <= finish, iter: 1000);
+    }
+
+    [Test]
+    public void Double_Zero()
+    {
+        Gen.Double.Array[1000].Sample(ds => ds.Contains(0.0));
+        Gen.Double[-1000.0, 1000.0].Array[1000].Sample(ds => ds.Contains(0.0));
     }
 
     [Test]
@@ -526,6 +578,14 @@ public class GenTests
         foreach (var (start, finish) in ranges)
             Gen.Decimal[start, finish].Sample(d => d >= start && d <= finish, iter: 1000);
     }
+
+    [Test]
+    public void Decimal_Zero()
+    {
+        Gen.Decimal.Array[1000].Sample(ds => ds.Contains(0M));
+        Gen.Decimal[-1000M, 1000M].Array[1000].Sample(ds => ds.Contains(0M));
+    }
+
     [Test]
     public void Decimal_Distribution()
     {
