@@ -125,7 +125,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T>(this Gen<T> gen, Action<T> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
     {
         seed ??= Seed;
         if (iter == -1) iter = Iter;
@@ -188,7 +188,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -203,7 +203,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -218,7 +218,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -233,7 +233,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -248,7 +248,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -263,7 +263,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -278,7 +278,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -292,7 +292,7 @@ public static partial class Check
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T>(this Gen<T> gen, Func<T, string> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -321,7 +321,7 @@ public static partial class Check
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, string> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -350,7 +350,7 @@ public static partial class Check
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, string> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -379,7 +379,7 @@ public static partial class Check
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, string> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -408,7 +408,7 @@ public static partial class Check
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, string> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -437,7 +437,7 @@ public static partial class Check
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, string> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -467,7 +467,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, string> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -497,7 +497,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, string> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -526,7 +526,7 @@ public static partial class Check
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ISampleLogger? logger = null)
     {
         seed ??= Seed;
         if (iter == -1) iter = Iter;
@@ -636,7 +636,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -651,7 +651,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -666,7 +666,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -681,7 +681,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> assert, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -697,7 +697,7 @@ public static partial class Check
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> assert,
          Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
-         ILogger? logger = null)
+         ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -712,7 +712,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> assert,
-         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null, ILogger? logger = null)
+         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -728,7 +728,7 @@ public static partial class Check
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> assert,
          Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -742,7 +742,7 @@ public static partial class Check
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task<string>> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -771,7 +771,7 @@ public static partial class Check
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<string>> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -800,7 +800,7 @@ public static partial class Check
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<string>> classify, Action<string> writeLine,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -830,7 +830,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<string>> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -860,7 +860,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<string>> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -890,7 +890,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<string>> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -920,7 +920,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<string>> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -950,7 +950,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<string>> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
     {
         var classifier = new Classifier();
         try
@@ -1059,7 +1059,7 @@ public static partial class Check
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void Sample<T>(this Gen<T> gen, Func<T, bool> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ISampleLogger? logger = null)
     {
         seed ??= Seed;
         if (iter == -1) iter = Iter;
@@ -1125,7 +1125,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1140,7 +1140,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1155,7 +1155,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1170,7 +1170,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1185,7 +1185,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1201,7 +1201,7 @@ public static partial class Check
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1217,7 +1217,7 @@ public static partial class Check
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1231,7 +1231,7 @@ public static partial class Check
     /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static async Task SampleAsync<T>(this Gen<T> gen, Func<T, Task<bool>> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, ISampleLogger? logger = null)
     {
         seed ??= Seed;
         if (iter == -1) iter = Iter;
@@ -1367,7 +1367,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<bool>> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1382,7 +1382,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<bool>> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1397,7 +1397,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<bool>> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1412,7 +1412,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<bool>> predicate, Action<string>? writeLine = null,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ILogger? logger = null)
+        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1428,7 +1428,7 @@ public static partial class Check
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<bool>> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1444,7 +1444,7 @@ public static partial class Check
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<bool>> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print, logger);
 
     /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
@@ -1460,7 +1460,7 @@ public static partial class Check
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<bool>> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
-        ILogger? logger = null)
+        ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), writeLine, seed, iter, time, threads, print, logger);
 
     sealed class ModelBasedData<Actual, Model>(Actual actualState, Model modelState, uint stream, ulong seed, Size? min, (int, Action<Actual>, Action<Model>)[] operations)
@@ -1510,7 +1510,7 @@ public static partial class Check
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model>[] operations,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
     {
         equal ??= ModelEqual;
         seed ??= Seed;
@@ -1600,7 +1600,7 @@ public static partial class Check
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBased(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1622,7 +1622,7 @@ public static partial class Check
         GenOperation<Actual, Model> operation2,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1645,7 +1645,7 @@ public static partial class Check
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1669,7 +1669,7 @@ public static partial class Check
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1695,7 +1695,7 @@ public static partial class Check
         GenOperation<Actual, Model> operation5,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3, operation4, operation5],
             equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
@@ -1723,7 +1723,7 @@ public static partial class Check
         GenOperation<Actual, Model> operation5, GenOperation<Actual, Model> operation6,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3, operation4, operation5, operation6],
             equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
@@ -1758,7 +1758,7 @@ public static partial class Check
     public static async Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model>[] operations,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
     {
         equal ??= ModelEqual;
         seed ??= Seed;
@@ -1856,7 +1856,7 @@ public static partial class Check
     public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBasedAsync(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1878,7 +1878,7 @@ public static partial class Check
         GenOperationAsync<Actual, Model> operation2,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1901,7 +1901,7 @@ public static partial class Check
         GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1925,7 +1925,7 @@ public static partial class Check
         GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3, GenOperationAsync<Actual, Model> operation4,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
@@ -1951,7 +1951,7 @@ public static partial class Check
         GenOperationAsync<Actual, Model> operation5,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4, operation5],
             equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
@@ -1979,7 +1979,7 @@ public static partial class Check
         GenOperationAsync<Actual, Model> operation5, GenOperationAsync<Actual, Model> operation6,
         Func<Actual, Model, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
-        Action<string>? writeLine = null, ILogger? logger = null)
+        Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4, operation5, operation6],
             equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
@@ -2012,7 +2012,7 @@ public static partial class Check
     /// <param name="logger">Log metrics regarding generated inputs and results.</param>
     public static void SampleMetamorphic<T>(this Gen<T> initial, GenMetamorphic<T> operations,
         Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
-        Func<T, string>? print = null, Action<string>? writeLine = null, ILogger? logger = null)
+        Func<T, string>? print = null, Action<string>? writeLine = null, ISampleLogger? logger = null)
     {
         equal ??= ModelEqual;
         seed ??= Seed;
