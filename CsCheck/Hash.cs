@@ -876,3 +876,152 @@ public sealed class HashStream : Stream
         return hash.GetHashCode();
     }
 }
+
+public static class RegressionExtensions
+{
+    const string NULL = "<null>";
+
+    public static void Add(this IRegression r, IEnumerable<bool> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<bool> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<byte> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<byte> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<char> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<char> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<DateTime> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<DateTime> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<DateTimeOffset> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<DateTimeOffset> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<decimal> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<decimal> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<double> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as ICollection<double> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<float> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<float> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<Guid> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<Guid> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<int> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<int> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<long> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<long> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<sbyte> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<sbyte> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<short> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<short> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<string> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<string> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<TimeSpan> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<TimeSpan> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<uint> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<uint> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<ulong> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<ulong> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+
+    public static void Add(this IRegression r, IEnumerable<ushort> val)
+    {
+        if (val is null) { r.Add(NULL); return; }
+        var col = val as IReadOnlyCollection<ushort> ?? [.. val];
+        r.Add((uint)col.Count);
+        foreach (var v in col) r.Add(v);
+    }
+}

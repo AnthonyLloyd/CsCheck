@@ -246,8 +246,6 @@ Global defaults via environment variables: `CsCheck_Iter`, `CsCheck_Time`,
 - Do **not** write `Arbitrary`/shrinker code; it doesn't exist here and isn't
   needed.
 - `Classify` and `Faster` make `writeLine:` effectively required to see output.
-- The `Dbg` module is a temporary debug aid; its API may change between minor
-  versions; don't rely on it in committed library code.
 - Prefer `Gen.Const(() => new ...())` (factory) over a shared instance for
   parallel/model tests so each run gets a fresh state.
 - **`skipped` in a failure message is not a problem.** It counts shrink-phase
