@@ -21,6 +21,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 
 /// <summary>Main random testing Check functions.</summary>
+[StackTraceHidden]
 public static partial class Check
 {
     /// <summary>The number of iterations to run in the sample (default 100).</summary>
@@ -129,7 +130,7 @@ public static partial class Check
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         bool isIter = time < 0;
         var cde = new CountdownEvent(threads);
         if (logger is not null)
@@ -530,7 +531,7 @@ public static partial class Check
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         if (logger is not null)
             assert = logger.WrapAssert(assert);
 
@@ -1063,7 +1064,7 @@ public static partial class Check
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         if (logger is not null)
             predicate = logger.WrapAssert(predicate);
         bool isIter = time < 0;
@@ -1235,7 +1236,7 @@ public static partial class Check
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         if (logger is not null)
             predicate = logger.WrapAssert(predicate);
 
@@ -1515,7 +1516,7 @@ public static partial class Check
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         printActual ??= Print;
         printModel ??= Print;
 
@@ -1763,7 +1764,7 @@ public static partial class Check
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         printActual ??= Print;
         printModel ??= Print;
 
@@ -2017,7 +2018,7 @@ public static partial class Check
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
 
         new GenMetamorphicData<T>(initial)
         .Select(operations)
@@ -2122,7 +2123,7 @@ public static partial class Check
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         if (threads < 2) threads = 2;
         if (replay == -1) replay = Replay;
         int[]? replayThreads = null;
@@ -2365,7 +2366,7 @@ public static partial class Check
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         if (threads < 2) threads = 2;
         if (replay == -1) replay = Replay;
         int[]? replayThreads = null;
@@ -2673,7 +2674,7 @@ public static partial class Check
             result,
             Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
             raiseexception);
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         while (--threads > 0)
             ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
@@ -2705,7 +2706,7 @@ public static partial class Check
             result,
             Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
             raiseexception);
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         while (--threads > 0)
             ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
@@ -2782,7 +2783,7 @@ public static partial class Check
             equal ?? Equal,
             Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
             raiseexception);
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         while (--threads > 0)
             ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
@@ -2839,7 +2840,7 @@ public static partial class Check
                 running = false;
             }
         }
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker().ConfigureAwait(false);
@@ -2910,7 +2911,7 @@ public static partial class Check
                 running = false;
             }
         }
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker().ConfigureAwait(false);
@@ -2990,7 +2991,7 @@ public static partial class Check
             Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
             seed ?? Seed,
             raiseexception);
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         while (--threads > 0)
             ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
@@ -3183,7 +3184,7 @@ public static partial class Check
                 running = false;
             }
         }
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker().ConfigureAwait(false);
@@ -3391,7 +3392,7 @@ public static partial class Check
             equal ?? Equal,
             seed ?? Seed,
             raiseexception);
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         while (--threads > 0)
             ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
@@ -3430,7 +3431,7 @@ public static partial class Check
             equal ?? Equal,
             seed ?? Seed,
             raiseexception);
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         while (--threads > 0)
             ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
         worker.Execute();
@@ -3644,7 +3645,7 @@ public static partial class Check
                 running = false;
             }
         }
-        if (threads == -1) threads = Threads;
+        if (threads < 1) threads = Threads;
         while (--threads > 0)
             _ = Task.Run(Worker);
         await Worker().ConfigureAwait(false);

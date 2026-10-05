@@ -33,15 +33,9 @@ using System.Collections.ObjectModel;
 
 public sealed class CsCheckException : Exception
 {
-    readonly Exception? _exception;
     private CsCheckException() { }
     public CsCheckException(string message) : base(message) { }
-    public CsCheckException(string message, Exception? exception)
-        : base(exception is null ? message : string.Concat(message, '\n', exception.Message))
-    {
-        _exception = exception;
-    }
-    public override string? StackTrace => _exception?.StackTrace;
+    public CsCheckException(string message, Exception? exception) : base(message, exception) { }
 }
 
 public static partial class Check
@@ -1134,6 +1128,7 @@ public static class HashHelper
     public static bool IsPow2(int value) => (value & (value - 1)) == 0;
 }
 
+[StackTraceHidden]
 public static class ThrowHelper
 {
     [DoesNotReturn]

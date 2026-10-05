@@ -1014,10 +1014,11 @@ public partial class SpecValidationTests
         var spec = Spec.From(0)
             .Action("Inc", s => s < 3, s => s == 2 ? throw new InvalidOperationException("effect boom") : s + 1)
             .Invariant("ANY", "Always true.", _ => true);
-        var message = Assert.Throws<CsCheckException>(() => spec.Conform(() => new ConformSut(),
-            (sut, t) => { sut.N++; return sut.N == t.After; }, writeLine: null, minSteps: 3, maxSteps: 3, iter: 20))!.Message;
-        await Assert.That(message).Contains("effect boom");
-        await Assert.That(message).DoesNotContain("Object reference not set");
+        var e = Assert.Throws<CsCheckException>(() => spec.Conform(() => new ConformSut(),
+            (sut, t) => { sut.N++; return sut.N == t.After; }, writeLine: null, minSteps: 3, maxSteps: 3, iter: 20))!;
+        await Assert.That(e.InnerException).IsTypeOf<InvalidOperationException>();
+        await Assert.That(e.InnerException!.Message).IsEqualTo("effect boom");
+        await Assert.That(e.ToString()).DoesNotContain("Object reference not set");
     }
 
     /// <summary>A model that throws surfaces its own exception rather than a NullReferenceException from the printer.</summary>
@@ -1027,10 +1028,11 @@ public partial class SpecValidationTests
         var spec = Spec.From(0)
             .Action("Inc", s => s < 3, s => s == 2 ? throw new InvalidOperationException("effect boom") : s + 1)
             .Invariant("ANY", "Always true.", _ => true);
-        var message = Assert.Throws<CsCheckException>(
-            () => spec.Sample(writeLine: null, minSteps: 3, maxSteps: 3, iter: 20))!.Message;
-        await Assert.That(message).Contains("effect boom");
-        await Assert.That(message).DoesNotContain("Object reference not set");
+        var e = Assert.Throws<CsCheckException>(
+            () => spec.Sample(writeLine: null, minSteps: 3, maxSteps: 3, iter: 20))!;
+        await Assert.That(e.InnerException).IsTypeOf<InvalidOperationException>();
+        await Assert.That(e.InnerException!.Message).IsEqualTo("effect boom");
+        await Assert.That(e.ToString()).DoesNotContain("Object reference not set");
     }
 
     /// <summary>Trace step bounds are rejected up front rather than crashing inside generation.</summary>
