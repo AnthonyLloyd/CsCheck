@@ -35,14 +35,19 @@ public sealed class Size
 
     public void Add(Size a)
     {
-        var nI = I + a.I;
-        I = nI >= I && nI >= a.I ? nI : ulong.MaxValue;
+        Add(a.I);
         if (a.Next is not null)
         {
             if (Next is null) Next = a.Next;
             else Next.Add(a.Next);
         }
     }
+    internal void Add(ulong i)
+    {
+        var nI = I + i;
+        I = nI >= I ? nI : ulong.MaxValue;
+    }
+
     public void Append(Size s)
     {
         var final = this;

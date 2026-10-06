@@ -484,6 +484,7 @@ Spec.From(State.Connected)
   a proof says the requirements hold, `Faults` says whether they were worth holding. `SampleFaults` produces the same
   table by walking each fault instead of proving it, for a model too large to close. For `SampleFaults`, NOTHING means no requirement was seen to catch it, not that none can.
 - **`Conform`** drives a real implementation down the same walk and checks it conforms to the specification on those traces. Exhaustive proves the model. Conform checks the real object on the traces it walked.
+- **`ConformExhaustive`** drives the implementation along every transition the proof counts instead, each from a fresh instance down a shortest path, so a divergence comes back as a shortest path with no shrinking and a clean run covers the whole model.
 
 `Mermaid` returns the reachable state graph as a Mermaid flowchart, with intended ends, dead ends and cut-off states styled differently, for a model small enough to look at.
 

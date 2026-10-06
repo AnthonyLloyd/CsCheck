@@ -1021,6 +1021,99 @@ public partial class SpecValidationTests
         await Assert.That(e.ToString()).DoesNotContain("Object reference not set");
     }
 
+    static Spec<int> IncOrStay() => Spec.From(0).Action("Inc", i => i < 3, i => i + 1).Action("Stay", i => i);
+
+    /// <summary>The path to a state is driven again for every transition out of it, and each of its steps was itself the
+    /// transition under test when the state before it was conformed. So a step that conformed then and diverges now is
+    /// the implementation's nondeterminism, and the report says so rather than blaming the step.</summary>
+    [Test]
+    public async Task ConformExhaustive_Reports_A_Nondeterministic_Implementation()
+    {
+        var asked = 0;
+        var message = Assert.Throws<CsCheckException>(() => IncOrStay().ConformExhaustive(() => new int[1], (sut, t) =>
+        {
+            if (t.Action == "Inc" && t.Before == 0 && ++asked > 1) return "remembers being asked before";
+            sut[0] = t.After;
+            return null;
+        }, threads: 1))!.Message;
+        await Assert.That(message).Contains("at step 1, on a path that had already conformed");
+        await Assert.That(message).Contains("Reason: remembers being asked before");
+    }
+
+    /// <summary>A transition back into the state it left is never on a shortest path, so driving the implementation
+    /// down each state's path would never take one. Every transition is taken, so a defect on a self-loop is found.</summary>
+    [Test]
+    public async Task ConformExhaustive_Takes_Transitions_Off_The_Shortest_Paths()
+    {
+        var message = Assert.Throws<CsCheckException>(() => IncOrStay().ConformExhaustive(() => new int[1], (sut, t) =>
+        {
+            sut[0] = t.Action == "Stay" && t.Before == 2 ? sut[0] + 1 : t.After;
+            return sut[0] == t.After ? null : $"got {sut[0]}, expected {t.After}";
+        }))!.Message;
+        await Assert.That(message).Contains("diverged from the specification at step 3\n");
+        await Assert.That(message).Contains("Reason: got 3, expected 2");
+        await Assert.That(message).Contains(">>  3 Stay");
+    }
+
+    /// <summary>An implementation that throws fails at the step it threw on, with its exception kept as the inner
+    /// exception, and one that cannot be created fails before any step.</summary>
+    [Test]
+    public async Task ConformExhaustive_Surfaces_An_Implementation_That_Throws()
+    {
+        var e = Assert.Throws<CsCheckException>(() => IncOrStay().ConformExhaustive(() => new int[1], (sut, t) =>
+        {
+            if (t.Before == 2 && t.Action == "Inc") throw new InvalidOperationException("apply boom");
+            sut[0] = t.After;
+            return true;
+        }))!;
+        await Assert.That(e.InnerException).IsTypeOf<InvalidOperationException>();
+        await Assert.That(e.Message).Contains("Implementation threw at step 3");
+        await Assert.That(e.Message).Contains("Error: InvalidOperationException: apply boom");
+        var created = Assert.Throws<CsCheckException>(() => IncOrStay().ConformExhaustive<int, int[]>(
+            () => throw new InvalidOperationException("create boom"), (_, _) => true))!;
+        await Assert.That(created.InnerException!.Message).IsEqualTo("create boom");
+        await Assert.That(created.Message).Contains("Implementation threw when created");
+    }
+
+    /// <summary>A specification that fails its own requirements says nothing about an implementation, so the violation
+    /// is reported exactly as Exhaustive reports it and no implementation is ever created.</summary>
+    [Test]
+    public async Task ConformExhaustive_Proves_The_Requirements_First()
+    {
+        static Spec<int> Make() => IncOrStay().Never("NO-THREE", "The counter never reaches three.", (_, a) => a == 3);
+        var created = 0;
+        var message = Assert.Throws<CsCheckException>(() => Make().ConformExhaustive(() => { created++; return new int[1]; },
+            (_, _) => true))!.Message;
+        Make().Exhaustive(out var violation);
+        await Assert.That(message).IsEqualTo(violation!.ToString());
+        await Assert.That(created).IsEqualTo(0);
+    }
+
+    /// <summary>A model that does not close can still be conformed as far as it was explored: every state the search
+    /// expanded has all its transitions driven, which are exactly the transitions the report counts once it stopped at
+    /// maxDepth, and the report is not closed.</summary>
+    [Test]
+    public async Task ConformExhaustive_Conforms_As_Far_As_The_Search_Went()
+    {
+        static bool Track(int[] sut, Transition<int> t)
+        {
+            var from = sut[0] == t.Before;
+            sut[0] = t.After;
+            return from;
+        }
+        var unbounded = Spec.From(0).Action("Inc", i => i + 1).Action("Stay", i => i);
+        var report = unbounded.ConformExhaustive(() => new int[1], Track, maxDepth: 4);
+        await Assert.That(report.Closed).IsFalse();
+        await Assert.That(report.ConformedStates).IsEqualTo(4);
+        await Assert.That(report.ConformedTransitions).IsEqualTo(report.Transitions);
+        await Assert.That(report.ToString()).Contains("conformed on 8 transitions from 4 states, 20 implementation steps");
+        // Giving up stops mid state, so that state is left out and the count falls short of the report's by its edges.
+        var gaveUp = Spec.From(0).Action("Inc", i => i + 1).ConformExhaustive(() => new int[1], Track, maxStates: 5);
+        await Assert.That(gaveUp.Closed).IsFalse();
+        await Assert.That(gaveUp.ConformedStates).IsEqualTo(4);
+        await Assert.That(gaveUp.ConformedTransitions).IsEqualTo(gaveUp.Transitions - 1);
+    }
+
     /// <summary>A model that throws surfaces its own exception rather than a NullReferenceException from the printer.</summary>
     [Test]
     public async Task Sample_Surfaces_A_Model_That_Throws()

@@ -279,12 +279,12 @@ Spec.Exhaustive of 31 requirements
   | SEQ-TOO-HIGH-QUEUE      |       4,420 |            |
   | LOGOUT-COMPLETES        |         922 |            |
   ...
-  | Action                  |       Fired |
-  | Recv(Logon TooHigh)     |       2,258 |
-  | Recv(App DupBadOrig)    |       2,258 |
-  | Recv(SeqReset TooLow)   |       2,258 |
+  | Action                  |       Fired | Self-loops |
+  | Recv(Logon TooHigh)     |       2,258 |            |
+  | Recv(App DupBadOrig)    |       2,258 |        256 |
+  | Recv(Garbled)           |       2,258 |        374 |
   ...
-  | Reconnect               |          49 |
+  | Reconnect               |          49 |            |
 ```
 
 `CLOSED` is a claim about every reachable state, so it is a proof for the abstracted model. Read alongside it:
@@ -305,6 +305,12 @@ Spec.Exhaustive of 31 requirements
 - **`Fired`**: one row per **(action, argument) case**, not per action. That matters: FIX has twenty inbound cases
   behind a single `Recv`, and counting per action hid a dead case behind a busy total; `NeverFired` could not see
   any of them. A `NEVER` here means that argument case never ran. Same problem as a requirement that never triggered: a busy total can hide a dead case.
+- **`Self-loops`**: how many of those left the model state unchanged, by the state's own equality, so a step that
+  only moves a response deadline or a history bit still counts. Often harmless: the FIX state records the last message
+  received, so the second of two garbled messages in a row changes nothing. But an enabled action that changes nothing
+  is also what a guard looser than its effect looks like, and in an implementation that retries until something
+  changes it is a busy loop. When an action must make progress, say so and the count becomes a counterexample:
+  `Never("ACQUIRE-TAKES-EFFECT", "An attempt that is allowed must take effect.", on: "Acquire", (b, a) => a.Equals(b))`.
 
 The tail of `BlockingQueueSpec` at `Wake.Any` with two producers, two consumers and a capacity of one:
 
@@ -565,6 +571,13 @@ proof becomes false, silently**; the search never visits the second one, so noth
 costs states. And the canonical form is recomputed on every lookup, so an expensive one is felt across the whole
 search; prefer saturating a counter, which is free and generalises the proof rather than scoping it.
 
+The first warning is not hypothetical. The lease-and-handoff protocol under [How big a model can
+be](#how-big-a-model-can-be) was first checked by a hand-written search keyed on a packed integer whose bit fields
+overlapped, which merged one state in nineteen into another for five weeks without anything failing. A port to `Spec`
+keyed the same way reproduced the count exactly, and its coverage table is what showed the bug: the protocol's three
+workers are interchangeable, so their per-argument rows must be identical, and one worker's were not.
+**Interchangeable subjects whose coverage rows differ mean the equality is broken.**
+
 ### What the other examples added
 
 Each of them contributed a technique the FIX model had no need of:
@@ -615,8 +628,66 @@ FixEngineSpec.Create().Conform(() => new FixEngine(), Apply, TUnitX.WriteLine);
 The comparison is a projection, not equality: pick the fields the implementation is supposed to agree about.
 `Conform` also checks the requirements on every trace, so one run covers conformance *and* the specification.
 
+Project everything the abstraction keeps rather than a convenient few fields, because a field left out is a
+divergence that can only show up later, if at all. Where the subjects of a model each make a decision, compare the
+decision each would make *next* as well as the state: a wrong decision then fails the moment its state is reached,
+rather than only on a walk that happens to take that action from there.
+
+A walk only gets as deep as the actions that reset it allow. Weight crash, restart and clock actions low and the
+protocol's own steps high: in one port, crash and time at 1, reassignment at 2 and protocol steps at 4 made the deep
+steps thirty to fifty times more frequent than equal weights did.
+
 `Tests/Specs/FixEngine.cs` is a mutable, imperative engine in the shape production code actually takes, with one
 planted defect (an already-processed duplicate advances the expected sequence number). It shrinks to two steps.
+
+### ConformExhaustive: every transition, not a sample
+
+A clean `Conform` run says no divergence was found on the walks it took, with no measure of how much of the model
+those walks covered. `ConformExhaustive` takes the same `create` and `apply` and drives the implementation from the
+proof instead: it enumerates the space as `Exhaustive` does, proving the requirements on the way, and then for every
+reachable state, in breadth-first order, a fresh implementation is driven down a shortest path to it and one step
+further on each action enabled there.
+
+```csharp
+FixEngineSpec.Create().ConformExhaustive(() => new FixEngine(), Apply, TUnitX.WriteLine);
+```
+
+```
+  Implementation diverged from the specification at step 2
+        Reason: Expect: got 3, expected 2
+```
+
+That is the same two steps `Conform` shrinks to, found with no seed, no weights and no shrinking, because the first
+divergence in breadth-first order is on a shortest path already. A clean run adds one line to the report, here for
+the refresh cache, whose implementation has no planted defect:
+
+```
+  conformed on 6,713 transitions from 1,445 states, 92,114 implementation steps
+```
+
+The counts are the proof's: every node and every transition the search counted was driven, including the extra
+nodes that `Response` deadlines and `Precedes` history put on one model state. It covers transitions rather than
+states for a reason: a transition back into the state it left is never on a shortest path, so driving the
+implementation down each state's path alone would never take one, and an enabled action that changes nothing is
+exactly where a retry loop goes wrong. The `Self-loops` column says how many there are.
+
+Three things to know:
+
+- **It is one path per state.** Behaviour that depends on how a state was reached, beyond what the model state
+  records, is only covered by `Conform`'s random walks, so run both.
+- **The implementation must be deterministic**, as for `Conform`. Each step of a path is driven again for every
+  transition out of the state it reaches, and was itself the transition under test when the state before it was
+  conformed, so a step that conformed then and diverges now is reported as the implementation's nondeterminism (or
+  state shared between instances) rather than as a defect in that step. Nondeterminism the abstraction never reads,
+  such as a fresh `Guid` only compared for equality, is fine.
+- **The cost is the depth.** Each transition costs one implementation step more than the depth of the state it
+  leaves, and the third number in the line is their total. The model is explored on one thread and the implementation is
+  driven on all of them by default, so `create` and `apply` must be safe to call on different instances at once,
+  as for `Conform`; the result does not depend on the thread count.
+
+A model that does not close can still be conformed as far as the search went: every state short of `maxDepth`, or
+before the state where it gave up at `maxStates`, has all its transitions driven, and the report says it is not
+closed.
 
 **The dependency runs implementation → specification → tests, and never back.** The engine owns the vocabulary (the
 message kinds, the sequence relations, what a step emits, the connection status), and the specification does
@@ -643,8 +714,9 @@ slow past it.
 Second, the largest worked example is 1.5 million states, which is 15% of that default rather than the comfortable
 margin the first six enjoy. So the default is not arbitrary headroom: a real specification has already come within an
 order of magnitude of it, and the one other real specification we know of (a lease-and-handoff protocol elsewhere in
-the same organisation as the author) closes at 1,008,264. Anything of that shape should expect to think about the
-bound rather than ignore it.
+the same organisation as the author) closes at 1,064,984 when it models the implementation's own records, and at
+544,856 as a separate model that leaves out what cannot change behaviour, checked against the code with `Conform`.
+Anything of that shape should expect to think about the bound rather than ignore it.
 
 Third, and still true of six of the seven: if a model is slow the answer is almost always a leaked abstraction or a
 wide state rather than the engine.
@@ -704,17 +776,18 @@ that is rejected up front.
 
 Reach for saturation first. `Math.Min(idle + 1, Cap)` makes every higher value *the same state*, which generalises
 the proof; a boundary only scopes it. Saturation is strictly stronger where you can find one; the boundary is for
-when you cannot. It applies to `Exhaustive` and `Faults`, not to `Sample` or `Conform`, whose walks are bounded by
-their step count and so cannot fail to terminate anyway.
+when you cannot. It applies to `Exhaustive`, `Faults` and `ConformExhaustive`, not to `Sample` or `Conform`, whose
+walks are bounded by their step count and so cannot fail to terminate anyway.
 
 ### Threads
 
 `Exhaustive` takes a `threads` argument that defaults to **1**, and the default path fuses expansion and insertion
 so an edge is consumed while still in registers. Above one thread each frontier level is expanded in parallel into a
-buffer and then inserted sequentially in source order. Only the user delegates run in parallel; the visited set is
-never touched off the main thread, so the state count, the counterexample chosen among several at the same depth, and
-every coverage number are identical however many threads ran; `Tests/Specs/SpecScaleTests.cs` asserts exactly that, for the
-report and for the counterexample.
+buffer and then inserted sequentially in source order. The user delegates run in parallel, and so does a read-only
+lookup of each successor in the visited set, which is only ever written on the main thread between parallel phases.
+So the state count, the counterexample chosen among several at the same depth, and every coverage number are
+identical however many threads ran; `Tests/Specs/SpecScaleTests.cs` asserts exactly that, for the report and for the
+counterexample.
 
 That holds for a failing run too, which took a fix. A violation stops the walk mid-node, and the parallel path has
 already expanded that whole node, so the sequential path finishes evaluating the node's remaining edges for counting
@@ -722,6 +795,13 @@ and stops only the inserting. Without it an action fired only after the violatio
 number on many, and `NeverFired` is public API. It costs one node of delegate calls on a run that is failing anyway.
 `Tests/Specs/SpecScaleTests.cs` compares whole reports for a model whose violating action is the *first* declared,
 because a model where it is the last passes either way.
+
+The lookup is what lets a successor already seen skip the sequential insert, which is otherwise the bound on the
+speedup. It pays on a cyclic model, where most successors are states seen before their level began: it made FIX and
+EWD 998 17% to 34% faster on 4 and 22 threads. It cannot pay where every step goes one level deeper, as in the model
+measured below, because there every revisit is to a state another node of the same level has just found and the set
+does not yet hold, so the engine keeps sampling one node in sixteen and stops looking the rest up while fewer than a
+quarter of lookups hit.
 
 It is opt in because the numbers say it should be. On 22 cores, four runs of
 `SpecScaleTests.Parallel_Speedup` over the same 50,700-transition model:
@@ -737,9 +817,10 @@ expanding it in place, and that cost does not go away when there is nothing to o
 `threads` defaults to 1 rather than to the core count.
 
 The ceiling is the sequential visited set: Amdahl, not implementation. So `threads` is worth reaching for only
-when your guards, transitions and requirement predicates are genuinely costly, and it comes with a real condition:
-above one thread those delegates must be **thread safe**, not merely pure. A memoisation cache inside a transition
-would corrupt the engine that proves your system correct, nondeterministically. On one thread it cannot.
+when your guards, transitions and requirement predicates are genuinely costly, or the model is cyclic and its state
+costly to hash, and it comes with a real condition: above one thread those delegates, and the state's `Equals` and
+`GetHashCode`, must be **thread safe**, not merely pure. A memoisation cache inside a transition would corrupt the
+engine that proves your system correct, nondeterministically. On one thread it cannot.
 
 ## Requirements on `S`
 

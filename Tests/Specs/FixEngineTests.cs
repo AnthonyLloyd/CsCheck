@@ -30,14 +30,16 @@ public class FixEngineTests
         await Assert.That(report.Transitions).IsEqualTo(51_569);
         // docs/Spec.md and README.md each quote this report to explain how to read one, abridged to a different
         // handful of rows. The two lines above the tables are not abridged, and every row either file does quote has
-        // to be a row this produces - the readme's had drifted a column wide without anything noticing.
+        // to be a whole row this produces - the readme's had drifted a column wide without anything noticing, and a
+        // substring match missed a column added at the end.
         var text = report.ToString();
+        var lines = text.Split('\n');
         foreach (var blocks in new[] { Docs.Spec, Docs.Readme })
         {
             var quoted = blocks.Single(b => b.StartsWith("Spec.Exhaustive of 31 requirements", StringComparison.Ordinal));
             await Assert.That(text).StartsWith(string.Join('\n', quoted.Split('\n')[..2]));
             foreach (var row in quoted.Split('\n').Where(l => l.StartsWith("  | ", StringComparison.Ordinal)))
-                await Assert.That(text).Contains(row);
+                await Assert.That(lines).Contains(row);
         }
     }
 
@@ -94,6 +96,41 @@ public class FixEngineTests
         TUnitX.WriteLine(violation.ToString(s => s.ToString()));
     }
 
+    /// <summary>The bridge between the specification's abstract domain and the engine's concrete API. The spec
+    /// expresses inbound messages as (kind, Seq relation); the engine takes a wire-level message with a real sequence
+    /// number and PossDup fields. The translation uses the engine's current Expect to produce a sequence number that
+    /// satisfies the intended relation.</summary>
+    static string? Apply(FixEngine e, Transition<FixEngineSpec.State> t)
+    {
+        switch (t.Action)
+        {
+            case "Recv":
+                var specMsg = FixEngineSpec.Inbound[t.ArgIndex];
+                var seqNum = specMsg.Seq switch
+                {
+                    Seq.Expected => e.Expect,
+                    Seq.TooHigh => e.Expect + 1,
+                    _ => e.Expect - 1  // TooLow / TooLowDup / DupBadOrig
+                };
+                e.Inbound(new FixEngine.Msg(specMsg.Kind, seqNum,
+                    PossDup: specMsg.Seq is Seq.TooLowDup or Seq.DupBadOrig,
+                    GoodOrig: specMsg.Seq == Seq.TooLowDup));
+                break;
+            case "Tick": e.Tick(); break;
+            case "SendApp": e.SendApp(); break;
+            case "SendLogout": e.SendLogout(); break;
+            case "Reconnect": e.Reconnect(); break;
+            default: e.Drop(); break;
+        }
+        if (e.Status != t.After.Status) return $"Status: got {e.Status}, expected {t.After.Status}";
+        if (e.Sent != t.After.Sent) return $"Sent: got {e.Sent}, expected {t.After.Sent}";
+        if (e.Expect != t.After.Expect) return $"Expect: got {e.Expect}, expected {t.After.Expect}";
+        if (e.Next != t.After.Next) return $"Next: got {e.Next}, expected {t.After.Next}";
+        if (e.GapOpen != t.After.GapOpen) return $"GapOpen: got {e.GapOpen}, expected {t.After.GapOpen}";
+        if (e.Queued != t.After.Queued) return $"Queued: got {e.Queued}, expected {t.After.Queued}";
+        return null;
+    }
+
     /// <summary>Conformance. A random walk drives the specification; at each step the same action is applied to both
     /// the specification and the engine, with <c>Apply</c> translating from the specification's abstract message
     /// vocabulary to the engine's wire-level API. The engine has one planted defect, so this is expected to fail
@@ -101,44 +138,26 @@ public class FixEngineTests
     [Test]
     public async Task Conforms_To_Spec()
     {
-        // Apply is the bridge between the specification's abstract domain and the engine's concrete API.
-        // The spec expresses inbound messages as (kind, Seq relation); the engine takes a wire-level message
-        // with a real sequence number and PossDup fields. The translation uses the engine's current Expect to
-        // produce a sequence number that satisfies the intended relation.
-        static string? Apply(FixEngine e, Transition<FixEngineSpec.State> t)
-        {
-            switch (t.Action)
-            {
-                case "Recv":
-                    var specMsg = FixEngineSpec.Inbound[t.ArgIndex];
-                    var seqNum = specMsg.Seq switch
-                    {
-                        Seq.Expected => e.Expect,
-                        Seq.TooHigh => e.Expect + 1,
-                        _ => e.Expect - 1  // TooLow / TooLowDup / DupBadOrig
-                    };
-                    e.Inbound(new FixEngine.Msg(specMsg.Kind, seqNum,
-                        PossDup: specMsg.Seq is Seq.TooLowDup or Seq.DupBadOrig,
-                        GoodOrig: specMsg.Seq == Seq.TooLowDup));
-                    break;
-                case "Tick": e.Tick(); break;
-                case "SendApp": e.SendApp(); break;
-                case "SendLogout": e.SendLogout(); break;
-                case "Reconnect": e.Reconnect(); break;
-                default: e.Drop(); break;
-            }
-            if (e.Status != t.After.Status) return $"Status: got {e.Status}, expected {t.After.Status}";
-            if (e.Sent != t.After.Sent) return $"Sent: got {e.Sent}, expected {t.After.Sent}";
-            if (e.Expect != t.After.Expect) return $"Expect: got {e.Expect}, expected {t.After.Expect}";
-            if (e.Next != t.After.Next) return $"Next: got {e.Next}, expected {t.After.Next}";
-            if (e.GapOpen != t.After.GapOpen) return $"GapOpen: got {e.GapOpen}, expected {t.After.GapOpen}";
-            if (e.Queued != t.After.Queued) return $"Queued: got {e.Queued}, expected {t.After.Queued}";
-            return null;
-        }
         var message = Assert.Throws<CsCheckException>(
             () => FixEngineSpec.Create().Conform(() => new FixEngine(), Apply, TUnitX.WriteLine, iter: 100_000))!.Message;
         TUnitX.WriteLine(message);
         await Assert.That(message).Contains("TooLowDup");
+    }
+
+    /// <summary>The same check driven by the proof rather than by random walks: every transition out of every reachable
+    /// state, each from a fresh engine taken down a shortest path to it. No weights to tune and no shrinking, and the
+    /// divergence it reports is the shallowest there is along those paths.</summary>
+    [Test]
+    public async Task Conforms_On_Every_Transition()
+    {
+        var message = Assert.Throws<CsCheckException>(
+            () => FixEngineSpec.Create().ConformExhaustive(() => new FixEngine(), Apply, TUnitX.WriteLine))!.Message;
+        TUnitX.WriteLine(message);
+        // A logon and then the duplicate: nothing shorter can reach a session that consumes application messages.
+        await Assert.That(message).Contains("diverged from the specification at step 2\n");
+        await Assert.That(message).Contains(">>  2 Recv(App TooLowDup)");
+        await Assert.That(message).Contains(Docs.Spec
+            .Single(b => b.StartsWith("  Implementation diverged", StringComparison.Ordinal)).TrimEnd('\n'));
     }
 
     /// <summary>The specification is also just a generator, so a trace can be reused in an ordinary Sample. Here it
