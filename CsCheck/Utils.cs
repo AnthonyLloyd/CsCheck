@@ -350,17 +350,15 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
             return true;
         if (a is null || b is null)
             return false;
-        if (a is IEquatable<T> aieq)
-            return aieq.Equals(b);
-        if (a is Array aa2 && b is Array ba2 && (aa2.Rank == 2 || ba2.Rank == 2))
+        if (a is Array aa && b is Array ba && (aa.Rank > 1 || ba.Rank > 1))
         {
-            if (aa2.Rank != ba2.Rank) return false;
-            int I = aa2.GetLength(0), J = aa2.GetLength(1);
-            if (I != ba2.GetLength(0) || J != ba2.GetLength(1)) return false;
-            for (int i = 0; i < I; i++)
-                for (int j = 0; j < J; j++)
-                    if (!Equal(aa2.GetValue(i, j), ba2.GetValue(i, j)))
-                        return false;
+            if (aa.Rank != ba.Rank) return false;
+            for (int d = 0; d < aa.Rank; d++)
+                if (aa.GetLength(d) != ba.GetLength(d)) return false;
+            var be = ba.GetEnumerator();
+            foreach (var x in aa)
+                if (!be.MoveNext() || !Equal(x, be.Current))
+                    return false;
             return true;
         }
         if (a is IList ail && b is IList bil)
@@ -368,6 +366,18 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
             if (ail.Count != bil.Count) return false;
             for (int i = 0; i < ail.Count; i++)
                 if (!Equal(ail[i], bil[i]))
+                    return false;
+            return true;
+        }
+        if (a is IEquatable<T> aieq)
+            return aieq.Equals(b);
+        if (a is string || b is string)
+            return a.Equals(b);
+        if (a is IDictionary ad && b is IDictionary bd)
+        {
+            if (ad.Count != bd.Count) return false;
+            foreach (DictionaryEntry e in ad)
+                if (!bd.Contains(e.Key) || !Equal(e.Value, bd[e.Key]))
                     return false;
             return true;
         }
@@ -403,7 +413,7 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         var unmatched = new List<object>(bo);
         foreach (var x in ao)
         {
-            var i = unmatched.FindIndex(y => EqualComparer.Instance.Equals(x, y));
+            var i = unmatched.FindIndex(y => Equal(x, y));
             if (i == -1) return false;
             unmatched.RemoveAt(i);
         }
@@ -423,17 +433,11 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
              || genericType == typeof(FrozenDictionary<,>)
              || genericType == typeof(ReadOnlyDictionary<,>)
              || genericType == typeof(ConcurrentBag<>)
-             || genericType == typeof(FrozenSet<>))
+             || genericType == typeof(FrozenSet<>)
+             || genericType == typeof(ReadOnlySet<>))
                 return true;
         }
         return false;
-    }
-
-    private sealed class EqualComparer : IEqualityComparer<object>
-    {
-        internal static readonly EqualComparer Instance = new();
-        public new bool Equals(object? x, object? y) => Equal(x, y);
-        public int GetHashCode([DisallowNull] object obj) => 0;
     }
 
     /// <summary>Don't check equality just return true.</summary>
@@ -523,6 +527,22 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         var order = new T[threadIds.Length];
         foreach (var permutation in Interleavings(threadIds, sequence, taken, order, 0))
             yield return permutation;
+    }
+    internal static bool Linearizable<T>((string, Action<T>)[] sequentialOperations, (string, Action<T>)[] parallelOperations, int[] threadIds, Func<T> initial, Func<T, bool> matches)
+    {
+        var linearizable = false;
+        Parallel.ForEach(Permutations(threadIds, parallelOperations), (sequence, state) =>
+        {
+            var linearState = initial();
+            try { Run(linearState, sequentialOperations, sequence, 1); }
+            catch { return; }
+            if (matches(linearState))
+            {
+                linearizable = true;
+                state.Stop();
+            }
+        });
+        return linearizable;
     }
 
     static IEnumerable<T[]> Interleavings<T>(int[] threadIds, T[] sequence, bool[] taken, T[] order, int depth)

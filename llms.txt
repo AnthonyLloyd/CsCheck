@@ -31,7 +31,7 @@ Terminating methods:
 - `gen.Faster(fast, slow, writeLine: ...)`: statistical performance comparison.
 - `ModelGen.X.Single(predicate, "seed")` + `Check.Hash(h => h.Add(...), expectedHash)`: regression testing.
 
-Common optional parameters: `iter` (default 100), `time` (seconds), `seed`, `threads`, `timeout` (Faster, 60s), `sigma` (Faster, 6), `replay` (SampleParallel, 100), `print`, `equal`. Env-var defaults: `CsCheck_Iter`, `CsCheck_Time`, `CsCheck_Seed`, `CsCheck_Sigma`, `CsCheck_Threads`.
+Common optional parameters: `iter` (default 100), `time` (seconds), `seed`, `threads`, `timeout` (Faster, 60s), `sigma` (Faster, 6), `replay` (SampleParallel, 100), `print`, `equal`. Env-var defaults: `CsCheck_Iter`, `CsCheck_Time`, `CsCheck_Seed`, `CsCheck_Threads`, `CsCheck_Timeout`, `CsCheck_Sigma` and `CsCheck_Replay` for those parameters, plus `CsCheck_AllocAll` (Faster counts allocations on all threads, default false), `CsCheck_Ulps` (`Check.Print` shows a double or float as a shorter number within that many ulps, default 4), `CsCheck_WhereLimit` (tries before `Where` throws, default 100) and `CsCheck_SingleLimit` (tries before `Single` throws, default 1,000,000).
 
 Canonical example:
 

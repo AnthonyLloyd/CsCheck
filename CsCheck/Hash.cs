@@ -15,7 +15,6 @@
 namespace CsCheck;
 
 using System.Text;
-using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -44,7 +43,6 @@ public interface IRegression
 /// <summary>Functionality for hash testing data with detailed information of any changes.</summary>
 public sealed class Hash : IRegression
 {
-    static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new(StringComparer.Ordinal);
     internal static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
     public const int OFFSET_SIZE = 500_000_000;
     readonly int Offset;
@@ -52,7 +50,7 @@ public sealed class Hash : IRegression
     readonly int ExpectedHash;
     readonly Stream? stream;
     readonly string? filename;
-    readonly string? threadId;
+    readonly string? tempfile;
     readonly bool writing;
     readonly List<int>? roundingFractions;
     string lastString = "null";
@@ -88,17 +86,12 @@ public sealed class Hash : IRegression
         if (!expectedHash.HasValue) return;
         ExpectedHash = expectedHash.Value;
         filename = Filename(FullHash(offset, ExpectedHash), memberName, filePath);
-        var rwLock = replaceLock.GetOrAdd(filename, _ => new ReaderWriterLockSlim());
-        rwLock.EnterUpgradeableReadLock();
         if (File.Exists(filename))
         {
             stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
             return;
         }
-        rwLock.EnterWriteLock();
-        threadId = Environment.CurrentManagedThreadId.ToString();
-        var tempfile = $"{filename}_{Environment.ProcessId}_{threadId}";
-        if (File.Exists(tempfile)) File.Delete(tempfile);
+        tempfile = $"{filename}_{Environment.ProcessId}_{Environment.CurrentManagedThreadId}";
         Directory.CreateDirectory(Path.GetDirectoryName(tempfile)!);
         stream = File.Create(tempfile);
         writing = true;
@@ -147,27 +140,26 @@ public sealed class Hash : IRegression
     public void Close()
     {
         var actualHash = GetHashCode();
-        if (stream is not null)
+        if (stream is null) return;
+        stream.Dispose();
+        if (!writing) return;
+        if (actualHash != ExpectedHash)
         {
-            stream.Dispose();
-
-            if (writing)
-            {
-                if (actualHash == ExpectedHash)
-                {
-                    if (File.Exists(filename)) File.Delete(filename);
-                    File.Move($"{filename}_{Environment.ProcessId}_{threadId}", filename!);
-                }
-                else
-                {
-                    File.Delete($"{filename}_{Environment.ProcessId}_{threadId}");
-                }
-
-                replaceLock[filename!].ExitWriteLock();
-            }
-            replaceLock[filename!].ExitUpgradeableReadLock();
+            File.Delete(tempfile!);
+            return;
+        }
+        try
+        {
+            File.Move(tempfile!, filename!);
+        }
+        catch (IOException) when (File.Exists(filename))
+        {
+            // Written meanwhile by another test host. Replacing it would fail on Windows while it's open for reading.
+            File.Delete(tempfile!);
         }
     }
+
+    internal Hash Clone() => (Hash)MemberwiseClone();
 
     public void Add(bool val)
     {
@@ -256,8 +248,9 @@ public sealed class Hash : IRegression
         Stream(StreamSerializer.WriteChar, StreamSerializer.ReadChar, val);
         AddPrivate((uint)val);
     }
-    public void Add(string val)
+    public void Add(string? val)
     {
+        val ??= "<null>";
         Stream(StreamSerializer.WriteString, StreamSerializer.ReadString, val);
         foreach (char c in val) AddPrivate((uint)c);
         lastString = val;
@@ -872,8 +865,10 @@ public sealed class HashStream : Stream
     }
     public override int GetHashCode()
     {
-        if (position > 0) hash.Add(bytes);
-        return hash.GetHashCode();
+        if (position == 0) return hash.GetHashCode();
+        var withPartialWord = hash.Clone();
+        withPartialWord.Add(bytes);
+        return withPartialWord.GetHashCode();
     }
 }
 

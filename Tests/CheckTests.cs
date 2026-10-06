@@ -3,6 +3,8 @@ namespace Tests;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using CsCheck;
@@ -223,12 +225,110 @@ public class CheckTests
         await Assert.That(Check.EqualUnordered(new[] { 1, 1, 2 }, new[] { 1, 2, 2 })).IsFalse();
     }
 
+    [Test]
+    public async Task Equal_Dictionary_Compares_Values_Structurally()
+    {
+        await Assert.That(Check.Equal(new Dictionary<int, int[]> { [1] = [2] }, new Dictionary<int, int[]> { [1] = [2] })).IsTrue();
+        await Assert.That(Check.Equal(new Dictionary<int, int[]> { [1] = [2] }, new Dictionary<int, int[]> { [1] = [3] })).IsFalse();
+        await Assert.That(Check.Equal<object?>(new ConcurrentDictionary<int, int[]>([new(1, [2])]), new Dictionary<int, int[]> { [1] = [2] })).IsTrue();
+    }
+
+    [Test]
+    public async Task Equal_ImmutableArray_Compares_Elements()
+    {
+        await Assert.That(Check.Equal(ImmutableArray.Create(1, 2), ImmutableArray.Create(1, 2))).IsTrue();
+        await Assert.That(Check.Equal(ImmutableArray.Create(1, 2), ImmutableArray.Create(2, 1))).IsFalse();
+    }
+
+    [Test]
+    public async Task Equal_Array3D()
+    {
+        await Assert.That(Check.Equal(new int[,,] { { { 1, 2 } } }, new int[,,] { { { 1, 2 } } })).IsTrue();
+        await Assert.That(Check.Equal(new int[,,] { { { 1, 2 } } }, new int[,,] { { { 2, 1 } } })).IsFalse();
+    }
+
+    [Test]
+    public async Task Equal_ReadOnlySet_Is_Unordered()
+    {
+        await Assert.That(Check.Equal(new ReadOnlySet<int>(new HashSet<int> { 1, 2 }), new ReadOnlySet<int>(new HashSet<int> { 2, 1 }))).IsTrue();
+    }
+
+    [Test]
+    public async Task Equal_List_Of_Strings()
+    {
+        await Assert.That(Check.Equal<List<string?>>(["ab", null], ["ab", null])).IsTrue();
+        await Assert.That(Check.Equal<List<string?>>(["ab"], ["ac"])).IsFalse();
+    }
+
+    [Test]
+    public async Task Equal_Actual_And_Model_Of_Different_Types()
+    {
+        await Assert.That(Check.Equal<object?>(new HashSet<int> { 1, 2, 3, 4 }, new List<int> { 4, 3, 2, 1 })).IsTrue();
+        await Assert.That(Check.Equal<object?>(new List<int> { 1, 2, 3, 4 }, new[] { 1, 2, 3, 4 })).IsTrue();
+        await Assert.That(Check.Equal<object?>(new List<int> { 1, 2, 3, 4 }, new[] { 1, 2, 4, 3 })).IsFalse();
+        await Assert.That(Check.Equal<object?>(new Dictionary<int, byte> { [1] = 2, [3] = 4 }, new KeyValuePair<int, byte>[] { new(3, 4), new(1, 2) })).IsTrue();
+        await Assert.That(Check.Equal<object?>(new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }, new KeyValuePair<int, byte>[] { new(3, 4), new(1, 2) })).IsFalse();
+    }
+
+    [Test]
+    public void Equal_Matches_Sequence_And_Multiset_Oracles()
+    {
+        static Dictionary<int, int[]> ToDict(int[] a) => a.Select((x, i) => (i, x)).ToDictionary(t => t.i, t => new[] { t.x });
+        Gen.Select(Gen.Int[0, 3].Array[0, 6], Gen.Int[0, 3].Array[0, 6], Gen.Int[0, 2], (xs, other, kind) => (xs, ys: kind switch
+        {
+            0 => xs.OrderDescending().ToArray(),
+            1 => other.Concat(xs).Take(xs.Length).ToArray(),
+            _ => other,
+        }))
+        .Sample((xs, ys) =>
+            Check.Equal<object?>(xs, ys.ToList()) == xs.SequenceEqual(ys)
+            && Check.Equal<object?>(new ConcurrentBag<int>(xs), ys.ToList()) == xs.Order().SequenceEqual(ys.Order())
+            && Check.Equal<object?>(xs.Select(x => new[] { x }).ToList(), ys.Select(y => new[] { y }).ToList()) == xs.SequenceEqual(ys)
+            && Check.Equal<object?>(new ConcurrentDictionary<int, int[]>(ToDict(xs)), ToDict(ys)) == xs.SequenceEqual(ys));
+    }
+
     /// <summary>Sample writes its passed line after the property has already succeeded, so a sink that throws there
     /// would turn a passing property into a failing test for a formatting problem.</summary>
     [Test]
     public void A_Throwing_WriteLine_Does_Not_Fail_A_Passing_Sample()
     {
         Gen.Int[0, 10].Sample(i => i >= 0, writeLine: _ => throw new InvalidOperationException("the sink is gone"), iter: 10);
+    }
+
+    static Action[] AllSampleKinds(Gen<int> gen, Func<int, bool> ok, long iter, string? seed = null) =>
+    [
+        () => gen.Sample(i => { if (!ok(i)) throw new ArgumentException("failed"); }, seed: seed, iter: iter),
+        () => gen.Sample(ok, seed: seed, iter: iter),
+        () => gen.SampleAsync(async i => { await Task.Yield(); if (!ok(i)) throw new ArgumentException("failed"); }, seed: seed, iter: iter).GetAwaiter().GetResult(),
+        () => gen.SampleAsync(async i => { await Task.Yield(); return ok(i); }, seed: seed, iter: iter).GetAwaiter().GetResult(),
+    ];
+
+    [Test]
+    public async Task Sample_Reports_A_Throwing_Generator_With_A_Seed_That_Reproduces_It()
+    {
+        var gen = Gen.Int[0, 100].Select(i => i < 50 ? i : throw new InvalidOperationException("gen bug"));
+        for (int kind = 0; kind < 4; kind++)
+        {
+            var e = Assert.Throws<CsCheckException>(AllSampleKinds(gen, _ => true, 100)[kind]);
+            await Assert.That(e.Message.Split('\n')[^1]).IsEqualTo("The generator threw.");
+            await Assert.That(e.InnerException is InvalidOperationException).IsTrue();
+            var seed = e.Message.Split('"')[1];
+            Assert.Throws<InvalidOperationException>(() => gen.Generate(PCG.Parse(seed), null, out _));
+            var replay = Assert.Throws<CsCheckException>(AllSampleKinds(gen, _ => true, 1, seed)[kind]);
+            await Assert.That(replay.Message.Split('\n')[^1]).IsEqualTo("The generator threw.");
+        }
+    }
+
+    [Test]
+    public async Task Sample_Shrinks_Past_A_Throwing_Generator()
+    {
+        var gen = Gen.Int[0, 100].Select(i => i == 7 ? throw new InvalidOperationException("gen bug") : i);
+        foreach (var sample in AllSampleKinds(gen, i => i < 90, 10_000))
+        {
+            var e = Assert.Throws<CsCheckException>(sample);
+            await Assert.That(e.Message.Split('\n')[^1]).IsEqualTo("90");
+            await Assert.That(e.InnerException is InvalidOperationException).IsFalse();
+        }
     }
 
     /// <summary>Arrays of different rank are unequal rather than throwing out of the rank 2 comparison.</summary>
@@ -570,6 +670,49 @@ public class CheckTests
         );
     }
 
+    sealed class ParallelCounter { public int Count; }
+
+    [Test]
+    public async Task Linearizable_Skips_Sequences_That_Throw()
+    {
+        (string, Action<ParallelCounter>) assertPositive = ("AssertPositive", c => { if (c.Count == 0) throw new InvalidOperationException("zero"); });
+        (string, Action<ParallelCounter>) inc = ("Inc", c => c.Count++);
+        var linearizable = Check.Linearizable([], [assertPositive, assertPositive, assertPositive, assertPositive, assertPositive, inc, inc, inc, inc, inc],
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 1], () => new ParallelCounter(), c => c.Count == 5);
+        await Assert.That(linearizable).IsTrue();
+    }
+
+    [Test]
+    public void SampleParallel_Seed_Replay_Reports_A_Later_Failing_Pass()
+    {
+        var equalCalls = 0;
+        Assert.Throws<CsCheckException>(() => Gen.Const(() => new ParallelCounter())
+            .SampleParallel(Gen.Operation<ParallelCounter>("Inc", c => Interlocked.Increment(ref c.Count)),
+                equal: (_, _) => Interlocked.Increment(ref equalCalls) == 1, seed: "0002tXP34JM1", maxSequentialOperations: 0, iter: 1, replay: 2));
+    }
+
+    [Test]
+    public async Task SampleParallel_Seed_Replay_Starts_Each_Pass_From_The_Initial_State()
+    {
+        var actualCounts = new ConcurrentBag<int>();
+        Gen.Const(() => new ParallelCounter())
+        .SampleParallel(Gen.Operation<ParallelCounter>("Inc", c => Interlocked.Increment(ref c.Count)),
+            equal: (actual, replay) => { actualCounts.Add(actual.Count); return actual.Count == replay.Count; },
+            seed: "0002tXP34JM1", maxSequentialOperations: 0, iter: 1, replay: 3);
+        await Assert.That(actualCounts.Distinct().Count()).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task SampleParallelModel_Seed_Replay_Starts_Each_Pass_From_The_Initial_State()
+    {
+        var actualCounts = new ConcurrentBag<int>();
+        Gen.Const(() => (new ParallelCounter(), new ParallelCounter()))
+        .SampleParallel(Gen.Operation<ParallelCounter, ParallelCounter>("Inc", a => Interlocked.Increment(ref a.Count), m => m.Count++),
+            equal: (actual, model) => { actualCounts.Add(actual.Count); return actual.Count == model.Count; },
+            seed: "0002tXP34JM1", maxSequentialOperations: 0, iter: 1, replay: 3);
+        await Assert.That(actualCounts.Distinct().Count()).IsEqualTo(1);
+    }
+
     [Test]
     public void MedianEstimator_Minimum_And_Maximum_Are_Exact()
     {
@@ -580,6 +723,71 @@ public class CheckTests
             foreach (var d in a) estimator.Add(d);
             return estimator.Minimum == a.Min() && estimator.Maximum == a.Max();
         });
+    }
+
+    [Test]
+    [Arguments(3.0, 1.3499e-3)]
+    [Arguments(4.0, 3.1671e-5)]
+    [Arguments(5.0, 2.8665e-7)]
+    [Arguments(6.0, 9.8659e-10)]
+    public void ChiSquared_False_Failures_Are_Within_A_Factor_Of_The_Normal_Rate(double sigma, double normalRate)
+    {
+        Gen.OneOf(Gen.Int[10, 60].Array[2], Gen.Int[10, 30].Array[3])
+        .Sample(expected => FalseFailureRate(expected) < 10 * normalRate, iter: 20);
+
+        double FalseFailureRate(int[] expected)
+        {
+            var n = expected.Sum();
+            var lnFactorial = new double[n + 1];
+            for (int i = 1; i <= n; i++) lnFactorial[i] = lnFactorial[i - 1] + Math.Log(i);
+            var actual = new int[expected.Length];
+            return Rate(0, n, lnFactorial[n]);
+
+            double Rate(int bucket, int remaining, double lnProbability)
+            {
+                if (bucket == expected.Length - 1)
+                {
+                    actual[bucket] = remaining;
+                    try
+                    {
+                        Check.ChiSquared(expected, actual, sigma);
+                        return 0;
+                    }
+                    catch (CsCheckException)
+                    {
+                        return Math.Exp(lnProbability + remaining * Math.Log((double)expected[bucket] / n) - lnFactorial[remaining]);
+                    }
+                }
+                var rate = 0.0;
+                for (int count = 0; count <= remaining; count++)
+                {
+                    actual[bucket] = count;
+                    rate += Rate(bucket + 1, remaining - count, lnProbability + count * Math.Log((double)expected[bucket] / n) - lnFactorial[count]);
+                }
+                return rate;
+            }
+        }
+    }
+
+    [Test]
+    public void ChiSquared_Fails_A_Generator_That_Misses_Buckets()
+    {
+        Assert.Throws<CsCheckException>(() => Check.ChiSquared([100, 100], [200, 0]));
+        Assert.Throws<CsCheckException>(() => Check.ChiSquared([.. Enumerable.Repeat(10, 70)], [.. Enumerable.Repeat(20, 35), .. Enumerable.Repeat(0, 35)]));
+    }
+
+    [Test]
+    public void ChiSquared_Passes_A_Perfect_Fit()
+    {
+        foreach (var buckets in new[] { 2, 10, 100, 1000 })
+            Check.ChiSquared([.. Enumerable.Repeat(10, buckets)], [.. Enumerable.Repeat(10, buckets)]);
+    }
+
+    [Test]
+    public async Task ChiSquared_One_Bucket_Is_Rejected()
+    {
+        var message = Assert.Throws<CsCheckException>(() => Check.ChiSquared([10], [10]))!.Message;
+        await Assert.That(message).Contains("2 buckets");
     }
 
     [Test]

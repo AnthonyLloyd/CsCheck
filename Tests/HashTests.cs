@@ -173,19 +173,88 @@ public class HashTests
         });
     }
 
-    /// <summary>A mismatch must release the cache file lock so a later check on the same file still works.</summary>
     [Test]
-    public async Task Hash_Mismatch_Releases_The_Cache_Lock()
+    public void HashStream_GetHashCode_Can_Be_Called_At_Any_Time()
     {
-        const string member = "HashLockRelease";
-        static void Values(Hash h, int last) { h.Add(1); h.Add("two"); h.Add(3.5); h.Add(last); }
-        static void DeleteCache()
+        Gen.Byte.Array[0, 9].Array[1, 6]
+        .Sample(chunks =>
         {
-            if (!Directory.Exists(Hash.CacheDir)) return;
-            foreach (var f in Directory.GetFiles(Hash.CacheDir, "*" + member + "*", SearchOption.AllDirectories))
-                File.Delete(f);
+            var interrupted = new HashStream();
+            foreach (var chunk in chunks)
+            {
+                interrupted.Write(chunk);
+                _ = interrupted.GetHashCode();
+            }
+            var fresh = new HashStream();
+            fresh.Write([.. chunks.SelectMany(c => c)]);
+            return interrupted.GetHashCode() == fresh.GetHashCode() && fresh.GetHashCode() == fresh.GetHashCode();
+        });
+    }
+
+    static string ThisFile([CallerFilePath] string filePath = "") => filePath;
+
+    static void DeleteCache(string member)
+    {
+        if (!Directory.Exists(Hash.CacheDir)) return;
+        foreach (var f in Directory.GetFiles(Hash.CacheDir, "*" + member + "*", SearchOption.AllDirectories))
+            File.Delete(f);
+    }
+
+    [Test]
+    public async Task Hash_Null_String_Hashes_As_The_Null_Marker()
+    {
+        var member = "HashNullString" + Environment.Version.Major;
+        static void Values(Hash h) { h.Add((string?)null); h.Add(["a", null!]); }
+        DeleteCache(member);
+        try
+        {
+            var marker = new Hash(null);
+            marker.Add("<null>");
+            marker.Add(["a", "<null>"]);
+            var expected = Hash.FullHash(null, marker.GetHashCode());
+            Check.Hash(Values, expected, memberName: member);
+            var reread = new Hash(marker.GetHashCode(), memberName: member, filePath: ThisFile());
+            Values(reread);
+            reread.Close();
+            await Assert.That(Directory.GetFiles(Hash.CacheDir, "*" + member + "*", SearchOption.AllDirectories).Length).IsEqualTo(1);
         }
-        DeleteCache();
+        finally
+        {
+            DeleteCache(member);
+        }
+    }
+
+    [Test]
+    public async Task Hash_Close_Keeps_A_Cache_File_Written_Meanwhile()
+    {
+        var member = "HashWrittenMeanwhile" + Environment.Version.Major;
+        static void Values(Hash h) { h.Add(1); h.Add("two"); }
+        DeleteCache(member);
+        try
+        {
+            var probe = new Hash(null);
+            Values(probe);
+            var writer = new Hash(probe.GetHashCode(), memberName: member, filePath: ThisFile());
+            Values(writer);
+            var filename = Hash.Filename(Hash.FullHash(null, probe.GetHashCode()), member, ThisFile());
+            File.WriteAllText(filename, "written meanwhile");
+            using (File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
+                writer.Close();
+            await Assert.That(File.ReadAllText(filename)).IsEqualTo("written meanwhile");
+            await Assert.That(Directory.GetFiles(Hash.CacheDir, "*" + member + "*", SearchOption.AllDirectories).Length).IsEqualTo(1);
+        }
+        finally
+        {
+            DeleteCache(member);
+        }
+    }
+
+    [Test]
+    public async Task Hash_Second_Mismatch_Still_Reports_The_Difference()
+    {
+        var member = "HashSecondMismatch" + Environment.Version.Major;
+        static void Values(Hash h, int last) { h.Add(1); h.Add("two"); h.Add(3.5); h.Add(last); }
+        DeleteCache(member);
         var discovered = 0L;
         try { Check.Hash(h => Values(h, 4), 0, memberName: member); }
         catch (CsCheckException e) { discovered = long.Parse(e.Message.Split(' ')[^1]); }
@@ -199,7 +268,7 @@ public class HashTests
         }
         finally
         {
-            DeleteCache();
+            DeleteCache(member);
         }
     }
 

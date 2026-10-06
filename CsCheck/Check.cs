@@ -56,6 +56,7 @@ public static partial class Check
         public T MinT = default!;
         public Exception? MinException;
         public int Shrinks = -1;
+        public bool GenThrew;
         public long Total = seed is null ? 0 : 1;
         public long Skipped;
 
@@ -66,6 +67,7 @@ public static partial class Check
             T t = default!;
             long skippedLocal = 0, totalLocal = 0;
             ulong state = 0;
+            var generating = false;
             while (true)
             {
                 try
@@ -81,7 +83,9 @@ public static partial class Check
                         }
                         totalLocal++;
                         state = pcg.State;
+                        generating = true;
                         t = gen.Generate(pcg, MinSize, out size);
+                        generating = false;
                         if (MinSize is null || Size.IsLessThan(size, MinSize))
                         {
                             assert(t);
@@ -94,14 +98,22 @@ public static partial class Check
                 {
                     lock (cde)
                     {
-                        if (MinSize is null || Size.IsLessThan(size, MinSize))
+                        if (!generating && (MinSize is null || Size.IsLessThan(size, MinSize)))
                         {
                             MinSize = size;
                             MinPCG = pcg;
                             MinState = state;
                             MinT = t;
                             MinException = e;
+                            GenThrew = false;
                             Shrinks++;
+                        }
+                        else if (generating && MinPCG is null)
+                        {
+                            MinPCG = pcg;
+                            MinState = state;
+                            MinException = e;
+                            GenThrew = true;
                         }
                     }
                 }
@@ -109,7 +121,9 @@ public static partial class Check
         }
         public string ExceptionMessage(Func<T, string> print)
         {
-            return SampleErrorMessage(MinPCG!.ToString(MinState), print(MinT!), Shrinks, Skipped, Total);
+            return GenThrew
+                ? SampleErrorMessage(MinPCG!.ToString(MinState), "The generator threw.", 0, Skipped, Total)
+                : SampleErrorMessage(MinPCG!.ToString(MinState), print(MinT!), Shrinks, Skipped, Total);
         }
     }
 
@@ -150,18 +164,25 @@ public static partial class Check
             ulong state = pcg.State;
             Size? size = null;
             T t = default!;
+            var generating = true;
             try
             {
-                assert(t = gen.Generate(pcg, null, out size));
+                t = gen.Generate(pcg, null, out size);
+                generating = false;
+                assert(t);
             }
             catch (Exception e)
             {
-                worker.MinSize = size;
                 worker.MinPCG = pcg;
                 worker.MinState = state;
-                worker.MinT = t;
                 worker.MinException = e;
-                worker.Shrinks++;
+                worker.GenThrew = generating;
+                if (!generating)
+                {
+                    worker.MinSize = size;
+                    worker.MinT = t;
+                    worker.Shrinks++;
+                }
             }
         }
 
@@ -540,6 +561,7 @@ public static partial class Check
         Size? minSize = null;
         T minT = default!;
         Exception? minException = null;
+        bool genThrew = false;
 
         int shrinks = -1;
         if (seed is not null)
@@ -548,18 +570,25 @@ public static partial class Check
             ulong state = pcg.State;
             Size? size = null;
             T t = default!;
+            var generating = true;
             try
             {
-                await assert(t = gen.Generate(pcg, null, out size)).ConfigureAwait(false);
+                t = gen.Generate(pcg, null, out size);
+                generating = false;
+                await assert(t).ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                minSize = size;
                 minPCG = pcg;
                 minState = state;
-                minT = t;
                 minException = e;
-                shrinks++;
+                genThrew = generating;
+                if (!generating)
+                {
+                    minSize = size;
+                    minT = t;
+                    shrinks++;
+                }
             }
         }
         long skipped = 0;
@@ -576,6 +605,7 @@ public static partial class Check
             T t = default!;
             long skippedLocal = 0, totalLocal = 0;
             ulong state = 0;
+            var generating = false;
             while (true)
             {
                 try
@@ -591,7 +621,9 @@ public static partial class Check
                         totalLocal++;
                         pcg = PCG.ThreadPCG; // Re-read every iteration. The await below resumes on whatever thread the pool gives it
                         state = pcg.State;
+                        generating = true;
                         t = gen.Generate(pcg, minSize, out size);
+                        generating = false;
                         if (minSize is null || Size.IsLessThan(size, minSize))
                             await assert(t).ConfigureAwait(false);
                         else
@@ -602,14 +634,22 @@ public static partial class Check
                 {
                     lock (tasks)
                     {
-                        if (minSize is null || Size.IsLessThan(size, minSize))
+                        if (!generating && (minSize is null || Size.IsLessThan(size, minSize)))
                         {
                             minSize = size;
                             minPCG = pcg;
                             minState = state;
                             minT = t;
                             minException = e;
+                            genThrew = false;
                             shrinks++;
+                        }
+                        else if (generating && minPCG is null)
+                        {
+                            minPCG = pcg;
+                            minState = state;
+                            minException = e;
+                            genThrew = true;
                         }
                     }
                 }
@@ -620,7 +660,9 @@ public static partial class Check
             tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
-            ThrowHelper.Throw(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
+            ThrowHelper.Throw(genThrew
+                ? SampleErrorMessage(minPCG.ToString(minState), "The generator threw.", 0, skipped, total)
+                : SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
         Reporter.Write(writeLine, $"Passed {total:#,0} iterations.");
     }
 
@@ -976,6 +1018,7 @@ public static partial class Check
         public T MinT = default!;
         public Exception? MinException;
         public int Shrinks = -1;
+        public bool GenThrew;
         public long Total = seed is null ? 0 : 1;
         public long Skipped;
         public void Execute()
@@ -985,6 +1028,7 @@ public static partial class Check
             T t = default!;
             long skippedLocal = 0, totalLocal = 0;
             ulong state = 0;
+            var generating = false;
             while (true)
             {
                 try
@@ -1000,7 +1044,9 @@ public static partial class Check
                         }
                         totalLocal++;
                         state = pcg.State;
+                        generating = true;
                         t = gen.Generate(pcg, MinSize, out size);
+                        generating = false;
                         if (MinSize is null || Size.IsLessThan(size, MinSize))
                         {
                             if (!predicate(t))
@@ -1014,6 +1060,7 @@ public static partial class Check
                                         MinState = state;
                                         MinT = t;
                                         MinException = null;
+                                        GenThrew = false;
                                         Shrinks++;
                                     }
                                 }
@@ -1029,14 +1076,22 @@ public static partial class Check
                 {
                     lock (cde)
                     {
-                        if (MinSize is null || Size.IsLessThan(size, MinSize))
+                        if (!generating && (MinSize is null || Size.IsLessThan(size, MinSize)))
                         {
                             MinSize = size;
                             MinPCG = pcg;
                             MinState = state;
                             MinT = t;
                             MinException = e;
+                            GenThrew = false;
                             Shrinks++;
+                        }
+                        else if (generating && MinPCG is null)
+                        {
+                            MinPCG = pcg;
+                            MinState = state;
+                            MinException = e;
+                            GenThrew = true;
                         }
                     }
                 }
@@ -1044,7 +1099,9 @@ public static partial class Check
         }
         public string ExceptionMessage(Func<T, string> print)
         {
-            return SampleErrorMessage(MinPCG!.ToString(MinState), print(MinT), Shrinks, Skipped, Total);
+            return GenThrew
+                ? SampleErrorMessage(MinPCG!.ToString(MinState), "The generator threw.", 0, Skipped, Total)
+                : SampleErrorMessage(MinPCG!.ToString(MinState), print(MinT), Shrinks, Skipped, Total);
         }
     }
 
@@ -1082,9 +1139,11 @@ public static partial class Check
             ulong state = pcg.State;
             Size? size = null;
             T t = default!;
+            var generating = true;
             try
             {
                 t = gen.Generate(pcg, null, out size);
+                generating = false;
                 if (!predicate(t))
                 {
                     worker.MinSize = size;
@@ -1096,12 +1155,16 @@ public static partial class Check
             }
             catch (Exception e)
             {
-                worker.MinSize = size;
                 worker.MinPCG = pcg;
                 worker.MinState = state;
-                worker.MinT = t;
                 worker.MinException = e;
-                worker.Shrinks++;
+                worker.GenThrew = generating;
+                if (!generating)
+                {
+                    worker.MinSize = size;
+                    worker.MinT = t;
+                    worker.Shrinks++;
+                }
             }
         }
         while (--threads > 0)
@@ -1245,6 +1308,7 @@ public static partial class Check
         Size? minSize = null;
         T minT = default!;
         Exception? minException = null;
+        bool genThrew = false;
 
         int shrinks = -1;
         if (seed is not null)
@@ -1253,9 +1317,11 @@ public static partial class Check
             ulong state = pcg.State;
             Size? size = null;
             T t = default!;
+            var generating = true;
             try
             {
                 t = gen.Generate(pcg, null, out size);
+                generating = false;
                 if (!await predicate(t).ConfigureAwait(false))
                 {
                     minSize = size;
@@ -1267,12 +1333,16 @@ public static partial class Check
             }
             catch (Exception e)
             {
-                minSize = size;
                 minPCG = pcg;
                 minState = state;
-                minT = t;
                 minException = e;
-                shrinks++;
+                genThrew = generating;
+                if (!generating)
+                {
+                    minSize = size;
+                    minT = t;
+                    shrinks++;
+                }
             }
         }
         long skipped = 0;
@@ -1289,6 +1359,7 @@ public static partial class Check
             T t = default!;
             long skippedLocal = 0, totalLocal = 0;
             ulong state = 0;
+            var generating = false;
             while (true)
             {
                 try
@@ -1304,7 +1375,9 @@ public static partial class Check
                         totalLocal++;
                         pcg = PCG.ThreadPCG; // Re-read every iteration. The await below resumes on whatever thread the pool gives it
                         state = pcg.State;
+                        generating = true;
                         t = gen.Generate(pcg, minSize, out size);
+                        generating = false;
                         if (minSize is null || Size.IsLessThan(size, minSize))
                         {
                             if (!await predicate(t).ConfigureAwait(false))
@@ -1318,6 +1391,7 @@ public static partial class Check
                                         minState = state;
                                         minT = t;
                                         minException = null;
+                                        genThrew = false;
                                         shrinks++;
                                     }
                                 }
@@ -1333,14 +1407,22 @@ public static partial class Check
                 {
                     lock (tasks)
                     {
-                        if (minSize is null || Size.IsLessThan(size, minSize))
+                        if (!generating && (minSize is null || Size.IsLessThan(size, minSize)))
                         {
                             minSize = size;
                             minPCG = pcg;
                             minState = state;
                             minT = t;
                             minException = e;
+                            genThrew = false;
                             shrinks++;
+                        }
+                        else if (generating && minPCG is null)
+                        {
+                            minPCG = pcg;
+                            minState = state;
+                            minException = e;
+                            genThrew = true;
                         }
                     }
                 }
@@ -1351,7 +1433,9 @@ public static partial class Check
             tasks[threads] = Task.Run(worker);
         await Task.WhenAll(tasks).ConfigureAwait(false);
         if (minPCG is not null)
-            ThrowHelper.Throw(SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
+            ThrowHelper.Throw(genThrew
+                ? SampleErrorMessage(minPCG.ToString(minState), "The generator threw.", 0, skipped, total)
+                : SampleErrorMessage(minPCG.ToString(minState), (print ?? Print)(minT!), shrinks, skipped, total), minException);
         Reporter.Write(writeLine, $"Passed {total:#,0} iterations.");
     }
 
@@ -2155,8 +2239,10 @@ public static partial class Check
         .Sample(spd =>
         {
             bool linearizable = false;
+            var pass = 0;
             do
             {
+                if (pass++ > 0) spd.InitialState = initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _);
                 try
                 {
                     if (replayThreads is null)
@@ -2167,22 +2253,11 @@ public static partial class Check
                 catch (Exception e)
                 {
                     spd.Exception = e;
+                    linearizable = false;
                     break;
                 }
-                Parallel.ForEach(Permutations(spd.ThreadIds, spd.ParallelOperations), (sequence, state) =>
-                {
-                    var linearState = initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _);
-                    try
-                    {
-                        Run(linearState, spd.SequentialOperations, sequence, 1);
-                        if (equal(spd.InitialState, linearState))
-                        {
-                            linearizable = true;
-                            state.Stop();
-                        }
-                    }
-                    catch { state.Stop(); }
-                });
+                linearizable = Linearizable(spd.SequentialOperations, spd.ParallelOperations, spd.ThreadIds,
+                    () => initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _), s => equal(spd.InitialState, s));
             } while (linearizable && firstIteration && seed is not null && --replay > 0);
             firstIteration = false;
             return linearizable;
@@ -2400,8 +2475,10 @@ public static partial class Check
         .Sample(spd =>
         {
             bool linearizable = false;
+            var pass = 0;
             do
             {
+                if (pass++ > 0) spd.InitialActual = initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _).Item1;
                 var actualSequentialOperations = Array.ConvertAll(spd.SequentialOperations, i => (i.Item1, i.Item2));
                 var actualParallelOperations = Array.ConvertAll(spd.ParallelOperations, i => (i.Item1, i.Item2));
                 try
@@ -2414,24 +2491,13 @@ public static partial class Check
                 catch (Exception e)
                 {
                     spd.Exception = e;
+                    linearizable = false;
                     break;
                 }
                 var modelSequentialOperations = Array.ConvertAll(spd.SequentialOperations, i => (i.Item1, i.Item3));
                 var modelParallelOperations = Array.ConvertAll(spd.ParallelOperations, i => (i.Item1, i.Item3));
-                Parallel.ForEach(Permutations(spd.ThreadIds, modelParallelOperations), (sequence, state) =>
-                {
-                    var (_, initialModel) = initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _);
-                    try
-                    {
-                        Run(initialModel, modelSequentialOperations, sequence, 1);
-                        if (equal(spd.InitialActual, initialModel))
-                        {
-                            linearizable = true;
-                            state.Stop();
-                        }
-                    }
-                    catch { state.Stop(); }
-                });
+                linearizable = Linearizable(modelSequentialOperations, modelParallelOperations, spd.ThreadIds,
+                    () => initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _).Item2, m => equal(spd.InitialActual, m));
             } while (linearizable && firstIteration && seed is not null && --replay > 0);
             firstIteration = false;
             return linearizable;
@@ -2603,10 +2669,11 @@ public static partial class Check
     /// <summary>Assert actual is in line with expected using a chi-squared test to sigma.</summary>
     /// <param name="expected">The expected bin counts.</param>
     /// <param name="actual">The actual bin counts.</param>
-    /// <param name="sigma">Sigma, default of 6.</param>
+    /// <param name="sigma">Sigma, default of 6. A correct distribution fails about as often as a normal deviate is above sigma, about once in a billion at 6.</param>
     public static void ChiSquared(int[] expected, int[] actual, double sigma = 6.0)
     {
         if (expected.Length != actual.Length) ThrowHelper.Throw("Expected and actual lengths need to be the same.");
+        if (expected.Length < 2) ThrowHelper.Throw("Expected needs at least 2 buckets.");
         if (Array.Exists(expected, e => e <= 5)) ThrowHelper.Throw("Expected frequency for all buckets needs to be above 5.");
         double chi = 0.0;
         for (int i = 0; i < expected.Length; i++)
@@ -2615,10 +2682,11 @@ public static partial class Check
             double d = actual[i] - e;
             chi += d * d / e;
         }
-        // chi-squared distribution has Mean = k and Variance = 2 k where k is the number of degrees of freedom.
+        // Wilson-Hilferty: (chi / k)^(1/3) is close to normal with mean 1 - 2 / (9 k) and variance 2 / (9 k), where k is the degrees of freedom.
         int k = expected.Length - 1;
-        double sigmaSquared = (chi - k) * (chi - k) / k / 2.0;
-        if (sigmaSquared > sigma * sigma) ThrowHelper.Throw("Chi-squared standard deviation = " + Math.Sqrt(sigmaSquared).ToString("0.0"));
+        double variance = 2.0 / (9 * k);
+        double z = (Math.Cbrt(chi / k) - 1 + variance) / Math.Sqrt(variance);
+        if (z > sigma) ThrowHelper.Throw("Chi-squared standard deviation = " + z.ToString("0.0"));
     }
 
     sealed class FasterActionWorker(ITimerAction fasterTimer, ITimerAction slowerTimer, FasterResult result, long endTimestamp, bool raiseexception) : IThreadPoolWorkItem
