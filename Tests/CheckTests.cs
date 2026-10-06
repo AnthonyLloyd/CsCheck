@@ -257,28 +257,6 @@ public class CheckTests
     }
 
     [Test]
-    public async Task ModelEqual_HashSet()
-    {
-        await Assert.That(Check.ModelEqual(
-            new HashSet<int> { 1, 2, 3, 4 },
-            new List<int> { 4, 3, 2, 1 }
-        )).IsTrue();
-    }
-
-    [Test]
-    public async Task ModelEqual_List()
-    {
-        await Assert.That(Check.ModelEqual(
-            new List<int> { 1, 2, 3, 4 },
-            new int[] { 1, 2, 3, 4 }
-        )).IsTrue();
-        await Assert.That(Check.ModelEqual(
-            new List<int> { 1, 2, 3, 4 },
-            new int[] { 1, 2, 4, 3 }
-        )).IsFalse();
-    }
-
-    [Test]
     public void SampleModelBased_ConcurrentBag()
     {
         Gen.Int[0, 5].List.Select(l => (new ConcurrentBag<int>(l), l))

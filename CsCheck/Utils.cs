@@ -439,41 +439,6 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
     /// <summary>Don't check equality just return true.</summary>
     public static bool EqualSkip<T>(T _, T __) => true;
 
-    /// <summary>Default model equal implementation. Handles most collections ordered unless the type is well known Set or Dictionary or elements are KeyValuePairs.</summary>
-    public static bool ModelEqual<T, M>(T actual, M model)
-    {
-        if (actual is null && model is null) return true;
-        if (actual is null || model is null) return false;
-        if (actual is IList ail && model is IList bil)
-        {
-            if (ail.Count != bil.Count) return false;
-            for (int i = 0; i < ail.Count; i++)
-            {
-                if (!ail[i]!.Equals(bil[i]))
-                    return false;
-            }
-            return true;
-        }
-        if (actual is IEnumerable aie && model is IEnumerable bie)
-        {
-            var count = aie.Cast<object>().Count();
-            if (bie.Cast<object>().Take(count + 1).Count() != count) return false;
-            if (count == 0) return true;
-            if (count == 1) return Equal(aie.Cast<object>().First(), bie.Cast<object>().First());
-            if (IsUnorderedCollection(actual.GetType()) || IsUnorderedCollection(model.GetType())
-             || aie.Cast<object>().First()?.GetType() is { IsGenericType: true } aelementType && aelementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
-             || bie.Cast<object>().First()?.GetType() is { IsGenericType: true } belementType && belementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
-                return !aie.Cast<object>().Except(bie.Cast<object>(), EqualComparer.Instance).Any();
-            var ae = aie.GetEnumerator();
-            var be = bie.GetEnumerator();
-            while (ae.MoveNext() && be.MoveNext())
-                if (!Equal(ae.Current, be.Current))
-                    return false;
-            return true;
-        }
-        return actual.Equals(model);
-    }
-
     sealed class RunWorker<T>(T state, (string, Action<T>)[] parallelOperations, int[]? threadIds) : IThreadPoolWorkItem
     {
         int opId = -1, threadId = -1;

@@ -1497,7 +1497,7 @@ public static partial class Check
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operations">The operation generators that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1512,7 +1512,7 @@ public static partial class Check
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
         Action<string>? writeLine = null, ISampleLogger? logger = null)
     {
-        equal ??= ModelEqual;
+        equal ??= (a, m) => Equal<object?>(a, m);
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
@@ -1586,7 +1586,7 @@ public static partial class Check
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation">The operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1607,7 +1607,7 @@ public static partial class Check
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1630,7 +1630,7 @@ public static partial class Check
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
     /// <param name="operation3">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1654,7 +1654,7 @@ public static partial class Check
     /// <param name="operation2">An operation generator that can act on the state.</param>
     /// <param name="operation3">An operation generator that can act on the state.</param>
     /// <param name="operation4">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1679,7 +1679,7 @@ public static partial class Check
     /// <param name="operation3">An operation generator that can act on the state.</param>
     /// <param name="operation4">An operation generator that can act on the state.</param>
     /// <param name="operation5">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1707,7 +1707,7 @@ public static partial class Check
     /// <param name="operation4">An operation generator that can act on the state.</param>
     /// <param name="operation5">An operation generator that can act on the state.</param>
     /// <param name="operation6">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1745,7 +1745,7 @@ public static partial class Check
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operations">The operation generators that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1760,7 +1760,7 @@ public static partial class Check
         Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, Func<Model, string>? classify = null,
         Action<string>? writeLine = null, ISampleLogger? logger = null)
     {
-        equal ??= ModelEqual;
+        equal ??= (a, m) => Equal<object?>(a, m);
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
@@ -1842,7 +1842,7 @@ public static partial class Check
     /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation">The operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1863,7 +1863,7 @@ public static partial class Check
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1886,7 +1886,7 @@ public static partial class Check
     /// <param name="operation1">An operation generator that can act on the state.</param>
     /// <param name="operation2">An operation generator that can act on the state.</param>
     /// <param name="operation3">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1910,7 +1910,7 @@ public static partial class Check
     /// <param name="operation2">An operation generator that can act on the state.</param>
     /// <param name="operation3">An operation generator that can act on the state.</param>
     /// <param name="operation4">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1935,7 +1935,7 @@ public static partial class Check
     /// <param name="operation3">An operation generator that can act on the state.</param>
     /// <param name="operation4">An operation generator that can act on the state.</param>
     /// <param name="operation5">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -1963,7 +1963,7 @@ public static partial class Check
     /// <param name="operation4">An operation generator that can act on the state.</param>
     /// <param name="operation5">An operation generator that can act on the state.</param>
     /// <param name="operation6">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -2002,7 +2002,7 @@ public static partial class Check
     /// <summary>Sample metamorphic (two path) operations on a random initial state checking that both paths are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial state generator.</param>
     /// <param name="operations">A metamorphic operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
@@ -2014,7 +2014,7 @@ public static partial class Check
         Func<T, T, bool>? equal = null, string? seed = null, long iter = -1, int time = -1, int threads = -1,
         Func<T, string>? print = null, Action<string>? writeLine = null, ISampleLogger? logger = null)
     {
-        equal ??= ModelEqual;
+        equal ??= (a, m) => Equal<object?>(a, m);
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
@@ -2348,7 +2348,7 @@ public static partial class Check
     /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial actual and model state generator.</param>
     /// <param name="operations">The actual and model operation generators that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
     /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
@@ -2362,7 +2362,7 @@ public static partial class Check
     public static void SampleParallel<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model>[] operations, Func<Actual, Model, bool>? equal = null, string? seed = null,
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
     {
-        equal ??= ModelEqual;
+        equal ??= (a, m) => Equal<object?>(a, m);
         seed ??= Seed;
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
@@ -2474,7 +2474,7 @@ public static partial class Check
     /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
     /// <param name="initial">The initial actual and model state generator.</param>
     /// <param name="operation">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
     /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
@@ -2494,7 +2494,7 @@ public static partial class Check
     /// <param name="initial">The initial actual and model state generator.</param>
     /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
     /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
@@ -2515,7 +2515,7 @@ public static partial class Check
     /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation3">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
     /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
@@ -2537,7 +2537,7 @@ public static partial class Check
     /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation3">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation4">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
     /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
@@ -2560,7 +2560,7 @@ public static partial class Check
     /// <param name="operation3">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation4">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation5">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
     /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
@@ -2584,7 +2584,7 @@ public static partial class Check
     /// <param name="operation4">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation5">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
     /// <param name="operation6">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.ModelEqual).</param>
+    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
     /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>

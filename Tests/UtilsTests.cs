@@ -17,14 +17,6 @@ public class UtilsTests
     }
 
     [Test]
-    public async Task ModelEqual()
-    {
-        await Assert.That(Check.ModelEqual(new Dictionary<int, byte> { { 1, 2 }, { 3, 4 } }, new KeyValuePair<int, byte>[] { new(3, 4), new(1, 2) })).IsTrue();
-        await Assert.That(Check.ModelEqual(new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }, new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) })).IsTrue();
-        await Assert.That(Check.ModelEqual(new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }, new KeyValuePair<int, byte>[] { new(3, 4), new(1, 2) })).IsFalse();
-    }
-
-    [Test]
     public async Task Print()
     {
         await Assert.That(Check.Print(new KeyValuePair<int, int>[] { new(1, 2), new(3, 4) })).IsEqualTo("[[1, 2], [3, 4]]");
