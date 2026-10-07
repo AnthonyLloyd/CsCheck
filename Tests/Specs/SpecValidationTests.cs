@@ -557,6 +557,7 @@ public partial class SpecValidationTests
             .Faults(TUnitX.WriteLine, throwOnUncaught: false);
         await Assert.That(report.Uncaught.Count).IsEqualTo(1);
         await Assert.That(report.Uncaught).Contains("counter advances twice");
+        await Assert.That(report.Results[0].Outcome).IsEqualTo(FaultOutcome.NotDetected);
         await Assert.That(report.CaughtBy("counter advances twice")).IsNull();
         await Assert.That(report.CaughtBy("counter goes negative")).IsEqualTo("NON-NEGATIVE");
         await Assert.That(report.ToString()).Contains("NOTHING");
@@ -574,6 +575,8 @@ public partial class SpecValidationTests
             .Fault("counter advances twice", (_, _) => true, (_, a) => a + 1)
             .Fault("counter goes negative", (_, _) => true, (_, _) => -1);
         var report = spec.SampleFaults(TUnitX.WriteLine, iter: 500, throwOnUncaught: false);
+        await Assert.That(report.Results[0].Outcome).IsEqualTo(FaultOutcome.NotFound);
+        await Assert.That(report.Uncaught).Contains("counter advances twice");
         await Assert.That(report.CaughtBy("counter advances twice")).IsNull();
         await Assert.That(report.CaughtBy("counter goes negative")).IsEqualTo("NON-NEGATIVE");
         await Assert.That(report.ToString()).Contains("not that none exists");
@@ -935,11 +938,11 @@ public partial class SpecValidationTests
     [GeneratedRegex(@"^  n0 -->\|""(.*)""\| n1;$", RegexOptions.Multiline)]
     private static partial Regex MyRegex1 { get; }
 
-    /// <summary>A dead end needs no requirement to detect it, and that was only true of <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> - a sampled
+    /// <summary>A dead end needs no requirement to detect it, and that was only true of <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> - a sampled
     /// walk stopped early and said nothing, so the engine you fall back to on a space too big to close was the one that
     /// could not see the bug the other finds for free. Counted as walks, not states, since a sampled walk keeps no
-    /// visited set: <see cref="SpecReport.DeadlockStates">DeadlockStates</see> stays zero rather than being filled in with a number that would not mean
-    /// what it means for <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see>.</summary>
+    /// visited set: <see cref="SpecReport{S}.DeadlockStates">DeadlockStates</see> stays zero rather than being filled in with a number that would not mean
+    /// what it means for <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see>.</summary>
     [Test]
     public async Task Sample_Reports_Walks_That_Dead_Ended()
     {
@@ -1305,7 +1308,7 @@ public partial class SpecValidationTests
             // A needs a B first, so the shortest counterexample against CAP[0] has a B occurrence in it.
             .Action("BumpA", p => p.B >= 1, p => p with { A = p.A + 1 })
             .Action("BumpB", p => p.B == 0, p => p with { B = p.B + 1 })
-            .AtMost("CAP", "At most one bump each.", 1, [0, 1],
+            .AtMost("CAP", "At most one bump each.", [0, 1], 1,
                 (b, a, k) => k == 0 ? a.A > b.A : a.B > b.B)
             .Exhaustive(out var violation);
         await Assert.That(violation).IsNotNull();
@@ -1635,12 +1638,11 @@ public partial class SpecValidationTests
     [Arguments(4)]
     public async Task Action_Coverage_Sums_To_The_Transition_Count(int threads)
     {
-        foreach (var report in new[]
-        {
-            FencingSpec.Create(FencingSpec.Fence.Every).Exhaustive(threads: threads),
-            AlternatingBitSpec.Create().Exhaustive(threads: threads),
-            RefreshCacheSpec.Create().Exhaustive(threads: threads),
-        })
+        await Sums(FencingSpec.Create(FencingSpec.Fence.Every).Exhaustive(threads: threads));
+        await Sums(AlternatingBitSpec.Create().Exhaustive(threads: threads));
+        await Sums(RefreshCacheSpec.Create().Exhaustive(threads: threads));
+
+        static async Task Sums<S>(SpecReport<S> report)
         {
             await Assert.That(report.Closed).IsTrue();
             var fired = 0L;

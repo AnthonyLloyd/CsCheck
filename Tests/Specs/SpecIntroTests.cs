@@ -17,7 +17,7 @@ public partial class SpecIntroTests
     public enum Status { New, Paid, Shipped, Delivered, Cancelled }
 
     /// <summary>The model state. It must be immutable with value equality - a record or record struct - because
-    /// <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> compares and hashes states to know when it has seen one before. Money is one unit, so
+    /// <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> compares and hashes states to know when it has seen one before. Money is one unit, so
     /// <c>Paid</c> and <c>Refunded</c> are 0 or 1: the requirements below are about the relationship between them,
     /// not about the amount - except REFUND-IS-ONE-STEP, which turns out to be about the amount after all. Give
     /// <c>Pay</c> two amounts and it is false in three steps. docs/Spec.md works that through, because choosing a
@@ -139,10 +139,10 @@ public partial class SpecIntroTests
         await Assert.That(report.DeadlockStates).IsEqualTo(1);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("CAN-REFUND");
-        // The count says a dead end exists; DeadlockTrace says which one, and it is the whole point of the example -
+        // The count says a dead end exists; Deadlock says which one, and it is the whole point of the example -
         // a cancelled order still holding the money, with nothing left to do.
-        await Assert.That(report.DeadlockTrace).IsNotNull();
-        await Assert.That(report.DeadlockTrace).Contains("Cancelled paid=1 refunded=0");
+        await Assert.That(report.Deadlock).IsNotNull();
+        await Assert.That(report.Deadlock!.Steps[^1].After).IsEqualTo(new Order(Status.Cancelled, Paid: 1, Refunded: 0));
         await Assert.That(report.DeadlockTrace).Contains("no action enabled");
         // The wrong turn named rather than left to be inferred: the step that took Cancel could have taken Ship.
         await Assert.That(report.DeadlockTrace).Contains("Cancel  or Ship");

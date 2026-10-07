@@ -106,14 +106,6 @@ internal sealed class TycheLogger : ISampleLogger
 
 public static class Logging
 {
-    public enum LogProcessor { Tyche }
-
-    public static ISampleLogger CreateLogger(LogProcessor p, [CallerMemberName] string? name = null, string? directory = null, StreamWriter? writer = null, Func<object, string>? print = null) => p switch
-    {
-        LogProcessor.Tyche => CreateTycheLogger(name, directory, writer, print),
-        _ => throw new ArgumentOutOfRangeException(nameof(p), p, null),
-    };
-
     public static ISampleLogger CreateTycheLogger([CallerMemberName] string? name = null, string? directory = null, StreamWriter? writer = null, Func<object, string>? print = null)
     {
         if (name is null) ThrowHelper.Throw("name is null");
@@ -161,7 +153,7 @@ public static class Logging
         }
     }
 
-    private static readonly Dictionary<string, string> _emptyDictionary = [with(StringComparer.Ordinal)];
+    private static readonly Dictionary<string, string> _emptyDictionary = new(StringComparer.Ordinal);
 }
 
 #pragma warning disable IDE1006 // Naming Styles

@@ -18,6 +18,8 @@ using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Numerics;
+using System.ComponentModel;
 
 /// <summary>Size representation of Gen generated data.</summary>s
 public sealed class Size
@@ -93,8 +95,10 @@ public abstract class Gen<T> : IGen<T>
     public GenOperation<S> Operation<S>(Action<S, T> action) => GenOperation.Create(this, action);
     public GenOperation<Actual, Model> Operation<Actual, Model>(Func<T, string> name, Action<Actual, T> actual, Action<Model, T> model) => GenOperation.Create(this, name, actual, model);
     public GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, T> actual, Action<Model, T> model) => GenOperation.Create(this, actual, model);
-    public GenOperationAsync<S> Operation<S>(Func<T, string> name, Func<S, T, Task> async) => GenOperationAsync.Create(this, name, async);
-    public GenOperationAsync<S> Operation<S>(Func<S, T, Task> async) => GenOperationAsync.Create(this, async);
+    [Obsolete(Gen.AsyncOperationNotSupported, error: true), EditorBrowsable(EditorBrowsableState.Never)]
+    public GenOperation<S> Operation<S>(Func<T, string> name, Func<S, T, Task> async) => throw new NotSupportedException(Gen.AsyncOperationNotSupported);
+    [Obsolete(Gen.AsyncOperationNotSupported, error: true), EditorBrowsable(EditorBrowsableState.Never)]
+    public GenOperation<S> Operation<S>(Func<S, T, Task> async) => throw new NotSupportedException(Gen.AsyncOperationNotSupported);
     public GenOperationAsync<Actual, Model> Operation<Actual, Model>(Func<T, string> name, Func<Actual, T, Task> actual, Func<Model, T, Task> model) => GenOperationAsync.Create(this, name, actual, model);
     public GenOperationAsync<Actual, Model> Operation<Actual, Model>(Func<Actual, T, Task> actual, Func<Model, T, Task> model) => GenOperationAsync.Create(this, actual, model);
     public GenMetamorphic<S> Metamorphic<S>(Func<T, string> name, Action<S, T> action1, Action<S, T> action2) => GenMetamorphic.Create(this, name, action1, action2);
@@ -1052,7 +1056,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, IGen<R>> selector)
         => new GenSelectMany<T1, T2, R>(gen1, gen2, selector);
 
     sealed class GenSelectMany<T1, T2, T3, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Func<T1, T2, T3, IGen<R>> selector) : Gen<R>
@@ -1074,7 +1078,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Func<T1, T2, T3, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Func<T1, T2, T3, IGen<R>> selector)
         => new GenSelectMany<T1, T2, T3, R>(gen1, gen2, gen3, selector);
 
     sealed class GenSelectMany<T1, T2, T3, T4, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Func<T1, T2, T3, T4, IGen<R>> selector) : Gen<R>
@@ -1099,7 +1103,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Func<T1, T2, T3, T4, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Func<T1, T2, T3, T4, IGen<R>> selector)
         => new GenSelectMany<T1, T2, T3, T4, R>(gen1, gen2, gen3, gen4, selector);
 
     sealed class GenSelectMany<T1, T2, T3, T4, T5, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Func<T1, T2, T3, T4, T5, IGen<R>> selector) : Gen<R>
@@ -1127,7 +1131,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Func<T1, T2, T3, T4, T5, IGen<R>> selector)
         => new GenSelectMany<T1, T2, T3, T4, T5, R>(gen1, gen2, gen3, gen4, gen5, selector);
 
     sealed class GenSelectMany<T1, T2, T3, T4, T5, T6, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, IGen<R>> selector) : Gen<R>
@@ -1158,7 +1162,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, T6, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, T6, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, IGen<R>> selector)
         => new GenSelectMany<T1, T2, T3, T4, T5, T6, R>(gen1, gen2, gen3, gen4, gen5, gen6, selector);
 
     sealed class GenSelectMany<T1, T2, T3, T4, T5, T6, T7, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, IGen<R>> selector) : Gen<R>
@@ -1192,7 +1196,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, IGen<R>> selector)
         => new GenSelectMany<T1, T2, T3, T4, T5, T6, T7, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, selector);
 
     sealed class GenSelectMany<T1, T2, T3, T4, T5, T6, T7, T8, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, IGen<R>> selector) : Gen<R>
@@ -1229,7 +1233,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, IGen<R>> selector)
         => new GenSelectMany<T1, T2, T3, T4, T5, T6, T7, T8, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, selector);
 
     sealed class GenSelectManyResult<T1, T2, R>(Gen<T1> gen, Func<T1, IGen<T2>> genSelector, Func<T1, T2, R> resultSelector) : Gen<R>
@@ -1562,7 +1566,7 @@ public static class Gen
     {
         if (constants is null) ThrowHelper.Throw("Gen.OneOf constants is null");
         if (constants.Length == 0) ThrowHelper.Throw("Gen.OneOf constants is empty");
-        return HashHelper.IsPow2(constants.Length) ? new GenOneOfConstPow2<T>(constants) : new GenOneOfConst<T>(constants);
+        return BitOperations.IsPow2(constants.Length) ? new GenOneOfConstPow2<T>(constants) : new GenOneOfConst<T>(constants);
     }
 
     sealed class GenOneOf<T>(params IGen<T>[] gens) : Gen<T>
@@ -1593,7 +1597,7 @@ public static class Gen
     {
         if (gens is null) ThrowHelper.Throw("Gen.OneOf gens is null");
         if (gens.Length == 0) ThrowHelper.Throw("Gen.OneOf gens is empty");
-        return HashHelper.IsPow2(gens.Length) ? new GenOneOfPow2<T>(gens) : new GenOneOf<T>(gens);
+        return BitOperations.IsPow2(gens.Length) ? new GenOneOfPow2<T>(gens) : new GenOneOf<T>(gens);
     }
 
     /// <summary>Create a generator for an enum.</summary>
@@ -1643,7 +1647,7 @@ public static class Gen
             total += (uint)i;
         }
         if (total == 0) ThrowHelper.Throw("Gen.Frequency total frequency is zero");
-        return HashHelper.IsPow2(total) ? new GenFrequencyConstPow2<T>(total, constants) : new GenFrequencyConst<T>(total, constants);
+        return BitOperations.IsPow2(total) ? new GenFrequencyConstPow2<T>(total, constants) : new GenFrequencyConst<T>(total, constants);
     }
 
     sealed class GenFrequency<T>(uint total, params (int Frequency, IGen<T> Generator)[] gens) : Gen<T>
@@ -1700,7 +1704,7 @@ public static class Gen
             total += (uint)i;
         }
         if (total == 0) ThrowHelper.Throw("Gen.Frequency total frequency is zero");
-        return HashHelper.IsPow2(total) ? new GenFrequencyPow2<T>(total, gens) : new GenFrequency<T>(total, gens);
+        return BitOperations.IsPow2(total) ? new GenFrequencyPow2<T>(total, gens) : new GenFrequency<T>(total, gens);
     }
 
     sealed class GenRecursive<T>(Func<Gen<T>> gen) : Gen<T>
@@ -2019,8 +2023,11 @@ public static class Gen
     public static GenOperation<T> Operation<T>(Action<T> action) => GenOperation.Create(action);
     public static GenOperation<Actual, Model> Operation<Actual, Model>(string name, Action<Actual> actual, Action<Model> model) => GenOperation.Create(name, actual, model);
     public static GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual> actual, Action<Model> model) => GenOperation.Create(actual, model);
-    public static GenOperationAsync<T> Operation<T>(string name, Func<T, Task> async) => GenOperationAsync.Create(name, async);
-    public static GenOperationAsync<T> Operation<T>(Func<T, Task> async) => GenOperationAsync.Create(async);
+    internal const string AsyncOperationNotSupported = "Async operations are not supported: SampleParallel runs operations synchronously. Wait for the task inside a synchronous operation instead.";
+    [Obsolete(AsyncOperationNotSupported, error: true), EditorBrowsable(EditorBrowsableState.Never)]
+    public static GenOperation<T> Operation<T>(string name, Func<T, Task> async) => throw new NotSupportedException(AsyncOperationNotSupported);
+    [Obsolete(AsyncOperationNotSupported, error: true), EditorBrowsable(EditorBrowsableState.Never)]
+    public static GenOperation<T> Operation<T>(Func<T, Task> async) => throw new NotSupportedException(AsyncOperationNotSupported);
     public static GenOperationAsync<Actual, Model> Operation<Actual, Model>(string name, Func<Actual, Task> actual, Func<Model, Task> model) => GenOperationAsync.Create(name, actual, model);
     public static GenOperationAsync<Actual, Model> Operation<Actual, Model>(Func<Actual, Task> actual, Func<Model, Task> model) => GenOperationAsync.Create(actual, model);
 
@@ -2041,6 +2048,10 @@ public static class Gen
     public static readonly GenLong Long = new();
     /// <summary>Generator for ulong.</summary>
     public static readonly GenULong ULong = new();
+    /// <summary>Generator for Int128.</summary>
+    public static readonly GenInt128 Int128 = new();
+    /// <summary>Generator for UInt128.</summary>
+    public static readonly GenUInt128 UInt128 = new();
     /// <summary>Generator for float.</summary>
     public static readonly GenFloat Float = new();
     /// <summary>Generator for float.</summary>
@@ -2144,9 +2155,9 @@ public sealed class GenByte : Gen<byte>
 public sealed class GenShort : Gen<short>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ushort Zigzag(short i) => (ushort)(i << 1 ^ i >> 31);
+    internal static ushort Zigzag(short i) => (ushort)(i << 1 ^ i >> 31);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static short Unzigzag(ushort i) => (short)((i >> 1) ^ -(int)(i & 1U));
+    internal static short Unzigzag(ushort i) => (short)((i >> 1) ^ -(int)(i & 1U));
     public override short Generate(PCG pcg, Size? min, out Size size)
     {
         uint s = pcg.Next() & 15U;
@@ -2208,9 +2219,9 @@ public sealed class GenUShort : Gen<ushort>
 public sealed class GenInt : Gen<int>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint Zigzag(int i) => (uint)(i << 1 ^ i >> 31);
+    internal static uint Zigzag(int i) => (uint)(i << 1 ^ i >> 31);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int Unzigzag(uint i) => (int)(i >> 1) ^ -(int)(i & 1U);
+    internal static int Unzigzag(uint i) => (int)(i >> 1) ^ -(int)(i & 1U);
     public override int Generate(PCG pcg, Size? min, out Size size)
     {
         uint s = pcg.Next() & 31U;
@@ -2229,7 +2240,7 @@ public sealed class GenInt : Gen<int>
         }
     }
     /// <summary>Generate an int uniformly distributed with all values.</summary>
-    public Gen<int> Uniform = new GenUniform();
+    public readonly Gen<int> Uniform = new GenUniform();
     sealed class GenPositive : Gen<int>
     {
         public override int Generate(PCG pcg, Size? min, out Size size)
@@ -2242,7 +2253,7 @@ public sealed class GenInt : Gen<int>
         }
     }
     /// <summary>Generate a positive int in the range 1 to int.MaxValue inclusive.</summary>
-    public Gen<int> Positive = new GenPositive();
+    public readonly Gen<int> Positive = new GenPositive();
     sealed class GenNonNegative : Gen<int>
     {
         public override int Generate(PCG pcg, Size? min, out Size size)
@@ -2255,7 +2266,7 @@ public sealed class GenInt : Gen<int>
         }
     }
     /// <summary>Generate a non-negative int in the range 0 to int.MaxValue inclusive.</summary>
-    public Gen<int> NonNegative = new GenNonNegative();
+    public readonly Gen<int> NonNegative = new GenNonNegative();
     sealed class Range(int start, uint length) : Gen<int>
     {
         public override int Generate(PCG pcg, Size? min, out Size size)
@@ -2329,15 +2340,15 @@ public sealed class GenUInt : Gen<uint>
         }
     }
     /// <summary>Generate a uint uniformly distributed with all values.</summary>
-    public Gen<uint> Uniform = new GenUniform();
+    public readonly Gen<uint> Uniform = new GenUniform();
 }
 
 public sealed class GenLong : Gen<long>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ulong Zigzag(long i) => (ulong)(i << 1 ^ i >> 63);
+    internal static ulong Zigzag(long i) => (ulong)(i << 1 ^ i >> 63);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static long Unzigzag(ulong i) => (long)(i >> 1) ^ -(long)(i & 1UL);
+    internal static long Unzigzag(ulong i) => (long)(i >> 1) ^ -(long)(i & 1UL);
     public override long Generate(PCG pcg, Size? min, out Size size)
     {
         uint s = pcg.Next() & 63U;
@@ -2374,7 +2385,7 @@ public sealed class GenLong : Gen<long>
         }
     }
     /// <summary>Generate a long uniformly distributed with all values.</summary>
-    public Gen<long> Uniform = new GenUniform();
+    public readonly Gen<long> Uniform = new GenUniform();
 }
 
 public sealed class GenULong : Gen<ulong>
@@ -2414,7 +2425,96 @@ public sealed class GenULong : Gen<ulong>
         }
     }
     /// <summary>Generate a ulong uniformly distributed with all values.</summary>
-    public Gen<ulong> Uniform = new GenUniform();
+    public readonly Gen<ulong> Uniform = new GenUniform();
+}
+
+public sealed class GenInt128 : Gen<Int128>
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static UInt128 Zigzag(Int128 i) => (UInt128)(i << 1 ^ i >> 127);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static Int128 Unzigzag(UInt128 i) => (Int128)(i >> 1) ^ -(Int128)(i & 1);
+    public override Int128 Generate(PCG pcg, Size? min, out Size size)
+    {
+        uint s = pcg.Next() & 127U;
+        var i = UInt128.One << (int)s;
+        i = (pcg.Next128() & (i - 1) | i) - 1;
+        size = new Size((ulong)s << 46 | (ulong)i & 0x3FFF_FFFF_FFFFUL);
+        return -Unzigzag(i);
+    }
+    sealed class Range(Int128 start, UInt128 length, int sizeShift) : Gen<Int128>
+    {
+        public override Int128 Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = start + (Int128)pcg.Next128(length);
+            size = new Size((ulong)(Zigzag(i) >> sizeShift));
+            return i;
+        }
+    }
+    /// <summary>Generate Int128 uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
+    public Gen<Int128> this[Int128 start, Int128 finish]
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return start == Int128.MinValue && finish == Int128.MaxValue ? Uniform
+                : new Range(start, (UInt128)(finish - start) + 1, GenUInt128.SizeShift(UInt128.Max(Zigzag(start), Zigzag(finish))));
+        }
+    }
+    sealed class GenUniform : Gen<Int128>
+    {
+        public override Int128 Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = (Int128)pcg.Next128();
+            size = new Size((ulong)(Zigzag(i) >> 64));
+            return i;
+        }
+    }
+    /// <summary>Generate an Int128 uniformly distributed with all values.</summary>
+    public readonly Gen<Int128> Uniform = new GenUniform();
+}
+
+public sealed class GenUInt128 : Gen<UInt128>
+{
+    internal static int SizeShift(UInt128 max) => Math.Max(0, 64 - (int)UInt128.LeadingZeroCount(max));
+    public override UInt128 Generate(PCG pcg, Size? min, out Size size)
+    {
+        uint s = pcg.Next() & 127U;
+        var i = UInt128.One << (int)s;
+        i = (pcg.Next128() & (i - 1) | i) - 1;
+        size = new Size((ulong)s << 46 | (ulong)i & 0x3FFF_FFFF_FFFFUL);
+        return i;
+    }
+    sealed class Range(UInt128 start, UInt128 length, int sizeShift) : Gen<UInt128>
+    {
+        public override UInt128 Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = start + pcg.Next128(length);
+            size = new Size((ulong)(i >> sizeShift));
+            return i;
+        }
+    }
+    /// <summary>Generate UInt128 uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
+    public Gen<UInt128> this[UInt128 start, UInt128 finish]
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return start == UInt128.MinValue && finish == UInt128.MaxValue ? Uniform
+                : new Range(start, finish - start + 1, SizeShift(finish));
+        }
+    }
+    sealed class GenUniform : Gen<UInt128>
+    {
+        public override UInt128 Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next128();
+            size = new Size((ulong)(i >> 64));
+            return i;
+        }
+    }
+    /// <summary>Generate a UInt128 uniformly distributed with all values.</summary>
+    public readonly Gen<UInt128> Uniform = new GenUniform();
 }
 
 public sealed class GenFloat : Gen<float>
@@ -2511,7 +2611,7 @@ public sealed class GenFloat : Gen<float>
         }
     }
     /// <summary>In the range 0.0f &lt;= x &lt; 1.0f.</summary>
-    public Gen<float> Unit = new GenUnit();
+    public readonly Gen<float> Unit = new GenUnit();
     sealed class GenOneTwo : Gen<float>
     {
         public override float Generate(PCG pcg, Size? min, out Size size)
@@ -2522,7 +2622,7 @@ public sealed class GenFloat : Gen<float>
         }
     }
     /// <summary>In the range 1.0f &lt;= x &lt; 2.0f.</summary>
-    public Gen<float> OneTwo = new GenOneTwo();
+    public readonly Gen<float> OneTwo = new GenOneTwo();
     static float MakeSpecial(uint i) => (i & 0xFU) switch
     {
         0x0U => float.NaN,
@@ -2652,7 +2752,7 @@ public sealed class GenDouble : Gen<double>
         }
     }
     /// <summary>In the range 0.0 &lt;= x &lt; 1.0.</summary>
-    public Gen<double> Unit = new GenUnit();
+    public readonly Gen<double> Unit = new GenUnit();
     sealed class GenOneTwo : Gen<double>
     {
         public override double Generate(PCG pcg, Size? min, out Size size)
@@ -2663,7 +2763,7 @@ public sealed class GenDouble : Gen<double>
         }
     }
     /// <summary>In the range 1.0 &lt;= x &lt; 2.0.</summary>
-    public Gen<double> OneTwo = new GenOneTwo();
+    public readonly Gen<double> OneTwo = new GenOneTwo();
     static double MakeSpecial(ulong i) => (i & 0xFUL) switch
     {
         0x0UL => double.NaN,
@@ -2799,13 +2899,13 @@ public sealed class GenDecimal : Gen<decimal>
             return i * 1e-15m;
         }
     }
-    public Gen<decimal> Unit = new GenUnit();
+    public readonly Gen<decimal> Unit = new GenUnit();
 }
 
 /// <summary>Generate DateTime with DateTimeKind.Unspecified.</summary>
 public sealed class GenDateTime : Gen<DateTime>
 {
-    const ulong max = 3155378975999999999UL; //(ulong)DateTime.MaxValue.Ticks;
+    internal const ulong max = 3155378975999999999UL; //(ulong)DateTime.MaxValue.Ticks;
     public override DateTime Generate(PCG pcg, Size? min, out Size size)
     {
         var i = pcg.Next64(max);
@@ -2831,65 +2931,69 @@ public sealed class GenDateTime : Gen<DateTime>
         }
     }
 
-    sealed class GenDateTimeUtc : Gen<DateTime>
+    /// <summary>Generate DateTime with DateTimeKind.Utc.</summary>
+    public readonly GenDateTimeUtc Utc = new();
+
+    /// <summary>Generate DateTime with DateTimeKind.Local.</summary>
+    public readonly GenDateTimeLocal Local = new();
+}
+
+/// <summary>Generate DateTime with DateTimeKind.Utc.</summary>
+public sealed class GenDateTimeUtc : Gen<DateTime>
+{
+    public override DateTime Generate(PCG pcg, Size? min, out Size size)
+    {
+        var i = pcg.Next64(GenDateTime.max);
+        size = new Size(i >> 10);
+        return new DateTime((long)i, DateTimeKind.Utc);
+    }
+    sealed class Range(ulong start, ulong length) : Gen<DateTime>
     {
         public override DateTime Generate(PCG pcg, Size? min, out Size size)
         {
-            var i = pcg.Next64(max);
-            size = new Size(i >> 10);
+            ulong i = start + pcg.Next64(length);
+            size = new Size(i);
             return new DateTime((long)i, DateTimeKind.Utc);
         }
-        sealed class Range(ulong start, ulong length) : Gen<DateTime>
+    }
+    /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
+    public Gen<DateTime> this[DateTime start, DateTime finish]
+    {
+        get
         {
-            public override DateTime Generate(PCG pcg, Size? min, out Size size)
-            {
-                ulong i = start + pcg.Next64(length);
-                size = new Size(i);
-                return new DateTime((long)i, DateTimeKind.Utc);
-            }
-        }
-        /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
-        public Gen<DateTime> this[DateTime start, DateTime finish]
-        {
-            get
-            {
-                if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-                return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
-            }
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
         }
     }
+}
 
-    public readonly Gen<DateTime> Utc = new GenDateTimeUtc();
-
-    sealed class GenDateTimeLocal : Gen<DateTime>
+/// <summary>Generate DateTime with DateTimeKind.Local.</summary>
+public sealed class GenDateTimeLocal : Gen<DateTime>
+{
+    public override DateTime Generate(PCG pcg, Size? min, out Size size)
+    {
+        var i = pcg.Next64(GenDateTime.max);
+        size = new Size(i >> 10);
+        return new DateTime((long)i, DateTimeKind.Local);
+    }
+    sealed class Range(ulong start, ulong length) : Gen<DateTime>
     {
         public override DateTime Generate(PCG pcg, Size? min, out Size size)
         {
-            var i = pcg.Next64(max);
-            size = new Size(i >> 10);
+            ulong i = start + pcg.Next64(length);
+            size = new Size(i);
             return new DateTime((long)i, DateTimeKind.Local);
         }
-        sealed class Range(ulong start, ulong length) : Gen<DateTime>
+    }
+    /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
+    public Gen<DateTime> this[DateTime start, DateTime finish]
+    {
+        get
         {
-            public override DateTime Generate(PCG pcg, Size? min, out Size size)
-            {
-                ulong i = start + pcg.Next64(length);
-                size = new Size(i);
-                return new DateTime((long)i, DateTimeKind.Local);
-            }
-        }
-        /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
-        public Gen<DateTime> this[DateTime start, DateTime finish]
-        {
-            get
-            {
-                if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-                return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
-            }
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
         }
     }
-
-    public readonly Gen<DateTime> Local = new GenDateTimeLocal();
 }
 
 public sealed class GenDate : Gen<DateTime>
@@ -3583,18 +3687,6 @@ public sealed class GenOperation<Actual, Model> : Gen<(string, Action<Actual>, A
     public override (string, Action<Actual>, Action<Model>) Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
 }
 
-public sealed class GenOperationAsync<T> : Gen<(string, Func<T, Task>)>
-{
-    public bool AddOpNumber;
-    readonly Gen<(string, Func<T, Task>)> gen;
-    internal GenOperationAsync(Gen<(string, Func<T, Task>)> gen, bool addOpNumber)
-    {
-        this.gen = gen;
-        AddOpNumber = addOpNumber;
-    }
-    public override (string, Func<T, Task>) Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
-}
-
 public sealed class GenOperationAsync<Actual, Model> : Gen<(string, Func<Actual, Task>, Func<Model, Task>)>
 {
     readonly Gen<(string, Func<Actual, Task>, Func<Model, Task>)> gen;
@@ -3641,10 +3733,6 @@ public static class GenOperation
 
 public static class GenOperationAsync
 {
-    public static GenOperationAsync<S> Create<S, T>(Gen<T> gen, Func<S, T, Task> action) =>
-        new(gen.Select<T, (string, Func<S, Task>)>(t => (" " + Check.Print(t), s => action(s, t))), true);
-    public static GenOperationAsync<S> Create<S, T>(Gen<T> gen, Func<T, string> name, Func<S, T, Task> action) =>
-        new(gen.Select<T, (string, Func<S, Task>)>(t => (name(t), s => action(s, t))), false);
     public static GenOperationAsync<Actual, Model> Create<Actual, Model, T>(Gen<T> gen, Func<Actual, T, Task> actual, Func<Model, T, Task> model) =>
         new(gen.Select<T, (string, Func<Actual, Task>, Func<Model, Task>)>(t => (" " + Check.Print(t), a => actual(a, t), m => model(m, t))),
             gen.Select<T, (Func<Actual, Task>, Func<Model, Task>)>(t => (a => actual(a, t), m => model(m, t))), true);
@@ -3655,10 +3743,6 @@ public static class GenOperationAsync
         => new(Gen.Const(("", actual, model)), Gen.Const((actual, model)), true);
     public static GenOperationAsync<Actual, Model> Create<Actual, Model>(string name, Func<Actual, Task> actual, Func<Model, Task> model)
         => new(Gen.Const((name, actual, model)), Gen.Const((actual, model)), false);
-    public static GenOperationAsync<T> Create<T>(Func<T, Task> action)
-        => new(Gen.Const(("", action)), true);
-    public static GenOperationAsync<T> Create<T>(string name, Func<T, Task> action)
-        => new(Gen.Const((name, action)), false);
 }
 
 public static class GenMetamorphic

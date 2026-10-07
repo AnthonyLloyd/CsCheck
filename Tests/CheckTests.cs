@@ -881,6 +881,26 @@ public class CheckTests
             .Ignored((a, v) => a.Note = v, Gen.String));
     }
 
+    static Gen<MutableNode> GenMutableLeaf => Gen.Int.Select(v => new MutableNode(v, null));
+    static Gen<MutableNode> GenMutableNode => Gen.Select(Gen.Int, GenMutableLeaf, (v, next) => new MutableNode(v, next));
+
+    [Test]
+    public void Equality_Fields_Mutable_Self_Reference()
+    {
+        GenMutableNode.Equality(f => f
+            .Compared((n, v) => n.Value = v, Gen.Int)
+            .Compared((n, v) => { n.Next = v; }, GenMutableLeaf));
+    }
+
+    [Test]
+    public async Task Equality_Fields_Detects_Assignment_Bound_As_Functional_Setter()
+    {
+        var message = Assert.Throws<CsCheckException>(() => GenMutableNode.Equality(f => f
+            .Compared((n, v) => n.Value = v, Gen.Int)
+            .Compared((n, v) => n.Next = v, GenMutableLeaf)))!.InnerException!.Message;
+        await Assert.That(message).Contains("returned the value it was given");
+    }
+
     [Test]
     public void Equality_Fields_Nested()
     {
@@ -1117,6 +1137,14 @@ public class CheckTests
         public string Note = note;
         public override bool Equals(object? obj) => obj is MutableAccount m && m.Id == Id;
         public override int GetHashCode() => Id.GetHashCode();
+    }
+
+    sealed class MutableNode(int value, MutableNode? next)
+    {
+        public int Value = value;
+        public MutableNode? Next = next;
+        public override bool Equals(object? obj) => obj is MutableNode m && m.Value == Value && Equals(m.Next, Next);
+        public override int GetHashCode() => Value.GetHashCode();
     }
 
     sealed record Address(int House, string Street);

@@ -244,7 +244,7 @@ public class SpecScaleTests
         GenSpec.Sample(spec =>
         {
             long created = 0, applied = 0;
-            SpecReport conformed, sampled;
+            SpecReport<Tiny> conformed, sampled;
             try
             {
                 conformed = spec.Conform(() => { Interlocked.Increment(ref created); return new Tiny[1]; },
@@ -255,7 +255,8 @@ public class SpecScaleTests
             catch (CsCheckException) { return true; }
             return conformed.TracesWalked == created && conformed.StepsWalked == applied
                 && conformed.ActionFired.Sum() == conformed.StepsWalked && sampled.ActionFired.Sum() == sampled.StepsWalked
-                && conformed.DeadlockTraces <= conformed.TracesWalked && sampled.DeadlockTraces <= sampled.TracesWalked;
+                && conformed.DeadlockTraces <= conformed.TracesWalked && sampled.DeadlockTraces <= sampled.TracesWalked
+                && (conformed.Deadlock is null) == (conformed.DeadlockTraces == 0) && (sampled.Deadlock is null) == (sampled.DeadlockTraces == 0);
         }, iter: 100, threads: 1);
     }
 
@@ -293,7 +294,7 @@ public class SpecScaleTests
 
     sealed class TinySut { public Tiny State; public int Steps; }
 
-    static (SpecReport? Report, string? Message, bool Contiguous) Conform(Planted p, int threads)
+    static (SpecReport<Tiny>? Report, string? Message, bool Contiguous) Conform(Planted p, int threads)
     {
         var contiguous = true;
         try
@@ -309,7 +310,7 @@ public class SpecScaleTests
         catch (CsCheckException e) { return (null, e.Message, contiguous); }
     }
 
-    static string WithoutModeOrConformed(SpecReport report)
+    static string WithoutModeOrConformed(SpecReport<Tiny> report)
         => string.Join('\n', report.ToString().Split('\n')[1..]
             .Where(l => !l.StartsWith("  conformed on ", StringComparison.Ordinal)));
 
@@ -364,7 +365,8 @@ public class SpecScaleTests
                 && report.TerminalStates + report.DeadlockStates <= report.States
                 && report.Depth < report.States
                 && report.DeadlockTraces == 0
-                && (report.DeadlockTrace is null) == (report.DeadlockStates == 0);
+                && (report.DeadlockTrace is null) == (report.DeadlockStates == 0)
+                && (report.Deadlock is null) == (report.DeadlockStates == 0);
         }, iter: 200, threads: 1);
     }
 

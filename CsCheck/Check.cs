@@ -197,106 +197,43 @@ public static partial class Check
         Reporter.Write(writeLine, $"Passed {worker.Total:#,0} iterations.");
     }
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Action{T}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Action{T}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Action{T}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Action{T}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Action{T}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Action{T}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Action{T}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null, ISampleLogger? logger = null)
@@ -331,16 +268,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, string}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, string> classify, Action<string> writeLine,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ISampleLogger? logger = null)
     {
@@ -360,16 +288,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, string}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, string> classify, Action<string> writeLine,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ISampleLogger? logger = null)
     {
@@ -389,16 +308,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, string}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, string> classify, Action<string> writeLine,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ISampleLogger? logger = null)
     {
@@ -418,16 +328,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, string}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, string> classify, Action<string> writeLine,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ISampleLogger? logger = null)
     {
@@ -447,16 +348,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, string}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, string> classify, Action<string> writeLine,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ISampleLogger? logger = null)
     {
@@ -476,16 +368,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, string}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, string> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
         ISampleLogger? logger = null)
@@ -506,16 +389,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data retuning a classification and raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, string}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, string> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
         ISampleLogger? logger = null)
@@ -666,107 +540,44 @@ public static partial class Check
         Reporter.Write(writeLine, $"Passed {total:#,0} iterations.");
     }
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> assert, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> assert,
          Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
          ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> assert,
          Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => assert(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the assert each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="assert">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> assert,
          Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
@@ -802,16 +613,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{string}}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static async Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<string>> classify, Action<string> writeLine,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ISampleLogger? logger = null)
     {
@@ -831,16 +633,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{string}}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static async Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<string>> classify, Action<string> writeLine,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ISampleLogger? logger = null)
     {
@@ -860,16 +653,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{string}}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static async Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<string>> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null,
         ISampleLogger? logger = null)
@@ -890,16 +674,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{string}}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static async Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<string>> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null,
         ISampleLogger? logger = null)
@@ -920,16 +695,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{string}}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<string>> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
         ISampleLogger? logger = null)
@@ -950,16 +716,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{string}}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<string>> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
         ISampleLogger? logger = null)
@@ -980,16 +737,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Sample the gen calling the classify each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="classify">The code to call with the input data raising an exception if it fails.</param>
-    /// <param name="writeLine">WriteLine function to use for the classify summary output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{string}}, Action{string}, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     public static async Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<string>> classify,
         Action<string> writeLine, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
         ISampleLogger? logger = null)
@@ -1176,107 +924,44 @@ public static partial class Check
         Reporter.Write(writeLine, $"Passed {worker.Total:#,0} iterations.");
     }
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, bool}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, bool}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, bool}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, bool}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, bool}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, bool> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null, ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, bool}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, bool> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
         ISampleLogger? logger = null)
         => Sample(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="Sample{T}(Gen{T}, Func{T, bool}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Sample<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, bool> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
@@ -1439,108 +1124,45 @@ public static partial class Check
         Reporter.Write(writeLine, $"Passed {total:#,0} iterations.");
     }
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{bool}}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{bool}}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{bool}}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{bool}}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<bool>> predicate, Action<string>? writeLine = null,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5), string>? print = null, ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{bool}}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<bool>> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6), string>? print = null,
         ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{bool}}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<bool>> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7), string>? print = null,
         ISampleLogger? logger = null)
         => SampleAsync(gen, t => predicate(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), writeLine, seed, iter, time, threads, print, logger);
 
-    /// <summary>Sample the gen calling the predicate each time across multiple threads. Shrink any exceptions if necessary.</summary>
-    /// <param name="gen">The sample input data generator.</param>
-    /// <param name="predicate">The code to call with the input data returning if it is successful.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleAsync{T}(Gen{T}, Func{T, Task{bool}}, Action{string}?, string?, long, int, int, Func{T, string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<bool>> predicate,
         Action<string>? writeLine = null, string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T1, T2, T3, T4, T5, T6, T7, T8), string>? print = null,
@@ -1687,20 +1309,7 @@ public static partial class Check
         Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBased(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial state generator.</param>
-    /// <param name="operation1">An operation generator that can act on the state.</param>
-    /// <param name="operation2">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
-    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleModelBased{Actual, Model}(Gen{ValueTuple{Actual, Model}}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, Func{Actual, Model, bool}?, string?, long, int, int, Func{Actual, string}?, Func{Model, string}?, Func{Model, string}?, Action{string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2,
@@ -1709,21 +1318,7 @@ public static partial class Check
         Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial state generator.</param>
-    /// <param name="operation1">An operation generator that can act on the state.</param>
-    /// <param name="operation2">An operation generator that can act on the state.</param>
-    /// <param name="operation3">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
-    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleModelBased{Actual, Model}(Gen{ValueTuple{Actual, Model}}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, Func{Actual, Model, bool}?, string?, long, int, int, Func{Actual, string}?, Func{Model, string}?, Func{Model, string}?, Action{string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3,
@@ -1732,22 +1327,7 @@ public static partial class Check
         Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial state generator.</param>
-    /// <param name="operation1">An operation generator that can act on the state.</param>
-    /// <param name="operation2">An operation generator that can act on the state.</param>
-    /// <param name="operation3">An operation generator that can act on the state.</param>
-    /// <param name="operation4">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
-    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleModelBased{Actual, Model}(Gen{ValueTuple{Actual, Model}}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, Func{Actual, Model, bool}?, string?, long, int, int, Func{Actual, string}?, Func{Model, string}?, Func{Model, string}?, Action{string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
@@ -1756,23 +1336,7 @@ public static partial class Check
         Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBased(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial state generator.</param>
-    /// <param name="operation1">An operation generator that can act on the state.</param>
-    /// <param name="operation2">An operation generator that can act on the state.</param>
-    /// <param name="operation3">An operation generator that can act on the state.</param>
-    /// <param name="operation4">An operation generator that can act on the state.</param>
-    /// <param name="operation5">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
-    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleModelBased{Actual, Model}(Gen{ValueTuple{Actual, Model}}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, Func{Actual, Model, bool}?, string?, long, int, int, Func{Actual, string}?, Func{Model, string}?, Func{Model, string}?, Action{string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleModelBased<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1,
         GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4,
@@ -1943,20 +1507,7 @@ public static partial class Check
         Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBasedAsync(initial, [operation], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial state generator.</param>
-    /// <param name="operation1">An operation generator that can act on the state.</param>
-    /// <param name="operation2">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
-    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleModelBasedAsync{Actual, Model}(Gen{Task{ValueTuple{Actual, Model}}}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, Func{Actual, Model, bool}?, string?, long, int, int, Func{Actual, string}?, Func{Model, string}?, Func{Model, string}?, Action{string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation1,
         GenOperationAsync<Actual, Model> operation2,
@@ -1965,21 +1516,7 @@ public static partial class Check
         Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial state generator.</param>
-    /// <param name="operation1">An operation generator that can act on the state.</param>
-    /// <param name="operation2">An operation generator that can act on the state.</param>
-    /// <param name="operation3">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
-    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleModelBasedAsync{Actual, Model}(Gen{Task{ValueTuple{Actual, Model}}}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, Func{Actual, Model, bool}?, string?, long, int, int, Func{Actual, string}?, Func{Model, string}?, Func{Model, string}?, Action{string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation1,
         GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3,
@@ -1988,22 +1525,7 @@ public static partial class Check
         Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2, operation3], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial state generator.</param>
-    /// <param name="operation1">An operation generator that can act on the state.</param>
-    /// <param name="operation2">An operation generator that can act on the state.</param>
-    /// <param name="operation3">An operation generator that can act on the state.</param>
-    /// <param name="operation4">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
-    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleModelBasedAsync{Actual, Model}(Gen{Task{ValueTuple{Actual, Model}}}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, Func{Actual, Model, bool}?, string?, long, int, int, Func{Actual, string}?, Func{Model, string}?, Func{Model, string}?, Action{string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation1,
         GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3, GenOperationAsync<Actual, Model> operation4,
@@ -2012,23 +1534,7 @@ public static partial class Check
         Action<string>? writeLine = null, ISampleLogger? logger = null)
         => SampleModelBasedAsync(initial, [operation1, operation2, operation3, operation4], equal, seed, iter, time, threads, printActual, printModel, classify, writeLine, logger);
 
-    /// <summary>Sample model-based operations on a random initial state checking that actual and model are equal. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial state generator.</param>
-    /// <param name="operation1">An operation generator that can act on the state.</param>
-    /// <param name="operation2">An operation generator that can act on the state.</param>
-    /// <param name="operation3">An operation generator that can act on the state.</param>
-    /// <param name="operation4">An operation generator that can act on the state.</param>
-    /// <param name="operation5">An operation generator that can act on the state.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
-    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="classify">A function to classify the model state each operation acts on. When writeLine is also set a table of how often each operation ran in each classification is written.</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
-    /// <param name="logger">Log metrics regarding generated inputs and results.</param>
+    /// <inheritdoc cref="SampleModelBasedAsync{Actual, Model}(Gen{Task{ValueTuple{Actual, Model}}}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, GenOperationAsync{Actual, Model}, Func{Actual, Model, bool}?, string?, long, int, int, Func{Actual, string}?, Func{Model, string}?, Func{Model, string}?, Action{string}?, ISampleLogger?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task SampleModelBasedAsync<Actual, Model>(this Gen<Task<(Actual, Model)>> initial, GenOperationAsync<Actual, Model> operation1,
         GenOperationAsync<Actual, Model> operation2, GenOperationAsync<Actual, Model> operation3, GenOperationAsync<Actual, Model> operation4,
@@ -2314,83 +1820,25 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
-    /// <summary>Sample operations on a random initial state in parallel. The result is compared against the result of the possible sequential permutations. At least one of these permutations result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial state generator.</param>
-    /// <param name="operation1">An operation generator that can act on the state in parallel.</param>
-    /// <param name="operation2">An operation generator that can act on the state in parallel.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
-    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <inheritdoc cref="SampleParallel{T}(Gen{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, Func{T, T, bool}?, string?, int, int, long, int, int, Func{T, string}?, int, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, Func<T, T, bool>? equal = null, string? seed = null,
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
-    /// <summary>Sample operations on a random initial state in parallel. The result is compared against the result of the possible sequential permutations. At least one of these permutations result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial state generator.</param>
-    /// <param name="operation1">An operation generator that can act on the state in parallel.</param>
-    /// <param name="operation2">An operation generator that can act on the state in parallel.</param>
-    /// <param name="operation3">An operation generator that can act on the state in parallel.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
-    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <inheritdoc cref="SampleParallel{T}(Gen{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, Func{T, T, bool}?, string?, int, int, long, int, int, Func{T, string}?, int, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, Func<T, T, bool>? equal = null, string? seed = null,
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
-    /// <summary>Sample operations on a random initial state in parallel. The result is compared against the result of the possible sequential permutations. At least one of these permutations result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial state generator.</param>
-    /// <param name="operation1">An operation generator that can act on the state in parallel.</param>
-    /// <param name="operation2">An operation generator that can act on the state in parallel.</param>
-    /// <param name="operation3">An operation generator that can act on the state in parallel.</param>
-    /// <param name="operation4">An operation generator that can act on the state in parallel.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
-    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <inheritdoc cref="SampleParallel{T}(Gen{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, Func{T, T, bool}?, string?, int, int, long, int, int, Func{T, string}?, int, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4, Func<T, T, bool>? equal = null, string? seed = null,
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3, operation4], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, print, replay, writeLine);
 
-    /// <summary>Sample operations on a random initial state in parallel. The result is compared against the result of the possible sequential permutations. At least one of these permutations result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial state generator.</param>
-    /// <param name="operation1">An operation generator that can act on the state in parallel.</param>
-    /// <param name="operation2">An operation generator that can act on the state in parallel.</param>
-    /// <param name="operation3">An operation generator that can act on the state in parallel.</param>
-    /// <param name="operation4">An operation generator that can act on the state in parallel.</param>
-    /// <param name="operation5">An operation generator that can act on the state in parallel.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="print">A function to convert the state to a string for error reporting (default Check.Print).</param>
-    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <inheritdoc cref="SampleParallel{T}(Gen{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, GenOperation{T}, Func{T, T, bool}?, string?, int, int, long, int, int, Func{T, string}?, int, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<T>(this Gen<T> initial, GenOperation<T> operation1, GenOperation<T> operation2, GenOperation<T> operation3, GenOperation<T> operation4, GenOperation<T> operation5, Func<T, T, bool>? equal = null, string? seed = null,
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<T, string>? print = null,
@@ -2556,87 +2004,25 @@ public static partial class Check
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
 
-    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial actual and model state generator.</param>
-    /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
-    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <inheritdoc cref="SampleParallel{Actual, Model}(Gen{ValueTuple{Actual, Model}}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, Func{Actual, Model, bool}?, string?, int, int, long, int, int, Func{Actual, string}?, Func{Model, string}?, int, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1, GenOperation<Actual, Model> operation2, Func<Actual, Model, bool>? equal = null, string? seed = null,
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
 
-    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial actual and model state generator.</param>
-    /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="operation3">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
-    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <inheritdoc cref="SampleParallel{Actual, Model}(Gen{ValueTuple{Actual, Model}}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, Func{Actual, Model, bool}?, string?, int, int, long, int, int, Func{Actual, string}?, Func{Model, string}?, int, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1, GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, Func<Actual, Model, bool>? equal = null, string? seed = null,
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
 
-    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial actual and model state generator.</param>
-    /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="operation3">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="operation4">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
-    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <inheritdoc cref="SampleParallel{Actual, Model}(Gen{ValueTuple{Actual, Model}}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, Func{Actual, Model, bool}?, string?, int, int, long, int, int, Func{Actual, string}?, Func{Model, string}?, int, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1, GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4, Func<Actual, Model, bool>? equal = null, string? seed = null,
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
         => SampleParallel(initial, [operation1, operation2, operation3, operation4], equal, seed, maxSequentialOperations, maxParallelOperations, iter, time, threads, printActual, printModel, replay, writeLine);
 
-    /// <summary>Sample operations on the random initial actual state in parallel and compare to all the possible linearized operations run sequentially on the initial model state. At least one of these permutations model result must be equal for the parallel execution to have been linearized successfully. If not the failing initial state and sequence will be shrunk down to the shortest and simplest.</summary>
-    /// <param name="initial">The initial actual and model state generator.</param>
-    /// <param name="operation1">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="operation2">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="operation3">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="operation4">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="operation5">An actual and model operation generator that can act on the state in parallel. There is no need for the model operations to be thread safe as they are only run sequentially.</param>
-    /// <param name="equal">A function to check if the actual and model are the same (default Check.Equal).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="maxSequentialOperations">The maximum number of operations to run sequentially before the parallel operations (default of 10).</param>
-    /// <param name="maxParallelOperations">The maximum number of operations to run in parallel (default of 5).</param>
-    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
-    /// <param name="time">The number of seconds to run the sample.</param>
-    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    /// <param name="printActual">A function to convert the actual state to a string for error reporting (default Check.Print).</param>
-    /// <param name="printModel">A function to convert the model state to a string for error reporting (default Check.Print).</param>
-    /// <param name="replay">The number of times to retry the seed to reproduce an initial fail (default 100).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary total iterations output.</param>
+    /// <inheritdoc cref="SampleParallel{Actual, Model}(Gen{ValueTuple{Actual, Model}}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, GenOperation{Actual, Model}, Func{Actual, Model, bool}?, string?, int, int, long, int, int, Func{Actual, string}?, Func{Model, string}?, int, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SampleParallel<Actual, Model>(this Gen<(Actual, Model)> initial, GenOperation<Actual, Model> operation1, GenOperation<Actual, Model> operation2, GenOperation<Actual, Model> operation3, GenOperation<Actual, Model> operation4, GenOperation<Actual, Model> operation5, Func<Actual, Model, bool>? equal = null, string? seed = null,
         int maxSequentialOperations = 10, int maxParallelOperations = 5, long iter = -1, int time = -1, int threads = -1, Func<Actual, string>? printActual = null, Func<Model, string>? printModel = null, int replay = -1, Action<string>? writeLine = null)
@@ -2754,16 +2140,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Assert the first function is faster than the second to a given sigma.</summary>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster(Action, Action, double, int, int, int, bool, Action{string}?, bool?)"/>
     public static void Faster<I1, I2>(I1 faster, I2 slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true,
         Action<string>? writeLine = null, bool? allocAll = null) where I1 : IInvoke where I2 : IInvoke
     {
@@ -3071,124 +2448,47 @@ public static partial class Check
         }
     }
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> faster, Action<T1, T2> slower, double sigma = -1.0, int threads = -1, int repeat = 1,
         int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> faster, Action<T1, T2, T3> slower, double sigma = -1.0, int threads = -1,
         int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> faster, Action<T1, T2, T3, T4> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
             sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> faster, Action<T1, T2, T3, T4, T5> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
             sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> faster, Action<T1, T2, T3, T4, T5, T6> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
             sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> faster, Action<T1, T2, T3, T4, T5, T6, T7> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
             sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> faster, Action<T1, T2, T3, T4, T5, T6, T7, T8> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
@@ -3265,116 +2565,47 @@ public static partial class Check
         }
     }
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> faster, Func<T1, T2, Task> slower, double sigma = -1.0, int threads = -1,
         int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> faster, Func<T1, T2, T3, Task> slower, double sigma = -1.0, int threads = -1,
         int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> faster, Func<T1, T2, T3, T4, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
             sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> faster, Func<T1, T2, T3, T4, T5, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
             sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> faster, Func<T1, T2, T3, T4, T5, T6, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
             sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
             sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> slower,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
@@ -3472,19 +2703,7 @@ public static partial class Check
         }
     }
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     public static void Faster<I1, I2, T, R>(this Gen<T> gen, I1 faster, I2 slower, Func<R, R, bool>? equal = null, double sigma = -1.0, int threads = -1, int repeat = 1,
         int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
             where I1 : IInvoke<T, R> where I2 : IInvoke<T, R>
@@ -3511,131 +2730,47 @@ public static partial class Check
         }
     }
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> faster, Func<T1, T2, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> faster, Func<T1, T2, T3, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> faster, Func<T1, T2, T3, T4, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), equal, sigma, threads, repeat, timeout, seed,
             raiseexception, writeLine, allocAll);
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> faster, Func<T1, T2, T3, T4, T5, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), equal, sigma, threads, repeat,
             timeout, seed, raiseexception, writeLine, allocAll);
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> faster, Func<T1, T2, T3, T4, T5, T6, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), equal, sigma,
             threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
             equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
-    /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
@@ -3726,124 +2861,47 @@ public static partial class Check
         }
     }
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<R>> faster, Func<T1, T2, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<R>> faster, Func<T1, T2, T3, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<R>> faster, Func<T1, T2, T3, T4, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
             equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<R>> faster, Func<T1, T2, T3, T4, T5, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
             equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
             equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
             equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
 
-    /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
-    /// <param name="gen">The input data generator.</param>
-    /// <param name="faster">The presumed faster code to test.</param>
-    /// <param name="slower">The presumed slower code to test.</param>
-    /// <param name="equal">A function to check if the two states are the same (default Check.Equal).</param>
-    /// <param name="sigma">The sigma is the number of standard deviations from the null hypothesis (default 6).</param>
-    /// <param name="threads">The number of threads to run the code on (default number logical CPUs).</param>
-    /// <param name="repeat">The number of times to call each of the actions in each iteration if they are too quick to accurately measure (default 1).</param>
-    /// <param name="timeout">The number of seconds to wait before timing out (default 60).</param>
-    /// <param name="seed">The initial seed to use for the first iteration.</param>
-    /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
-    /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> slower, Func<R, R, bool>? equal = null,
         double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
@@ -4359,8 +3417,15 @@ sealed class EqualityField<T, V> : EqualityField<T>
     {
         var name = Name;
         var s = set;
+        T Set(T x, V v)
+        {
+            var r = s(x, v);
+            if (ReferenceEquals(r, v) && !ReferenceEquals(r, x))
+                ThrowHelper.Throw($"Field '{name}' setter returned the value it was given, not the instance. An assignment like (t, v) => t.Next = v binds to the functional overload when the value converts to the instance type; write it as a block, (t, v) => {{ t.Next = v; }}.");
+            return r;
+        }
         return new GenDistinctPair<V>(gen, comparer, name)
-            .Select(t => new FieldApply<T>(name, x => s(x, t.Item1), x => s(x, t.Item2)));
+            .Select(t => new FieldApply<T>(name, x => Set(x, t.Item1), x => Set(x, t.Item2)));
     }
 }
 
@@ -4383,7 +3448,7 @@ public sealed class EqualityFields<T>
     }
 
     /// <summary>Add a field that is expected to be included in equality. Changing it must make two equal instances unequal.</summary>
-    /// <param name="set">An in-place setter that mutates the field value on the instance.</param>
+    /// <param name="set">An in-place setter that mutates the field value on the instance. For a struct use a functional setter, as an in-place one only changes the copy it is passed.</param>
     /// <param name="gen">The generator for the field value.</param>
     /// <param name="comparer">When two field values are considered the same for equality (default EqualityComparer.Default). For a field whose setter transforms the value (e.g. rounds or clamps), pass a comparer that reflects that transform so the two generated values stay distinct once set.</param>
     /// <param name="name">The field name for failure messages (defaults to the setter expression).</param>
@@ -4405,7 +3470,7 @@ public sealed class EqualityFields<T>
     }
 
     /// <summary>Add a field that is expected to be excluded from equality. Changing it must keep two equal instances equal.</summary>
-    /// <param name="set">An in-place setter that mutates the field value on the instance.</param>
+    /// <param name="set">An in-place setter that mutates the field value on the instance. For a struct use a functional setter, as an in-place one only changes the copy it is passed.</param>
     /// <param name="gen">The generator for the field value.</param>
     /// <param name="comparer">When two field values are considered the same for equality (default EqualityComparer.Default). For a field whose setter transforms the value (e.g. rounds or clamps), pass a comparer that reflects that transform so the two generated values stay distinct once set.</param>
     /// <param name="name">The field name for failure messages (defaults to the setter expression).</param>

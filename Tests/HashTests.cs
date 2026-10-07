@@ -191,6 +191,45 @@ public class HashTests
         });
     }
 
+    [Test]
+    public void Hash_Collection_Is_Count_Then_Elements()
+    {
+        Same(Gen.Bool, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.SByte, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Byte, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Short, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.UShort, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Int, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.UInt, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Long, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.ULong, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.DateTime, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.TimeSpan, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.DateTimeOffset, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Guid, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Char, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.String, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Double, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Float, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Decimal, (h, v) => h.Add(v), (h, v) => h.Add(v));
+
+        static void Same<T>(Gen<T> gen, Action<Hash, IEnumerable<T>?> addAll, Action<Hash, T> addOne)
+            => Gen.Select(gen.Array[0, 8], Gen.Int[0, 2]).Sample((xs, kind) =>
+            {
+                IEnumerable<T>? val = kind switch { 0 => xs, 1 => xs.Select(x => x), _ => null };
+                var actual = new Hash(null);
+                addAll(actual, val);
+                var expected = new Hash(null);
+                if (val is null) expected.Add("<null>");
+                else
+                {
+                    expected.Add((uint)xs.Length);
+                    foreach (var x in xs) addOne(expected, x);
+                }
+                return actual.GetHashCode() == expected.GetHashCode();
+            });
+    }
+
     static string ThisFile([CallerFilePath] string filePath = "") => filePath;
 
     static void DeleteCache(string member)

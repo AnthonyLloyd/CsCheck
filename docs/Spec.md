@@ -299,6 +299,7 @@ Spec.Exhaustive of 31 requirements
 - **`deadlock`**: states with no enabled action that were not declared `Terminal`. For a protocol this should be
   zero; anything else is a state the design cannot leave. When it is not zero the report prints a path to the first
   one, and `report.DeadlockTrace` is that path, because knowing a dead end exists is not the same as knowing where.
+  `report.Deadlock` is the same path as a `Trace<S>`, to assert on its states or replay it against an implementation.
   Each step of that path also says what else was enabled where it was taken, since knowing where is still not the
   same as knowing which turn was the wrong one. `Sample` reports the same thing as `deadlocked`, counting walks rather
   than states since it keeps no visited set - which matters, because it is the engine left when a space will not close.
@@ -408,11 +409,12 @@ await Assert.That(report.CaughtBy("no heartbeat when idle")).IsEqualTo("HB-KEEPA
 await Assert.That(report.Uncaught).IsEmpty();
 ```
 
-`Results` is one row per fault, `Uncaught` the ones proved undetectable (exhaustive search closed, no violation found),
-`Inconclusive` the ones where the search gave up before closing (`NOT CLOSED` in the table; these do not trigger
-`throwOnUncaught`), `Unexercised` the trailing list, and `ToString()` the table. Each `SpecFaultResult` carries a
-`FaultOutcome` (`Caught`, `NotDetected`, or `Inconclusive`), which makes the three outcomes unambiguous rather than
-relying on a nullable `CaughtBy` plus a flag. `CaughtBy` throws on a name that was never declared: a fault renamed
+`Results` is one row per fault, `Uncaught` the ones no requirement caught (proved undetectable by `Faults`, or not
+found in the walks by `SampleFaults`), `Inconclusive` the ones where the search gave up before closing (`NOT CLOSED` in
+the table; these do not trigger `throwOnUncaught`), `Unexercised` the trailing list, and `ToString()` the table. Each
+`SpecFaultResult` carries a `FaultOutcome` (`Caught`, `NotDetected`, `Inconclusive`, or `NotFound` for a fault the
+sampled walks did not find), which makes the outcomes unambiguous rather than relying on a nullable `CaughtBy` plus a
+flag. `CaughtBy` throws on a name that was never declared: a fault renamed
 without its assertion being updated would otherwise read as uncaught, which is the same green-for-the-wrong-reason
 failure the column exists to catch.
 

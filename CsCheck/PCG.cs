@@ -63,6 +63,15 @@ public sealed class PCG
         while (n < threshold) n = Next64();
         return n % maxExclusive;
     }
+    public UInt128 Next128() => ((UInt128)Next64() << 64) + Next64();
+    public UInt128 Next128(UInt128 maxExclusive)
+    {
+        if (maxExclusive <= ulong.MaxValue) return Next64((ulong)maxExclusive);
+        var threshold = -maxExclusive % maxExclusive;
+        var n = Next128();
+        while (n < threshold) n = Next128();
+        return n % maxExclusive;
+    }
     public override string ToString() => SeedString.ToString(State, Stream);
     public string ToString(ulong state) => SeedString.ToString(state, Stream);
     public static PCG Parse(string seed)

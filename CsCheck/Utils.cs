@@ -552,17 +552,22 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
             yield return (T[])order.Clone();
             yield break;
         }
-loop_i: for (int i = 0; i < threadIds.Length; i++)
+        for (int i = 0; i < threadIds.Length; i++)
         {
-            if (taken[i]) continue;
-            for (int j = 0; j < i; j++)
-                if (!taken[j] && threadIds[j] == threadIds[i]) { continue loop_i; }
+            if (taken[i] || EarlierUntakenOnSameThread(threadIds, taken, i)) continue;
             taken[i] = true;
             order[depth] = sequence[i];
             foreach (var permutation in Interleavings(threadIds, sequence, taken, order, depth + 1))
                 yield return permutation;
             taken[i] = false;
         }
+    }
+
+    static bool EarlierUntakenOnSameThread(int[] threadIds, bool[] taken, int i)
+    {
+        for (int j = 0; j < i; j++)
+            if (!taken[j] && threadIds[j] == threadIds[i]) return true;
+        return false;
     }
 
     /// <summary>Check if two doubles are within the given absolute and relative tolerance.</summary>
@@ -704,7 +709,7 @@ loop_i: for (int i = 0; i < threadIds.Length; i++)
 }
 
 /// <summary>A median and quartile estimator.</summary>
-public sealed class MedianEstimator
+internal sealed class MedianEstimator
 {
     /// <summary>The number of sample observations.</summary>
     public int N;
@@ -943,9 +948,14 @@ public sealed class MedianEstimator
 
 /// <summary>Median estimate with error. Supports mathematical operators.</summary>
 [StructLayout(LayoutKind.Auto)]
-public struct MedianEstimate(MedianEstimator e)
+public struct MedianEstimate
 {
-    public double Median = e.Median, Error = (e.Q3 - e.Q1) * 0.5;
+    public double Median, Error;
+    internal MedianEstimate(MedianEstimator e)
+    {
+        Median = e.Median;
+        Error = (e.Q3 - e.Q1) * 0.5;
+    }
     static double Sqr(double x) => x * x;
     public static MedianEstimate operator -(double a, MedianEstimate e) => new() { Median = a - e.Median, Error = e.Error };
     public static MedianEstimate operator *(MedianEstimate e, double a) => new() { Median = e.Median * a, Error = e.Error * a };
@@ -958,7 +968,7 @@ public struct MedianEstimate(MedianEstimator e)
         Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0").PadLeft(5) + " ±" + Math.Min(Error, 99.9).ToString("0.0").PadLeft(4);
 }
 
-public sealed class Classifier
+internal sealed class Classifier
 {
     readonly ConcurrentDictionary<string, MedianEstimator> estimators = new(StringComparer.Ordinal);
     // Counts without times, in a long because a long run can count past int.MaxValue, which MedianEstimator.N cannot hold.
@@ -1093,25 +1103,8 @@ public sealed class Classifier
         };
 }
 
-public static class HashHelper
-{
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ulong GetFastModMultiplier(uint divisor)
-        => ulong.MaxValue / divisor + 1;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint FastMod(uint value, uint divisor, ulong multiplier)
-        => (uint)(((((multiplier * value) >> 32) + 1) * divisor) >> 32);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsPow2(uint value) => (value & (value - 1)) == 0;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsPow2(int value) => (value & (value - 1)) == 0;
-}
-
 [StackTraceHidden]
-public static class ThrowHelper
+internal static class ThrowHelper
 {
     [DoesNotReturn]
     public static void ThrowFinishLessThanStart<T>(T start, T finish)
