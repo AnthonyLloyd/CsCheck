@@ -236,8 +236,8 @@ public class CheckTests
     [Test]
     public async Task Equal_ImmutableArray_Compares_Elements()
     {
-        await Assert.That(Check.Equal(ImmutableArray.Create(1, 2), ImmutableArray.Create(1, 2))).IsTrue();
-        await Assert.That(Check.Equal(ImmutableArray.Create(1, 2), ImmutableArray.Create(2, 1))).IsFalse();
+        await Assert.That(Check.Equal(ImmutableArray.Create(1, 2), [1, 2])).IsTrue();
+        await Assert.That(Check.Equal(ImmutableArray.Create(1, 2), [2, 1])).IsFalse();
     }
 
     [Test]
@@ -276,8 +276,8 @@ public class CheckTests
         static Dictionary<int, int[]> ToDict(int[] a) => a.Select((x, i) => (i, x)).ToDictionary(t => t.i, t => new[] { t.x });
         Gen.Select(Gen.Int[0, 3].Array[0, 6], Gen.Int[0, 3].Array[0, 6], Gen.Int[0, 2], (xs, other, kind) => (xs, ys: kind switch
         {
-            0 => xs.OrderDescending().ToArray(),
-            1 => other.Concat(xs).Take(xs.Length).ToArray(),
+            0 => [.. xs.OrderDescending()],
+            1 => [.. other.Concat(xs).Take(xs.Length)],
             _ => other,
         }))
         .Sample((xs, ys) =>

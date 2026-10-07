@@ -963,15 +963,12 @@ public sealed class Classifier
     readonly ConcurrentDictionary<string, MedianEstimator> estimators = new(StringComparer.Ordinal);
     // Counts without times, in a long because a long run can count past int.MaxValue, which MedianEstimator.N cannot hold.
     readonly ConcurrentDictionary<string, long> counts = new(StringComparer.Ordinal);
-    [ThreadStatic] static MedianEstimator? nextEstimator;
     long nullCount;
     public void Add(string name, long time)
     {
         if (name is not null)
         {
-            var estimator = estimators.GetOrAdd(name, nextEstimator ??= new());
-            if (ReferenceEquals(estimator, nextEstimator))
-                nextEstimator = new();
+            var estimator = estimators.GetOrAdd(name, static _ => new());
             lock (estimator)
             {
                 estimator.Add(time);

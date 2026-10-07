@@ -22,12 +22,12 @@ CsCheck also makes specification, performance and regression testing simple and 
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;specification;model-checking;temporal;parallel;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>5.0.0</Version>
+        <Version>5.0.0-beta1</Version>
         <PackageReleaseNotes>
 Fixed SampleModelBased writing an operation table and timing every operation when only writeLine is set.
 SampleModelBased classify table is now counts only, kept per thread, so it no longer slows the sample down.
 SampleModelBased only builds operation names when reporting a failure.
-Fixed a Classifier summary row counting the rows it is a prefix of, such as Op1 counting Op10.
+Fixed a Classifier summary row counting the rows it is a prefix of, such as Op1 counting Op10.      
 Fixed a throwing writeLine in a classify table failing a passing sample or replacing its failure.
 Classifier totals are now long, so a long classify run no longer throws OverflowException.
 Added Gen.Select overloads for 9 to 16 generators with a selector.
@@ -51,7 +51,7 @@ Added Gen.Select overloads for 9 to 16 generators with a selector.
         <AnalysisMode>All</AnalysisMode>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.261" PrivateAssets="All" />
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.294" PrivateAssets="All" />
         <None Include="../CsCheck.png" Pack="true" PackagePath="" Visible="False" />
         <None Include="../README.md" Pack="true" PackagePath="" Visible="False" />
     </ItemGroup>
