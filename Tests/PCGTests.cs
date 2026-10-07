@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using CsCheck;
 
 public class PCGTests
@@ -108,6 +109,17 @@ public class PCGTests
         });
     }
 
+    [Test]
+    public void PCG_Bound_UInt128()
+    {
+        Gen.UInt128.Sample(i =>
+        {
+            if (i == 0) return true; // as Next128(0) is an error
+            var threshold = -i % i;
+            return threshold == (UInt128.MaxValue % i + 1) % i;
+        });
+    }
+
     readonly Gen<PCG> genPCG =
         Gen.Select(Gen.UInt, Gen.ULong,
             (stream, seed) => new PCG(stream, seed));
@@ -131,7 +143,7 @@ public class PCGTests
                     mask <<= 1;
                 }
             }
-            Check.ChiSquared(expected, actual, 10);
+            Check.ChiSquared(expected, actual);
         }, iter: 1);
     }
 
@@ -154,7 +166,30 @@ public class PCGTests
                     mask <<= 1;
                 }
             }
-            Check.ChiSquared(expected, actual, 10);
+            Check.ChiSquared(expected, actual);
+        }, iter: 1);
+    }
+
+    [Test]
+    public void PCG_Next128()
+    {
+        genPCG
+        .Select(i => i.Next128())
+        .Array[20]
+        .Sample(t =>
+        {
+            var expected = Enumerable.Repeat(10, 128).ToArray();
+            var actual = new int[128];
+            foreach (var i in t)
+            {
+                var mask = UInt128.One;
+                for (int m = 0; m < 128; m++)
+                {
+                    if ((i & mask) == mask) actual[m]++;
+                    mask <<= 1;
+                }
+            }
+            Check.ChiSquared(expected, actual);
         }, iter: 1);
     }
 
@@ -172,6 +207,14 @@ public class PCGTests
         Gen.ULong[1, ulong.MaxValue].Select(genPCG)
         .Select((max, pcg) => (max, pcg.Next64(max)))
         .Sample((max, x) => x <= max);
+    }
+
+    [Test]
+    public void PCG_Next128_UInt128()
+    {
+        Gen.UInt128.Select(i => i + 1).Select(genPCG)
+        .Select((max, pcg) => (max, pcg.Next128(max)))
+        .Sample((max, x) => x < max);
     }
 
     [Test]
@@ -221,10 +264,22 @@ public class PCGTests
     }
 
     [Test]
+    public void FastMod()
+    {
+        Gen.Select(Gen.UInt[0, int.MaxValue], Gen.UInt[1, 2_000_000_000])
+        .Sample((value, divisor) =>
+        {
+            var multiplier = PCGTest.GetFastModMultiplier(divisor);
+            var fastMod = PCGTest.FastMod(value, divisor, multiplier);
+            return fastMod == value % divisor;
+        });
+    }
+
+    [Test]
     public void PCG_Multiplier_Is_Not_Faster()
     {
         Gen.Select(Gen.UInt, Gen.ULong, Gen.UInt[2, 10_000])
-        .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m, HashHelper.GetFastModMultiplier(m)))
+        .Select((i, s, m) => (new PCG(i, s), new PCGTest(i, s), m, PCGTest.GetFastModMultiplier(m)))
         .Faster(
             (_, n, u, m) => n.Next(u, m),
             (o, _, u, _) => o.Next(u),
@@ -294,7 +349,7 @@ public class PCGTests
         }
         public PCGTest(uint stream, ulong seed)
         {
-            Inc = (stream << 1) | 1UL;
+            Inc = ((ulong)stream << 1) | 1UL;
             State = Inc + seed;
         }
         public PCGTest(uint stream) : this(stream, (ulong)Stopwatch.GetTimestamp()) { }
@@ -352,20 +407,26 @@ public class PCGTests
             while (n < threshold) n = Next64();
             return n % maxExclusive;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong GetFastModMultiplier(uint divisor)
+            => ulong.MaxValue / divisor + 1;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint FastMod(uint value, uint divisor, ulong multiplier)
+            => (uint)(((((multiplier * value) >> 32) + 1) * divisor) >> 32);
         public uint Next(uint maxExclusive, ulong multiplier)
         {
             if (maxExclusive == 1U) return 0U;
-            var threshold = HashHelper.FastMod((uint)-(int)maxExclusive, maxExclusive, multiplier);
+            var threshold = FastMod((uint)-(int)maxExclusive, maxExclusive, multiplier);
             var n = Next();
             while (n < threshold) n = Next();
-            return HashHelper.FastMod(n, maxExclusive, multiplier);
+            return FastMod(n, maxExclusive, multiplier);
         }
         public override string ToString() => SeedString.ToString(State, Stream);
         public string ToString(ulong state) => SeedString.ToString(state, Stream);
         public static PCGTest Parse(string seed)
         {
             var state = SeedString.Parse(seed, out var stream);
-            return new PCGTest((stream << 1) | 1UL, state);
+            return new PCGTest(((ulong)stream << 1) | 1UL, state);
         }
     }
 }

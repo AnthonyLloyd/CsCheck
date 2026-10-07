@@ -19,7 +19,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 
-/// <summary>One step of a <see cref="Trace{S}"/>: the action applied and the model state either side of it. This is what <see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see> hands to its <c>apply</c>, so it carries both the printable names and the indices needed to recover the typed argument.</summary>
+/// <summary>One step of a <see cref="Trace{S}"/>: the action applied and the model state either side of it. This is what <see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see> and <see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int)">ConformExhaustive</see> hand to their <c>apply</c>, so it carries both the printable names and the indices needed to recover the typed argument.</summary>
 /// <param name="Index">Zero based position of this step in the trace.</param>
 /// <param name="ActionIndex">Position of the action in the order they were declared on the <see cref="Spec{S}"/>.</param>
 /// <param name="ArgIndex">Index into the array passed as the action's domain, so a conformance test can recover the typed argument as domain[<paramref name="ArgIndex"/>]. Zero for an action declared without one.</param>
@@ -40,7 +40,7 @@ public sealed class Trace<S>
     public readonly S Initial;
     /// <summary>The steps in order. Shorter than requested when no further action was enabled.</summary>
     public readonly Transition<S>[] Steps;
-    /// <summary><see langword="true"/> when the walk stopped because nothing was enabled (including an intended <see cref="Spec{S}.Terminal(Func{S, bool})">Terminal</see> end). <see langword="false"/> when the walk reached the requested length. A deadlock is a no-action end that was not declared Terminal; that split lives on <see cref="SpecReport"/>, not here. </summary>
+    /// <summary><see langword="true"/> when the walk stopped because nothing was enabled (including an intended <see cref="Spec{S}.Terminal(Func{S, bool})">Terminal</see> end). <see langword="false"/> when the walk reached the requested length. A deadlock is a no-action end that was not declared Terminal; that split lives on <see cref="SpecReport{S}"/>, not here. </summary>
     public readonly bool NoActionEnabled;
 
     internal Trace(S initial, Transition<S>[] steps, bool noActionEnabled)
@@ -183,6 +183,7 @@ sealed class SpecFault<S>(string name, Func<S, S, bool> when, Func<S, S, S> pert
     public readonly Func<S, S, S> Perturb = perturb;
     public string? OnAction;
     public int OnActionIndex = -1;
+    public bool AppliesTo(int action, S before, S after) => (OnActionIndex < 0 || OnActionIndex == action) && When(before, after);
 }
 
 /// <summary>Entry point for building a <see cref="Spec{S}"/>.</summary>
@@ -193,7 +194,7 @@ public static class Spec
     public static Spec<S> From<S>(S initial) => new(initial);
 }
 
-/// <summary>An executable specification: a pure transition system plus named requirements quoted from a document. The same spec can be explored exhaustively (<see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see>) or randomly (<see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see>), mutated (<see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see>), or run against a real implementation (<see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>).</summary>
+/// <summary>An executable specification: a pure transition system plus named requirements quoted from a document. The same spec can be explored exhaustively (<see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see>) or randomly (<see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see>), mutated (<see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see>), or run against a real implementation on sampled traces (<see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>) or on every transition (<see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int)">ConformExhaustive</see>).</summary>
 /// <remarks>The builder methods add to this instance and return it. The spec freezes the first time an engine runs it; adding after that throws. Return a fresh Spec from a method and derive variants from that.</remarks>
 public sealed class Spec<S>(S initial)
 {
@@ -211,6 +212,7 @@ public sealed class Spec<S>(S initial)
     // Which (action, argument) pair each action's arguments start at, so coverage is counted per case and not per action. Built by Validate, which is also where the spec freezes.
     internal int[] ArgBase = [];
     internal int ArgPairs;
+    string?[] _argNames = [];
     internal bool Frozen;
     static readonly Func<int, string> NoArg = _ => "";
 
@@ -242,7 +244,7 @@ public sealed class Spec<S>(S initial)
         return this;
     }
 
-    /// <summary>The region of the state space to explore. States reached from inside it are still checked, so a requirement violated by the step that leaves the boundary is still found; those states are just not expanded. Use this when a model has no sound abstraction that makes it finite: <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> then still closes, and the result is the scoped claim "no violation is reachable without leaving the boundary" rather than the nothing you get from hitting <c>maxStates</c>. Prefer saturating a counter where you can - that makes higher values the same state, which generalises the proof instead of scoping it.</summary>
+    /// <summary>The region of the state space to explore. States reached from inside it are still checked, so a requirement violated by the step that leaves the boundary is still found; those states are just not expanded. Use this when a model has no sound abstraction that makes it finite: <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> then still closes, and the result is the scoped claim "no violation is reachable without leaving the boundary" rather than the nothing you get from hitting <c>maxStates</c>. Prefer saturating a counter where you can - that makes higher values the same state, which generalises the proof instead of scoping it.</summary>
     public Spec<S> Boundary(Func<S, bool> inBoundary)
     {
         ThrowIfFrozen("a boundary");
@@ -254,7 +256,7 @@ public sealed class Spec<S>(S initial)
     public Spec<S> Action(string name, Func<S, S> next, int weight = 1)
         => Action(name, static _ => true, next, weight);
 
-    /// <summary>An action with no argument, enabled only when <paramref name="guard"/> holds. <paramref name="weight"/> is the relative probability of being picked by <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see> among the enabled actions; <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> ignores it. Raise it for actions that open up the state space and lower it for ones that end a trace, or a cheap always-enabled terminator will eat most of the sampling budget.</summary>
+    /// <summary>An action with no argument, enabled only when <paramref name="guard"/> holds. <paramref name="weight"/> is the relative probability of being picked by <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see> among the enabled actions; <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> ignores it. Raise it for actions that open up the state space and lower it for ones that end a trace, or a cheap always-enabled terminator will eat most of the sampling budget.</summary>
     public Spec<S> Action(string name, Func<S, bool> guard, Func<S, S> next, int weight = 1)
     {
         ThrowIfFrozen($"action '{name}'");
@@ -263,7 +265,7 @@ public sealed class Spec<S>(S initial)
         return this;
     }
 
-    /// <summary>An action over a small finite argument domain, always enabled. The domain is enumerated by <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> and sampled by <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see>, so declare abstract argument cases (for example TooLow/Expected/TooHigh) rather than raw values.</summary>
+    /// <summary>An action over a small finite argument domain, always enabled. The domain is enumerated by <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> and sampled by <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see>, so declare abstract argument cases (for example TooLow/Expected/TooHigh) rather than raw values.</summary>
     public Spec<S> Action<T>(string name, T[] domain, Func<S, T, S> next, int weight = 1)
         => Action(name, domain, static (_, _) => true, next, weight);
 
@@ -281,7 +283,7 @@ public sealed class Spec<S>(S initial)
     public Spec<S> Invariant(string id, string quote, Func<S, bool> holds) =>
         Add(new(ReqKind.Invariant, id, quote) { Holds = holds });
 
-    /// <summary>Must hold in at least one reachable state. The dual of <see cref="Spec{S}.Invariant">Invariant</see>, and the guard against a model so over-constrained that it cannot reach the case you care about - which is the failure mode that makes every other requirement pass for the wrong reason. <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> fails when the state space closes without this ever holding, which is a proof of unreachability; <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see> can only report it as never seen.</summary>
+    /// <summary>Must hold in at least one reachable state. The dual of <see cref="Spec{S}.Invariant">Invariant</see>, and the guard against a model so over-constrained that it cannot reach the case you care about - which is the failure mode that makes every other requirement pass for the wrong reason. <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> fails when the state space closes without this ever holding, which is a proof of unreachability; <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see> can only report it as never seen.</summary>
     public Spec<S> Reachable(string id, string quote, Func<S, bool> holds) =>
         Add(new(ReqKind.Reachable, id, quote) { Holds = holds });
 
@@ -319,7 +321,7 @@ public sealed class Spec<S>(S initial)
     }
 
     /// <summary>One <see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> per element of <paramref name="over"/>, each with its own count, reported as <c>id[element]</c>. Needed whenever the subject of the requirement is one of several things: a single instance counts occurrences across all of them, so three retries of one key would exhaust the budget for another. Costs one of the 16 shared <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see>/<see cref="Spec{S}.AtMost(string, string, int, Func{S, S, bool})">AtMost</see> slots per element.</summary>
-    public Spec<S> AtMost<T>(string id, string quote, int times, T[] over, Func<S, S, T, bool> occurs)
+    public Spec<S> AtMost<T>(string id, string quote, T[] over, int times, Func<S, S, T, bool> occurs)
     {
         if (over is null || over.Length == 0) ThrowHelper.Throw($"Spec AtMost '{id}' over is null or empty");
         foreach (var t in over)
@@ -327,7 +329,7 @@ public sealed class Spec<S>(S initial)
         return this;
     }
 
-    /// <summary>Bounded response. Once <paramref name="trigger"/> holds, <paramref name="response"/> must hold on one of the next <paramref name="within"/> steps, unless <paramref name="cancel"/> discharges the obligation first. The outstanding deadline becomes part of the search state so <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> proves this too. <para>The next steps, not this one: a response holding on the trigger step itself does not discharge the obligation. That is stricter than the usual reading of leads-to, and the opposite of <see cref="Spec{S}.Precedes(string, string, Func{S, S, bool}, Func{S, S, bool})">Precedes</see>, which is satisfied by its two predicates holding on one step. So a property whose consequence happens <em>in</em> the triggering step, like answering a TestRequest with a Heartbeat, is a <see cref="Spec{S}.Rule(string, string, Func{S, S, bool})">Rule</see>; <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see> is for the ones that take time.</para></summary>
+    /// <summary>Bounded response. Once <paramref name="trigger"/> holds, <paramref name="response"/> must hold on one of the next <paramref name="within"/> steps, unless <paramref name="cancel"/> discharges the obligation first. The outstanding deadline becomes part of the search state so <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> proves this too. <para>The next steps, not this one: a response holding on the trigger step itself does not discharge the obligation. That is stricter than the usual reading of leads-to, and the opposite of <see cref="Spec{S}.Precedes(string, string, Func{S, S, bool}, Func{S, S, bool})">Precedes</see>, which is satisfied by its two predicates holding on one step. So a property whose consequence happens <em>in</em> the triggering step, like answering a TestRequest with a Heartbeat, is a <see cref="Spec{S}.Rule(string, string, Func{S, S, bool})">Rule</see>; <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see> is for the ones that take time.</para></summary>
     /// <remarks><paramref name="per"/> names an action, not an action and its argument. That is right for a clock, which is what it is nearly always used for, but it means a deadline cannot be measured in "reads of key k". Split such an action into separately named actions if you need that. Note also that a <paramref name="per"/> bound only constrains paths on which that action recurs: proving it says nothing about an execution that stops ticking, which is the right reading of "within three heartbeat intervals" but is worth being explicit about.</remarks>
     public Spec<S> Response(string id, string quote, Func<S, S, bool> trigger, Func<S, S, bool> response, int within, Func<S, S, bool>? cancel = null, string? per = null)
     {
@@ -459,15 +461,22 @@ public sealed class Spec<S>(S initial)
             var pairs = 0;
             for (int a = 0; a < Actions.Count; a++) { ArgBase[a] = pairs; pairs += Actions[a].ArgCount; }
             ArgPairs = pairs;
+            _argNames = new string?[pairs];
         }
         Frozen = true;
     }
+
+    // Rendered the first time a case is used rather than on every step that takes it, since a domain element's ToString usually allocates. Two threads may both render it, which is harmless.
+    internal string ArgName(int action, int arg) => _argNames[ArgBase[action] + arg] ??= Actions[action].ArgName(arg);
 }
 
 sealed class GenSpecTrace<S>(Spec<S> spec, int minSteps, int maxSteps, SpecFault<S>? fault = null) : Gen<Trace<S>>
 {
     [ThreadStatic] static int[]? actionBuf;
     [ThreadStatic] static int[]? argBuf;
+    // A walk is built here and copied out at its final length. Allocating the requested length instead wasted the rest
+    // whenever a walk ended early: on the FIX example a walk averages 4.8 steps of a requested 12.5.
+    [ThreadStatic] static Transition<S>[]? _stepBuf;
 
     readonly int lengths = minSteps >= 0 && maxSteps >= minSteps ? maxSteps - minSteps + 1 : ThrowHelper.Throw<int>($"Spec trace steps must be 0 <= minSteps <= maxSteps, was {minSteps} and {maxSteps}");
 
@@ -482,7 +491,8 @@ sealed class GenSpecTrace<S>(Spec<S> spec, int minSteps, int maxSteps, SpecFault
         var enabledActions = actionBuf;
         if (enabledActions is null || enabledActions.Length < actions.Count)
             enabledActions = actionBuf = new int[actions.Count];
-        var steps = new Transition<S>[length];
+        var steps = _stepBuf;
+        if (steps is null || steps.Length < length) steps = _stepBuf = new Transition<S>[maxSteps];
         var state = spec.Initial;
         var noActionEnabled = false;
         int n = 0;
@@ -513,20 +523,19 @@ sealed class GenSpecTrace<S>(Spec<S> spec, int minSteps, int maxSteps, SpecFault
                 if (chosen.Enabled(state, g)) enabledArgs[ng++] = g;
             var gi = enabledArgs[(int)pcg.Next((uint)ng)];
             var after = chosen.Apply(state, gi);
-            if (fault?.When(state, after) == true) after = fault.Perturb(state, after);
-            steps[n] = new Transition<S>(n, ai, gi, chosen.Name, chosen.ArgName(gi), state, after);
+            if (fault?.AppliesTo(ai, state, after) == true) after = fault.Perturb(state, after);
+            steps[n] = new Transition<S>(n, ai, gi, chosen.Name, spec.ArgName(ai, gi), state, after);
             state = after;
-            total.Add(new Size(((ulong)ai << 20) + (ulong)gi));
+            total.Add(((ulong)ai << 20) + (ulong)gi);
             if (Size.IsLessThan(min, size)) return default!;
         }
         size.I = (ulong)n << 32;
-        if (n != length) System.Array.Resize(ref steps, n); // Gen<T>.Array shadows the type name here
-        return new(spec.Initial, steps, noActionEnabled);
+        return new(spec.Initial, steps.AsSpan(0, n).ToArray(), noActionEnabled);
     }
 }
 
-/// <summary>The result of exploring a <see cref="Spec{S}"/>: coverage of actions and requirements, and for <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> whether the reachable state space was closed.</summary>
-public sealed class SpecReport
+/// <summary>The result of exploring a <see cref="Spec{S}"/>: coverage of actions and requirements, and for <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> whether the reachable state space was closed.</summary>
+public sealed class SpecReport<S>
 {
     /// <summary><see langword="true"/> when the whole reachable state space was enumerated, so safety and bounded response requirements are proved for the model rather than merely tested.</summary>
     public bool Closed { get; internal set; }
@@ -539,26 +548,36 @@ public sealed class SpecReport
     public long Revisits { get; internal set; }
     /// <summary>Steps in the longest shortest-path from the initial state, so the depth at which the search finished. This bounds how long a counterexample can be, since the walk is breadth first.</summary>
     public int Depth { get; internal set; }
-    /// <summary>States with no enabled action that were not declared <see cref="Spec{S}.Terminal(Func{S, bool})">Terminal</see>. A model of a protocol should have none: anywhere else with nothing to do is a state the design cannot leave. Zero for <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see>, which cannot count distinct states and reports <see cref="SpecReport.DeadlockTraces">DeadlockTraces</see> instead.</summary>
+    /// <summary>States with no enabled action that were not declared <see cref="Spec{S}.Terminal(Func{S, bool})">Terminal</see>. A model of a protocol should have none: anywhere else with nothing to do is a state the design cannot leave. Zero for <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see>, which cannot count distinct states and reports <see cref="SpecReport{S}.DeadlockTraces">DeadlockTraces</see> instead.</summary>
     public int DeadlockStates { get; internal set; }
-    /// <summary>Random walks that ended in a state with nothing enabled. Zero for <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see>, which reports <see cref="SpecReport.DeadlockStates">DeadlockStates</see> instead. A count of walks rather than of states, since a sampled walk keeps no visited set and so cannot tell one dead end from the same one reached twice.</summary>
+    /// <summary>Random walks that ended in a state with nothing enabled. Zero for <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see>, which reports <see cref="SpecReport{S}.DeadlockStates">DeadlockStates</see> instead. A count of walks rather than of states, since a sampled walk keeps no visited set and so cannot tell one dead end from the same one reached twice.</summary>
     public long DeadlockTraces { get; internal set; }
     /// <summary>States with no enabled action that <see cref="Spec{S}.Terminal(Func{S, bool})">Terminal</see> declared to be the intended end of a trace. Zero when no <see cref="Spec{S}.Terminal(Func{S, bool})">Terminal</see> was declared, in which case every such state is counted a deadlock instead, and zero for <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see>, which counts no states.</summary>
     public int TerminalStates { get; internal set; }
-    /// <summary>A path to a state that had nothing enabled and was not declared <see cref="Spec{S}.Terminal(Func{S, bool})">Terminal</see>, rendered with the spec's printer, or null when there were none. The count says a dead end exists; this says which, which is the difference between knowing the design can get stuck and knowing where. <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> gives a shortest one, <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see> the shortest it happened to walk.</summary>
+    /// <summary>A path to a state that had nothing enabled and was not declared <see cref="Spec{S}.Terminal(Func{S, bool})">Terminal</see>, rendered with the spec's printer, or null when there were none. The count says a dead end exists; this says which, which is the difference between knowing the design can get stuck and knowing where. <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> gives a shortest one, <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see> the shortest it happened to walk.</summary>
     public string? DeadlockTrace { get; internal set; }
+    /// <summary>The path <see cref="DeadlockTrace"/> renders, as the trace itself, so a test can assert on its states or replay its steps against an implementation. Null when there were none.</summary>
+    public Trace<S>? Deadlock { get; internal set; }
     /// <summary>States reached but not expanded because they fell outside the declared <see cref="Spec{S}.Boundary">Boundary</see>. When this is not zero, closure means "no violation is reachable without leaving the boundary", which is weaker than closure over the whole space, and an unheld <see cref="Spec{S}.Reachable">Reachable</see> requirement can no longer be called unreachable.</summary>
     public int Pruned { get; internal set; }
-    /// <summary>Random walks completed. Zero for <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see>, which reports <see cref="SpecReport.States">States</see> and <see cref="SpecReport.Transitions">Transitions</see> instead.</summary>
+    /// <summary>Random walks completed. Zero for <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see>, which reports <see cref="SpecReport{S}.States">States</see> and <see cref="SpecReport{S}.Transitions">Transitions</see> instead.</summary>
     public long TracesWalked { get; internal set; }
     /// <summary>Steps taken across every walk. Named apart from <see cref="Trace{S}.Steps"/>, which is one walk's transitions rather than a count of them.</summary>
     public long StepsWalked { get; internal set; }
+    /// <summary>States whose every enabled transition <see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int)">ConformExhaustive</see> drove the implementation along and saw conform. Equal to <see cref="States"/> when the space closed and nothing diverged, and zero for the other engines.</summary>
+    public int ConformedStates { get; internal set; }
+    /// <summary>Transitions <see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int)">ConformExhaustive</see> drove the implementation along, each from a fresh instance taken down a shortest path to the state it leaves, and saw conform. Equal to <see cref="Transitions"/> when the space closed and nothing diverged, and zero for the other engines.</summary>
+    public long ConformedTransitions { get; internal set; }
     /// <summary>A diagnostic when the exploration could not finish or the model looks wrong.</summary>
     public string? Note { get; internal set; }
 
     internal string Mode = "";
+    // Implementation steps behind ConformedTransitions, each the depth of the state it leaves plus one, so the cost of the run.
+    internal long ConformedSteps;
     internal string[] ActionNames = [];
     internal long[] ActionFired = [];
+    // By S's equality rather than the search node's, so a step that only moves a deadline or a history bit still counts.
+    internal long[] ActionSelfLoops = [];
     internal string[] RequirementIds = [];
     internal long[] RequirementTriggered = [];
     internal long[] RequirementUnresolved = [];
@@ -602,6 +621,9 @@ public sealed class SpecReport
             sb.Append("\n  ").Append(TracesWalked.ToString("#,0")).Append(" traces, ")
               .Append(StepsWalked.ToString("#,0")).Append(" steps, ")
               .Append(DeadlockTraces.ToString("#,0")).Append(" deadlocked");
+        if (ConformedStates != 0)
+            sb.Append("\n  conformed on ").Append(Count(ConformedTransitions, "transition")).Append(" from ")
+              .Append(Count(ConformedStates, "state")).Append(", ").Append(Count(ConformedSteps, "implementation step"));
         if (Note is not null) sb.Append("\n  ").Append(Note);
         if (DeadlockTrace is not null) sb.Append("\n  deadlock:").Append(DeadlockTrace);
         var w = 11;
@@ -615,17 +637,20 @@ public sealed class SpecReport
                        : RequirementTriggered[i].ToString("#,0")).PadLeft(11)).Append(" | ")
               .Append((RequirementUnresolved[i] == 0 ? "" : RequirementUnresolved[i].ToString("#,0")).PadLeft(10)).Append(" |");
         }
-        sb.Append("\n  | ").Append("Action".PadRight(w)).Append(" |       Fired |");
+        sb.Append("\n  | ").Append("Action".PadRight(w)).Append(" |       Fired | Self-loops |");
         for (int i = 0; i < ActionNames.Length; i++)
         {
             sb.Append("\n  | ").Append(ActionNames[i].PadRight(w)).Append(" | ")
-              .Append((ActionFired[i] == 0 ? "NEVER" : ActionFired[i].ToString("#,0")).PadLeft(11)).Append(" |");
+              .Append((ActionFired[i] == 0 ? "NEVER" : ActionFired[i].ToString("#,0")).PadLeft(11)).Append(" | ")
+              .Append((ActionSelfLoops[i] == 0 ? "" : ActionSelfLoops[i].ToString("#,0")).PadLeft(10)).Append(" |");
         }
         return sb.ToString();
+
+        static string Count(long n, string noun) => n == 1 ? $"1 {noun}" : $"{n:#,0} {noun}s";
     }
 }
 
-/// <summary>The three possible outcomes of one fault injection run.</summary>
+/// <summary>The possible outcomes of one fault injection run.</summary>
 public enum FaultOutcome
 {
     /// <summary>A requirement detected the fault. <see cref="SpecFaultResult.CaughtBy"/> names it.</summary>
@@ -634,6 +659,8 @@ public enum FaultOutcome
     NotDetected,
     /// <summary>The exhaustive search gave up before closing the state space, so it is unknown whether the fault is detectable. The fault appears in <see cref="SpecFaultsReport.Inconclusive"/>. Declare a <see cref="Spec{S}.Boundary">Boundary</see> or reduce the model to make the search conclusive.</summary>
     Inconclusive,
+    /// <summary>The walks <see cref="Check.SampleFaults{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int, bool)">SampleFaults</see> sampled found no violation. Unlike <see cref="NotDetected"/> this proves nothing: a requirement may still detect the fault on a walk that was not sampled. <see cref="SpecFaultResult.CaughtBy"/> is null.</summary>
+    NotFound,
 }
 
 /// <summary>What became of one declared <see cref="Spec{S}.Fault(string, Func{S, S, bool}, Func{S, S, S})">Fault</see>: the outcome of the search, the requirement whose counterexample was shortest when caught, and how many steps that took.</summary>
@@ -644,11 +671,11 @@ public sealed class SpecFaultsReport
 {
     /// <summary>One entry per declared fault, in declaration order.</summary>
     public IReadOnlyList<SpecFaultResult> Results { get; }
-    /// <summary>Faults with outcome <see cref="FaultOutcome.NotDetected"/>: the exhaustive search closed without finding a violation, so each one means a requirement is missing. <see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see> throws on these unless <c>throwOnUncaught</c> is false.</summary>
+    /// <summary>Faults with outcome <see cref="FaultOutcome.NotDetected"/>, where the exhaustive search closed without finding a violation, so each one means a requirement is missing, or <see cref="FaultOutcome.NotFound"/>, where the sampled walks found none, so one may be. Both engines throw on these unless <c>throwOnUncaught</c> is false.</summary>
     public IReadOnlyList<string> Uncaught { get; }
     /// <summary>Faults whose exhaustive search gave up before the state space closed, so it is not known whether the fault is detectable. These are not thrown on, because the search was incomplete; they show as NOT CLOSED in the table. Declare a <see cref="Spec{S}.Boundary">Boundary</see> or reduce the model to make the search conclusive.</summary>
     public IReadOnlyList<string> Inconclusive { get; }
-    /// <summary>Requirements not targeted by any declared fault: a list of faults worth writing rather than a failure. <see cref="Spec{S}.Reachable">Reachable</see> requirements are excluded, and not because a fault cannot break one. Perturbing the model away from the state does exactly that, and <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> then reports the <see cref="Spec{S}.Reachable">Reachable</see> as the violation. They are excluded because a fault written to do that says nothing about whether a requirement is strong enough, which is the only question this list is asking.</summary>
+    /// <summary>Requirements not targeted by any declared fault: a list of faults worth writing rather than a failure. <see cref="Spec{S}.Reachable">Reachable</see> requirements are excluded, and not because a fault cannot break one. Perturbing the model away from the state does exactly that, and <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> then reports the <see cref="Spec{S}.Reachable">Reachable</see> as the violation. They are excluded because a fault written to do that says nothing about whether a requirement is strong enough, which is the only question this list is asking.</summary>
     public IReadOnlyList<string> Unexercised { get; }
 
     readonly string _table;
@@ -662,7 +689,7 @@ public sealed class SpecFaultsReport
         _table = table;
     }
 
-    /// <summary>The requirement that caught <paramref name="fault"/>, or null when the outcome is <see cref="FaultOutcome.NotDetected"/> or <see cref="FaultOutcome.Inconclusive"/>. Throws when no fault of that name was declared, so a renamed or mistyped fault fails loudly rather than looking uncaught.</summary>
+    /// <summary>The requirement that caught <paramref name="fault"/>, or null when the outcome is anything other than <see cref="FaultOutcome.Caught"/>. Throws when no fault of that name was declared, so a renamed or mistyped fault fails loudly rather than looking uncaught.</summary>
     public string? CaughtBy(string fault)
     {
         for (int i = 0; i < Results.Count; i++)
@@ -679,22 +706,40 @@ sealed class SpecCounters(int requirements, int actions)
     public readonly long[] Triggered = new long[requirements];
     public readonly long[] Unresolved = new long[requirements];
     public readonly long[] Fired = new long[actions];
+    public readonly long[] SelfLoops = new long[actions];
     public long Traces;
     public long Steps;
     public long Deadlocks;
+
+    public void Add(SpecCounters other)
+    {
+        for (int i = 0; i < Triggered.Length; i++)
+        {
+            Triggered[i] += other.Triggered[i];
+            Unresolved[i] += other.Unresolved[i];
+        }
+        for (int i = 0; i < Fired.Length; i++)
+        {
+            Fired[i] += other.Fired[i];
+            SelfLoops[i] += other.SelfLoops[i];
+        }
+        Traces += other.Traces;
+        Steps += other.Steps;
+        Deadlocks += other.Deadlocks;
+    }
 }
 
 readonly record struct SpecNode<S>(S State, ulong Deadlines, ulong Seen, ulong Counts);
 
-// One expanded transition, computed during the parallel phase and consumed during the sequential one.
-readonly record struct SpecEdge<S>(int Action, int Arg, S After, ulong Deadlines, ulong Seen, ulong Counts, string? Detail, int ReqIndex);
+// One expanded transition, computed during the parallel phase and consumed during the sequential one. Known is a transition into a node already visited when the phase began, kept in order so a violation later in the same node still stops the count at the same edge.
+readonly record struct SpecEdge<S>(int Action, int Arg, S After, ulong Deadlines, ulong Seen, ulong Counts, string? Detail, int ReqIndex, bool Known = false);
 
 /// <summary>The breadth first frontier and everything the two walks mutate. Holding this in a class costs nothing over locals: the Parallel.For lambda forces Roslyn to heap allocate a closure over exactly these fields anyway. Measured neutral, see Tests/SpecScaleTests.</summary>
-sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport report, SpecCounters counters, int maxStates, int maxDepth)
+sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport<S> report, SpecCounters counters, int maxStates, int maxDepth)
 {
     readonly Spec<S> _spec = spec;
     readonly SpecFault<S>? _fault = fault;
-    readonly SpecReport _report = report;
+    readonly SpecReport<S> _report = report;
     readonly SpecCounters _counters = counters;
     readonly List<SpecAction<S>> _actions = spec.Actions;
     readonly int _reqs = spec.Requirements.Count;
@@ -707,9 +752,11 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
     readonly List<int> _edgeArg = [-1];
     readonly List<int> _depths = [0];
     readonly HashSet<SpecNode<S>> _visited = [new(spec.Initial, 0UL, 0UL, 0UL)];
+    static readonly SpecEdge<S> _knownEdge = new(0, 0, default!, 0UL, 0UL, 0UL, null, 0, Known: true);
     int _depth;
     long _revisits;
     int _firstDeadlock = -1;
+    int _gaveUpAt;
     bool _stopped;
     bool _gaveUp;
     bool _truncated;
@@ -728,6 +775,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
     bool Insert(int head, in SpecEdge<S> edge)
     {
         _report.Transitions++;
+        if (edge.Known) { _revisits++; return true; }
         if (edge.Detail is not null)
         {
             var req = _spec.Requirements[edge.ReqIndex];
@@ -748,6 +796,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
             _report.States = Nodes.Count;
             _report.Depth = _depth + 1;
             _gaveUp = true;
+            _gaveUpAt = head;
             return false;
         }
         Nodes.Add(child);
@@ -779,48 +828,117 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
     }
 
     // The path to the first state that had nothing enabled and was not declared Terminal, or null if there was none.
-    public Trace<S>? DeadlockPath()
-    {
-        if (_firstDeadlock < 0) return null;
-        var back = Backtrack(_firstDeadlock);
-        var steps = new Transition<S>[back.Count];
-        Replay(back, steps);
-        return new(_spec.Initial, steps, true);
-    }
+    public Trace<S>? DeadlockPath() => _firstDeadlock < 0 ? null : new(_spec.Initial, PathTo(_firstDeadlock), true);
 
-    // The (action, argument) pairs from a node back to the initial state, so innermost first.
-    List<(int Action, int Arg)> Backtrack(int head)
+    // The steps from the initial state to a node. Only the parent links are kept, so a trace is rebuilt rather than stored, but from the states already in Nodes rather than by running the model again.
+    Transition<S>[] PathTo(int node)
     {
-        var back = new List<(int, int)>();
-        for (int i = head; i > 0; i = _parent[i]) back.Add((_edgeAction[i], _edgeArg[i]));
-        return back;
-    }
-
-    // Replay a backtracked path into steps, faults included, returning the state reached. Only the walk knows how a state was arrived at, so a trace is rebuilt rather than stored.
-    S Replay(List<(int Action, int Arg)> back, Transition<S>[] steps)
-    {
-        var state = _spec.Initial;
-        for (int i = 0; i < back.Count; i++)
+        var steps = new Transition<S>[_depths[node]];
+        for (int i = node, j = steps.Length - 1; i > 0; i = _parent[i], j--)
         {
-            var (ai, arg) = back[back.Count - 1 - i];
-            var action = _actions[ai];
-            var after = action.Apply(state, arg);
-            if (_fault is not null && (_fault.OnActionIndex < 0 || _fault.OnActionIndex == ai) && _fault.When(state, after)) after = _fault.Perturb(state, after);
-            steps[i] = new(i, ai, arg, action.Name, action.ArgName(arg), state, after);
-            state = after;
+            int a = _edgeAction[i], g = _edgeArg[i];
+            steps[j] = new(j, a, g, _actions[a].Name, _spec.ArgName(a, g), Nodes[_parent[i]].State, Nodes[i].State);
         }
-        return state;
+        return steps;
     }
 
     // The path to a node, plus one more step onto the edge that violated a requirement.
     Trace<S> Path(int head, int lastAction, int lastArg, S lastAfter)
     {
-        var back = Backtrack(head);
-        var steps = new Transition<S>[back.Count + 1];
-        var state = Replay(back, steps);
-        var last = _actions[lastAction];
-        steps[^1] = new(steps.Length - 1, lastAction, lastArg, last.Name, last.ArgName(lastArg), state, lastAfter);
+        var path = PathTo(head);
+        var steps = new Transition<S>[path.Length + 1];
+        path.CopyTo(steps, 0);
+        steps[^1] = new(path.Length, lastAction, lastArg, _actions[lastAction].Name, _spec.ArgName(lastAction, lastArg), Nodes[head].State, lastAfter);
         return new(_spec.Initial, steps, false);
+    }
+
+    readonly record struct ConformFailure(Transition<S> Last, int Step, string? Reason, Exception? Error);
+
+    // Drive the implementation along every transition the walk counted: for each node in breadth first order, a fresh
+    // implementation follows the node's path and then takes one transition enabled there. The first failure in that order
+    // is on a shortest path, and is chosen in that order however many threads ran, so the result does not depend on them.
+    public string? Conform<TSut>(Func<TSut> create, Func<TSut, Transition<S>, string?> apply, int threads, out Exception? error)
+    {
+        error = null;
+        // Every node short of the one the walk gave up in, and short of maxDepth, had all its transitions counted.
+        var count = _gaveUp ? _gaveUpAt : Nodes.Count;
+        while (count > 0 && _depths[count - 1] == _maxDepth) count--;
+        var chunk = Math.Clamp(16384 / _pairs, 1, 4096);
+        var conformed = new int[chunk];
+        var steps = new long[chunk];
+        var failures = new ConformFailure?[chunk];
+        var options = new ParallelOptions { MaxDegreeOfParallelism = threads };
+        for (int chunkStart = 0; chunkStart < count; chunkStart += chunk)
+        {
+            var width = Math.Min(chunk, count - chunkStart);
+            var from = chunkStart;
+            System.Threading.Tasks.Parallel.For(0, width, options, i =>
+            {
+                var path = PathTo(from + i);
+                var state = Nodes[from + i].State;
+                int passed = 0;
+                long driven = 0;
+                ConformFailure? failure = null;
+                for (int a = 0; a < _actions.Count && failure is null; a++)
+                {
+                    var action = _actions[a];
+                    for (int g = 0; g < action.ArgCount; g++)
+                    {
+                        if (!action.Enabled(state, g)) continue;
+                        failure = Drive(create, apply, path, new(path.Length, a, g, action.Name, _spec.ArgName(a, g), state, action.Apply(state, g)));
+                        if (failure is not null) break;
+                        passed++;
+                        driven += path.Length + 1;
+                    }
+                }
+                conformed[i] = passed;
+                steps[i] = driven;
+                failures[i] = failure;
+            });
+            for (int i = 0; i < width; i++)
+            {
+                _report.ConformedTransitions += conformed[i];
+                _report.ConformedSteps += steps[i];
+                if (failures[i] is { } failure) return Diverged(chunkStart + i, failure, out error);
+                _report.ConformedStates++;
+            }
+        }
+        return null;
+    }
+
+    // Step is -1 when create threw, below the path's length when a step of the path failed, and the path's length when the transition itself did.
+    static ConformFailure? Drive<TSut>(Func<TSut> create, Func<TSut, Transition<S>, string?> apply, Transition<S>[] path, Transition<S> last)
+    {
+        var step = -1;
+        try
+        {
+            var sut = create();
+            for (step = 0; step < path.Length; step++)
+                if (apply(sut, path[step]) is { } reason) return new(last, step, reason, null);
+            return apply(sut, last) is { } diverged ? new(last, step, diverged, null) : null;
+        }
+        catch (Exception e) { return new(last, step, null, e); }
+    }
+
+    string Diverged(int node, ConformFailure failure, out Exception? error)
+    {
+        error = failure.Error;
+        if (failure.Step < 0) return $"\n  Implementation threw when created: {error!.GetType().Name}: {error.Message}";
+        var path = PathTo(node);
+        var steps = new Transition<S>[failure.Step + 1];
+        Array.Copy(path, steps, Math.Min(path.Length, steps.Length));
+        var onPath = failure.Step < path.Length;
+        if (!onPath) steps[^1] = failure.Last;
+        var sb = new StringBuilder(error is null ? "\n  Implementation diverged from the specification at step "
+                                                 : "\n  Implementation threw at step ").Append(failure.Step + 1);
+        // Each step of a path was the transition taken when the node it leaves was conformed, so it had already conformed once.
+        if (onPath) sb.Append(", on a path that had already conformed: the implementation is not deterministic, or its instances share state");
+        if (error is not null) sb.Append("\n         Error: ").Append(error.GetType().Name).Append(": ").Append(error.Message);
+        else if (failure.Reason!.Length != 0) sb.Append("\n        Reason: ").Append(failure.Reason);
+        sb.Append("\n         Trace: ");
+        try { sb.Append(new Trace<S>(_spec.Initial, steps, false).ToString(_spec.Printer, failure.Step)); }
+        catch (Exception e) { sb.Append("could not be printed: ").Append(e.GetType().Name).Append(": ").Append(e.Message); }
+        return sb.ToString();
     }
 
     // The default walk. Expansion and insertion are fused, so an edge is consumed while it is still in registers and no buffer is touched. Measurably the fastest way to do this on one core.
@@ -846,7 +964,8 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
                     enabled++;
                     _counters.Fired[_argBase[a] + g]++;
                     var after = action.Apply(node.State, g);
-                    if (_fault is not null && (_fault.OnActionIndex < 0 || _fault.OnActionIndex == a) && _fault.When(node.State, after)) after = _fault.Perturb(node.State, after);
+                    if (_fault?.AppliesTo(a, node.State, after) == true) after = _fault.Perturb(node.State, after);
+                    if (EqualityComparer<S>.Default.Equals(after, node.State)) _counters.SelfLoops[_argBase[a] + g]++;
                     ulong d = node.Deadlines, s = node.Seen, k = node.Counts;
                     var det = Check.CheckTransition(_spec, a, node.State, after, ref d, ref s, ref k, _counters.Triggered, 0, out var r);
                     if (!stopInserting && !Insert(head, new(a, g, after, d, s, k, det, r)))
@@ -858,7 +977,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
         }
     }
 
-    // Opt in. A frontier level is expanded in parallel into a buffer and then inserted sequentially. Only the user delegates run in parallel; the visited set is never touched off the main thread. That buys nothing unless those delegates dominate, because the sequential insert bounds the speedup, see Tests/SpecScaleTests.Parallel_Speedup for the numbers.
+    // Opt in. A frontier level is expanded in parallel into a buffer and then inserted sequentially. The visited set is only read off the main thread, and only written between parallel phases, so the expansion can look up whether a successor is already known and leave the sequential insert to hash only what may be new. That buys nothing unless the delegates dominate, because the sequential insert bounds the speedup, see Tests/SpecScaleTests.Parallel_Speedup for the numbers.
     public void Parallel(int threads)
     {
         // At least one pair, because Validate rejects a spec with no actions and every action has at least one argument.
@@ -868,7 +987,13 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
         var enabledCount = new int[chunk];
         var triggered = new long[chunk * Math.Max(_reqs, 1)];
         var fired = new long[chunk * _pairs];
+        var selfLoops = new long[chunk * _pairs];
         var options = new ParallelOptions { MaxDegreeOfParallelism = threads };
+        // A lookup off the main thread only pays when successors are often already known. Where every step goes one level
+        // deeper, every revisit is a sibling's child from the same level, which is not in the set yet, so none ever hit -
+        // measured at zero for the cube and the Disruptor, and 42% to 89% for the cyclic worked examples. Every sixteenth
+        // node is looked up regardless, so a model whose shape changes with depth is noticed.
+        var lookUpAll = true;
         for (int levelStart = 0; levelStart < Nodes.Count && !_stopped;)
         {
             var levelEnd = Nodes.Count;
@@ -880,12 +1005,14 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
                 var width = Math.Min(chunk, levelEnd - chunkStart);
                 Array.Clear(triggered, 0, width * _reqs);
                 Array.Clear(fired, 0, width * _pairs);
+                Array.Clear(selfLoops, 0, width * _pairs);
                 var from = chunkStart;
                 System.Threading.Tasks.Parallel.For(0, width, options, i =>
                 {
                     var node = Nodes[from + i];
-                    // Both buffers are strided by pairs, so one base serves both.
+                    // Every buffer here is strided by pairs, so one base serves them all.
                     var slot = i * _pairs;
+                    var lookUp = lookUpAll || (i & 15) == 0;
                     int n = 0, enabled = 0;
                     for (int a = 0; a < _actions.Count; a++)
                     {
@@ -896,25 +1023,39 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport repor
                             enabled++;
                             fired[slot + _argBase[a] + g]++;
                             var after = action.Apply(node.State, g);
-                            if (_fault is not null && (_fault.OnActionIndex < 0 || _fault.OnActionIndex == a) && _fault.When(node.State, after)) after = _fault.Perturb(node.State, after);
+                            if (_fault?.AppliesTo(a, node.State, after) == true) after = _fault.Perturb(node.State, after);
+                            if (EqualityComparer<S>.Default.Equals(after, node.State)) selfLoops[slot + _argBase[a] + g]++;
                             ulong d = node.Deadlines, s = node.Seen, k = node.Counts;
                             var det = Check.CheckTransition(_spec, a, node.State, after, ref d, ref s, ref k, triggered, i * _reqs, out var r);
-                            edges[slot + n++] = new(a, g, after, d, s, k, det, r);
+                            edges[slot + n++] = lookUp && det is null && _visited.Contains(new(after, d, s, k))
+                                ? _knownEdge
+                                : new(a, g, after, d, s, k, det, r);
                         }
                     }
                     edgeCount[i] = n;
                     enabledCount[i] = enabled;
                 });
+                long lookedUp = 0, known = 0;
                 for (int i = 0; i < width && !_stopped; i++)
                 {
                     var head = chunkStart + i;
                     for (int k = 0; k < _reqs; k++) _counters.Triggered[k] += triggered[i * _reqs + k];
-                    for (int k = 0; k < _pairs; k++) _counters.Fired[k] += fired[i * _pairs + k];
+                    for (int k = 0; k < _pairs; k++)
+                    {
+                        _counters.Fired[k] += fired[i * _pairs + k];
+                        _counters.SelfLoops[k] += selfLoops[i * _pairs + k];
+                    }
                     if (enabledCount[i] == 0) { Settle(head); continue; }
                     var edgeBase = i * _pairs;
+                    if (lookUpAll || (i & 15) == 0) lookedUp += edgeCount[i];
                     for (int k = 0; k < edgeCount[i]; k++)
+                    {
+                        if (edges[edgeBase + k].Known) known++;
                         if (!Insert(head, edges[edgeBase + k])) { _stopped = true; break; }
+                    }
                 }
+                // Break even was measured at between 13% and 28% of lookups hitting, depending on the model.
+                lookUpAll = known * 4 >= lookedUp;
             }
             levelStart = levelEnd;
         }
@@ -1047,51 +1188,40 @@ public static partial class Check
         return null;
     }
 
-    // Per trace tallies. They exist so the interlocked adds are one per counter per trace rather than one per
-    // step, and reusing them rather than allocating three arrays each time is 29% of what a walk put on the heap -
-    // measured, 2,140 down to 1,515 bytes a trace on the FIX example. Thread static like the buffers in
-    // GenSpecTrace<S>, and only ever read between a clear and a flush inside one call.
-    [ThreadStatic] static SpecCounters? _tally;
+    // Sample and Conform count coverage per thread and sum it once the walk is over. Counting each trace into shared
+    // counters instead took about twenty contended interlocked adds a trace, which on 22 cores left Sample barely five
+    // times faster than on one.
+    static ThreadLocal<SpecCounters> PerThread<S>(Spec<S> spec)
+        => new(() => new(spec.Requirements.Count, spec.ArgPairs), trackAllValues: true);
 
-    // Check one walked trace and fold its coverage into the shared counters. Shared by Sample and Conform, so the two report coverage identically.
+    // Check one walked trace and count its coverage into the calling thread's counters. Shared by Sample and Conform, so the two report coverage identically.
     static SpecViolation<S>? SpecWalk<S>(Spec<S> spec, Trace<S> trace, SpecCounters counters)
     {
-        Interlocked.Increment(ref counters.Traces);
-        Interlocked.Add(ref counters.Steps, trace.Steps.Length);
-        var tally = _tally;
-        if (tally is null || tally.Triggered.Length != counters.Triggered.Length || tally.Fired.Length != counters.Fired.Length)
-            tally = _tally = new(counters.Triggered.Length, counters.Fired.Length);
-        else
-        {
-            Array.Clear(tally.Triggered);
-            Array.Clear(tally.Unresolved);
-            Array.Clear(tally.Fired);
-        }
+        counters.Traces++;
+        counters.Steps += trace.Steps.Length;
         var steps = trace.Steps;
         var argBase = spec.ArgBase;
-        for (int i = 0; i < steps.Length; i++) tally.Fired[argBase[steps[i].ActionIndex] + steps[i].ArgIndex]++;
-        var violation = SpecCheck(spec, trace, tally);
-        for (int i = 0; i < tally.Triggered.Length; i++)
+        for (int i = 0; i < steps.Length; i++)
         {
-            if (tally.Triggered[i] != 0) Interlocked.Add(ref counters.Triggered[i], tally.Triggered[i]);
-            if (tally.Unresolved[i] != 0) Interlocked.Add(ref counters.Unresolved[i], tally.Unresolved[i]);
+            var pair = argBase[steps[i].ActionIndex] + steps[i].ArgIndex;
+            counters.Fired[pair]++;
+            if (EqualityComparer<S>.Default.Equals(steps[i].After, steps[i].Before)) counters.SelfLoops[pair]++;
         }
-        for (int i = 0; i < tally.Fired.Length; i++)
-            if (tally.Fired[i] != 0) Interlocked.Add(ref counters.Fired[i], tally.Fired[i]);
-        return violation;
+        return SpecCheck(spec, trace, counters);
     }
 
     static string Plural(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n} {noun}s";
 
-    static SpecReport SpecReportOf<S>(Spec<S> spec, string mode, SpecCounters c)
+    static SpecReport<S> SpecReportOf<S>(Spec<S> spec, string mode, SpecCounters c)
     {
-        var report = new SpecReport
+        var report = new SpecReport<S>
         {
             Mode = mode,
-            // The arrays below are shared by reference, so the report sees the walk as it happens. TracesWalked and
+            // The arrays below are shared by reference, so the report sees whatever is counted into them. TracesWalked and
             // StepsWalked are values, so they cannot be; Sample and Conform copy them across once the walk is done.
             ActionNames = new string[spec.ArgPairs],
             ActionFired = c.Fired,
+            ActionSelfLoops = c.SelfLoops,
             RequirementIds = new string[spec.Requirements.Count],
             RequirementTriggered = c.Triggered,
             RequirementUnresolved = c.Unresolved,
@@ -1104,7 +1234,7 @@ public static partial class Check
             var action = spec.Actions[a];
             for (int g = 0; g < action.ArgCount; g++)
             {
-                var arg = action.ArgName(g);
+                var arg = spec.ArgName(a, g);
                 report.ActionNames[spec.ArgBase[a] + g] = arg.Length == 0 ? action.Name : $"{action.Name}({arg})";
             }
         }
@@ -1132,7 +1262,7 @@ public static partial class Check
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    public static SpecReport Sample<S>(this Spec<S> spec, Action<string>? writeLine = null, int minSteps = 1, int maxSteps = 24,
+    public static SpecReport<S> Sample<S>(this Spec<S> spec, Action<string>? writeLine = null, int minSteps = 1, int maxSteps = 24,
         string? seed = null, long iter = -1, int time = -1, int threads = -1)
     {
         // ArgPairs is built by Validate, and every other engine reaches it through the walk it starts.
@@ -1140,20 +1270,27 @@ public static partial class Check
         var counters = new SpecCounters(spec.Requirements.Count, spec.ArgPairs);
         var report = SpecReportOf(spec, $"Spec.Sample of {Plural(spec.Requirements.Count, "requirement")}", counters);
         // A dead end needs no requirement to detect it, which is the whole of the BlockingQueue example - but only
-        var deadEnds = new DeadEnds<S>(spec, counters);
+        var deadEnds = new DeadEnds<S>(spec);
+        using var perThread = PerThread(spec);
         try
         {
             spec.GenTrace(minSteps, maxSteps).Sample(
-                trace => { deadEnds.Observe(trace); return SpecWalk(spec, trace, counters) is null; },
+                trace =>
+                {
+                    var mine = perThread.Value!;
+                    deadEnds.Observe(trace, mine);
+                    return SpecWalk(spec, trace, mine) is null;
+                },
                 null, seed, iter, time, threads,
                 trace => trace is null ? "\n  The model threw before a trace could be generated."
                        : SpecCheck(spec, trace, null)?.ToString(spec.Printer) ?? trace.ToString(spec.Printer, -1));
         }
         finally
         {
+            foreach (var mine in perThread.Values) counters.Add(mine);
             report.TracesWalked = counters.Traces;
             report.StepsWalked = counters.Steps;
-            deadEnds.Report(report);
+            deadEnds.Report(report, counters);
             Reporter.Write(writeLine, report);
         }
         return report;
@@ -1161,28 +1298,40 @@ public static partial class Check
 
     /// <summary>Enumerate the whole reachable state space breadth first, checking every requirement on every transition. Outstanding <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see> deadlines and <see cref="Spec{S}.Precedes(string, string, Func{S, S, bool}, Func{S, S, bool})">Precedes</see> history are part of the search state, so when the space closes every requirement is proved for the model, not sampled. Any violation is reported with a shortest path to it.</summary>
     /// <param name="spec">The specification to explore.</param>
-    /// <param name="maxStates">Give up after this many distinct states (default 10,000,000, measured at 2.0GB peak and under four seconds when actually reached). Hitting this proves nothing; declare a <see cref="Spec{S}.Boundary">Boundary</see> instead and the exploration closes over a region you chose. The boundary applies here and to <see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see>, not to <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see> or <see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>, whose walks are already bounded by their step count and so cannot fail to terminate. Raising it much further is not free: the cost is linear in states, so ten times this is twenty gigabytes, and the point of the limit is to turn an unbounded model into a report rather than into an out of memory.</param>
-    /// <param name="maxDepth">Stop after this many steps from the initial state. Like <paramref name="maxStates"/> and unlike <see cref="Spec{S}.Boundary">Boundary</see> this truncates rather than scopes, so the report is not closed and proves nothing.</param>
-    /// <param name="threads">Threads to expand each frontier level on, default 1. Results do not depend on it: expansion is parallel but insertion is sequential in source order, so the state count, the counterexample chosen among several at the same depth, and every coverage number are the same on one thread as on many. That holds for a failing run too: a violation stops the inserting, but the node it was found in is evaluated to the end either way, because the parallel path expands a whole node before inserting any of it. It is opt in because the sequential visited set bounds the speedup, so it only pays when guards, transitions and requirement predicates are expensive - measured on 22 cores at about 2x for costly delegates and about 0.8x for free ones, in Tests/SpecScaleTests. Cheap delegates are the reason it is off by default: buffering a level and handing it out costs more than it saves, so this is a loss rather than a wash. Above one thread the delegates must also be thread safe, not merely pure.</param>
-    /// <param name="throwOnViolation">Throw a <see cref="CsCheckException"/> on the first violation (default true).</param>
     /// <param name="writeLine">WriteLine function for the proof certificate.</param>
-    public static SpecReport Exhaustive<S>(this Spec<S> spec, int maxStates = 10_000_000, int maxDepth = int.MaxValue,
-        int threads = 1, bool throwOnViolation = true, Action<string>? writeLine = null) =>
+    /// <param name="maxStates">Give up after this many distinct states (default 10,000,000, measured at 2.0GB peak and under four seconds when actually reached). Hitting this proves nothing; declare a <see cref="Spec{S}.Boundary">Boundary</see> instead and the exploration closes over a region you chose. The boundary applies here, to <see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see> and to <see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int)">ConformExhaustive</see>, not to <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see> or <see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>, whose walks are already bounded by their step count and so cannot fail to terminate. Raising it much further is not free: the cost is linear in states, so ten times this is twenty gigabytes, and the point of the limit is to turn an unbounded model into a report rather than into an out of memory.</param>
+    /// <param name="maxDepth">Stop after this many steps from the initial state. Like <paramref name="maxStates"/> and unlike <see cref="Spec{S}.Boundary">Boundary</see> this truncates rather than scopes, so the report is not closed and proves nothing.</param>
+    /// <param name="threads">Threads to expand each frontier level on, default 1. Results do not depend on it: expansion is parallel but insertion is sequential in source order, so the state count, the counterexample chosen among several at the same depth, and every coverage number are the same on one thread as on many. That holds for a failing run too: a violation stops the inserting, but the node it was found in is evaluated to the end either way, because the parallel path expands a whole node before inserting any of it. It is opt in because the sequential visited set bounds the speedup, so it only pays when guards, transitions and requirement predicates are expensive - measured on 22 cores at about 2x for costly delegates and about 0.8x for free ones, in Tests/SpecScaleTests - or when the model is cyclic, since a successor already seen is then recognised off the main thread, which made the cyclic worked examples 17% to 34% faster. Cheap delegates are the reason it is off by default: buffering a level and handing it out costs more than it saves, so this is a loss rather than a wash. Above one thread the delegates, and the state's Equals and GetHashCode, must also be thread safe, not merely pure.</param>
+    /// <param name="throwOnViolation">Throw a <see cref="CsCheckException"/> on the first violation (default true).</param>
+    public static SpecReport<S> Exhaustive<S>(this Spec<S> spec, Action<string>? writeLine = null, int maxStates = 10_000_000,
+        int maxDepth = int.MaxValue, int threads = 1, bool throwOnViolation = true) =>
         Exhaustive(spec, null, writeLine, maxStates, maxDepth, threads, throwOnViolation, out _);
 
     /// <summary>Enumerate the whole reachable state space breadth first, returning any violation with a shortest path to it instead of throwing. Use this to assert that a requirement is genuinely falsifiable.</summary>
     /// <param name="spec">The specification to explore.</param>
     /// <param name="violation">The shortest-path violation, or null when nothing failed.</param>
+    /// <param name="writeLine">WriteLine function for the proof certificate.</param>
     /// <param name="maxStates">Give up after this many distinct states (default 10,000,000).</param>
     /// <param name="maxDepth">Stop after this many steps from the initial state.</param>
     /// <param name="threads">Threads to expand each frontier level on, default 1. The result does not depend on it.</param>
-    /// <param name="writeLine">WriteLine function for the proof certificate.</param>
-    public static SpecReport Exhaustive<S>(this Spec<S> spec, out SpecViolation<S>? violation, int maxStates = 10_000_000,
-        int maxDepth = int.MaxValue, int threads = 1, Action<string>? writeLine = null) =>
+    public static SpecReport<S> Exhaustive<S>(this Spec<S> spec, out SpecViolation<S>? violation, Action<string>? writeLine = null,
+        int maxStates = 10_000_000, int maxDepth = int.MaxValue, int threads = 1) =>
         Exhaustive(spec, null, writeLine, maxStates, maxDepth, threads, false, out violation);
 
-    static SpecReport Exhaustive<S>(Spec<S> spec, SpecFault<S>? fault, Action<string>? writeLine, int maxStates,
+    static SpecReport<S> Exhaustive<S>(Spec<S> spec, SpecFault<S>? fault, Action<string>? writeLine, int maxStates,
         int maxDepth, int threads, bool throwOnViolation, out SpecViolation<S>? violation)
+    {
+        var report = Explore(spec, fault, fault is null ? $"Spec.Exhaustive of {Plural(spec.Requirements.Count, "requirement")}"
+                                                        : $"Spec.Exhaustive with fault '{fault.Name}'",
+                             maxStates, maxDepth, threads, out violation, out _);
+        Reporter.Write(writeLine, report);
+        if (violation is not null && throwOnViolation) ThrowHelper.Throw(violation.ToString(spec.Printer));
+        return report;
+    }
+
+    // The search itself, writing and throwing nothing, so ConformExhaustive can drive the implementation over the frontier before the report goes out. The frontier is null when the initial state already violated a requirement.
+    static SpecReport<S> Explore<S>(Spec<S> spec, SpecFault<S>? fault, string mode, int maxStates, int maxDepth, int threads,
+        out SpecViolation<S>? violation, out SpecFrontier<S>? frontier)
     {
         spec.Validate();
         // The give-up test is an equality against a count that starts at one, so a non-positive limit would never
@@ -1190,21 +1339,18 @@ public static partial class Check
         if (maxStates < 1) ThrowHelper.Throw($"Spec Exhaustive maxStates must be at least 1, was {maxStates}");
         if (maxDepth < 0) ThrowHelper.Throw($"Spec Exhaustive maxDepth cannot be negative, was {maxDepth}");
         var counters = new SpecCounters(spec.Requirements.Count, spec.ArgPairs);
-        var report = SpecReportOf(spec, fault is null ? $"Spec.Exhaustive of {Plural(spec.Requirements.Count, "requirement")}"
-                                                      : $"Spec.Exhaustive with fault '{fault.Name}'", counters);
+        var report = SpecReportOf(spec, mode, counters);
         violation = null;
+        frontier = null;
         var detail = SpecInitial(spec, counters, out var ri);
         if (detail is not null)
         {
             violation = new(spec.Requirements[ri].Id, spec.Requirements[ri].Quote, detail, -1, new(spec.Initial, [], false));
-            // Every other failing path reports before it returns or throws; this one was silent.
-            Reporter.Write(writeLine, report);
-            if (throwOnViolation) ThrowHelper.Throw(violation.ToString(spec.Printer));
             return report;
         }
         // The frontier owns the visited set, which is a set and not a map: nothing ever looked a node up by index, and
         // Add doubling as the membership test is what keeps a new state to one hash of the whole node rather than two.
-        var walk = new SpecFrontier<S>(spec, fault, report, counters, maxStates, maxDepth);
+        var walk = frontier = new SpecFrontier<S>(spec, fault, report, counters, maxStates, maxDepth);
         if (threads < 1) threads = 1;
         if (threads == 1) walk.Sequential();
         else walk.Parallel(threads);
@@ -1212,14 +1358,12 @@ public static partial class Check
         report.Revisits = walk.Revisits;
         // Computed here rather than in each branch below, so it is there whatever the run's outcome.
         if (report.DeadlockStates != 0)
-            report.DeadlockTrace = PrintTrace(spec, walk.DeadlockPath());
-        violation = walk.Found;
-        if (walk.Found is not null)
         {
-            Reporter.Write(writeLine, report);
-            if (throwOnViolation) ThrowHelper.Throw(walk.Found.ToString(spec.Printer));
-            return report;
+            report.Deadlock = walk.DeadlockPath();
+            report.DeadlockTrace = PrintTrace(spec, report.Deadlock);
         }
+        violation = walk.Found;
+        if (walk.Found is not null) return report;
         if (walk.GaveUp)
         {
             var widest = WidestFields(spec, walk.Nodes);
@@ -1233,7 +1377,6 @@ public static partial class Check
                 // honestly infinite model never revisits either.
                 + (walk.Revisits == 0 ? "; no state was ever revisited, so check as well that no field of the state breaks "
                                       + "its value equality" : "");
-            Reporter.Write(writeLine, report);
             return report;
         }
         // maxDepth truncates like maxStates, not like Boundary: the states past it are inside whatever region was
@@ -1242,7 +1385,6 @@ public static partial class Check
         {
             report.States = walk.States;
             report.Note = $"stopped at maxDepth {maxDepth} - states beyond it were not explored, so nothing is proved";
-            Reporter.Write(writeLine, report);
             return report;
         }
         report.States = walk.States;
@@ -1268,20 +1410,17 @@ public static partial class Check
             {
                 var req = spec.Requirements[unreachable];
                 violation = new(req.Id, req.Quote, "is unreachable: the state space closed without it ever holding", -1, new(spec.Initial, [], false));
-                Reporter.Write(writeLine, report);
-                if (throwOnViolation) ThrowHelper.Throw(violation.ToString(spec.Printer));
                 return report;
             }
             var note = "never held, but states outside the boundary were not explored so this is not a failure: "
                 + string.Join(", ", unheld);
             report.Note = report.Note is null ? note : $"{report.Note}; {note}";
         }
-        Reporter.Write(writeLine, report);
         return report;
     }
 
     /// <summary>The reachable state graph in Mermaid flowchart syntax, for a model small enough to look at. Terminal states, dead ends and truncated states are styled differently, so they are visible without reading a table.</summary>
-    /// <remarks>This walks the space itself rather than reusing <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see>, because the walk keeps only a spanning tree of parent links - enough to rebuild one path, but not the graph. Requirements are not evaluated: the picture is for understanding a model, and <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> is for proving things about it.</remarks>
+    /// <remarks>This walks the space itself rather than reusing <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see>, because the walk keeps only a spanning tree of parent links - enough to rebuild one path, but not the graph. Requirements are not evaluated: the picture is for understanding a model, and <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> is for proving things about it.</remarks>
     /// <param name="spec">The specification to draw.</param>
     /// <param name="maxStates">Give up after this many states, since a picture stops being useful long before a proof does (default 200).</param>
     public static string Mermaid<S>(this Spec<S> spec, int maxStates = 200)
@@ -1313,7 +1452,7 @@ public static partial class Check
         var drawn = new List<int>();
         var label = new StringBuilder();
         // The walk is breadth first, so the depth a state is first discovered at is its shortest path from the initial
-        // state, and the largest of those is what SpecReport.Depth means.
+        // state, and the largest of those is what SpecReport<S>.Depth means.
         var depths = new List<int> { 0 };
         var depth = 0;
         // Every discovered state is expanded, because a state the loop stopped short of would still be pointed at by
@@ -1362,7 +1501,7 @@ public static partial class Check
                 {
                     if (outgoing[j].To != to) continue;
                     var (_, a, g) = outgoing[j];
-                    var arg = spec.Actions[a].ArgName(g);
+                    var arg = spec.ArgName(a, g);
                     if (a == prevAction)
                     {
                         if (!open) { label.Append('('); open = true; }
@@ -1430,25 +1569,29 @@ public static partial class Check
     // what else could have been taken on the way in. Bounded because a wide argument domain would otherwise put the
     // whole of it on one line, and the point is that there was another way rather than what all of them were.
     // Shared by Sample and Conform, which both print the count from one line of the report.
-    sealed class DeadEnds<S>(Spec<S> spec, SpecCounters counters)
+    sealed class DeadEnds<S>(Spec<S> spec)
     {
-        readonly object _lock = new();
+        readonly Lock _lock = new();
         Trace<S>? _shortest;
+        int _shortestLength = int.MaxValue;
 
-        public void Observe(Trace<S> trace)
+        public void Observe(Trace<S> trace, SpecCounters counters)
         {
             // NoActionEnabled is also true at an intended end.
             if (!trace.NoActionEnabled || spec.IsTerminal?.Invoke(
                 trace.Steps.Length == 0 ? trace.Initial : trace.Steps[^1].After) == true) return;
-            Interlocked.Increment(ref counters.Deadlocks);
-            // Shortest, to match the path Exhaustive reports.
-            lock (_lock)
-                if (_shortest is null || trace.Steps.Length < _shortest.Steps.Length) _shortest = trace;
+            counters.Deadlocks++;
+            // Shortest, to match the path Exhaustive reports. The unlocked read is a filter only, and an int read cannot
+            // tear, so a stale one costs at most a lock.
+            if (trace.Steps.Length < _shortestLength)
+                lock (_lock)
+                    if (trace.Steps.Length < _shortestLength) { _shortest = trace; _shortestLength = trace.Steps.Length; }
         }
 
-        public void Report(SpecReport report)
+        public void Report(SpecReport<S> report, SpecCounters counters)
         {
             report.DeadlockTraces = counters.Deadlocks;
+            report.Deadlock = _shortest;
             report.DeadlockTrace = PrintTrace(spec, _shortest);
         }
     }
@@ -1473,7 +1616,7 @@ public static partial class Check
                 if ((a == step.ActionIndex && g == step.ArgIndex) || !action.Enabled(step.Before, g)) continue;
                 if (shown == 8) { more++; continue; }
                 if (shown++ != 0) sb.Append(", ");
-                var arg = action.ArgName(g);
+                var arg = spec.ArgName(a, g);
                 sb.Append(arg.Length == 0 ? action.Name : $"{action.Name}({arg})");
             }
         }
@@ -1500,7 +1643,7 @@ public static partial class Check
             catch { return null; }
             if (!ParseFields(printed, pairs)) return null;
             if (names.Count == 0)
-                foreach (var (name, _) in pairs) { names.Add(name); distinct.Add([with(StringComparer.Ordinal)]); }
+                foreach (var (name, _) in pairs) { names.Add(name); distinct.Add(new(StringComparer.Ordinal)); }
             else if (pairs.Count != names.Count) return null;
             for (int f = 0; f < pairs.Count; f++)
             {
@@ -1564,10 +1707,10 @@ public static partial class Check
                 : "within the declared boundary: a fault caught by NOTHING may still be caught outside it",
             "No requirement detects these faults", writeLine, throwOnUncaught,
             baseline: () => Exhaustive(spec, null, null, maxStates, maxDepth, threads, true, out _),
-            fault => { var r = Exhaustive(spec, fault, null, maxStates, maxDepth, threads, false, out var v); return (v, r.Closed); });
+            fault => { var r = Exhaustive(spec, fault, null, maxStates, maxDepth, threads, false, out var v); return (v, r.Closed ? FaultOutcome.NotDetected : FaultOutcome.Inconclusive); });
 
-    /// <summary>Mutation testing for a specification whose state space is too large to close. Each declared <see cref="Spec{S}.Fault(string, Func{S, S, bool}, Func{S, S, S})">Fault</see> is injected in turn and the specification walked randomly, and the shallowest violation found is reported. <see cref="Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see> is strictly better where it can run, it proves a fault is undetectable rather than failing to find it, so reach for this only when <see cref="Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> gives up.</summary>
-    /// <remarks>Two columns mean less here than in the proved table. <c>Steps</c> is the shallowest counterexample sampled rather than the shallowest that exists, and <c>NOTHING</c> means no requirement was seen to detect the fault rather than that none can. A <see cref="Spec{S}.Reachable">Reachable</see> requirement can never appear in <c>Caught by</c> at all, because unreachability only follows from closure. <para>Before injecting any fault, the unmutated spec is walked over the same budget and rejected immediately if a requirement already fails. The baseline uses sampling rather than <see cref="Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> so the cost is proportional: one extra fault-free pass, not a full exhaustive search on a space that does not close.</para> <para>The budget is per fault, so the total work is <paramref name="iter"/> walks times the number of faults plus one baseline pass.</para></remarks>
+    /// <summary>Mutation testing for a specification whose state space is too large to close. Each declared <see cref="Spec{S}.Fault(string, Func{S, S, bool}, Func{S, S, S})">Fault</see> is injected in turn and the specification walked randomly, and the shallowest violation found is reported. <see cref="Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see> is strictly better where it can run, it proves a fault is undetectable rather than failing to find it, so reach for this only when <see cref="Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> gives up.</summary>
+    /// <remarks>Two columns mean less here than in the proved table. <c>Steps</c> is the shallowest counterexample sampled rather than the shallowest that exists, and <c>NOTHING</c> means no requirement was seen to detect the fault rather than that none can. A <see cref="Spec{S}.Reachable">Reachable</see> requirement can never appear in <c>Caught by</c> at all, because unreachability only follows from closure. <para>Before injecting any fault, the unmutated spec is walked over the same budget and rejected immediately if a requirement already fails. The baseline uses sampling rather than <see cref="Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> so the cost is proportional: one extra fault-free pass, not a full exhaustive search on a space that does not close.</para> <para>The budget is per fault, so the total work is <paramref name="iter"/> walks times the number of faults plus one baseline pass.</para></remarks>
     /// <param name="spec">The specification to mutate.</param>
     /// <param name="writeLine">WriteLine function for the fault table.</param>
     /// <param name="minSteps">The shortest trace to generate.</param>
@@ -1588,8 +1731,7 @@ public static partial class Check
             // sampling is caught here too, and the cost is one extra fault-free pass rather than a 10M-state search.
             baseline: () => { var v = SampleFault(spec, new("(baseline)", (_, _) => false, (_, a) => a), minSteps, maxSteps, seed, iter, time, threads);
                                if (v is not null) ThrowHelper.Throw(v.ToString(spec.Printer)); },
-            // Sampling always concludes (the budget runs out, never "gives up"), so closed is always true.
-            fault => (SampleFault(spec, fault, minSteps, maxSteps, seed, iter, time, threads), true));
+            fault => (SampleFault(spec, fault, minSteps, maxSteps, seed, iter, time, threads), FaultOutcome.NotFound));
 
     // Walk one fault, keeping the violation that happened on the earliest step of any trace.
     // Ranked by the step the violation happened on rather than by the length of the trace that reached it,
@@ -1599,7 +1741,7 @@ public static partial class Check
     static SpecViolation<S>? SampleFault<S>(Spec<S> spec, SpecFault<S> fault, int minSteps, int maxSteps, string? seed,
         long iter, int time, int threads)
     {
-        var gate = new object();
+        var gate = new Lock();
         SpecViolation<S>? best = null;
         var bestStep = int.MaxValue;
         new GenSpecTrace<S>(spec, minSteps, maxSteps, fault).Sample(trace =>
@@ -1624,7 +1766,7 @@ public static partial class Check
 
     static SpecFaultsReport FaultsReport<S>(Spec<S> spec, string mode, string? caveat, string uncaughtMessage,
         Action<string>? writeLine, bool throwOnUncaught, Action baseline,
-        Func<SpecFault<S>, (SpecViolation<S>? Violation, bool Closed)> run)
+        Func<SpecFault<S>, (SpecViolation<S>? Violation, FaultOutcome Missed)> run)
     {
         // Every other engine validates through the walk it starts. This one would skip it entirely for a spec with no
         // faults declared, so a typo in an on: name would go unreported.
@@ -1649,16 +1791,14 @@ public static partial class Check
         for (int f = 0; f < spec.FaultList.Count; f++)
         {
             var fault = spec.FaultList[f];
-            var (violation, closed) = run(fault);
-            var outcome = violation is not null ? FaultOutcome.Caught
-                        : closed ? FaultOutcome.NotDetected
-                        : FaultOutcome.Inconclusive;
+            var (violation, missed) = run(fault);
+            var outcome = violation is null ? missed : FaultOutcome.Caught;
             if (outcome == FaultOutcome.Caught) caught.Add(violation!.Id);
-            else if (outcome == FaultOutcome.NotDetected) uncaught.Add(fault.Name);
-            else inconclusive.Add(fault.Name);
+            else if (outcome == FaultOutcome.Inconclusive) inconclusive.Add(fault.Name);
+            else uncaught.Add(fault.Name);
             results[f] = new SpecFaultResult(fault.Name, outcome, violation?.Id, violation?.Trace.Steps.Length ?? 0);
             var label = outcome == FaultOutcome.Caught ? violation!.Id
-                      : outcome == FaultOutcome.NotDetected ? "NOTHING" : "NOT CLOSED";
+                      : outcome == FaultOutcome.Inconclusive ? "NOT CLOSED" : "NOTHING";
             sb.Append("\n  | ").Append(fault.Name.PadRight(w)).Append(" | ")
               .Append(label.PadRight(c)).Append(" | ")
               .Append((violation is null ? "" : (violation.Trace.Steps.Length).ToString()).PadLeft(5)).Append(" |");
@@ -1691,21 +1831,19 @@ public static partial class Check
     /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
     /// <param name="time">The number of seconds to run the sample.</param>
     /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
-    public static SpecReport Conform<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, bool> apply,
+    public static SpecReport<S> Conform<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, bool> apply,
         Action<string>? writeLine = null, int minSteps = 1, int maxSteps = 24, string? seed = null, long iter = -1,
         int time = -1, int threads = -1)
         => Conform(spec, create, (sut, t) => apply(sut, t) ? null : "", writeLine, minSteps, maxSteps, seed, iter, time, threads);
 
     /// <summary>Check that a real implementation conforms to the <paramref name="spec"/>. The <paramref name="apply"/> function drives one action on the SUT and returns <see langword="null"/> if the SUT state matches the model, or a short description of the divergence that will appear in the failure trace.</summary>
-    public static SpecReport Conform<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, string?> apply,
+    public static SpecReport<S> Conform<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, string?> apply,
         Action<string>? writeLine = null, int minSteps = 1, int maxSteps = 24, string? seed = null, long iter = -1,
         int time = -1, int threads = -1)
     {
         spec.Validate();
         var counters = new SpecCounters(spec.Requirements.Count, spec.ArgPairs);
-        var sutClause = $" of {typeof(TSut).Name}";
-        if (sutClause.Contains('`')) sutClause = ""; // Generic types (ValueTuple`4, anonymous types) produce unreadable names; omit the type.
-        var report = SpecReportOf(spec, $"Spec.Conform{sutClause} to {Plural(spec.Requirements.Count, "requirement")}", counters);
+        var report = SpecReportOf(spec, $"Spec.Conform{SutClause<TSut>()} to {Plural(spec.Requirements.Count, "requirement")}", counters);
         static (int Step, string? Reason) Diverged<S2, TSut2>(Func<TSut2> create, Func<TSut2, Transition<S2>, string?> apply, Trace<S2> trace)
         {
             var sut = create();
@@ -1716,14 +1854,16 @@ public static partial class Check
             }
             return (-1, null);
         }
-        var deadEnds = new DeadEnds<S>(spec, counters);
+        var deadEnds = new DeadEnds<S>(spec);
+        using var perThread = PerThread(spec);
         try
         {
             spec.GenTrace(minSteps, maxSteps).Sample(
                 trace =>
                 {
-                    deadEnds.Observe(trace);
-                    return SpecWalk(spec, trace, counters) is null && Diverged(create, apply, trace).Step == -1;
+                    var mine = perThread.Value!;
+                    deadEnds.Observe(trace, mine);
+                    return SpecWalk(spec, trace, mine) is null && Diverged(create, apply, trace).Step == -1;
                 },
                 null, seed, iter, time, threads,
             trace =>
@@ -1743,11 +1883,45 @@ public static partial class Check
         }
         finally
         {
+            foreach (var mine in perThread.Values) counters.Add(mine);
             report.TracesWalked = counters.Traces;
             report.StepsWalked = counters.Steps;
-            deadEnds.Report(report);
+            deadEnds.Report(report, counters);
             Reporter.Write(writeLine, report);
         }
         return report;
     }
+
+    // Generic types (ValueTuple`4, anonymous types) produce unreadable names, so they are left out.
+    static string SutClause<TSut>() => typeof(TSut).Name.Contains('`') ? "" : $" of {typeof(TSut).Name}";
+
+    /// <summary>Check a real implementation conforms to the specification on every transition of its reachable state space, rather than on sampled traces. The space is enumerated as <see cref="Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> enumerates it, proving the requirements on the way, and then for every state in breadth first order a fresh implementation is driven down a shortest path to it and one step further on each action enabled there, with <paramref name="apply"/> comparing it to the model after every step. So a clean run means the implementation took every transition the model has and agreed on each, and a divergence is reported on a shortest path to it, with no shrinking needed.</summary>
+    /// <remarks>Each state is reached by one path. Behaviour that depends on how a state was reached, beyond what the model state records, is only covered by <see cref="Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>'s random walks, so the two are complementary. <para>The implementation must be deterministic, as for Conform: the steps of a path are driven again for every transition out of the state it reaches, and a step that conformed once and then diverges is reported as nondeterminism. Nondeterminism the abstraction never reads, such as a fresh Guid only ever compared for equality, is fine.</para> <para>The cost in implementation steps is the sum, over transitions, of the depth of the state each leaves plus one, so a deep space takes many more steps than it has transitions. The report gives the count.</para></remarks>
+    /// <param name="spec">The specification to conform to.</param>
+    /// <param name="create">Creates a fresh implementation for each transition checked.</param>
+    /// <param name="apply">Performs one step on the implementation, returning null when it agrees with the model state the specification reached, or a short description of the divergence for the failure message.</param>
+    /// <param name="writeLine">WriteLine function for the report.</param>
+    /// <param name="maxStates">Give up after this many distinct states (default 10,000,000). The states reached before then are still conformed, but the report is not closed.</param>
+    /// <param name="maxDepth">Stop after this many steps from the initial state. The states short of it are still conformed, but the report is not closed.</param>
+    /// <param name="threads">The number of threads to drive the implementation on (default number logical CPUs), so <paramref name="create"/> and <paramref name="apply"/> must be safe to call on different instances at once, as for Conform. The model is explored on one thread first. Results do not depend on it.</param>
+    public static SpecReport<S> ConformExhaustive<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, string?> apply,
+        Action<string>? writeLine = null, int maxStates = 10_000_000, int maxDepth = int.MaxValue, int threads = -1)
+    {
+        var report = Explore(spec, null, $"Spec.ConformExhaustive{SutClause<TSut>()} to {Plural(spec.Requirements.Count, "requirement")}",
+                             maxStates, maxDepth, 1, out var violation, out var frontier);
+        if (violation is not null)
+        {
+            Reporter.Write(writeLine, report);
+            ThrowHelper.Throw(violation.ToString(spec.Printer));
+        }
+        var divergence = frontier!.Conform(create, apply, threads < 1 ? Threads : threads, out var error);
+        Reporter.Write(writeLine, report);
+        if (divergence is not null) ThrowHelper.Throw(divergence, error);
+        return report;
+    }
+
+    /// <summary>Check a real implementation conforms to the specification on every transition of its reachable state space, with <paramref name="apply"/> returning false when the implementation disagrees with the model. See the overload whose <c>apply</c> returns the reason.</summary>
+    public static SpecReport<S> ConformExhaustive<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, bool> apply,
+        Action<string>? writeLine = null, int maxStates = 10_000_000, int maxDepth = int.MaxValue, int threads = -1)
+        => ConformExhaustive(spec, create, (sut, t) => apply(sut, t) ? null : "", writeLine, maxStates, maxDepth, threads);
 }

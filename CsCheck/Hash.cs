@@ -15,36 +15,12 @@
 namespace CsCheck;
 
 using System.Text;
-using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-public interface IRegression
-{
-    void Add(bool val);
-    void Add(byte val);
-    void Add(char val);
-    void Add(DateTime val);
-    void Add(DateTimeOffset val);
-    void Add(decimal val);
-    void Add(double val);
-    void Add(float val);
-    void Add(Guid val);
-    void Add(int val);
-    void Add(long val);
-    void Add(sbyte val);
-    void Add(short val);
-    void Add(string val);
-    void Add(TimeSpan val);
-    void Add(uint val);
-    void Add(ulong val);
-    void Add(ushort val);
-}
-
 /// <summary>Functionality for hash testing data with detailed information of any changes.</summary>
-public sealed class Hash : IRegression
+public sealed class Hash
 {
-    static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> replaceLock = new(StringComparer.Ordinal);
     internal static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CsCheck");
     public const int OFFSET_SIZE = 500_000_000;
     readonly int Offset;
@@ -52,7 +28,7 @@ public sealed class Hash : IRegression
     readonly int ExpectedHash;
     readonly Stream? stream;
     readonly string? filename;
-    readonly string? threadId;
+    readonly string? tempfile;
     readonly bool writing;
     readonly List<int>? roundingFractions;
     string lastString = "null";
@@ -75,7 +51,7 @@ public sealed class Hash : IRegression
         }
     }
 
-    public Hash(int? expectedHash, int? offset = null, int? decimalPlaces = null, int? significantFigures = null, string memberName = "", string filePath = "")
+    internal Hash(int? expectedHash, int? offset = null, int? decimalPlaces = null, int? significantFigures = null, string memberName = "", string filePath = "")
     {
         Offset = offset ?? 0;
         DecimalPlaces = decimalPlaces;
@@ -88,17 +64,12 @@ public sealed class Hash : IRegression
         if (!expectedHash.HasValue) return;
         ExpectedHash = expectedHash.Value;
         filename = Filename(FullHash(offset, ExpectedHash), memberName, filePath);
-        var rwLock = replaceLock.GetOrAdd(filename, _ => new ReaderWriterLockSlim());
-        rwLock.EnterUpgradeableReadLock();
         if (File.Exists(filename))
         {
             stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
             return;
         }
-        rwLock.EnterWriteLock();
-        threadId = Environment.CurrentManagedThreadId.ToString();
-        var tempfile = filename + threadId;
-        if (File.Exists(tempfile)) File.Delete(tempfile);
+        tempfile = $"{filename}_{Environment.ProcessId}_{Environment.CurrentManagedThreadId}";
         Directory.CreateDirectory(Path.GetDirectoryName(tempfile)!);
         stream = File.Create(tempfile);
         writing = true;
@@ -115,17 +86,17 @@ public sealed class Hash : IRegression
     // The 33rd bit is a flag for no offset. Meaning a range of values for no offset of (0x100000000,0x1FFFFFFFF) = (4_294_967_296,8_589_934_591) ie 10 digits always.
     // The offset is shifted 33 bits and the bit above this set giving a range of (0x4000000000000000,(500_000_000 < 33) | 0x4000000000000000) | 0xFFFFFFFF)
     // = (4_611_686_018_427_387_904,8_906_653_318_722_355_199)
-    public static long FullHash(int? offset, int hash)
+    internal static long FullHash(int? offset, int hash)
     {
         return offset.HasValue ? ((((long)offset) << 33) | 0x4000000000000000) + (uint)hash : 0x100000000 | (uint)hash;
     }
 
-    public static (int?, int) OffsetHash(long fullHash)
+    internal static (int?, int) OffsetHash(long fullHash)
     {
         return ((fullHash & 0x100000000) == 0 ? (int?)((fullHash & 0x3FFFFFFE00000000) >> 33) : null, (int)fullHash);
     }
 
-    public int? BestOffset()
+    internal int? BestOffset()
     {
         if (roundingFractions is null || roundingFractions.Count == 0) return null;
         roundingFractions.Sort();
@@ -144,30 +115,29 @@ public sealed class Hash : IRegression
         return OFFSET_SIZE - maxMid;
     }
 
-    public void Close()
+    internal void Close()
     {
         var actualHash = GetHashCode();
-        if (stream is not null)
+        if (stream is null) return;
+        stream.Dispose();
+        if (!writing) return;
+        if (actualHash != ExpectedHash)
         {
-            stream.Dispose();
-
-            if (writing)
-            {
-                if (actualHash == ExpectedHash)
-                {
-                    if (File.Exists(filename)) File.Delete(filename);
-                    File.Move(filename + threadId, filename!);
-                }
-                else
-                {
-                    File.Delete(filename + threadId);
-                }
-
-                replaceLock[filename!].ExitWriteLock();
-            }
-            replaceLock[filename!].ExitUpgradeableReadLock();
+            File.Delete(tempfile!);
+            return;
+        }
+        try
+        {
+            File.Move(tempfile!, filename!);
+        }
+        catch (IOException) when (File.Exists(filename))
+        {
+            // Written meanwhile by another test host. Replacing it would fail on Windows while it's open for reading.
+            File.Delete(tempfile!);
         }
     }
+
+    internal Hash Clone() => (Hash)MemberwiseClone();
 
     public void Add(bool val)
     {
@@ -256,8 +226,9 @@ public sealed class Hash : IRegression
         Stream(StreamSerializer.WriteChar, StreamSerializer.ReadChar, val);
         AddPrivate((uint)val);
     }
-    public void Add(string val)
+    public void Add(string? val)
     {
+        val ??= NULL;
         Stream(StreamSerializer.WriteString, StreamSerializer.ReadString, val);
         foreach (char c in val) AddPrivate((uint)c);
         lastString = val;
@@ -405,6 +376,35 @@ public sealed class Hash : IRegression
             AddPrivate(c.lo);
         }
     }
+
+    const string NULL = "<null>";
+
+    IReadOnlyCollection<T> AddCount<T>(IEnumerable<T>? val)
+    {
+        if (val is null) { Add(NULL); return []; }
+        var col = val as IReadOnlyCollection<T> ?? [.. val];
+        Add((uint)col.Count);
+        return col;
+    }
+
+    public void Add(IEnumerable<bool>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<sbyte>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<byte>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<short>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<ushort>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<int>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<uint>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<long>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<ulong>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<DateTime>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<TimeSpan>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<DateTimeOffset>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<Guid>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<char>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<string>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<double>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<float>? val) { foreach (var v in AddCount(val)) Add(v); }
+    public void Add(IEnumerable<decimal>? val) { foreach (var v in AddCount(val)) Add(v); }
 
     static readonly double[] pow10Double = [ 1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14,
         1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22, 1e23, 1e24, 1e25, 1e26, 1e27, 1e28, 1e29, 1e30, 1e31 ];
@@ -872,7 +872,9 @@ public sealed class HashStream : Stream
     }
     public override int GetHashCode()
     {
-        if (position > 0) hash.Add(bytes);
-        return hash.GetHashCode();
+        if (position == 0) return hash.GetHashCode();
+        var withPartialWord = hash.Clone();
+        withPartialWord.Add(bytes);
+        return withPartialWord.GetHashCode();
     }
 }

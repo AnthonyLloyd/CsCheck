@@ -22,18 +22,50 @@ CsCheck also makes specification, performance and regression testing simple and 
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;specification;model-checking;temporal;parallel;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>4.9.2</Version>
+        <Version>5.0.0-beta1</Version>
         <PackageReleaseNotes>
-Fixed SampleModelBased writing an operation table and timing every operation when only writeLine is set.
-SampleModelBased classify table is now counts only, kept per thread, so it no longer slows the sample down.
-SampleModelBased only builds operation names when reporting a failure.
-Fixed a Classifier summary row counting the rows it is a prefix of, such as Op1 counting Op10.
-Fixed a throwing writeLine in a classify table failing a passing sample or replacing its failure.
-Classifier totals are now long, so a long classify run no longer throws OverflowException.
-Added Gen.Select overloads for 9 to 16 generators with a selector.
+Added Gen.Int128, Gen.UInt128 and PCG.Next128.
+Added Gen.Select overloads for 9 to 16 generators.
+Added range indexers to Gen.DateTime.Utc and Gen.DateTime.Local.
+Added Spec.ConformExhaustive: checks an implementation on every transition of the proof.
+Added a Self-loops column and SpecReport.Deadlock to Spec reports.
+Added Check.SingleLimit: Single stops after 1,000,000 tries instead of hanging.
+Improved Spec Sample, Conform and parallel Exhaustive speed.
+Improved SampleModelBased speed: its classify table is counts only.
+Improved CsCheckException: InnerException is set, and the stack trace points at the test.
+Improved SelectMany: selectors can return IGen&lt;R&gt;.
+Fixed Gen.Decimal, Gen.Double and Gen.Float ranges throwing at 0, returning NaN or infinity, and varying by OS or .NET version.
+Fixed Check.Equal for dictionaries, ImmutableArray, rank 3+ arrays, ReadOnlySet and strings.
+Fixed Sample hiding failures and printing the wrong value when the generator throws.
+Fixed SampleParallel false failures and seed replay.
+Fixed SampleModelBased writing timed operation tables when only writeLine is set.
+Fixed classify tables: Op1 counting Op10, a throwing writeLine, and overflow on long runs.
+Fixed Gen.Frequency with negative weights or totals over int.MaxValue.
+Fixed Check.ChiSquared failing correct distributions.
+Fixed Check.Hash with null strings, repeated HashStream.GetHashCode, and parallel test hosts.
+Fixed Check.Equality accepting an assignment setter that binds as a functional one.
+Fixed an action-scoped Spec.Fault applying to every action in sampled traces.
+Fixed Sample, Faster and Single threads losing AsyncLocal values and culture.
+Fixed Causal.Profile errors being far too small, and overflow on long runs.
+Fixed threads: 0 hanging; below 1 now means the default.
+
+BREAKING CHANGES:
+- Now targets net10.0, version 4.9.1 was the last to target net8.0.
+- Removed Gen.UInt4 to Gen.UInt2048, Gen.UInt[0, N - 1] gives the same values. Gen.UInt128 now generates UInt128.
+- OneOfConst and FrequencyConst are now OneOf and Frequency overloads.
+- Removed Check.ModelEqual; models default to Check.Equal, so bags count duplicates.
+- Removed Dbg, IRegression and RegressionExtensions; Hash.Add takes collections.
+- Removed GenOperationAsync&lt;T&gt;; Gen.Operation with an async lambda is a compile error.
+- Removed Logging.LogProcessor and Logging.CreateLogger.
+- Renamed ILogger to ISampleLogger.
+- Spec checks return SpecReport&lt;S&gt;, Exhaustive takes writeLine first, and AtMost&lt;T&gt; takes times after over.
+- SampleFaults reports FaultOutcome.NotFound, not NotDetected, for a fault it misses.
+- Generator fields such as Gen.Int.Uniform are readonly.
+- No longer public: Classifier, MedianEstimator, ThrowHelper, HashHelper, the Timer types, Zigzag, and the Hash and MedianEstimate constructors.
+- CsCheckException.Message no longer includes the inner exception's message.
+- Seeds change for Gen.Decimal, Gen.Double, Gen.Float and about half of Gen.Seed values.
         </PackageReleaseNotes>
-        <TargetFramework>net8.0</TargetFramework>
-        <LangVersion>preview</LangVersion>
+        <TargetFramework>net10.0</TargetFramework>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <WarningLevel>9999</WarningLevel>
         <Nullable>enable</Nullable>
@@ -43,7 +75,6 @@ Added Gen.Select overloads for 9 to 16 generators with a selector.
         <AssemblyOriginatorKeyFile>../SigningKey.snk</AssemblyOriginatorKeyFile>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
-        <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -52,8 +83,7 @@ Added Gen.Select overloads for 9 to 16 generators with a selector.
         <AnalysisMode>All</AnalysisMode>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.401" PrivateAssets="All" />
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.261" PrivateAssets="All" />
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.294" PrivateAssets="All" />
         <None Include="../CsCheck.png" Pack="true" PackagePath="" Visible="False" />
         <None Include="../README.md" Pack="true" PackagePath="" Visible="False" />
     </ItemGroup>

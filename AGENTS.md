@@ -143,6 +143,7 @@ spec.Faults(TUnitX.WriteLine);       // mutation testing for the requirements th
 spec.SampleFaults(TUnitX.WriteLine); // the same table walked rather than proved, when the space will not close
 spec.Mermaid();                      // reachable state graph as a Mermaid flowchart, for a model small enough to look at
 spec.Conform(() => new Engine(), Apply, TUnitX.WriteLine); // does the real code conform to the spec
+spec.ConformExhaustive(() => new Engine(), Apply, TUnitX.WriteLine); // on every transition, down shortest paths
 ```
 
 Rules for generating this:
@@ -170,7 +171,8 @@ Rules for generating this:
 - `Response` is for consequences that take time: a response holding on the trigger step itself does **not** discharge
   the obligation. A property whose consequence happens in the triggering step (answer a TestRequest with a Heartbeat)
   is a `Rule`. `Precedes` is the opposite: its two predicates holding on one step satisfies it.
-- Read `Triggered` in the report: `NEVER` means the when / on / trigger never happened, so a green row proves nothing. `Fired` is per (action, argument) case, so `NEVER` there means that case is dead. A non-zero `deadlock` count prints a path to one, each step naming what else was enabled where it was taken, since every action is disabled at the dead end itself. `Sample` reports `deadlocked` as a count of walks rather than of states, and leaves `DeadlockStates` zero.
+- Read `Triggered` in the report: `NEVER` means the when / on / trigger never happened, so a green row proves nothing. `Fired` is per (action, argument) case, so `NEVER` there means that case is dead. `Self-loops` counts steps that left the state equal; for an action that must make progress add `Never(id, quote, on: "Name", (b, a) => a.Equals(b))`. A non-zero `deadlock` count prints a path to one, each step naming what else was enabled where it was taken, since every action is disabled at the dead end itself. `Sample` reports `deadlocked` as a count of walks rather than of states, and leaves `DeadlockStates` zero.
+- Prefer `ConformExhaustive` to `Conform` when the space closes: it drives the implementation along every transition the proof counts, each from a fresh instance down a shortest path, so it needs no weights or shrinking, and its counts (`ConformedStates`, `ConformedTransitions`) equal the proof's. It covers one path per state, so keep `Conform` for behaviour that depends on how a state was reached. In `apply`, compare everything the abstraction keeps, not a few fields.
 - Assert the size of the space (`report.States`, `report.Transitions`), not only that it closed. Every other assertion
   has the form "no counterexample was found", which a search that explored too little also satisfies.
 - Assert which requirement caught each fault, not just that something did:
@@ -239,15 +241,18 @@ Check.Hash(h =>
 default 100).
 
 Global defaults via environment variables: `CsCheck_Iter`, `CsCheck_Time`,
-`CsCheck_Seed`, `CsCheck_Sigma`, `CsCheck_Threads`.
+`CsCheck_Seed`, `CsCheck_Threads`, `CsCheck_Timeout`, `CsCheck_Sigma` and
+`CsCheck_Replay` set the parameters above. `CsCheck_AllocAll` (default false)
+makes Faster count allocations on all threads. `CsCheck_Ulps` (default 4) lets
+`Check.Print` show a double or float as a shorter number within that many ulps.
+`CsCheck_WhereLimit` (default 100) and `CsCheck_SingleLimit` (default
+1,000,000) are how many tries `Where` and `Single` make before throwing.
 
 ## Gotchas for agents
 
 - Do **not** write `Arbitrary`/shrinker code; it doesn't exist here and isn't
   needed.
 - `Classify` and `Faster` make `writeLine:` effectively required to see output.
-- The `Dbg` module is a temporary debug aid; its API may change between minor
-  versions; don't rely on it in committed library code.
 - Prefer `Gen.Const(() => new ...())` (factory) over a shared instance for
   parallel/model tests so each run gets a fresh state.
 - **`skipped` in a failure message is not a problem.** It counts shrink-phase

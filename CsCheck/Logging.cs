@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 
-public interface ILogger : IDisposable
+public interface ISampleLogger : IDisposable
 {
     Action<T> WrapAssert<T>(Action<T> assert);
     Func<T, bool> WrapAssert<T>(Func<T, bool> assert);
@@ -13,7 +13,7 @@ public interface ILogger : IDisposable
     Func<T, Task<bool>> WrapAssert<T>(Func<T, Task<bool>> assert);
 }
 
-internal sealed class TycheLogger : ILogger
+internal sealed class TycheLogger : ISampleLogger
 {
     private readonly Task _loggingTask;
     private readonly Channel<(object Value, bool Success)> _channel;
@@ -106,15 +106,7 @@ internal sealed class TycheLogger : ILogger
 
 public static class Logging
 {
-    public enum LogProcessor { Tyche }
-
-    public static ILogger CreateLogger(LogProcessor p, [CallerMemberName] string? name = null, string? directory = null, StreamWriter? writer = null, Func<object, string>? print = null) => p switch
-    {
-        LogProcessor.Tyche => CreateTycheLogger(name, directory, writer, print),
-        _ => throw new ArgumentOutOfRangeException(nameof(p), p, null),
-    };
-
-    public static ILogger CreateTycheLogger([CallerMemberName] string? name = null, string? directory = null, StreamWriter? writer = null, Func<object, string>? print = null)
+    public static ISampleLogger CreateTycheLogger([CallerMemberName] string? name = null, string? directory = null, StreamWriter? writer = null, Func<object, string>? print = null)
     {
         if (name is null) ThrowHelper.Throw("name is null");
         var channel = Channel.CreateUnbounded<(object Value, bool Success)>(new() { SingleReader = true, SingleWriter = false });
@@ -161,7 +153,7 @@ public static class Logging
         }
     }
 
-    private static readonly Dictionary<string, string> _emptyDictionary = [with(StringComparer.Ordinal)];
+    private static readonly Dictionary<string, string> _emptyDictionary = new(StringComparer.Ordinal);
 }
 
 #pragma warning disable IDE1006 // Naming Styles

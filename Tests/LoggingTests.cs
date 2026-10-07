@@ -23,7 +23,7 @@ public class LoggingTests
         var logger = Logging.CreateTycheLogger(writer: writer);
 
         // Random test logic
-        const int frequency = 10;
+        const int frequency = 100;
         var expected = Enumerable.Repeat(frequency, 2).ToArray();
 
         //Try catch to suppress failing original test logic
@@ -31,7 +31,7 @@ public class LoggingTests
         {
             Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array[2 * frequency]
                 .Select(sample => Tally(2, sample))
-                .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2, logger: logger);
+                .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2, logger: logger);
         }
         catch
         {
@@ -50,7 +50,7 @@ public class LoggingTests
         var tycheData = JsonSerializer.Deserialize(json, TycheJsonSerializerContext.Default.TycheData);
 
         await Assert.That(tycheData is not null && LogCheck(tycheData, generatedIntUponTrue)).IsTrue();
-        await Assert.That(tycheData!.representation[1..^1].Split(',', StringSplitOptions.TrimEntries).Sum(int.Parse)).IsEqualTo(20);
+        await Assert.That(tycheData!.representation[1..^1].Split(',', StringSplitOptions.TrimEntries).Sum(int.Parse)).IsEqualTo(2 * frequency);
 
         static bool LogCheck(TycheData td, int generatedIntUponTrue)
         {
@@ -69,14 +69,14 @@ public class LoggingTests
     {
         var logger = Logging.CreateTycheLogger();
         // Random test logic
-        const int frequency = 10;
+        const int frequency = 100;
         var expected = Enumerable.Repeat(frequency, 2).ToArray();
         //Try catch to suppress failing original test logic
         try
         {
             Gen.Bool.Select(i => i ? generatedIntUponTrue : 0).Array[2 * frequency]
                 .Select(sample => Tally(2, sample))
-                .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2, logger: logger);
+                .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2, logger: logger);
         }
         catch {}
     }

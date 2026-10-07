@@ -151,7 +151,9 @@ session that outlives its connection were the smallest honest widening of it.
     `TooLowDup` defect is reachable in two. A planted defect masks every divergence behind it. The deeper point is
     that nothing exhaustively relates the engine to the model: `Exhaustive` proves requirements about the model,
     `Conform` samples state equality against the engine, and a requirement proved on one is not thereby true of the
-    other. Found by reading the two files side by side, which is not a method that scales.
+    other. Found by reading the two files side by side, which is not a method that scales. `ConformExhaustive` now
+    relates them: it compares the engine with the model on every transition the proof counts, down one shortest path
+    per state. It still reports only the first divergence, so the planted defect would still have masked this one.
 
 And one finding that is not a defect but a real property of the implementation, kept as a test that asserts the
 counterexample still exists: **nothing bounds how long a gap may stay open.** `NextSequenceReset` calls

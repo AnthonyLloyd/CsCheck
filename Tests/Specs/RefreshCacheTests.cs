@@ -35,32 +35,47 @@ public class RefreshCacheTests
         RefreshCacheSpec.Create().Faults(TUnitX.WriteLine);
     }
 
+    static string? Apply(RefreshCache c, Transition<RefreshCacheSpec.State> t)
+    {
+        var key = RefreshCacheSpec.Keys[t.ArgIndex];
+        var served = RefreshCache.Served.None;
+        switch (t.Action)
+        {
+            case "Read": served = c.Read(key); break;
+            case "Complete": c.Complete(key); break;
+            case "Fail": c.Fail(key); break;
+            default: c.Tick(); break;
+        }
+        if (served != t.After.Served) return $"Served: got {served}, expected {t.After.Served}";
+        if (c.Version(key) != t.After.Of(key).Version) return $"Version[{key}]: got {c.Version(key)}, expected {t.After.Of(key).Version}";
+        if (c.Age(key) != t.After.Of(key).Age) return $"Age[{key}]: got {c.Age(key)}, expected {t.After.Of(key).Age}";
+        if (c.Loads(key) != t.After.Of(key).Loads) return $"Loads[{key}]: got {c.Loads(key)}, expected {t.After.Of(key).Loads}";
+        return null;
+    }
+
     /// <summary>An independently written implementation, driven down the same walk. Unlike the FIX engine this one has
     /// no planted defect, so the run completes and the coverage table shows what a clean conformance result looks
     /// like.</summary>
     [Test]
     public async Task Conforms_To_Spec()
     {
-        static string? Apply(RefreshCache c, Transition<RefreshCacheSpec.State> t)
-        {
-            var key = RefreshCacheSpec.Keys[t.ArgIndex];
-            var served = RefreshCache.Served.None;
-            switch (t.Action)
-            {
-                case "Read": served = c.Read(key); break;
-                case "Complete": c.Complete(key); break;
-                case "Fail": c.Fail(key); break;
-                default: c.Tick(); break;
-            }
-            if (served != t.After.Served) return $"Served: got {served}, expected {t.After.Served}";
-            if (c.Version(key) != t.After.Of(key).Version) return $"Version[{key}]: got {c.Version(key)}, expected {t.After.Of(key).Version}";
-            if (c.Age(key) != t.After.Of(key).Age) return $"Age[{key}]: got {c.Age(key)}, expected {t.After.Of(key).Age}";
-            if (c.Loads(key) != t.After.Of(key).Loads) return $"Loads[{key}]: got {c.Loads(key)}, expected {t.After.Of(key).Loads}";
-            return null;
-        }
         var report = RefreshCacheSpec.Create()
             .Conform(() => new RefreshCache(), Apply, TUnitX.WriteLine, maxSteps: 30, iter: 20_000);
         await Assert.That(report.NeverTriggered).IsEmpty();
+    }
+
+    /// <summary>The same implementation on every transition of the proof. The Response requirements put deadlines in the
+    /// search state, so a model state is often reached more than once, and each of those nodes is conformed in its own
+    /// right: the counts are the proof's, not the number of distinct model states.</summary>
+    [Test]
+    public async Task Conforms_On_Every_Transition()
+    {
+        var report = RefreshCacheSpec.Create().ConformExhaustive(() => new RefreshCache(), Apply, TUnitX.WriteLine);
+        await Assert.That(report.Closed).IsTrue();
+        await Assert.That(report.ConformedStates).IsEqualTo(1_445);
+        await Assert.That(report.ConformedTransitions).IsEqualTo(6_713);
+        await Assert.That(report.ToString().Split('\n')).Contains(Docs.Spec
+            .Single(b => b.StartsWith("  conformed on ", StringComparison.Ordinal)).TrimEnd('\n'));
     }
 
     /// <summary>The cache has no liveness property of its own: a stale value only becomes fresh if something reads it

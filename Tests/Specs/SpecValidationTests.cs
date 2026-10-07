@@ -157,6 +157,30 @@ public partial class SpecValidationTests
     }
 
     [Test]
+    public async Task SampleFaults_Fault_On_Disabled_Action_Is_Uncaught()
+    {
+        var report = Spec.From(0)
+            .Action("A", i => i < 3, i => i + 1)
+            .Action("B", _ => false, i => i - 100)
+            .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
+            .Fault("b-broken", on: "B", perturb: (_, a) => a - 1000)
+            .SampleFaults(throwOnUncaught: false);
+        await Assert.That(report.Uncaught).Contains("b-broken");
+    }
+
+    [Test]
+    public async Task SampleFaults_Fault_On_ActionName_Is_Caught_When_That_Action_Fires()
+    {
+        var report = Spec.From(0)
+            .Action("Inc", i => i + 1)
+            .Action("Dec", i => i > 0, i => i - 1)
+            .Invariant("NON-NEGATIVE", "the counter never goes negative", i => i >= 0)
+            .Fault("inc-broken", on: "Inc", perturb: (before, _) => before - 1)
+            .SampleFaults();
+        await Assert.That(report.CaughtBy("inc-broken")).IsEqualTo("NON-NEGATIVE");
+    }
+
+    [Test]
     public async Task Fault_On_ActionName_With_When_Predicate_Is_Caught()
     {
         var report = Spec.From(0)
@@ -533,6 +557,7 @@ public partial class SpecValidationTests
             .Faults(TUnitX.WriteLine, throwOnUncaught: false);
         await Assert.That(report.Uncaught.Count).IsEqualTo(1);
         await Assert.That(report.Uncaught).Contains("counter advances twice");
+        await Assert.That(report.Results[0].Outcome).IsEqualTo(FaultOutcome.NotDetected);
         await Assert.That(report.CaughtBy("counter advances twice")).IsNull();
         await Assert.That(report.CaughtBy("counter goes negative")).IsEqualTo("NON-NEGATIVE");
         await Assert.That(report.ToString()).Contains("NOTHING");
@@ -550,6 +575,8 @@ public partial class SpecValidationTests
             .Fault("counter advances twice", (_, _) => true, (_, a) => a + 1)
             .Fault("counter goes negative", (_, _) => true, (_, _) => -1);
         var report = spec.SampleFaults(TUnitX.WriteLine, iter: 500, throwOnUncaught: false);
+        await Assert.That(report.Results[0].Outcome).IsEqualTo(FaultOutcome.NotFound);
+        await Assert.That(report.Uncaught).Contains("counter advances twice");
         await Assert.That(report.CaughtBy("counter advances twice")).IsNull();
         await Assert.That(report.CaughtBy("counter goes negative")).IsEqualTo("NON-NEGATIVE");
         await Assert.That(report.ToString()).Contains("not that none exists");
@@ -911,11 +938,11 @@ public partial class SpecValidationTests
     [GeneratedRegex(@"^  n0 -->\|""(.*)""\| n1;$", RegexOptions.Multiline)]
     private static partial Regex MyRegex1 { get; }
 
-    /// <summary>A dead end needs no requirement to detect it, and that was only true of <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see> - a sampled
+    /// <summary>A dead end needs no requirement to detect it, and that was only true of <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> - a sampled
     /// walk stopped early and said nothing, so the engine you fall back to on a space too big to close was the one that
     /// could not see the bug the other finds for free. Counted as walks, not states, since a sampled walk keeps no
-    /// visited set: <see cref="SpecReport.DeadlockStates">DeadlockStates</see> stays zero rather than being filled in with a number that would not mean
-    /// what it means for <see cref="Check.Exhaustive{S}(Spec{S}, int, int, int, bool, System.Action{string}?)">Exhaustive</see>.</summary>
+    /// visited set: <see cref="SpecReport{S}.DeadlockStates">DeadlockStates</see> stays zero rather than being filled in with a number that would not mean
+    /// what it means for <see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see>.</summary>
     [Test]
     public async Task Sample_Reports_Walks_That_Dead_Ended()
     {
@@ -990,10 +1017,104 @@ public partial class SpecValidationTests
         var spec = Spec.From(0)
             .Action("Inc", s => s < 3, s => s == 2 ? throw new InvalidOperationException("effect boom") : s + 1)
             .Invariant("ANY", "Always true.", _ => true);
-        var message = Assert.Throws<CsCheckException>(() => spec.Conform(() => new ConformSut(),
-            (sut, t) => { sut.N++; return sut.N == t.After; }, writeLine: null, minSteps: 3, maxSteps: 3, iter: 20))!.Message;
-        await Assert.That(message).Contains("effect boom");
-        await Assert.That(message).DoesNotContain("Object reference not set");
+        var e = Assert.Throws<CsCheckException>(() => spec.Conform(() => new ConformSut(),
+            (sut, t) => { sut.N++; return sut.N == t.After; }, writeLine: null, minSteps: 3, maxSteps: 3, iter: 20))!;
+        await Assert.That(e.InnerException).IsTypeOf<InvalidOperationException>();
+        await Assert.That(e.InnerException!.Message).IsEqualTo("effect boom");
+        await Assert.That(e.ToString()).DoesNotContain("Object reference not set");
+    }
+
+    static Spec<int> IncOrStay() => Spec.From(0).Action("Inc", i => i < 3, i => i + 1).Action("Stay", i => i);
+
+    /// <summary>The path to a state is driven again for every transition out of it, and each of its steps was itself the
+    /// transition under test when the state before it was conformed. So a step that conformed then and diverges now is
+    /// the implementation's nondeterminism, and the report says so rather than blaming the step.</summary>
+    [Test]
+    public async Task ConformExhaustive_Reports_A_Nondeterministic_Implementation()
+    {
+        var asked = 0;
+        var message = Assert.Throws<CsCheckException>(() => IncOrStay().ConformExhaustive(() => new int[1], (sut, t) =>
+        {
+            if (t.Action == "Inc" && t.Before == 0 && ++asked > 1) return "remembers being asked before";
+            sut[0] = t.After;
+            return null;
+        }, threads: 1))!.Message;
+        await Assert.That(message).Contains("at step 1, on a path that had already conformed");
+        await Assert.That(message).Contains("Reason: remembers being asked before");
+    }
+
+    /// <summary>A transition back into the state it left is never on a shortest path, so driving the implementation
+    /// down each state's path would never take one. Every transition is taken, so a defect on a self-loop is found.</summary>
+    [Test]
+    public async Task ConformExhaustive_Takes_Transitions_Off_The_Shortest_Paths()
+    {
+        var message = Assert.Throws<CsCheckException>(() => IncOrStay().ConformExhaustive(() => new int[1], (sut, t) =>
+        {
+            sut[0] = t.Action == "Stay" && t.Before == 2 ? sut[0] + 1 : t.After;
+            return sut[0] == t.After ? null : $"got {sut[0]}, expected {t.After}";
+        }))!.Message;
+        await Assert.That(message).Contains("diverged from the specification at step 3\n");
+        await Assert.That(message).Contains("Reason: got 3, expected 2");
+        await Assert.That(message).Contains(">>  3 Stay");
+    }
+
+    /// <summary>An implementation that throws fails at the step it threw on, with its exception kept as the inner
+    /// exception, and one that cannot be created fails before any step.</summary>
+    [Test]
+    public async Task ConformExhaustive_Surfaces_An_Implementation_That_Throws()
+    {
+        var e = Assert.Throws<CsCheckException>(() => IncOrStay().ConformExhaustive(() => new int[1], (sut, t) =>
+        {
+            if (t.Before == 2 && t.Action == "Inc") throw new InvalidOperationException("apply boom");
+            sut[0] = t.After;
+            return true;
+        }))!;
+        await Assert.That(e.InnerException).IsTypeOf<InvalidOperationException>();
+        await Assert.That(e.Message).Contains("Implementation threw at step 3");
+        await Assert.That(e.Message).Contains("Error: InvalidOperationException: apply boom");
+        var created = Assert.Throws<CsCheckException>(() => IncOrStay().ConformExhaustive<int, int[]>(
+            () => throw new InvalidOperationException("create boom"), (_, _) => true))!;
+        await Assert.That(created.InnerException!.Message).IsEqualTo("create boom");
+        await Assert.That(created.Message).Contains("Implementation threw when created");
+    }
+
+    /// <summary>A specification that fails its own requirements says nothing about an implementation, so the violation
+    /// is reported exactly as Exhaustive reports it and no implementation is ever created.</summary>
+    [Test]
+    public async Task ConformExhaustive_Proves_The_Requirements_First()
+    {
+        static Spec<int> Make() => IncOrStay().Never("NO-THREE", "The counter never reaches three.", (_, a) => a == 3);
+        var created = 0;
+        var message = Assert.Throws<CsCheckException>(() => Make().ConformExhaustive(() => { created++; return new int[1]; },
+            (_, _) => true))!.Message;
+        Make().Exhaustive(out var violation);
+        await Assert.That(message).IsEqualTo(violation!.ToString());
+        await Assert.That(created).IsEqualTo(0);
+    }
+
+    /// <summary>A model that does not close can still be conformed as far as it was explored: every state the search
+    /// expanded has all its transitions driven, which are exactly the transitions the report counts once it stopped at
+    /// maxDepth, and the report is not closed.</summary>
+    [Test]
+    public async Task ConformExhaustive_Conforms_As_Far_As_The_Search_Went()
+    {
+        static bool Track(int[] sut, Transition<int> t)
+        {
+            var from = sut[0] == t.Before;
+            sut[0] = t.After;
+            return from;
+        }
+        var unbounded = Spec.From(0).Action("Inc", i => i + 1).Action("Stay", i => i);
+        var report = unbounded.ConformExhaustive(() => new int[1], Track, maxDepth: 4);
+        await Assert.That(report.Closed).IsFalse();
+        await Assert.That(report.ConformedStates).IsEqualTo(4);
+        await Assert.That(report.ConformedTransitions).IsEqualTo(report.Transitions);
+        await Assert.That(report.ToString()).Contains("conformed on 8 transitions from 4 states, 20 implementation steps");
+        // Giving up stops mid state, so that state is left out and the count falls short of the report's by its edges.
+        var gaveUp = Spec.From(0).Action("Inc", i => i + 1).ConformExhaustive(() => new int[1], Track, maxStates: 5);
+        await Assert.That(gaveUp.Closed).IsFalse();
+        await Assert.That(gaveUp.ConformedStates).IsEqualTo(4);
+        await Assert.That(gaveUp.ConformedTransitions).IsEqualTo(gaveUp.Transitions - 1);
     }
 
     /// <summary>A model that throws surfaces its own exception rather than a NullReferenceException from the printer.</summary>
@@ -1003,10 +1124,11 @@ public partial class SpecValidationTests
         var spec = Spec.From(0)
             .Action("Inc", s => s < 3, s => s == 2 ? throw new InvalidOperationException("effect boom") : s + 1)
             .Invariant("ANY", "Always true.", _ => true);
-        var message = Assert.Throws<CsCheckException>(
-            () => spec.Sample(writeLine: null, minSteps: 3, maxSteps: 3, iter: 20))!.Message;
-        await Assert.That(message).Contains("effect boom");
-        await Assert.That(message).DoesNotContain("Object reference not set");
+        var e = Assert.Throws<CsCheckException>(
+            () => spec.Sample(writeLine: null, minSteps: 3, maxSteps: 3, iter: 20))!;
+        await Assert.That(e.InnerException).IsTypeOf<InvalidOperationException>();
+        await Assert.That(e.InnerException!.Message).IsEqualTo("effect boom");
+        await Assert.That(e.ToString()).DoesNotContain("Object reference not set");
     }
 
     /// <summary>Trace step bounds are rejected up front rather than crashing inside generation.</summary>
@@ -1186,7 +1308,7 @@ public partial class SpecValidationTests
             // A needs a B first, so the shortest counterexample against CAP[0] has a B occurrence in it.
             .Action("BumpA", p => p.B >= 1, p => p with { A = p.A + 1 })
             .Action("BumpB", p => p.B == 0, p => p with { B = p.B + 1 })
-            .AtMost("CAP", "At most one bump each.", 1, [0, 1],
+            .AtMost("CAP", "At most one bump each.", [0, 1], 1,
                 (b, a, k) => k == 0 ? a.A > b.A : a.B > b.B)
             .Exhaustive(out var violation);
         await Assert.That(violation).IsNotNull();
@@ -1516,12 +1638,11 @@ public partial class SpecValidationTests
     [Arguments(4)]
     public async Task Action_Coverage_Sums_To_The_Transition_Count(int threads)
     {
-        foreach (var report in new[]
-        {
-            FencingSpec.Create(FencingSpec.Fence.Every).Exhaustive(threads: threads),
-            AlternatingBitSpec.Create().Exhaustive(threads: threads),
-            RefreshCacheSpec.Create().Exhaustive(threads: threads),
-        })
+        await Sums(FencingSpec.Create(FencingSpec.Fence.Every).Exhaustive(threads: threads));
+        await Sums(AlternatingBitSpec.Create().Exhaustive(threads: threads));
+        await Sums(RefreshCacheSpec.Create().Exhaustive(threads: threads));
+
+        static async Task Sums<S>(SpecReport<S> report)
         {
             await Assert.That(report.Closed).IsTrue();
             var fired = 0L;

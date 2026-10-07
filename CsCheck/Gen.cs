@@ -17,6 +17,9 @@ namespace CsCheck;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Numerics;
+using System.ComponentModel;
 
 /// <summary>Size representation of Gen generated data.</summary>s
 public sealed class Size
@@ -34,14 +37,19 @@ public sealed class Size
 
     public void Add(Size a)
     {
-        var nI = I + a.I;
-        I = nI >= I && nI >= a.I ? nI : ulong.MaxValue;
+        Add(a.I);
         if (a.Next is not null)
         {
             if (Next is null) Next = a.Next;
             else Next.Add(a.Next);
         }
     }
+    internal void Add(ulong i)
+    {
+        var nI = I + i;
+        I = nI >= I ? nI : ulong.MaxValue;
+    }
+
     public void Append(Size s)
     {
         var final = this;
@@ -87,8 +95,10 @@ public abstract class Gen<T> : IGen<T>
     public GenOperation<S> Operation<S>(Action<S, T> action) => GenOperation.Create(this, action);
     public GenOperation<Actual, Model> Operation<Actual, Model>(Func<T, string> name, Action<Actual, T> actual, Action<Model, T> model) => GenOperation.Create(this, name, actual, model);
     public GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual, T> actual, Action<Model, T> model) => GenOperation.Create(this, actual, model);
-    public GenOperationAsync<S> Operation<S>(Func<T, string> name, Func<S, T, Task> async) => GenOperationAsync.Create(this, name, async);
-    public GenOperationAsync<S> Operation<S>(Func<S, T, Task> async) => GenOperationAsync.Create(this, async);
+    [Obsolete(Gen.AsyncOperationNotSupported, error: true), EditorBrowsable(EditorBrowsableState.Never)]
+    public GenOperation<S> Operation<S>(Func<T, string> name, Func<S, T, Task> async) => throw new NotSupportedException(Gen.AsyncOperationNotSupported);
+    [Obsolete(Gen.AsyncOperationNotSupported, error: true), EditorBrowsable(EditorBrowsableState.Never)]
+    public GenOperation<S> Operation<S>(Func<S, T, Task> async) => throw new NotSupportedException(Gen.AsyncOperationNotSupported);
     public GenOperationAsync<Actual, Model> Operation<Actual, Model>(Func<T, string> name, Func<Actual, T, Task> actual, Func<Model, T, Task> model) => GenOperationAsync.Create(this, name, actual, model);
     public GenOperationAsync<Actual, Model> Operation<Actual, Model>(Func<Actual, T, Task> actual, Func<Model, T, Task> model) => GenOperationAsync.Create(this, actual, model);
     public GenMetamorphic<S> Metamorphic<S>(Func<T, string> name, Action<S, T> action1, Action<S, T> action2) => GenMetamorphic.Create(this, name, action1, action2);
@@ -1046,7 +1056,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, R>(this Gen<T1> gen1, Gen<T2> gen2, Func<T1, T2, IGen<R>> selector)
         => new GenSelectMany<T1, T2, R>(gen1, gen2, selector);
 
     sealed class GenSelectMany<T1, T2, T3, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Func<T1, T2, T3, IGen<R>> selector) : Gen<R>
@@ -1068,7 +1078,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Func<T1, T2, T3, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, T3, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Func<T1, T2, T3, IGen<R>> selector)
         => new GenSelectMany<T1, T2, T3, R>(gen1, gen2, gen3, selector);
 
     sealed class GenSelectMany<T1, T2, T3, T4, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Func<T1, T2, T3, T4, IGen<R>> selector) : Gen<R>
@@ -1093,7 +1103,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Func<T1, T2, T3, T4, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, T3, T4, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Func<T1, T2, T3, T4, IGen<R>> selector)
         => new GenSelectMany<T1, T2, T3, T4, R>(gen1, gen2, gen3, gen4, selector);
 
     sealed class GenSelectMany<T1, T2, T3, T4, T5, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Func<T1, T2, T3, T4, T5, IGen<R>> selector) : Gen<R>
@@ -1121,7 +1131,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Func<T1, T2, T3, T4, T5, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Func<T1, T2, T3, T4, T5, IGen<R>> selector)
         => new GenSelectMany<T1, T2, T3, T4, T5, R>(gen1, gen2, gen3, gen4, gen5, selector);
 
     sealed class GenSelectMany<T1, T2, T3, T4, T5, T6, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, IGen<R>> selector) : Gen<R>
@@ -1152,7 +1162,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, T6, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, T6, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Func<T1, T2, T3, T4, T5, T6, IGen<R>> selector)
         => new GenSelectMany<T1, T2, T3, T4, T5, T6, R>(gen1, gen2, gen3, gen4, gen5, gen6, selector);
 
     sealed class GenSelectMany<T1, T2, T3, T4, T5, T6, T7, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, IGen<R>> selector) : Gen<R>
@@ -1186,7 +1196,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Func<T1, T2, T3, T4, T5, T6, T7, IGen<R>> selector)
         => new GenSelectMany<T1, T2, T3, T4, T5, T6, T7, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, selector);
 
     sealed class GenSelectMany<T1, T2, T3, T4, T5, T6, T7, T8, R>(Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, IGen<R>> selector) : Gen<R>
@@ -1223,7 +1233,7 @@ public static class Gen
         }
     }
     /// <summary>Projects each element of a generator to a new generator and flattens into one generator.</summary>
-    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, Gen<R>> selector)
+    public static Gen<R> SelectMany<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<T1> gen1, Gen<T2> gen2, Gen<T3> gen3, Gen<T4> gen4, Gen<T5> gen5, Gen<T6> gen6, Gen<T7> gen7, Gen<T8> gen8, Func<T1, T2, T3, T4, T5, T6, T7, T8, IGen<R>> selector)
         => new GenSelectMany<T1, T2, T3, T4, T5, T6, T7, T8, R>(gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, selector);
 
     sealed class GenSelectManyResult<T1, T2, R>(Gen<T1> gen, Func<T1, IGen<T2>> genSelector, Func<T1, T2, R> resultSelector) : Gen<R>
@@ -1552,11 +1562,11 @@ public static class Gen
         }
     }
     /// <summary>Create a generator where the element is one of the constants.</summary>
-    public static Gen<T> OneOfConst<T>(params T[] constants)
+    public static Gen<T> OneOf<T>(params T[] constants)
     {
-        if (constants is null) ThrowHelper.Throw("Gen.OneOfConst constants is null");
-        if (constants.Length == 0) ThrowHelper.Throw("Gen.OneOfConst constants is empty");
-        return HashHelper.IsPow2(constants.Length) ? new GenOneOfConstPow2<T>(constants) : new GenOneOfConst<T>(constants);
+        if (constants is null) ThrowHelper.Throw("Gen.OneOf constants is null");
+        if (constants.Length == 0) ThrowHelper.Throw("Gen.OneOf constants is empty");
+        return BitOperations.IsPow2(constants.Length) ? new GenOneOfConstPow2<T>(constants) : new GenOneOfConst<T>(constants);
     }
 
     sealed class GenOneOf<T>(params IGen<T>[] gens) : Gen<T>
@@ -1582,56 +1592,62 @@ public static class Gen
         }
     }
     /// <summary>Create a generator where the element is generated from one of the generators.</summary>
+    [OverloadResolutionPriority(1)]
     public static Gen<T> OneOf<T>(params IGen<T>[] gens)
     {
         if (gens is null) ThrowHelper.Throw("Gen.OneOf gens is null");
         if (gens.Length == 0) ThrowHelper.Throw("Gen.OneOf gens is empty");
-        return HashHelper.IsPow2(gens.Length) ? new GenOneOfPow2<T>(gens) : new GenOneOf<T>(gens);
+        return BitOperations.IsPow2(gens.Length) ? new GenOneOfPow2<T>(gens) : new GenOneOf<T>(gens);
     }
 
     /// <summary>Create a generator for an enum.</summary>
     public static Gen<T> Enum<T>() where T : struct, Enum
-        => OneOfConst(System.Enum.GetValues<T>());
+        => OneOf(System.Enum.GetValues<T>());
 
     sealed class GenFrequencyConst<T>(uint total, params (int Frequency, T Constant)[] constants) : Gen<T>
     {
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
-            var v = (int)pcg.Next(total);
-            size = new Size((ulong)v);
-            for (var j = 0; j < constants.Length; j++)
+            var v = pcg.Next(total);
+            size = new Size(v);
+            for (var j = 0; ; j++)
             {
-                v -= constants[j].Frequency;
-                if (v < 0)
+                var frequency = (uint)constants[j].Frequency;
+                if (v < frequency)
                     return constants[j].Constant;
+                v -= frequency;
             }
-            return default!;
         }
     }
     sealed class GenFrequencyConstPow2<T>(uint total, params (int Frequency, T Constant)[] constants) : Gen<T>
     {
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
-            var v = (int)(pcg.Next() & (total - 1));
-            size = new Size((ulong)v);
-            for (var j = 0; j < constants.Length; j++)
+            var v = pcg.Next() & (total - 1);
+            size = new Size(v);
+            for (var j = 0; ; j++)
             {
-                v -= constants[j].Frequency;
-                if (v < 0)
+                var frequency = (uint)constants[j].Frequency;
+                if (v < frequency)
                     return constants[j].Constant;
+                v -= frequency;
             }
-            return default!;
         }
     }
     /// <summary>Create a generator where the element is one of the constants weighted by the frequency.</summary>
-    public static Gen<T> FrequencyConst<T>(params (int Frequency, T Constant)[] constants)
+    public static Gen<T> Frequency<T>(params (int Frequency, T Constant)[] constants)
     {
-        if (constants is null) ThrowHelper.Throw("Gen.FrequencyConst constants is null");
-        if (constants.Length == 0) ThrowHelper.Throw("Gen.FrequencyConst constants is empty");
+        if (constants is null) ThrowHelper.Throw("Gen.Frequency constants is null");
+        if (constants.Length == 0) ThrowHelper.Throw("Gen.Frequency constants is empty");
         uint total = 0;
-        foreach (var (i, _) in constants) total += (uint)i;
-        if (total == 0) ThrowHelper.Throw("Gen.FrequencyConst total frequency is zero");
-        return HashHelper.IsPow2(total) ? new GenFrequencyConstPow2<T>(total, constants) : new GenFrequencyConst<T>(total, constants);
+        foreach (var (i, _) in constants)
+        {
+            if (i < 0) ThrowHelper.Throw("Gen.Frequency frequency is negative");
+            if ((uint)i > uint.MaxValue - total) ThrowHelper.Throw("Gen.Frequency total frequency is greater than uint.MaxValue");
+            total += (uint)i;
+        }
+        if (total == 0) ThrowHelper.Throw("Gen.Frequency total frequency is zero");
+        return BitOperations.IsPow2(total) ? new GenFrequencyConstPow2<T>(total, constants) : new GenFrequencyConst<T>(total, constants);
     }
 
     sealed class GenFrequency<T>(uint total, params (int Frequency, IGen<T> Generator)[] gens) : Gen<T>
@@ -1639,20 +1655,19 @@ public static class Gen
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
             var nSize = pcg.Next(total);
-            var v = (int)nSize;
-            for (var i = 0; i < gens.Length; i++)
+            var v = nSize;
+            for (var i = 0; ; i++)
             {
-                v -= gens[i].Frequency;
-                if (v < 0)
+                var frequency = (uint)gens[i].Frequency;
+                if (v < frequency)
                 {
                     var next = nSize == min?.I ? min.Next : null;
                     var r = gens[i].Generator.Generate(pcg, next, out size);
                     size = new Size(nSize, size);
                     return r;
                 }
+                v -= frequency;
             }
-            size = new Size(0);
-            return default!;
         }
     }
     sealed class GenFrequencyPow2<T>(uint total, params (int Frequency, IGen<T> Generator)[] gens) : Gen<T>
@@ -1660,31 +1675,36 @@ public static class Gen
         public override T Generate(PCG pcg, Size? min, out Size size)
         {
             var nSize = pcg.Next() & (total - 1);
-            var v = (int)nSize;
-            for (var i = 0; i < gens.Length; i++)
+            var v = nSize;
+            for (var i = 0; ; i++)
             {
-                v -= gens[i].Frequency;
-                if (v < 0)
+                var frequency = (uint)gens[i].Frequency;
+                if (v < frequency)
                 {
                     var next = nSize == min?.I ? min.Next : null;
                     var r = gens[i].Generator.Generate(pcg, next, out size);
                     size = new Size(nSize, size);
                     return r;
                 }
+                v -= frequency;
             }
-            size = new Size(0);
-            return default!;
         }
     }
     /// <summary>Create a generator where the element is generated by one of the generators weighted by the frequency.</summary>
+    [OverloadResolutionPriority(1)]
     public static Gen<T> Frequency<T>(params (int Frequency, IGen<T> Generator)[] gens)
     {
         if (gens is null) ThrowHelper.Throw("Gen.Frequency gens is null");
         if (gens.Length == 0) ThrowHelper.Throw("Gen.Frequency gens is empty");
         uint total = 0;
-        foreach (var (i, _) in gens) total += (uint)i;
+        foreach (var (i, _) in gens)
+        {
+            if (i < 0) ThrowHelper.Throw("Gen.Frequency frequency is negative");
+            if ((uint)i > uint.MaxValue - total) ThrowHelper.Throw("Gen.Frequency total frequency is greater than uint.MaxValue");
+            total += (uint)i;
+        }
         if (total == 0) ThrowHelper.Throw("Gen.Frequency total frequency is zero");
-        return HashHelper.IsPow2(total) ? new GenFrequencyPow2<T>(total, gens) : new GenFrequency<T>(total, gens);
+        return BitOperations.IsPow2(total) ? new GenFrequencyPow2<T>(total, gens) : new GenFrequency<T>(total, gens);
     }
 
     sealed class GenRecursive<T>(Func<Gen<T>> gen) : Gen<T>
@@ -2003,8 +2023,11 @@ public static class Gen
     public static GenOperation<T> Operation<T>(Action<T> action) => GenOperation.Create(action);
     public static GenOperation<Actual, Model> Operation<Actual, Model>(string name, Action<Actual> actual, Action<Model> model) => GenOperation.Create(name, actual, model);
     public static GenOperation<Actual, Model> Operation<Actual, Model>(Action<Actual> actual, Action<Model> model) => GenOperation.Create(actual, model);
-    public static GenOperationAsync<T> Operation<T>(string name, Func<T, Task> async) => GenOperationAsync.Create(name, async);
-    public static GenOperationAsync<T> Operation<T>(Func<T, Task> async) => GenOperationAsync.Create(async);
+    internal const string AsyncOperationNotSupported = "Async operations are not supported: SampleParallel runs operations synchronously. Wait for the task inside a synchronous operation instead.";
+    [Obsolete(AsyncOperationNotSupported, error: true), EditorBrowsable(EditorBrowsableState.Never)]
+    public static GenOperation<T> Operation<T>(string name, Func<T, Task> async) => throw new NotSupportedException(AsyncOperationNotSupported);
+    [Obsolete(AsyncOperationNotSupported, error: true), EditorBrowsable(EditorBrowsableState.Never)]
+    public static GenOperation<T> Operation<T>(Func<T, Task> async) => throw new NotSupportedException(AsyncOperationNotSupported);
     public static GenOperationAsync<Actual, Model> Operation<Actual, Model>(string name, Func<Actual, Task> actual, Func<Model, Task> model) => GenOperationAsync.Create(name, actual, model);
     public static GenOperationAsync<Actual, Model> Operation<Actual, Model>(Func<Actual, Task> actual, Func<Model, Task> model) => GenOperationAsync.Create(actual, model);
 
@@ -2022,30 +2045,13 @@ public static class Gen
     public static readonly GenInt Int = new();
     internal static readonly Gen<int> Int9999 = Int[1, 9999];
     public static readonly GenUInt UInt = new();
-    /// <summary>Generator for uint in the range 0 to 3 inclusive.</summary>
-    public static readonly GenUInt4 UInt4 = new();
-    /// <summary>Generator for uint in the range 0 to 7 inclusive.</summary>
-    public static readonly GenUInt8 UInt8 = new();
-    /// <summary>Generator for uint in the range 0 to 15 inclusive.</summary>
-    public static readonly GenUInt16 UInt16 = new();
-    /// <summary>Generator for uint in the range 0 to 31 inclusive.</summary>
-    public static readonly GenUInt32 UInt32 = new();
-    /// <summary>Generator for uint in the range 0 to 63 inclusive.</summary>
-    public static readonly GenUInt64 UInt64 = new();
-    /// <summary>Generator for uint in the range 0 to 127 inclusive.</summary>
-    public static readonly GenUInt128 UInt128 = new();
-    /// <summary>Generator for uint in the range 0 to 255 inclusive.</summary>
-    public static readonly GenUInt256 UInt256 = new();
-    /// <summary>Generator for uint in the range 0 to 511 inclusive.</summary>
-    public static readonly GenUInt512 UInt512 = new();
-    /// <summary>Generator for uint in the range 0 to 1023 inclusive.</summary>
-    public static readonly GenUInt1024 UInt1024 = new();
-    /// <summary>Generator for uint in the range 0 to 2047 inclusive.</summary>
-    public static readonly GenUInt2048 UInt2048 = new();
-    /// <summary>Generator for long.</summary>
     public static readonly GenLong Long = new();
     /// <summary>Generator for ulong.</summary>
     public static readonly GenULong ULong = new();
+    /// <summary>Generator for Int128.</summary>
+    public static readonly GenInt128 Int128 = new();
+    /// <summary>Generator for UInt128.</summary>
+    public static readonly GenUInt128 UInt128 = new();
     /// <summary>Generator for float.</summary>
     public static readonly GenFloat Float = new();
     /// <summary>Generator for float.</summary>
@@ -2149,9 +2155,9 @@ public sealed class GenByte : Gen<byte>
 public sealed class GenShort : Gen<short>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ushort Zigzag(short i) => (ushort)(i << 1 ^ i >> 31);
+    internal static ushort Zigzag(short i) => (ushort)(i << 1 ^ i >> 31);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static short Unzigzag(ushort i) => (short)((i >> 1) ^ -(int)(i & 1U));
+    internal static short Unzigzag(ushort i) => (short)((i >> 1) ^ -(int)(i & 1U));
     public override short Generate(PCG pcg, Size? min, out Size size)
     {
         uint s = pcg.Next() & 15U;
@@ -2213,9 +2219,9 @@ public sealed class GenUShort : Gen<ushort>
 public sealed class GenInt : Gen<int>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint Zigzag(int i) => (uint)(i << 1 ^ i >> 31);
+    internal static uint Zigzag(int i) => (uint)(i << 1 ^ i >> 31);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int Unzigzag(uint i) => (int)(i >> 1) ^ -(int)(i & 1U);
+    internal static int Unzigzag(uint i) => (int)(i >> 1) ^ -(int)(i & 1U);
     public override int Generate(PCG pcg, Size? min, out Size size)
     {
         uint s = pcg.Next() & 31U;
@@ -2234,7 +2240,7 @@ public sealed class GenInt : Gen<int>
         }
     }
     /// <summary>Generate an int uniformly distributed with all values.</summary>
-    public Gen<int> Uniform = new GenUniform();
+    public readonly Gen<int> Uniform = new GenUniform();
     sealed class GenPositive : Gen<int>
     {
         public override int Generate(PCG pcg, Size? min, out Size size)
@@ -2247,7 +2253,7 @@ public sealed class GenInt : Gen<int>
         }
     }
     /// <summary>Generate a positive int in the range 1 to int.MaxValue inclusive.</summary>
-    public Gen<int> Positive = new GenPositive();
+    public readonly Gen<int> Positive = new GenPositive();
     sealed class GenNonNegative : Gen<int>
     {
         public override int Generate(PCG pcg, Size? min, out Size size)
@@ -2260,7 +2266,7 @@ public sealed class GenInt : Gen<int>
         }
     }
     /// <summary>Generate a non-negative int in the range 0 to int.MaxValue inclusive.</summary>
-    public Gen<int> NonNegative = new GenNonNegative();
+    public readonly Gen<int> NonNegative = new GenNonNegative();
     sealed class Range(int start, uint length) : Gen<int>
     {
         public override int Generate(PCG pcg, Size? min, out Size size)
@@ -2278,6 +2284,21 @@ public sealed class GenInt : Gen<int>
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
             return start == int.MinValue && finish == int.MaxValue ? Uniform : new Range(start, (uint)(finish - start + 1));
         }
+    }
+}
+
+internal sealed class GenIntSized(int start, int finish) : Gen<int>
+{
+    readonly uint bits = 32 - uint.LeadingZeroCount((uint)Math.Max(-(long)start, finish));
+    internal static Gen<int> Range(int start, int finish) => start <= 0 && finish >= 0 ? new GenIntSized(start, finish) : Gen.Int[start, finish];
+    public override int Generate(PCG pcg, Size? min, out Size size)
+    {
+        var b = (int)pcg.Next(bits + 1);
+        var cap = (1L << b) - 1;
+        var lo = Math.Max(start, -cap);
+        var i = (int)(lo + (long)pcg.Next64((ulong)(Math.Min(finish, cap) - lo + 1)));
+        size = new Size((ulong)b << 32 | GenInt.Zigzag(i));
+        return i;
     }
 }
 
@@ -2319,104 +2340,15 @@ public sealed class GenUInt : Gen<uint>
         }
     }
     /// <summary>Generate a uint uniformly distributed with all values.</summary>
-    public Gen<uint> Uniform = new GenUniform();
+    public readonly Gen<uint> Uniform = new GenUniform();
 }
-public sealed class GenUInt4 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 3;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt8 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 7;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt16 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 15;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt32 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 31;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt64 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 63;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt128 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 127;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt256 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 255;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt512 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 511;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt1024 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 1023;
-        size = new Size(i);
-        return i;
-    }
-}
-public sealed class GenUInt2048 : Gen<uint>
-{
-    public override uint Generate(PCG pcg, Size? min, out Size size)
-    {
-        var i = pcg.Next() & 2047;
-        size = new Size(i);
-        return i;
-    }
-}
+
 public sealed class GenLong : Gen<long>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ulong Zigzag(long i) => (ulong)(i << 1 ^ i >> 63);
+    internal static ulong Zigzag(long i) => (ulong)(i << 1 ^ i >> 63);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static long Unzigzag(ulong i) => (long)(i >> 1) ^ -(long)(i & 1UL);
+    internal static long Unzigzag(ulong i) => (long)(i >> 1) ^ -(long)(i & 1UL);
     public override long Generate(PCG pcg, Size? min, out Size size)
     {
         uint s = pcg.Next() & 63U;
@@ -2453,7 +2385,7 @@ public sealed class GenLong : Gen<long>
         }
     }
     /// <summary>Generate a long uniformly distributed with all values.</summary>
-    public Gen<long> Uniform = new GenUniform();
+    public readonly Gen<long> Uniform = new GenUniform();
 }
 
 public sealed class GenULong : Gen<ulong>
@@ -2493,7 +2425,96 @@ public sealed class GenULong : Gen<ulong>
         }
     }
     /// <summary>Generate a ulong uniformly distributed with all values.</summary>
-    public Gen<ulong> Uniform = new GenUniform();
+    public readonly Gen<ulong> Uniform = new GenUniform();
+}
+
+public sealed class GenInt128 : Gen<Int128>
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static UInt128 Zigzag(Int128 i) => (UInt128)(i << 1 ^ i >> 127);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static Int128 Unzigzag(UInt128 i) => (Int128)(i >> 1) ^ -(Int128)(i & 1);
+    public override Int128 Generate(PCG pcg, Size? min, out Size size)
+    {
+        uint s = pcg.Next() & 127U;
+        var i = UInt128.One << (int)s;
+        i = (pcg.Next128() & (i - 1) | i) - 1;
+        size = new Size((ulong)s << 46 | (ulong)i & 0x3FFF_FFFF_FFFFUL);
+        return -Unzigzag(i);
+    }
+    sealed class Range(Int128 start, UInt128 length, int sizeShift) : Gen<Int128>
+    {
+        public override Int128 Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = start + (Int128)pcg.Next128(length);
+            size = new Size((ulong)(Zigzag(i) >> sizeShift));
+            return i;
+        }
+    }
+    /// <summary>Generate Int128 uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
+    public Gen<Int128> this[Int128 start, Int128 finish]
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return start == Int128.MinValue && finish == Int128.MaxValue ? Uniform
+                : new Range(start, (UInt128)(finish - start) + 1, GenUInt128.SizeShift(UInt128.Max(Zigzag(start), Zigzag(finish))));
+        }
+    }
+    sealed class GenUniform : Gen<Int128>
+    {
+        public override Int128 Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = (Int128)pcg.Next128();
+            size = new Size((ulong)(Zigzag(i) >> 64));
+            return i;
+        }
+    }
+    /// <summary>Generate an Int128 uniformly distributed with all values.</summary>
+    public readonly Gen<Int128> Uniform = new GenUniform();
+}
+
+public sealed class GenUInt128 : Gen<UInt128>
+{
+    internal static int SizeShift(UInt128 max) => Math.Max(0, 64 - (int)UInt128.LeadingZeroCount(max));
+    public override UInt128 Generate(PCG pcg, Size? min, out Size size)
+    {
+        uint s = pcg.Next() & 127U;
+        var i = UInt128.One << (int)s;
+        i = (pcg.Next128() & (i - 1) | i) - 1;
+        size = new Size((ulong)s << 46 | (ulong)i & 0x3FFF_FFFF_FFFFUL);
+        return i;
+    }
+    sealed class Range(UInt128 start, UInt128 length, int sizeShift) : Gen<UInt128>
+    {
+        public override UInt128 Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = start + pcg.Next128(length);
+            size = new Size((ulong)(i >> sizeShift));
+            return i;
+        }
+    }
+    /// <summary>Generate UInt128 uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
+    public Gen<UInt128> this[UInt128 start, UInt128 finish]
+    {
+        get
+        {
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return start == UInt128.MinValue && finish == UInt128.MaxValue ? Uniform
+                : new Range(start, finish - start + 1, SizeShift(finish));
+        }
+    }
+    sealed class GenUniform : Gen<UInt128>
+    {
+        public override UInt128 Generate(PCG pcg, Size? min, out Size size)
+        {
+            var i = pcg.Next128();
+            size = new Size((ulong)(i >> 64));
+            return i;
+        }
+    }
+    /// <summary>Generate a UInt128 uniformly distributed with all values.</summary>
+    public readonly Gen<UInt128> Uniform = new GenUniform();
 }
 
 public sealed class GenFloat : Gen<float>
@@ -2509,20 +2530,20 @@ public sealed class GenFloat : Gen<float>
     public override float Generate(PCG pcg, Size? min, out Size size)
         => DefaultFloat.Generate(pcg, min, out size);
 
-    sealed class GenEvenlyDistributed(float start, float length) : Gen<float>
+    static float Pow10(int e) => (float)GenDouble.Pow10(e);
+    static int Log10Floor(float f) => GenDouble.Log10Floor(f);
+    static int Log10Ceiling(float f) => GenDouble.Log10Ceiling(f);
+    sealed class GenEvenlyDistributed(float start, float finish) : Gen<float>
     {
         public override float Generate(PCG pcg, Size? min, out Size size)
         {
             uint i = pcg.Next() >> 9;
             size = new Size(i);
-            return new FloatConverter { I = i | 0x3F800000 }.F * length + start;
+            var u = new FloatConverter { I = i | 0x3F800000 }.F - 1f;
+            return start > 0 || finish < 0 ? start + u * (finish - start) : (1 - u) * start + u * finish;
         }
     }
-    private static Gen<float> EvenlyDistributed(float start, float finish)
-    {
-        finish -= start;
-        return new GenEvenlyDistributed(start - finish, finish);
-    }
+    private static Gen<float> EvenlyDistributed(float start, float finish) => new GenEvenlyDistributed(start, finish);
     /// <summary>Generate float in the range <paramref name="start"/> to <paramref name="finish"/>.</summary>
     public Gen<float> this[float start, float finish]
     {
@@ -2530,9 +2551,9 @@ public sealed class GenFloat : Gen<float>
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
             const int denominator = 99;
-            const int minExp = -99;
+            const int minExp = -45;
             static Gen<int> GenInt(float start, float finish)
-                => Gen.Int[(int)Math.Clamp(Math.Ceiling(start), int.MinValue, int.MaxValue), (int)Math.Clamp(Math.Floor(finish), int.MinValue, int.MaxValue)];
+                => GenIntSized.Range((int)Math.Clamp(Math.Ceiling(start), int.MinValue, int.MaxValue), (int)Math.Clamp(Math.Floor(finish), int.MinValue, int.MaxValue));
             var myGens = new (int, IGen<float>)[4];
             if (start <= int.MaxValue && finish >= int.MinValue && (int)Math.Ceiling(start) <= (int)Math.Floor(finish))
                 myGens[0] = (1, GenInt(start, finish).Select(i => (float)i));
@@ -2549,30 +2570,30 @@ public sealed class GenFloat : Gen<float>
             Gen<float>? exponential = null;
             if (start <= 0 && finish >= 0)
             {
-                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start))) - 3;
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish))) - 3;
-                if (startExp >= minExp && finishExp >= minExp)
+                var startExp = start < 0 ? Log10Ceiling(-start) - 3 : minExp;
+                var finishExp = finish > 0 ? Log10Ceiling(finish) - 3 : minExp;
+                if (startExp > minExp + 3 && finishExp > minExp + 3)
                     exponential = Gen.OneOf(
-                        Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => (float)Math.Pow(10, e) * m),
-                        Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -(float)Math.Pow(10, e) * m));
-                else if (startExp >= minExp)
-                    exponential = Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -(float)Math.Pow(10, e) * m);
-                else if (finishExp >= minExp)
-                    exponential = Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => (float)Math.Pow(10, e) * m);
+                        Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => Pow10(e) * m),
+                        Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -Pow10(e) * m));
+                else if (startExp > minExp + 3)
+                    exponential = Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -Pow10(e) * m);
+                else if (finishExp > minExp + 3)
+                    exponential = Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => Pow10(e) * m);
             }
-            else if (start >= 0 && finish >= 0)
+            else if (start > 0)
             {
-                var startExp = (int)Math.Floor(Math.Log10(Math.Abs(start)));
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish))) - 3;
+                var startExp = Log10Floor(start);
+                var finishExp = Log10Ceiling(finish) - 3;
                 if (finishExp > startExp + 3)
-                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => (float)Math.Pow(10, e) * m);
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => Pow10(e) * m);
             }
             else
             {
-                var startExp = (int)Math.Floor(Math.Log10(Math.Abs(finish)));
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start))) - 3;
+                var startExp = Log10Floor(-finish);
+                var finishExp = Log10Ceiling(-start) - 3;
                 if (finishExp > startExp + 3)
-                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => -(float)Math.Pow(10, e) * m);
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => -Pow10(e) * m);
             }
             if (exponential is not null)
                 myGens[2] = (1, exponential.Where(r => r >= start && r <= finish));
@@ -2590,7 +2611,7 @@ public sealed class GenFloat : Gen<float>
         }
     }
     /// <summary>In the range 0.0f &lt;= x &lt; 1.0f.</summary>
-    public Gen<float> Unit = new GenUnit();
+    public readonly Gen<float> Unit = new GenUnit();
     sealed class GenOneTwo : Gen<float>
     {
         public override float Generate(PCG pcg, Size? min, out Size size)
@@ -2601,7 +2622,7 @@ public sealed class GenFloat : Gen<float>
         }
     }
     /// <summary>In the range 1.0f &lt;= x &lt; 2.0f.</summary>
-    public Gen<float> OneTwo = new GenOneTwo();
+    public readonly Gen<float> OneTwo = new GenOneTwo();
     static float MakeSpecial(uint i) => (i & 0xFU) switch
     {
         0x0U => float.NaN,
@@ -2636,23 +2657,33 @@ public sealed class GenFloat : Gen<float>
 
 public sealed class GenDouble : Gen<double>
 {
+    static readonly double[] pow10 = [.. Enumerable.Range(-324, 633).Select(e => double.Parse("1e" + e.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture))];
     readonly static Gen<double> DefaultDouble = Gen.Double[-1e50, 1e50];
     public override double Generate(PCG pcg, Size? min, out Size size)
         => DefaultDouble.Generate(pcg, min, out size);
-    sealed class GenEvenlyDistributed(double start, double length) : Gen<double>
+    internal static double Pow10(int e) => pow10[e + 324];
+    internal static int Log10Floor(double d)
+    {
+        var e = 308;
+        while (Pow10(e) > d) e--;
+        return e;
+    }
+    internal static int Log10Ceiling(double d)
+    {
+        var e = Log10Floor(d);
+        return Pow10(e) == d ? e : e + 1;
+    }
+    sealed class GenEvenlyDistributed(double start, double finish) : Gen<double>
     {
         public override double Generate(PCG pcg, Size? min, out Size size)
         {
             var i = pcg.Next64() >> 12;
             size = new Size(i);
-            return BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) * length + start;
+            var u = BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1.0;
+            return start > 0 || finish < 0 ? start + u * (finish - start) : (1 - u) * start + u * finish;
         }
     }
-    private static Gen<double> EvenlyDistributed(double start, double finish)
-    {
-        finish -= start;
-        return new GenEvenlyDistributed(start - finish, finish);
-    }
+    private static Gen<double> EvenlyDistributed(double start, double finish) => new GenEvenlyDistributed(start, finish);
 
     /// <summary>Generate double in the range <paramref name="start"/> to <paramref name="finish"/>.</summary>
     public Gen<double> this[double start, double finish]
@@ -2663,7 +2694,7 @@ public sealed class GenDouble : Gen<double>
             const int denominator = 99;
             const int minExp = -99;
             static Gen<int> GenInt(double start, double finish)
-                => Gen.Int[(int)Math.Clamp(Math.Ceiling(start), int.MinValue, int.MaxValue), (int)Math.Clamp(Math.Floor(finish), int.MinValue, int.MaxValue)];
+                => GenIntSized.Range((int)Math.Clamp(Math.Ceiling(start), int.MinValue, int.MaxValue), (int)Math.Clamp(Math.Floor(finish), int.MinValue, int.MaxValue));
             var myGens = new (int, IGen<double>)[4];
             if (start <= int.MaxValue && finish >= int.MinValue && (int)Math.Ceiling(start) <= (int)Math.Floor(finish))
                 myGens[0] = (1, GenInt(start, finish).Select(i => (double)i));
@@ -2680,30 +2711,30 @@ public sealed class GenDouble : Gen<double>
             Gen<double>? exponential = null;
             if (start <= 0 && finish >= 0)
             {
-                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start))) - 3;
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish))) - 3;
-                if (startExp >= minExp && finishExp >= minExp)
+                var startExp = start < 0 ? Log10Ceiling(-start) - 3 : minExp;
+                var finishExp = finish > 0 ? Log10Ceiling(finish) - 3 : minExp;
+                if (startExp > minExp + 3 && finishExp > minExp + 3)
                     exponential = Gen.OneOf(
-                        Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => Math.Pow(10, e) * m),
-                        Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -Math.Pow(10, e) * m));
-                else if (startExp >= minExp)
-                    exponential = Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -Math.Pow(10, e) * m);
-                else if (finishExp >= minExp)
-                    exponential = Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => Math.Pow(10, e) * m);
+                        Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => Pow10(e) * m),
+                        Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -Pow10(e) * m));
+                else if (startExp > minExp + 3)
+                    exponential = Gen.Int[minExp, startExp].Select(Gen.Int9999, (e, m) => -Pow10(e) * m);
+                else if (finishExp > minExp + 3)
+                    exponential = Gen.Int[minExp, finishExp].Select(Gen.Int9999, (e, m) => Pow10(e) * m);
             }
-            else if (start >= 0 && finish >= 0)
+            else if (start > 0)
             {
-                var startExp = (int)Math.Floor(Math.Log10(Math.Abs(start)));
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(finish))) - 3;
+                var startExp = Log10Floor(start);
+                var finishExp = Log10Ceiling(finish) - 3;
                 if (finishExp > startExp + 3)
-                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => Math.Pow(10, e) * m);
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => Pow10(e) * m);
             }
             else
             {
-                var startExp = (int)Math.Floor(Math.Log10(Math.Abs(finish)));
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs(start))) - 3;
+                var startExp = Log10Floor(-finish);
+                var finishExp = Log10Ceiling(-start) - 3;
                 if (finishExp > startExp + 3)
-                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => -Math.Pow(10, e) * m);
+                    exponential = Gen.Int[startExp, finishExp].Select(Gen.Int9999, (e, m) => -Pow10(e) * m);
             }
             if (exponential is not null)
                 myGens[2] = (1, exponential.Where(r => r >= start && r <= finish));
@@ -2721,7 +2752,7 @@ public sealed class GenDouble : Gen<double>
         }
     }
     /// <summary>In the range 0.0 &lt;= x &lt; 1.0.</summary>
-    public Gen<double> Unit = new GenUnit();
+    public readonly Gen<double> Unit = new GenUnit();
     sealed class GenOneTwo : Gen<double>
     {
         public override double Generate(PCG pcg, Size? min, out Size size)
@@ -2732,7 +2763,7 @@ public sealed class GenDouble : Gen<double>
         }
     }
     /// <summary>In the range 1.0 &lt;= x &lt; 2.0.</summary>
-    public Gen<double> OneTwo = new GenOneTwo();
+    public readonly Gen<double> OneTwo = new GenOneTwo();
     static double MakeSpecial(ulong i) => (i & 0xFUL) switch
     {
         0x0UL => double.NaN,
@@ -2767,17 +2798,33 @@ public sealed class GenDouble : Gen<double>
 
 public sealed class GenDecimal : Gen<decimal>
 {
+    static readonly decimal[] pow10 = [ 1e-28m, 1e-27m, 1e-26m, 1e-25m, 1e-24m, 1e-23m, 1e-22m, 1e-21m, 1e-20m, 1e-19m, 1e-18m, 1e-17m, 1e-16m, 1e-15m,
+        1e-14m, 1e-13m, 1e-12m, 1e-11m, 1e-10m, 1e-9m, 1e-8m, 1e-7m, 1e-6m, 1e-5m, 1e-4m, 1e-3m, 1e-2m, 1e-1m, 1e0m, 1e1m, 1e2m, 1e3m, 1e4m,
+        1e5m, 1e6m, 1e7m, 1e8m, 1e9m, 1e10m, 1e11m, 1e12m, 1e13m, 1e14m, 1e15m, 1e16m, 1e17m, 1e18m, 1e19m, 1e20m, 1e21m, 1e22m, 1e23m, 1e24m,
+        1e25m, 1e26m, 1e27m, 1e28m ];
     readonly static Gen<decimal> DefaultDecimal = Gen.Decimal[-1e25m, 1e25m];
     public override decimal Generate(PCG pcg, Size? min, out Size size)
         => DefaultDecimal.Generate(pcg, min, out size);
+    static decimal Pow10(int e) => pow10[e + 28];
+    static int Log10Floor(decimal d)
+    {
+        var e = 28;
+        while (Pow10(e) > d) e--;
+        return e;
+    }
+    static int Log10Ceiling(decimal d)
+    {
+        var e = Log10Floor(d);
+        return Pow10(e) == d ? e : e + 1;
+    }
     sealed class GenEvenlyDistributed(decimal start, decimal finish) : Gen<decimal>
     {
         public override decimal Generate(PCG pcg, Size? min, out Size size)
         {
-            var i = pcg.Next64() >> 12;
+            var i = pcg.Next64(1_000_000_000_000_000);
             size = new Size(i);
-            var onetwo = ((decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000));
-            return (2 - onetwo) * start + (onetwo - 1) * finish;
+            var u = i * 1e-15m;
+            return start > 0 || finish < 0 ? start + u * (finish - start) : (1 - u) * start + u * finish;
         }
     }
     private static Gen<decimal> EvenlyDistributed(decimal start, decimal finish) => new GenEvenlyDistributed(start, finish);
@@ -2788,49 +2835,52 @@ public sealed class GenDecimal : Gen<decimal>
         {
             if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
             const int denominator = 99;
-            const int minExp = -99;
-            static Gen<int> GenInt(double start, double finish)
-                => Gen.Int[(int)Math.Clamp(Math.Ceiling(start), int.MinValue, int.MaxValue), (int)Math.Clamp(Math.Floor(finish), int.MinValue, int.MaxValue)];
+            const int minExp = -28;
+            static bool HasNumerator(decimal start, decimal finish, int den) => decimal.Ceiling(start * den) <= decimal.Floor(finish * den);
+            static Gen<int> GenInt(decimal start, decimal finish)
+                => GenIntSized.Range((int)Math.Clamp(decimal.Ceiling(start), int.MinValue, int.MaxValue), (int)Math.Clamp(decimal.Floor(finish), int.MinValue, int.MaxValue));
+            var intStart = Math.Clamp(start, int.MinValue, int.MaxValue);
+            var intFinish = Math.Clamp(finish, int.MinValue, int.MaxValue);
             var myGens = new (int, IGen<decimal>)[4];
-            if (start <= int.MaxValue && finish >= int.MinValue && (int)Math.Clamp(Math.Ceiling((double)start), int.MinValue, int.MaxValue) <= (int)Math.Clamp(Math.Floor((double)finish), int.MinValue, int.MaxValue))
-                myGens[0] = (1, GenInt((double)start, (double)finish).Select(i => (decimal)i));
-            if ((double)start * denominator <= int.MaxValue && (double)finish * denominator >= int.MinValue && (int)Math.Clamp(Math.Ceiling((double)start * denominator), int.MinValue, int.MaxValue) <= (int)Math.Clamp(Math.Floor((double)finish * denominator), int.MinValue, int.MaxValue))
+            if (start <= int.MaxValue && finish >= int.MinValue && HasNumerator(intStart, intFinish, 1))
+                myGens[0] = (1, GenInt(intStart, intFinish).Select(i => (decimal)i));
+            if (intStart * denominator <= int.MaxValue && intFinish * denominator >= int.MinValue && HasNumerator(intStart, intFinish, denominator))
             {
-                var lower = denominator - 1;
-                while (Math.Ceiling((double)start * lower) <= Math.Floor((double)finish * lower) && lower > 1)
+                var lower = HasNumerator(intStart, intFinish, 1) ? 1 : denominator - 1;
+                while (lower > 1 && HasNumerator(intStart, intFinish, lower))
                     lower--;
                 var rational = Gen.Int[lower + 1, denominator]
-                    .SelectMany(den => GenInt((double)start * den, (double)finish * den).Select(num => (decimal)num / den))
+                    .SelectMany(den => GenInt(intStart * den, intFinish * den).Select(num => (decimal)num / den))
                     .Where(r => r >= start && r <= finish);
                 myGens[1] = (1, rational);
             }
             static Gen<decimal> Exp(int loExp, int hiExp, int sign)
                 => Gen.Int[loExp, hiExp].Select(Gen.Int9999, (e, m) => (e, m))
-                    .Where(t => Math.Pow(10, t.e) * t.m <= (double)decimal.MaxValue)
-                    .Select(t => sign * ((decimal)Math.Pow(10, t.e) * t.m));
+                    .Where(t => t.e < 25 || t.m <= decimal.MaxValue / Pow10(t.e))
+                    .Select(t => sign * t.m * Pow10(t.e));
             Gen<decimal>? exponential = null;
             if (start <= 0 && finish >= 0)
             {
-                var startExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)start))) - 3;
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)finish))) - 3;
-                if (startExp >= minExp && finishExp >= minExp)
+                var startExp = start < 0 ? Log10Ceiling(-start) - 3 : minExp;
+                var finishExp = finish > 0 ? Log10Ceiling(finish) - 3 : minExp;
+                if (startExp > minExp + 3 && finishExp > minExp + 3)
                     exponential = Gen.OneOf(Exp(minExp, finishExp, 1), Exp(minExp, startExp, -1));
-                else if (startExp >= minExp)
+                else if (startExp > minExp + 3)
                     exponential = Exp(minExp, startExp, -1);
-                else if (finishExp >= minExp)
+                else if (finishExp > minExp + 3)
                     exponential = Exp(minExp, finishExp, 1);
             }
-            else if (start >= 0 && finish >= 0)
+            else if (start > 0)
             {
-                var startExp = (int)Math.Floor(Math.Log10(Math.Abs((double)start)));
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)finish))) - 3;
+                var startExp = Log10Floor(start);
+                var finishExp = Log10Ceiling(finish) - 3;
                 if (finishExp > startExp + 3)
                     exponential = Exp(startExp, finishExp, 1);
             }
             else
             {
-                var startExp = (int)Math.Floor(Math.Log10(Math.Abs((double)finish)));
-                var finishExp = (int)Math.Ceiling(Math.Log10(Math.Abs((double)start))) - 3;
+                var startExp = Log10Floor(-finish);
+                var finishExp = Log10Ceiling(-start) - 3;
                 if (finishExp > startExp + 3)
                     exponential = Exp(startExp, finishExp, -1);
             }
@@ -2844,18 +2894,18 @@ public sealed class GenDecimal : Gen<decimal>
     {
         public override decimal Generate(PCG pcg, Size? min, out Size size)
         {
-            ulong i = pcg.Next64() >> 12;
+            var i = pcg.Next64(1_000_000_000_000_000);
             size = new Size(i + 1UL);
-            return (decimal)BitConverter.Int64BitsToDouble((long)i | 0x3FF0000000000000) - 1M;
+            return i * 1e-15m;
         }
     }
-    public Gen<decimal> Unit = new GenUnit();
+    public readonly Gen<decimal> Unit = new GenUnit();
 }
 
 /// <summary>Generate DateTime with DateTimeKind.Unspecified.</summary>
 public sealed class GenDateTime : Gen<DateTime>
 {
-    const ulong max = 3155378975999999999UL; //(ulong)DateTime.MaxValue.Ticks;
+    internal const ulong max = 3155378975999999999UL; //(ulong)DateTime.MaxValue.Ticks;
     public override DateTime Generate(PCG pcg, Size? min, out Size size)
     {
         var i = pcg.Next64(max);
@@ -2881,65 +2931,69 @@ public sealed class GenDateTime : Gen<DateTime>
         }
     }
 
-    sealed class GenDateTimeUtc : Gen<DateTime>
+    /// <summary>Generate DateTime with DateTimeKind.Utc.</summary>
+    public readonly GenDateTimeUtc Utc = new();
+
+    /// <summary>Generate DateTime with DateTimeKind.Local.</summary>
+    public readonly GenDateTimeLocal Local = new();
+}
+
+/// <summary>Generate DateTime with DateTimeKind.Utc.</summary>
+public sealed class GenDateTimeUtc : Gen<DateTime>
+{
+    public override DateTime Generate(PCG pcg, Size? min, out Size size)
+    {
+        var i = pcg.Next64(GenDateTime.max);
+        size = new Size(i >> 10);
+        return new DateTime((long)i, DateTimeKind.Utc);
+    }
+    sealed class Range(ulong start, ulong length) : Gen<DateTime>
     {
         public override DateTime Generate(PCG pcg, Size? min, out Size size)
         {
-            var i = pcg.Next64(max);
-            size = new Size(i >> 10);
+            ulong i = start + pcg.Next64(length);
+            size = new Size(i);
             return new DateTime((long)i, DateTimeKind.Utc);
         }
-        sealed class Range(ulong start, ulong length) : Gen<DateTime>
+    }
+    /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
+    public Gen<DateTime> this[DateTime start, DateTime finish]
+    {
+        get
         {
-            public override DateTime Generate(PCG pcg, Size? min, out Size size)
-            {
-                ulong i = start + pcg.Next64(length);
-                size = new Size(i);
-                return new DateTime((long)i, DateTimeKind.Utc);
-            }
-        }
-        /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
-        public Gen<DateTime> this[DateTime start, DateTime finish]
-        {
-            get
-            {
-                if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-                return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
-            }
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
         }
     }
+}
 
-    public readonly Gen<DateTime> Utc = new GenDateTimeUtc();
-
-    sealed class GenDateTimeLocal : Gen<DateTime>
+/// <summary>Generate DateTime with DateTimeKind.Local.</summary>
+public sealed class GenDateTimeLocal : Gen<DateTime>
+{
+    public override DateTime Generate(PCG pcg, Size? min, out Size size)
+    {
+        var i = pcg.Next64(GenDateTime.max);
+        size = new Size(i >> 10);
+        return new DateTime((long)i, DateTimeKind.Local);
+    }
+    sealed class Range(ulong start, ulong length) : Gen<DateTime>
     {
         public override DateTime Generate(PCG pcg, Size? min, out Size size)
         {
-            var i = pcg.Next64(max);
-            size = new Size(i >> 10);
+            ulong i = start + pcg.Next64(length);
+            size = new Size(i);
             return new DateTime((long)i, DateTimeKind.Local);
         }
-        sealed class Range(ulong start, ulong length) : Gen<DateTime>
+    }
+    /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
+    public Gen<DateTime> this[DateTime start, DateTime finish]
+    {
+        get
         {
-            public override DateTime Generate(PCG pcg, Size? min, out Size size)
-            {
-                ulong i = start + pcg.Next64(length);
-                size = new Size(i);
-                return new DateTime((long)i, DateTimeKind.Local);
-            }
-        }
-        /// <summary>Generate DateTime uniformly distributed in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
-        public Gen<DateTime> this[DateTime start, DateTime finish]
-        {
-            get
-            {
-                if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
-                return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
-            }
+            if (finish < start) ThrowHelper.ThrowFinishLessThanStart(start, finish);
+            return new Range((ulong)start.Ticks, (ulong)(finish.Ticks - start.Ticks + 1));
         }
     }
-
-    public readonly Gen<DateTime> Local = new GenDateTimeLocal();
 }
 
 public sealed class GenDate : Gen<DateTime>
@@ -3633,18 +3687,6 @@ public sealed class GenOperation<Actual, Model> : Gen<(string, Action<Actual>, A
     public override (string, Action<Actual>, Action<Model>) Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
 }
 
-public sealed class GenOperationAsync<T> : Gen<(string, Func<T, Task>)>
-{
-    public bool AddOpNumber;
-    readonly Gen<(string, Func<T, Task>)> gen;
-    internal GenOperationAsync(Gen<(string, Func<T, Task>)> gen, bool addOpNumber)
-    {
-        this.gen = gen;
-        AddOpNumber = addOpNumber;
-    }
-    public override (string, Func<T, Task>) Generate(PCG pcg, Size? min, out Size size) => gen.Generate(pcg, min, out size);
-}
-
 public sealed class GenOperationAsync<Actual, Model> : Gen<(string, Func<Actual, Task>, Func<Model, Task>)>
 {
     readonly Gen<(string, Func<Actual, Task>, Func<Model, Task>)> gen;
@@ -3691,10 +3733,6 @@ public static class GenOperation
 
 public static class GenOperationAsync
 {
-    public static GenOperationAsync<S> Create<S, T>(Gen<T> gen, Func<S, T, Task> action) =>
-        new(gen.Select<T, (string, Func<S, Task>)>(t => (" " + Check.Print(t), s => action(s, t))), true);
-    public static GenOperationAsync<S> Create<S, T>(Gen<T> gen, Func<T, string> name, Func<S, T, Task> action) =>
-        new(gen.Select<T, (string, Func<S, Task>)>(t => (name(t), s => action(s, t))), false);
     public static GenOperationAsync<Actual, Model> Create<Actual, Model, T>(Gen<T> gen, Func<Actual, T, Task> actual, Func<Model, T, Task> model) =>
         new(gen.Select<T, (string, Func<Actual, Task>, Func<Model, Task>)>(t => (" " + Check.Print(t), a => actual(a, t), m => model(m, t))),
             gen.Select<T, (Func<Actual, Task>, Func<Model, Task>)>(t => (a => actual(a, t), m => model(m, t))), true);
@@ -3705,10 +3743,6 @@ public static class GenOperationAsync
         => new(Gen.Const(("", actual, model)), Gen.Const((actual, model)), true);
     public static GenOperationAsync<Actual, Model> Create<Actual, Model>(string name, Func<Actual, Task> actual, Func<Model, Task> model)
         => new(Gen.Const((name, actual, model)), Gen.Const((actual, model)), false);
-    public static GenOperationAsync<T> Create<T>(Func<T, Task> action)
-        => new(Gen.Const(("", action)), true);
-    public static GenOperationAsync<T> Create<T>(string name, Func<T, Task> action)
-        => new(Gen.Const((name, action)), false);
 }
 
 public static class GenMetamorphic

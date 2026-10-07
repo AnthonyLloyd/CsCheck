@@ -102,7 +102,7 @@ public static class Causal
     {
         if (iter == -1) iter = Check.Iter;
         if (time == -1) time = Check.Time;
-        int Run(RunType run, string? name, int time)
+        long Run(RunType run, string? name, int time)
         {
             runType = run;
             delayName = name;
@@ -112,7 +112,7 @@ public static class Causal
             totalDelay = 0L;
             var start = Stopwatch.GetTimestamp();
             action();
-            return (int)(Stopwatch.GetTimestamp() - start - totalDelay);
+            return Stopwatch.GetTimestamp() - start - totalDelay;
         }
         Run(RunType.CollectTimes, null, 0);
         var summary = times.Select(i => i.Item1).ToHashSet(StringComparer.Ordinal).Select(i => new Result.Row(i)).ToArray();

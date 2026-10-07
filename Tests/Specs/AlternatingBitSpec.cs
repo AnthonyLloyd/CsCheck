@@ -65,7 +65,7 @@ public static class AlternatingBitSpec
 
             // The requirement this example is here for. One count per frame, in the search state rather than the model.
             .AtMost("DELIVERED-ONCE", "A frame is delivered to the application at most once, however many copies of it "
-                + "the channel produces.", 1, All, (_, a, f) => a.JustDelivered == f)
+                + "the channel produces.", All, 1, (_, a, f) => a.JustDelivered == f)
 
             // A frame cannot arrive before it was sent. Cheap, and it is the requirement that would catch a model where
             // the receiver invented data rather than one where the protocol was wrong.

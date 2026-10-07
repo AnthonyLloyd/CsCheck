@@ -34,7 +34,7 @@ public sealed class PCG
     }
     public PCG(uint stream, ulong seed)
     {
-        Inc = (stream << 1) | 1UL;
+        Inc = ((ulong)stream << 1) | 1UL;
         State = Inc + seed;
     }
     public PCG(uint stream) : this(stream, (ulong)Stopwatch.GetTimestamp()) { }
@@ -63,12 +63,21 @@ public sealed class PCG
         while (n < threshold) n = Next64();
         return n % maxExclusive;
     }
+    public UInt128 Next128() => ((UInt128)Next64() << 64) + Next64();
+    public UInt128 Next128(UInt128 maxExclusive)
+    {
+        if (maxExclusive <= ulong.MaxValue) return Next64((ulong)maxExclusive);
+        var threshold = -maxExclusive % maxExclusive;
+        var n = Next128();
+        while (n < threshold) n = Next128();
+        return n % maxExclusive;
+    }
     public override string ToString() => SeedString.ToString(State, Stream);
     public string ToString(ulong state) => SeedString.ToString(state, Stream);
     public static PCG Parse(string seed)
     {
         var state = SeedString.Parse(seed, out var stream);
-        return new PCG((stream << 1) | 1UL, state);
+        return new PCG(((ulong)stream << 1) | 1UL, state);
     }
 }
 

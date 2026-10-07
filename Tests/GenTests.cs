@@ -25,11 +25,11 @@ public class GenTests
     [Test]
     public void Bool_Distribution()
     {
-        const int frequency = 10;
+        const int frequency = 100;
         var expected = new int[] { frequency, frequency};
         Gen.Bool.Select(i => i ? 1 : 0).Array[2 * frequency]
         .Select(sample => Tally(2, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
     [Test]
@@ -59,7 +59,7 @@ public class GenTests
         Gen.SByte[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
     [Test]
@@ -89,7 +89,7 @@ public class GenTests
         Gen.Byte[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
     [Test]
@@ -125,7 +125,7 @@ public class GenTests
         Gen.Short[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
     [Test]
@@ -155,7 +155,7 @@ public class GenTests
         Gen.UShort[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
     [Test]
@@ -241,7 +241,7 @@ public class GenTests
         Array.Fill(expected, frequency);
         Gen.Int[0, buckets - 1].Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
     [Test]
@@ -287,7 +287,7 @@ public class GenTests
         Gen.UInt[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
     [Test]
@@ -339,7 +339,7 @@ public class GenTests
         Gen.Long[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
     [Test]
@@ -369,7 +369,154 @@ public class GenTests
         Gen.ULong[0, buckets - 1]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
+    }
+
+    [Test]
+    public void Int128_Zigzag_Matches_Oracle()
+    {
+        static UInt128 Oracle(Int128 i) => i >= 0 ? (UInt128)i * 2 : (UInt128)(-(i + 1)) * 2 + 1;
+        Gen.OneOf(Gen.Int128, Gen.Int128.Uniform, Gen.Const(Int128.MinValue), Gen.Const(Int128.MaxValue))
+        .Sample(i => GenInt128.Zigzag(i) == Oracle(i) && GenInt128.Unzigzag(GenInt128.Zigzag(i)) == i);
+    }
+
+    [Test]
+    public void Int128_Magnitude_Distribution()
+    {
+        const int buckets = 128;
+        const int frequency = 10;
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
+        Gen.Int128
+        .Select(i => 127 - (int)UInt128.LeadingZeroCount(GenInt128.Zigzag(i) + 1)).Array[frequency * buckets]
+        .Select(sample => Tally(buckets, sample))
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
+    }
+
+    [Test]
+    public void Int128_MinMax()
+    {
+        Gen.Int128[Int128.MinValue, Int128.MaxValue].Single();
+    }
+
+    static readonly Gen<Int128> genInt128End = Gen.OneOf(Gen.Int128, Gen.Const(Int128.MinValue), Gen.Const(Int128.MaxValue));
+
+    [Test]
+    public void Int128_Range()
+    {
+        (from t in genInt128End.Select(genInt128End)
+         let start = Int128.Min(t.Item1, t.Item2)
+         let finish = Int128.Max(t.Item1, t.Item2)
+         from value in Gen.Int128[start, finish]
+         select (value, start, finish))
+        .Sample(i => i.start <= i.value && i.value <= i.finish);
+    }
+
+    [Test]
+    public void Int128_Distribution()
+    {
+        const int buckets = 70;
+        const int frequency = 10;
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
+        Gen.Int128[-35, 34]
+        .Select(i => (int)i + 35).Array[frequency * buckets]
+        .Select(sample => Tally(buckets, sample))
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
+    }
+
+    [Test]
+    public void Int128_Range_Size()
+    {
+        Gen.Select(genInt128End, genInt128End, Gen.UInt, Gen.ULong)
+        .Sample((a, b, stream, seed) =>
+        {
+            var start = Int128.Min(a, b);
+            var finish = Int128.Max(a, b);
+            var gen = Gen.Int128[start, finish];
+            var pcg = new PCG(stream, seed);
+            var v1 = gen.Generate(pcg, null, out var s1);
+            var v2 = gen.Generate(pcg, null, out var s2);
+            var z1 = GenInt128.Zigzag(v1);
+            var z2 = GenInt128.Zigzag(v2);
+            return (z1 < z2 ? s1.I <= s2.I : s1.I >= s2.I)
+                && (start < long.MinValue || finish > long.MaxValue || s1.I == GenLong.Zigzag((long)v1));
+        });
+    }
+
+    [Test]
+    public void UInt128_Magnitude_Distribution()
+    {
+        const int buckets = 128;
+        const int frequency = 10;
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
+        Gen.UInt128
+        .Select(i => 127 - (int)UInt128.LeadingZeroCount(i + 1)).Array[frequency * buckets]
+        .Select(sample => Tally(buckets, sample))
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
+    }
+
+    [Test]
+    public void UInt128_MinMax()
+    {
+        Gen.UInt128[UInt128.MinValue, UInt128.MaxValue].Single();
+    }
+
+    static readonly Gen<UInt128> genUInt128End = Gen.OneOf(Gen.UInt128, Gen.Const(UInt128.MinValue), Gen.Const(UInt128.MaxValue));
+
+    [Test]
+    public void UInt128_Range()
+    {
+        (from t in genUInt128End.Select(genUInt128End)
+         let start = UInt128.Min(t.Item1, t.Item2)
+         let finish = UInt128.Max(t.Item1, t.Item2)
+         from value in Gen.UInt128[start, finish]
+         select (value, start, finish))
+        .Sample(i => i.value >= i.start && i.value <= i.finish);
+    }
+
+    [Test]
+    public void UInt128_Distribution()
+    {
+        const int buckets = 70;
+        const int frequency = 10;
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
+        Gen.UInt128[0, buckets - 1]
+        .Select(i => (int)i).Array[frequency * buckets]
+        .Select(sample => Tally(buckets, sample))
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
+    }
+
+    [Test]
+    public void UInt128_Wide_Distribution()
+    {
+        const int buckets = 3;
+        const int frequency = 1000;
+        var expected = new int[buckets];
+        Array.Fill(expected, frequency);
+        Gen.UInt128[0, ((UInt128)buckets << 126) - 1]
+        .Select(i => (int)(i >> 126)).Array[frequency * buckets]
+        .Select(sample => Tally(buckets, sample))
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
+    }
+
+    [Test]
+    public void UInt128_Range_Size()
+    {
+        Gen.Select(genUInt128End, genUInt128End, Gen.UInt, Gen.ULong)
+        .Sample((a, b, stream, seed) =>
+        {
+            var start = UInt128.Min(a, b);
+            var finish = UInt128.Max(a, b);
+            var gen = Gen.UInt128[start, finish];
+            var pcg = new PCG(stream, seed);
+            var v1 = gen.Generate(pcg, null, out var s1);
+            var v2 = gen.Generate(pcg, null, out var s2);
+            return (v1 < v2 ? s1.I <= s2.I : s1.I >= s2.I)
+                && (finish > ulong.MaxValue || s1.I == (ulong)v1);
+        });
     }
 
     [Test]
@@ -408,6 +555,38 @@ public class GenTests
     }
 
     [Test]
+    public void Single_Range_Beyond_The_Unit_Interval()
+    {
+        var g = Gen.Frequency(
+            (2, Gen.UInt.Uniform.Select(BitConverter.UInt32BitsToSingle).Where(float.IsFinite)),
+            (1, Gen.Single),
+            (1, Gen.Single.Unit),
+            (1, Gen.OneOf(0f, float.Epsilon, float.MinValue, float.MaxValue)));
+        (from t in Gen.Select(g, g)
+         let start = Math.Min(t.Item1, t.Item2)
+         let finish = Math.Max(t.Item1, t.Item2)
+         from value in Gen.Single[start, finish]
+         select (value, start, finish))
+        .Sample(i => i.value >= i.start && i.value <= i.finish);
+    }
+
+    [Test]
+    public void Single_Range_Edges()
+    {
+        (float, float)[] ranges = [(0f, 0f), (0f, float.Epsilon), (float.MinValue, float.MaxValue), (-1e38f, 1e38f), (3e8f, float.MaxValue),
+            (1f, float.MaxValue), (float.MaxValue, float.MaxValue), (float.MinValue, float.MinValue)];
+        foreach (var (start, finish) in ranges)
+            Gen.Single[start, finish].Sample(f => f >= start && f <= finish, iter: 1000);
+    }
+
+    [Test]
+    public void Single_Zero()
+    {
+        Gen.Single.Array[1000].Sample(fs => fs.Contains(0f));
+        Gen.Single[-1000f, 1000f].Array[1000].Sample(fs => fs.Contains(0f));
+    }
+
+    [Test]
     public void Single_Distribution()
     {
         const int buckets = 70;
@@ -418,7 +597,7 @@ public class GenTests
         .Select(i => (int)(i * buckets))
         .Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
     [Test]
@@ -442,7 +621,11 @@ public class GenTests
     [Test]
     public void Double_Range_Beyond_The_Unit_Interval()
     {
-        var g = Gen.Double.Where(double.IsFinite);
+        var g = Gen.Frequency(
+            (2, Gen.ULong.Uniform.Select(BitConverter.UInt64BitsToDouble).Where(double.IsFinite)),
+            (1, Gen.Double),
+            (1, Gen.Double.Unit),
+            (1, Gen.OneOf(0.0, double.Epsilon, double.MinValue, double.MaxValue)));
         (from t in Gen.Select(g, g)
          let start = Math.Min(t.Item1, t.Item2)
          let finish = Math.Max(t.Item1, t.Item2)
@@ -463,6 +646,22 @@ public class GenTests
     }
 
     [Test]
+    public void Double_Range_Edges()
+    {
+        (double, double)[] ranges = [(0.0, 0.0), (0.0, 1e-100), (0.0, double.Epsilon), (double.MinValue, double.MaxValue), (-1e308, 1e308), (3e8, double.MaxValue),
+            (1.0, double.MaxValue), (double.MaxValue, double.MaxValue), (double.MinValue, double.MinValue)];
+        foreach (var (start, finish) in ranges)
+            Gen.Double[start, finish].Sample(d => d >= start && d <= finish, iter: 1000);
+    }
+
+    [Test]
+    public void Double_Zero()
+    {
+        Gen.Double.Array[1000].Sample(ds => ds.Contains(0.0));
+        Gen.Double[-1000.0, 1000.0].Array[1000].Sample(ds => ds.Contains(0.0));
+    }
+
+    [Test]
     public void Double_Distribution()
     {
         const int buckets = 70;
@@ -473,7 +672,7 @@ public class GenTests
         .Select(i => (int)(i * buckets))
         .Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
     [Test]
@@ -506,12 +705,32 @@ public class GenTests
     [Test]
     public void Decimal_Range()
     {
-        (from t in Gen.Decimal.Unit.Select(Gen.Decimal.Unit)
+        var end = Gen.Frequency(
+            (2, Gen.Select(Gen.Int, Gen.Int, Gen.Int, Gen.Bool, Gen.Byte[0, 28]).Select((lo, mid, hi, isNegative, scale) => new decimal(lo, mid, hi, isNegative, scale))),
+            (1, Gen.Decimal),
+            (1, Gen.Decimal.Unit));
+        (from t in end.Select(end)
          let start = Math.Min(t.Item1, t.Item2)
          let finish = Math.Max(t.Item1, t.Item2)
          from value in Gen.Decimal[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
+    }
+
+    [Test]
+    public void Decimal_Range_Edges()
+    {
+        (decimal, decimal)[] ranges = [(0M, 0M), (0M, 1M), (-100M, 0M), (0M, 0.00000000000000000000000002M), (2.0000000000000000001M, 3M),
+            (2.0000000000000000001M, 2.0000000000000000002M), (decimal.MaxValue, decimal.MaxValue), (decimal.MinValue, decimal.MinValue)];
+        foreach (var (start, finish) in ranges)
+            Gen.Decimal[start, finish].Sample(d => d >= start && d <= finish, iter: 1000);
+    }
+
+    [Test]
+    public void Decimal_Zero()
+    {
+        Gen.Decimal.Array[1000].Sample(ds => ds.Contains(0M));
+        Gen.Decimal[-1000M, 1000M].Array[1000].Sample(ds => ds.Contains(0M));
     }
 
     [Test]
@@ -524,7 +743,7 @@ public class GenTests
         .Select(i => (int)(i * buckets))
         .Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
     [Test]
@@ -576,6 +795,20 @@ public class GenTests
          from value in Gen.DateTime[start, finish]
          select (value, start, finish))
         .Sample(i => i.value >= i.start && i.value <= i.finish);
+    }
+
+    [Test]
+    public void DateTime_Utc_Local_Range()
+    {
+        Gen.Select(Gen.DateTime.Utc, Gen.DateTime.Local).Sample((utc, local) => utc.Kind == DateTimeKind.Utc && local.Kind == DateTimeKind.Local);
+        (from t in Gen.DateTime.Select(Gen.DateTime)
+         let start = t.Item1 < t.Item2 ? t.Item1 : t.Item2
+         let finish = t.Item1 < t.Item2 ? t.Item2 : t.Item1
+         from utc in Gen.DateTime.Utc[start, finish]
+         from local in Gen.DateTime.Local[start, finish]
+         select (utc, local, start, finish))
+        .Sample(i => i.utc.Kind == DateTimeKind.Utc && i.utc >= i.start && i.utc <= i.finish
+                  && i.local.Kind == DateTimeKind.Local && i.local >= i.start && i.local <= i.finish);
     }
 
     [Test]
@@ -666,7 +899,7 @@ public class GenTests
         Gen.Char[(char)0, (char)(buckets - 1)]
         .Select(i => (int)i).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
-        .Sample(actual => Check.ChiSquared(expected, actual, 10), iter: 1, time: -2);
+        .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
     [Test]
@@ -825,13 +1058,13 @@ public class GenTests
     }
 
     [Test]
-    public void OneOfConst()
+    public void OneOf_Const()
     {
-        Gen.OneOfConst(0, 1, 2).Sample(i => i is >= 0 and <= 2);
+        Gen.OneOf(0, 1, 2).Sample(i => i is >= 0 and <= 2);
     }
 
     [Test]
-    public void OneOf()
+    public void OneOf_IGen()
     {
         Gen.OneOf(Gen.Const(0), Gen.Const(1), Gen.Const(2)).Sample(i => i is >= 0 and <= 2);
     }
@@ -839,23 +1072,66 @@ public class GenTests
     [Test]
     public void Frequency()
     {
-        const int frequency = 10;
+        const int frequency = 100;
         (from f in Gen.Select(Gen.Int[1, 5], Gen.Int[1, 5], Gen.Int[1, 5])
          let expected = new[] { f.Item1 * frequency, f.Item2 * frequency, f.Item3 * frequency }
-         from actual in Gen.FrequencyConst((f.Item1, 0), (f.Item2, 1), (f.Item3, 2))
+         from actual in Gen.Frequency((f.Item1, 0), (f.Item2, 1), (f.Item3, 2))
                         .Array[frequency * (f.Item1 + f.Item2 + f.Item3)]
                         .Select(sample => Tally(3, sample))
          select (expected, actual))
-        .Sample(t => Check.ChiSquared(t.expected, t.actual, 10), iter: 1, time: -2);
+        .Sample(t => Check.ChiSquared(t.expected, t.actual), iter: 1, time: -2);
     }
 
     [Test]
     public async Task Frequency_Total_Zero_Is_Rejected()
     {
-        var constants = Assert.Throws<CsCheckException>(() => Gen.FrequencyConst((0, "a"), (0, "b")))!.Message;
+        var constants = Assert.Throws<CsCheckException>(() => Gen.Frequency((0, "a"), (0, "b")))!.Message;
         await Assert.That(constants).Contains("zero");
         var gens = Assert.Throws<CsCheckException>(() => Gen.Frequency((0, Gen.Const("a")), (0, Gen.Const("b"))))!.Message;
         await Assert.That(gens).Contains("zero");
+    }
+
+    [Test]
+    public async Task Frequency_Negative_Weight_Is_Rejected()
+    {
+        var constants = Assert.Throws<CsCheckException>(() => Gen.Frequency((-2, "a"), (3, "b")))!.Message;
+        await Assert.That(constants).Contains("negative");
+        var gens = Assert.Throws<CsCheckException>(() => Gen.Frequency((-2, Gen.Const("a")), (3, Gen.Const("b"))))!.Message;
+        await Assert.That(gens).Contains("negative");
+    }
+
+    [Test]
+    public async Task Frequency_Total_Over_UInt_MaxValue_Is_Rejected()
+    {
+        var constants = Assert.Throws<CsCheckException>(() => Gen.Frequency((int.MaxValue, "a"), (int.MaxValue, "b"), (2, "c")))!.Message;
+        await Assert.That(constants).Contains("uint.MaxValue");
+        var gens = Assert.Throws<CsCheckException>(() => Gen.Frequency((int.MaxValue, Gen.Const("a")), (int.MaxValue, Gen.Const("b")), (2, Gen.Const("c"))))!.Message;
+        await Assert.That(gens).Contains("uint.MaxValue");
+    }
+
+    [Test]
+    public void Frequency_Matches_Cumulative_Weight_Oracle()
+    {
+        Gen.Select(Gen.OneOf(Gen.Int[0, 3], Gen.Int[int.MaxValue - 3, int.MaxValue]).Array[1, 5], Gen.UInt, Gen.ULong)
+        .Where((weights, _, _) => weights.Sum(w => (long)w) is > 0 and <= uint.MaxValue)
+        .Sample((weights, stream, seed) =>
+        {
+            var constants = Gen.Frequency([.. weights.Select((w, i) => (w, i))]);
+            var gens = Gen.Frequency([.. weights.Select((w, i) => (w, Gen.Const(i)))]);
+            var pcg = new PCG(stream, seed);
+            for (int n = 0; n < 100; n++)
+            {
+                if (!InRange(constants.Generate(pcg, null, out var size), size.I)) return false;
+                if (!InRange(gens.Generate(pcg, null, out size), size.I)) return false;
+            }
+            return true;
+
+            bool InRange(int i, ulong position)
+            {
+                var start = weights.Take(i).Sum(w => (long)w);
+                return position >= (ulong)start && position < (ulong)(start + weights[i]);
+            }
+        });
     }
 
     [Test]
@@ -920,18 +1196,6 @@ public class GenTests
         {
             static int Depth(MyObj o) => o.Children.Length == 0 ? 0 : 1 + o.Children.Max(Depth);
             return Depth(i) <= maxDepth;
-        });
-    }
-
-    [Test]
-    public void FastMod()
-    {
-        Gen.Select(Gen.UInt[0, int.MaxValue], Gen.UInt[1, 2_000_000_000])
-        .Sample((value, divisor) =>
-        {
-            var multiplier = HashHelper.GetFastModMultiplier(divisor);
-            var fastMod = HashHelper.FastMod(value, divisor, multiplier);
-            return fastMod == value % divisor;
         });
     }
 }

@@ -2,6 +2,7 @@ namespace Tests.Specs;
 
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using CsCheck;
 
@@ -123,6 +124,8 @@ public class SpecScaleTests
             await Assert.That(one.Closed).IsTrue();
             foreach (var row in rows) await Assert.That(one.ToString()).Contains(row);
             await Assert.That(many.ToString()).IsEqualTo(one.ToString());
+            // These are cyclic, so most revisits are recognised during the parallel expansion rather than on insert.
+            await Assert.That(many.Revisits).IsEqualTo(one.Revisits);
         }
     }
 
@@ -232,6 +235,122 @@ public class SpecScaleTests
         }, iter: 100, threads: 1);
     }
 
+    /// <summary>Sample and Conform count coverage on each thread and sum it when the walk ends, so a thread whose counts
+    /// were lost or added twice would show here: every trace and every step the implementation was driven through is
+    /// counted exactly once, and every step fires exactly one (action, argument) row.</summary>
+    [Test]
+    public void Sampled_Coverage_Counts_Every_Thread_Once()
+    {
+        GenSpec.Sample(spec =>
+        {
+            long created = 0, applied = 0;
+            SpecReport<Tiny> conformed, sampled;
+            try
+            {
+                conformed = spec.Conform(() => { Interlocked.Increment(ref created); return new Tiny[1]; },
+                    (sut, t) => { Interlocked.Increment(ref applied); sut[0] = t.After; return true; },
+                    maxSteps: 20, iter: 1_000, threads: 4);
+                sampled = spec.Sample(maxSteps: 20, iter: 1_000, threads: 4);
+            }
+            catch (CsCheckException) { return true; }
+            return conformed.TracesWalked == created && conformed.StepsWalked == applied
+                && conformed.ActionFired.Sum() == conformed.StepsWalked && sampled.ActionFired.Sum() == sampled.StepsWalked
+                && conformed.DeadlockTraces <= conformed.TracesWalked && sampled.DeadlockTraces <= sampled.TracesWalked
+                && (conformed.Deadlock is null) == (conformed.DeadlockTraces == 0) && (sampled.Deadlock is null) == (sampled.DeadlockTraces == 0);
+        }, iter: 100, threads: 1);
+    }
+
+    /// <summary>A random specification with a divergence planted on the transitions that satisfy a predicate, of one
+    /// action or of any, and optionally requirements that can never fail but carry a count and a history bit, so several
+    /// search nodes share a model state and conformance has to cover nodes rather than states.</summary>
+    sealed record Planted(ActSpec[] Acts, bool Words, int Action, int A, int B)
+    {
+        public bool Diverges(Tiny before, Tiny after) => after.A >= A && after.B == B;
+
+        public bool Diverges(Transition<Tiny> t) => (Action < 0 || t.ActionIndex == Action) && Diverges(t.Before, t.After);
+
+        public Spec<Tiny> Spec()
+        {
+            var spec = Build(Acts, []);
+            if (Words)
+                spec.AtMost("A-STEPS", "q", 254, (b, a) => a.A > b.A)
+                    .Precedes("B-SEEN", "q", (b, a) => a.B > b.B, (_, _) => false);
+            return spec;
+        }
+
+        /// <summary>Violated exactly where the planted implementation diverges.</summary>
+        public Spec<Tiny> Oracle() => Action < 0 ? Spec().Never("DIVERGE", "q", Diverges)
+                                                 : Spec().Never("DIVERGE", "q", $"Act{Action}", Diverges);
+    }
+
+    static Gen<Planted> GenPlanted =>
+        from acts in Gen.Select(Gen.Int[0, 2], Gen.Int[0, 2], Gen.Int[0, Cap],
+                                (dA, dB, g) => new ActSpec(dA, dB, g)).Array[1, 3]
+        from action in Gen.Int[-1, acts.Length - 1]
+        from a in Gen.Int[0, 8]
+        from b in Gen.Int[0, 8]
+        from words in Gen.Bool
+        select new Planted(acts, words, action, a, b);
+
+    sealed class TinySut { public Tiny State; public int Steps; }
+
+    static (SpecReport<Tiny>? Report, string? Message, bool Contiguous) Conform(Planted p, int threads)
+    {
+        var contiguous = true;
+        try
+        {
+            return (p.Spec().ConformExhaustive(() => new TinySut(), (sut, t) =>
+            {
+                // Only ever cleared, so a race between threads cannot lose a failure.
+                if (t.Index != sut.Steps++ || !t.Before.Equals(sut.State)) contiguous = false;
+                sut.State = t.After;
+                return p.Diverges(t) ? "planted" : null;
+            }, maxStates: 100_000, threads: threads), null, contiguous);
+        }
+        catch (CsCheckException e) { return (null, e.Message, contiguous); }
+    }
+
+    static string WithoutModeOrConformed(SpecReport<Tiny> report)
+        => string.Join('\n', report.ToString().Split('\n')[1..]
+            .Where(l => !l.StartsWith("  conformed on ", StringComparison.Ordinal)));
+
+    /// <summary>Exhaustive is the oracle. The Never is violated exactly where the implementation diverges, and the
+    /// proof's breadth first order is the order conformance drives the implementation in, so the counterexample and the
+    /// divergence must be the same trace, not merely as short. Where nothing diverges, every node and transition the
+    /// proof counted must have been driven, and the proof must read the same apart from the line saying so. Throughout,
+    /// the implementation must only ever be stepped from where it was, and four threads must give what one does.</summary>
+    [Test]
+    public async Task ConformExhaustive_Finds_The_Divergence_Exhaustive_Would()
+    {
+        int diverged = 0, clean = 0;
+        GenPlanted.Sample(p =>
+        {
+            p.Oracle().Exhaustive(out var expected, maxStates: 100_000);
+            var one = Conform(p, 1);
+            var many = Conform(p, 4);
+            if (!one.Contiguous || !many.Contiguous) return false;
+            if (!string.Equals(one.Message ?? one.Report!.ToString(), many.Message ?? many.Report!.ToString(), StringComparison.Ordinal))
+                return false;
+            if (expected is null)
+            {
+                clean++;
+                var proof = p.Spec().Exhaustive(maxStates: 100_000);
+                return one.Report is { Closed: true } report
+                    && report.ConformedStates == proof.States
+                    && report.ConformedTransitions == proof.Transitions
+                    && string.Equals(WithoutModeOrConformed(report), WithoutModeOrConformed(proof), StringComparison.Ordinal);
+            }
+            diverged++;
+            return one.Message is { } message
+                && message.Contains($"at step {expected.StepIndex + 1}\n", StringComparison.Ordinal)
+                && message.Contains(expected.Trace.ToString(s => s.ToString(), expected.StepIndex), StringComparison.Ordinal);
+        }, iter: 500, threads: 1);
+        TUnitX.WriteLine($"{diverged} diverged, {clean} conformed");
+        // Both outcomes compared, and neither incidental.
+        await Assert.That(diverged * 5).IsGreaterThan(diverged + clean);
+        await Assert.That(clean * 5).IsGreaterThan(diverged + clean);
+    }
+
     /// <summary>Arithmetic the report owes itself.</summary>
     [Test]
     public void A_Closed_Report_Is_Internally_Consistent()
@@ -246,7 +365,8 @@ public class SpecScaleTests
                 && report.TerminalStates + report.DeadlockStates <= report.States
                 && report.Depth < report.States
                 && report.DeadlockTraces == 0
-                && (report.DeadlockTrace is null) == (report.DeadlockStates == 0);
+                && (report.DeadlockTrace is null) == (report.DeadlockStates == 0)
+                && (report.Deadlock is null) == (report.DeadlockStates == 0);
         }, iter: 200, threads: 1);
     }
 
@@ -266,6 +386,7 @@ public class SpecScaleTests
             var one = spec.Exhaustive(out var v1, maxStates: 5_000, threads: 1);
             var many = spec.Exhaustive(out var vN, maxStates: 5_000, threads: 4);
             return string.Equals(one.ToString(), many.ToString(), StringComparison.Ordinal)
+                && one.Revisits == many.Revisits
                 && v1 is null == vN is null
                 && (v1 is null || string.Equals(v1.ToString(), vN!.ToString(), StringComparison.Ordinal));
         }, iter: 500, threads: 1);

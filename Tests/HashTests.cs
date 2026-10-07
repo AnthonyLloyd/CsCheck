@@ -154,7 +154,7 @@ public class HashTests
                 hash.Add(Gen.Char.Generate(pcg, null, out _));
                 hash.Add(Gen.String.Generate(pcg, null, out _));
             }
-        }, 8168389655);
+        }, 8342106295);
     }
 
     [Test]
@@ -173,19 +173,127 @@ public class HashTests
         });
     }
 
-    /// <summary>A mismatch must release the cache file lock so a later check on the same file still works.</summary>
     [Test]
-    public async Task Hash_Mismatch_Releases_The_Cache_Lock()
+    public void HashStream_GetHashCode_Can_Be_Called_At_Any_Time()
     {
-        const string member = "HashLockRelease";
-        static void Values(Hash h, int last) { h.Add(1); h.Add("two"); h.Add(3.5); h.Add(last); }
-        static void DeleteCache()
+        Gen.Byte.Array[0, 9].Array[1, 6]
+        .Sample(chunks =>
         {
-            if (!Directory.Exists(Hash.CacheDir)) return;
-            foreach (var f in Directory.GetFiles(Hash.CacheDir, "*" + member + "*", SearchOption.AllDirectories))
-                File.Delete(f);
+            var interrupted = new HashStream();
+            foreach (var chunk in chunks)
+            {
+                interrupted.Write(chunk);
+                _ = interrupted.GetHashCode();
+            }
+            var fresh = new HashStream();
+            fresh.Write([.. chunks.SelectMany(c => c)]);
+            return interrupted.GetHashCode() == fresh.GetHashCode() && fresh.GetHashCode() == fresh.GetHashCode();
+        });
+    }
+
+    [Test]
+    public void Hash_Collection_Is_Count_Then_Elements()
+    {
+        Same(Gen.Bool, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.SByte, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Byte, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Short, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.UShort, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Int, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.UInt, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Long, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.ULong, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.DateTime, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.TimeSpan, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.DateTimeOffset, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Guid, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Char, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.String, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Double, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Float, (h, v) => h.Add(v), (h, v) => h.Add(v));
+        Same(Gen.Decimal, (h, v) => h.Add(v), (h, v) => h.Add(v));
+
+        static void Same<T>(Gen<T> gen, Action<Hash, IEnumerable<T>?> addAll, Action<Hash, T> addOne)
+            => Gen.Select(gen.Array[0, 8], Gen.Int[0, 2]).Sample((xs, kind) =>
+            {
+                IEnumerable<T>? val = kind switch { 0 => xs, 1 => xs.Select(x => x), _ => null };
+                var actual = new Hash(null);
+                addAll(actual, val);
+                var expected = new Hash(null);
+                if (val is null) expected.Add("<null>");
+                else
+                {
+                    expected.Add((uint)xs.Length);
+                    foreach (var x in xs) addOne(expected, x);
+                }
+                return actual.GetHashCode() == expected.GetHashCode();
+            });
+    }
+
+    static string ThisFile([CallerFilePath] string filePath = "") => filePath;
+
+    static void DeleteCache(string member)
+    {
+        if (!Directory.Exists(Hash.CacheDir)) return;
+        foreach (var f in Directory.GetFiles(Hash.CacheDir, "*" + member + "*", SearchOption.AllDirectories))
+            File.Delete(f);
+    }
+
+    [Test]
+    public async Task Hash_Null_String_Hashes_As_The_Null_Marker()
+    {
+        var member = "HashNullString" + Environment.Version.Major;
+        static void Values(Hash h) { h.Add((string?)null); h.Add(["a", null!]); }
+        DeleteCache(member);
+        try
+        {
+            var marker = new Hash(null);
+            marker.Add("<null>");
+            marker.Add(["a", "<null>"]);
+            var expected = Hash.FullHash(null, marker.GetHashCode());
+            Check.Hash(Values, expected, memberName: member);
+            var reread = new Hash(marker.GetHashCode(), memberName: member, filePath: ThisFile());
+            Values(reread);
+            reread.Close();
+            await Assert.That(Directory.GetFiles(Hash.CacheDir, "*" + member + "*", SearchOption.AllDirectories).Length).IsEqualTo(1);
         }
-        DeleteCache();
+        finally
+        {
+            DeleteCache(member);
+        }
+    }
+
+    [Test]
+    public async Task Hash_Close_Keeps_A_Cache_File_Written_Meanwhile()
+    {
+        var member = "HashWrittenMeanwhile" + Environment.Version.Major;
+        static void Values(Hash h) { h.Add(1); h.Add("two"); }
+        DeleteCache(member);
+        try
+        {
+            var probe = new Hash(null);
+            Values(probe);
+            var writer = new Hash(probe.GetHashCode(), memberName: member, filePath: ThisFile());
+            Values(writer);
+            var filename = Hash.Filename(Hash.FullHash(null, probe.GetHashCode()), member, ThisFile());
+            File.WriteAllText(filename, "written meanwhile");
+            using (File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
+                writer.Close();
+            await Assert.That(File.ReadAllText(filename)).IsEqualTo("written meanwhile");
+            await Assert.That(Directory.GetFiles(Hash.CacheDir, "*" + member + "*", SearchOption.AllDirectories).Length).IsEqualTo(1);
+        }
+        finally
+        {
+            DeleteCache(member);
+        }
+    }
+
+    [Test]
+    public async Task Hash_Second_Mismatch_Still_Reports_The_Difference()
+    {
+        var member = "HashSecondMismatch" + Environment.Version.Major;
+        static void Values(Hash h, int last) { h.Add(1); h.Add("two"); h.Add(3.5); h.Add(last); }
+        DeleteCache(member);
         var discovered = 0L;
         try { Check.Hash(h => Values(h, 4), 0, memberName: member); }
         catch (CsCheckException e) { discovered = long.Parse(e.Message.Split(' ')[^1]); }
@@ -199,7 +307,7 @@ public class HashTests
         }
         finally
         {
-            DeleteCache();
+            DeleteCache(member);
         }
     }
 
@@ -349,7 +457,7 @@ public class HashTests
         double[] powCache = [ 1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18,
             1e19, 1e20, 1e21, 1e22, 1e23, 1e24, 1e25, 1e26, 1e27, 1e28, 1e29, 1e30, 1e31 ];
         double Pow3(int n) => powCache[n];
-        var genInt = Gen.UInt32.Select(i => (int)i);
+        var genInt = Gen.Int[0, 31];
         genInt.Faster(Pow1, Pow2, Check.EqualSkip, repeat: 100, raiseexception: false, writeLine: TUnitX.WriteLine);
         genInt.Faster(Pow3, Pow1, Check.EqualSkip, repeat: 100, raiseexception: false, writeLine: TUnitX.WriteLine);
         genInt.Faster(Pow3, i => Math.Pow(10, i), Check.EqualSkip, repeat: 100, raiseexception: false, writeLine: TUnitX.WriteLine);

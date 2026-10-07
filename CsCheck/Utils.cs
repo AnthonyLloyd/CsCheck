@@ -33,15 +33,9 @@ using System.Collections.ObjectModel;
 
 public sealed class CsCheckException : Exception
 {
-    readonly Exception? _exception;
     private CsCheckException() { }
     public CsCheckException(string message) : base(message) { }
-    public CsCheckException(string message, Exception? exception)
-        : base(exception is null ? message : string.Concat(message, '\n', exception.Message))
-    {
-        _exception = exception;
-    }
-    public override string? StackTrace => _exception?.StackTrace;
+    public CsCheckException(string message, Exception? exception) : base(message, exception) { }
 }
 
 public static partial class Check
@@ -59,10 +53,10 @@ public static partial class Check
         return string.IsNullOrWhiteSpace(value) ? defaultValue : long.Parse(value);
     }
 
-    static int ParseEnvironmentVariableToInt(string variable, int defaultValue)
+    static int ParseEnvironmentVariableToInt(string variable, int defaultValue, int minValue)
     {
         var value = Environment.GetEnvironmentVariable(variable);
-        return string.IsNullOrWhiteSpace(value) ? defaultValue : int.Parse(value);
+        return string.IsNullOrWhiteSpace(value) ? defaultValue : Math.Max(int.Parse(value), minValue);
     }
 
     static double ParseEnvironmentVariableToDouble(string variable, double defaultValue)
@@ -356,17 +350,15 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
             return true;
         if (a is null || b is null)
             return false;
-        if (a is IEquatable<T> aieq)
-            return aieq.Equals(b);
-        if (a is Array aa2 && b is Array ba2 && (aa2.Rank == 2 || ba2.Rank == 2))
+        if (a is Array aa && b is Array ba && (aa.Rank > 1 || ba.Rank > 1))
         {
-            if (aa2.Rank != ba2.Rank) return false;
-            int I = aa2.GetLength(0), J = aa2.GetLength(1);
-            if (I != ba2.GetLength(0) || J != ba2.GetLength(1)) return false;
-            for (int i = 0; i < I; i++)
-                for (int j = 0; j < J; j++)
-                    if (!Equal(aa2.GetValue(i, j), ba2.GetValue(i, j)))
-                        return false;
+            if (aa.Rank != ba.Rank) return false;
+            for (int d = 0; d < aa.Rank; d++)
+                if (aa.GetLength(d) != ba.GetLength(d)) return false;
+            var be = ba.GetEnumerator();
+            foreach (var x in aa)
+                if (!be.MoveNext() || !Equal(x, be.Current))
+                    return false;
             return true;
         }
         if (a is IList ail && b is IList bil)
@@ -374,6 +366,18 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
             if (ail.Count != bil.Count) return false;
             for (int i = 0; i < ail.Count; i++)
                 if (!Equal(ail[i], bil[i]))
+                    return false;
+            return true;
+        }
+        if (a is IEquatable<T> aieq)
+            return aieq.Equals(b);
+        if (a is string || b is string)
+            return a.Equals(b);
+        if (a is IDictionary ad && b is IDictionary bd)
+        {
+            if (ad.Count != bd.Count) return false;
+            foreach (DictionaryEntry e in ad)
+                if (!bd.Contains(e.Key) || !Equal(e.Value, bd[e.Key]))
                     return false;
             return true;
         }
@@ -409,7 +413,7 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         var unmatched = new List<object>(bo);
         foreach (var x in ao)
         {
-            var i = unmatched.FindIndex(y => EqualComparer.Instance.Equals(x, y));
+            var i = unmatched.FindIndex(y => Equal(x, y));
             if (i == -1) return false;
             unmatched.RemoveAt(i);
         }
@@ -429,56 +433,15 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
              || genericType == typeof(FrozenDictionary<,>)
              || genericType == typeof(ReadOnlyDictionary<,>)
              || genericType == typeof(ConcurrentBag<>)
-             || genericType == typeof(FrozenSet<>))
+             || genericType == typeof(FrozenSet<>)
+             || genericType == typeof(ReadOnlySet<>))
                 return true;
         }
         return false;
     }
 
-    private sealed class EqualComparer : IEqualityComparer<object>
-    {
-        internal static readonly EqualComparer Instance = new();
-        public new bool Equals(object? x, object? y) => Equal(x, y);
-        public int GetHashCode([DisallowNull] object obj) => 0;
-    }
-
     /// <summary>Don't check equality just return true.</summary>
     public static bool EqualSkip<T>(T _, T __) => true;
-
-    /// <summary>Default model equal implementation. Handles most collections ordered unless the type is well known Set or Dictionary or elements are KeyValuePairs.</summary>
-    public static bool ModelEqual<T, M>(T actual, M model)
-    {
-        if (actual is null && model is null) return true;
-        if (actual is null || model is null) return false;
-        if (actual is IList ail && model is IList bil)
-        {
-            if (ail.Count != bil.Count) return false;
-            for (int i = 0; i < ail.Count; i++)
-            {
-                if (!ail[i]!.Equals(bil[i]))
-                    return false;
-            }
-            return true;
-        }
-        if (actual is IEnumerable aie && model is IEnumerable bie)
-        {
-            var count = aie.Cast<object>().Count();
-            if (bie.Cast<object>().Take(count + 1).Count() != count) return false;
-            if (count == 0) return true;
-            if (count == 1) return Equal(aie.Cast<object>().First(), bie.Cast<object>().First());
-            if (IsUnorderedCollection(actual.GetType()) || IsUnorderedCollection(model.GetType())
-             || aie.Cast<object>().First()?.GetType() is { IsGenericType: true } aelementType && aelementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
-             || bie.Cast<object>().First()?.GetType() is { IsGenericType: true } belementType && belementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
-                return !aie.Cast<object>().Except(bie.Cast<object>(), EqualComparer.Instance).Any();
-            var ae = aie.GetEnumerator();
-            var be = bie.GetEnumerator();
-            while (ae.MoveNext() && be.MoveNext())
-                if (!Equal(ae.Current, be.Current))
-                    return false;
-            return true;
-        }
-        return actual.Equals(model);
-    }
 
     sealed class RunWorker<T>(T state, (string, Action<T>)[] parallelOperations, int[]? threadIds) : IThreadPoolWorkItem
     {
@@ -565,6 +528,22 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         foreach (var permutation in Interleavings(threadIds, sequence, taken, order, 0))
             yield return permutation;
     }
+    internal static bool Linearizable<T>((string, Action<T>)[] sequentialOperations, (string, Action<T>)[] parallelOperations, int[] threadIds, Func<T> initial, Func<T, bool> matches)
+    {
+        var linearizable = false;
+        Parallel.ForEach(Permutations(threadIds, parallelOperations), (sequence, state) =>
+        {
+            var linearState = initial();
+            try { Run(linearState, sequentialOperations, sequence, 1); }
+            catch { return; }
+            if (matches(linearState))
+            {
+                linearizable = true;
+                state.Stop();
+            }
+        });
+        return linearizable;
+    }
 
     static IEnumerable<T[]> Interleavings<T>(int[] threadIds, T[] sequence, bool[] taken, T[] order, int depth)
     {
@@ -573,17 +552,22 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
             yield return (T[])order.Clone();
             yield break;
         }
-loop_i: for (int i = 0; i < threadIds.Length; i++)
+        for (int i = 0; i < threadIds.Length; i++)
         {
-            if (taken[i]) continue;
-            for (int j = 0; j < i; j++)
-                if (!taken[j] && threadIds[j] == threadIds[i]) { continue loop_i; }
+            if (taken[i] || EarlierUntakenOnSameThread(threadIds, taken, i)) continue;
             taken[i] = true;
             order[depth] = sequence[i];
             foreach (var permutation in Interleavings(threadIds, sequence, taken, order, depth + 1))
                 yield return permutation;
             taken[i] = false;
         }
+    }
+
+    static bool EarlierUntakenOnSameThread(int[] threadIds, bool[] taken, int i)
+    {
+        for (int j = 0; j < i; j++)
+            if (!taken[j] && threadIds[j] == threadIds[i]) return true;
+        return false;
     }
 
     /// <summary>Check if two doubles are within the given absolute and relative tolerance.</summary>
@@ -725,7 +709,7 @@ loop_i: for (int i = 0; i < threadIds.Length; i++)
 }
 
 /// <summary>A median and quartile estimator.</summary>
-public sealed class MedianEstimator
+internal sealed class MedianEstimator
 {
     /// <summary>The number of sample observations.</summary>
     public int N;
@@ -964,35 +948,37 @@ public sealed class MedianEstimator
 
 /// <summary>Median estimate with error. Supports mathematical operators.</summary>
 [StructLayout(LayoutKind.Auto)]
-public struct MedianEstimate(MedianEstimator e)
+public struct MedianEstimate
 {
-    public double Median = e.Median, Error = (e.Q3 - e.Q1) * 0.5;
+    public double Median, Error;
+    internal MedianEstimate(MedianEstimator e)
+    {
+        Median = e.Median;
+        Error = (e.Q3 - e.Q1) * 0.5;
+    }
     static double Sqr(double x) => x * x;
     public static MedianEstimate operator -(double a, MedianEstimate e) => new() { Median = a - e.Median, Error = e.Error };
     public static MedianEstimate operator *(MedianEstimate e, double a) => new() { Median = e.Median * a, Error = e.Error * a };
     public static MedianEstimate operator /(MedianEstimate a, MedianEstimate b) => new()
     {
         Median = a.Median / b.Median,
-        Error = Math.Sqrt(Sqr(a.Error / a.Median) * Sqr(b.Error / b.Median)) * Math.Abs(a.Median / b.Median),
+        Error = Math.Sqrt(Sqr(a.Error / a.Median) + Sqr(b.Error / b.Median)) * Math.Abs(a.Median / b.Median),
     };
-    public override readonly string ToString() => Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0").PadLeft(5)
-                                       + " ±" + Math.Min(Error, 99.9).ToString("0.0").PadLeft(4);
+    public override readonly string ToString() =>
+        Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0").PadLeft(5) + " ±" + Math.Min(Error, 99.9).ToString("0.0").PadLeft(4);
 }
 
-public sealed class Classifier
+internal sealed class Classifier
 {
     readonly ConcurrentDictionary<string, MedianEstimator> estimators = new(StringComparer.Ordinal);
     // Counts without times, in a long because a long run can count past int.MaxValue, which MedianEstimator.N cannot hold.
     readonly ConcurrentDictionary<string, long> counts = new(StringComparer.Ordinal);
-    [ThreadStatic] static MedianEstimator? nextEstimator;
     long nullCount;
     public void Add(string name, long time)
     {
         if (name is not null)
         {
-            var estimator = estimators.GetOrAdd(name, nextEstimator ??= new());
-            if (ReferenceEquals(estimator, nextEstimator))
-                nextEstimator = new();
+            var estimator = estimators.GetOrAdd(name, static _ => new());
             lock (estimator)
             {
                 estimator.Add(time);
@@ -1117,24 +1103,8 @@ public sealed class Classifier
         };
 }
 
-public static class HashHelper
-{
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ulong GetFastModMultiplier(uint divisor)
-        => ulong.MaxValue / divisor + 1;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint FastMod(uint value, uint divisor, ulong multiplier)
-        => (uint)(((((multiplier * value) >> 32) + 1) * divisor) >> 32);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsPow2(uint value) => (value & (value - 1)) == 0;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsPow2(int value) => (value & (value - 1)) == 0;
-}
-
-public static class ThrowHelper
+[StackTraceHidden]
+internal static class ThrowHelper
 {
     [DoesNotReturn]
     public static void ThrowFinishLessThanStart<T>(T start, T finish)
