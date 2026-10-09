@@ -19,7 +19,7 @@ namespace Tests
             Check.Faster(
                 ReverseComplementNew.RevComp.NotMain,
             ReverseComplementOld.RevComp.NotMain,
-                sigma: 6, threads: 1, timeout: 600_000, writeLine: TUnitX.WriteLine);
+                sigma: 6, threads: 1, timeout: 600, writeLine: TUnitX.WriteLine);
         }
     }
 

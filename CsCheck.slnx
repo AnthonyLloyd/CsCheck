@@ -9,6 +9,7 @@
     <File Path="docs/Why.md" />
     <File Path="README.md" />
   </Folder>
+  <Project Path="AotSample/AotSample.csproj" />
   <Project Path="CsCheck/CsCheck.csproj" />
   <Project Path="Tests/Tests.csproj" />
 </Solution>

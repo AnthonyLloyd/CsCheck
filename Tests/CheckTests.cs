@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using CsCheck;
@@ -595,6 +596,128 @@ public class CheckTests
         var message = (await Assert.ThrowsAsync<CsCheckException>(
             () => Check.FasterAsync(Quick, Slow, repeat: repeat, timeout: 1)))!.Message;
         await Assert.That(message).Contains("repeat must be at least 1");
+    }
+
+    [Test]
+    public async Task Faster_WarmUp_Runs_For_Each_Kind_Of_Overload()
+    {
+        static int Fast(int i) => i;
+        static int Slow(int i) { var s = 0; for (var j = 0; j < 1000; j++) s += i ^ j; return s; }
+        var outputs = new List<string>();
+        Check.Faster(() => Fast(3), () => Slow(3), Check.EqualSkip, threads: 1, writeLine: outputs.Add, warmUp: true);
+        Gen.Int[0, 100].Faster(Fast, Slow, Check.EqualSkip, threads: 1, writeLine: outputs.Add, warmUp: true);
+        await Check.FasterAsync(() => Task.FromResult(Fast(3)), () => Task.FromResult(Slow(3)), Check.EqualSkip, threads: 1, writeLine: outputs.Add, warmUp: true);
+        await Gen.Int[0, 100].FasterAsync(i => Task.FromResult(Fast(i)), i => Task.FromResult(Slow(i)), Check.EqualSkip, threads: 1, writeLine: outputs.Add, warmUp: true);
+        await Assert.That(outputs.Count).IsEqualTo(4);
+        foreach (var output in outputs) await Assert.That(output).Contains(", jit = ");
+    }
+
+    sealed class Marked(int value)
+    {
+        public readonly int Value = value;
+        public bool Touched;
+    }
+
+    [Test]
+    public async Task Faster_Gen_Gives_Each_Function_Its_Own_Copy()
+    {
+        Marked? seen = null;
+        var sink = 0;
+        int Fast(Marked m) { m.Touched = true; seen = m; return m.Value; }
+        int Slow(Marked m)
+        {
+            if (m.Touched || m.Value != seen!.Value) throw new InvalidOperationException("slower did not get its own copy of faster's input");
+            var s = 0;
+            for (var j = 0; j < 1000; j++) s += m.Value ^ j;
+            return sink = s;
+        }
+        var gen = Gen.Int.Select(i => new Marked(i));
+        gen.Faster(m => { Fast(m); }, m => { Slow(m); }, threads: 1, raiseexception: false, writeLine: _ => { }, warmUp: true);
+        gen.Faster(Fast, Slow, Check.EqualSkip, threads: 1, raiseexception: false, writeLine: _ => { }, warmUp: true);
+        await gen.FasterAsync(m => { Fast(m); return Task.CompletedTask; }, m => { Slow(m); return Task.CompletedTask; }, threads: 1, raiseexception: false, writeLine: _ => { }, warmUp: true);
+        await gen.FasterAsync(m => Task.FromResult(Fast(m)), m => Task.FromResult(Slow(m)), Check.EqualSkip, threads: 1, raiseexception: false, writeLine: _ => { }, warmUp: true);
+    }
+
+    [Test]
+    public async Task Faster_WarmUp_Exception_Has_The_Seed()
+    {
+        static int Throw(int _) => throw new InvalidOperationException("thrown by slower");
+        var gen = Gen.Int[0, 100];
+        CsCheckException[] exceptions =
+        [
+            Assert.Throws<CsCheckException>(() => gen.Faster(_ => { }, i => { Throw(i); }, threads: 1, warmUp: true)),
+            Assert.Throws<CsCheckException>(() => gen.Faster(i => i, Throw, threads: 1, warmUp: true)),
+            (await Assert.ThrowsAsync<CsCheckException>(() => gen.FasterAsync(_ => Task.CompletedTask, i => { Throw(i); return Task.CompletedTask; }, threads: 1, warmUp: true)))!,
+            (await Assert.ThrowsAsync<CsCheckException>(() => gen.FasterAsync(Task.FromResult, i => Task.FromResult(Throw(i)), threads: 1, warmUp: true)))!,
+        ];
+        foreach (var e in exceptions)
+        {
+            await Assert.That(e.Message).Contains("CsCheck_Seed=");
+            await Assert.That(e.InnerException).IsTypeOf<InvalidOperationException>();
+        }
+    }
+
+    [Test]
+    public async Task Faster_Returns_After_Its_Threads_Stop()
+    {
+        var inFlight = 0;
+        void Busy(double microseconds)
+        {
+            Interlocked.Increment(ref inFlight);
+            var end = Stopwatch.GetTimestamp() + (long)(microseconds * Stopwatch.Frequency / 1e6);
+            while (Stopwatch.GetTimestamp() < end) { }
+            Interlocked.Decrement(ref inFlight);
+        }
+        for (var run = 0; run < 5; run++)
+        {
+            Check.Faster(() => Busy(200), () => Busy(400), threads: 4, raiseexception: false);
+            await Assert.That(inFlight).IsEqualTo(0);
+            await Check.FasterAsync(() => { Busy(200); return Task.CompletedTask; }, () => { Busy(400); return Task.CompletedTask; }, threads: 4, raiseexception: false);
+            await Assert.That(inFlight).IsEqualTo(0);
+        }
+    }
+
+    [Test]
+    public async Task Faster_Seed_Is_Only_The_First_Input()
+    {
+        const string seed = "0N0XIzNsQ0O2";
+        var gen = Gen.Int.Uniform;
+        var first = gen.Generate(PCG.Parse(seed), null, out _);
+        var counts = new ConcurrentDictionary<int, int>();
+        var sink = 0;
+        int Fast(int i) => counts.AddOrUpdate(i, 1, (_, c) => c + 1);
+        int Slow(int i)
+        {
+            var s = 0;
+            for (var j = 0; j < 20_000; j++) s += i ^ j;
+            return sink = s;
+        }
+        async Task AssertFirstSeenOnce()
+        {
+            await Assert.That(counts.ContainsKey(first)).IsTrue();
+            await Assert.That(counts.Values.Max()).IsEqualTo(1);
+            counts.Clear();
+        }
+        gen.Faster(i => { Fast(i); }, i => { Slow(i); }, seed: seed, sigma: 20, threads: 4, raiseexception: false);
+        await AssertFirstSeenOnce();
+        gen.Faster(Fast, Slow, Check.EqualSkip, seed: seed, sigma: 20, threads: 4, raiseexception: false);
+        await AssertFirstSeenOnce();
+        await gen.FasterAsync(i => { Fast(i); return Task.CompletedTask; }, i => { Slow(i); return Task.CompletedTask; }, seed: seed, sigma: 20, threads: 4, raiseexception: false);
+        await AssertFirstSeenOnce();
+        await gen.FasterAsync(i => Task.FromResult(Fast(i)), i => Task.FromResult(Slow(i)), Check.EqualSkip, seed: seed, sigma: 20, threads: 4, raiseexception: false);
+        await AssertFirstSeenOnce();
+    }
+
+    [Test]
+    public async Task Faster_Seed_Reproduces_Return_Values_Differ()
+    {
+        static int Same(int i) => i;
+        static int Different(int i) => i % 7 == 0 ? i + 1 : i;
+        var gen = Gen.Int.Uniform;
+        var message = Assert.Throws<CsCheckException>(() => gen.Faster(Same, Different, threads: 1))!.Message;
+        var seed = message.Split("CsCheck_Seed=")[1].Split(' ', '\n')[0];
+        var again = Assert.Throws<CsCheckException>(() => gen.Faster(Same, Different, seed: seed, threads: 1))!.Message;
+        await Assert.That(again).IsEqualTo(message);
     }
 
     [Test]

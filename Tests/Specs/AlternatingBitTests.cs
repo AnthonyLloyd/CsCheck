@@ -15,7 +15,7 @@ public class AlternatingBitTests
     [Test]
     public async Task One_Bit_Over_A_Fifo_Channel_Is_Correct()
     {
-        var report = AlternatingBitSpec.Create(Seq.OneBit, Order.Fifo).Exhaustive(writeLine: TUnitX.WriteLine);
+        var report = AlternatingBitSpec.Create(Seq.OneBit, Order.Fifo).Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.NeverTriggered).IsEmpty();
         await Assert.That(report.NeverFired).IsEmpty();
@@ -31,7 +31,7 @@ public class AlternatingBitTests
     public async Task Without_The_Bit_A_Frame_Is_Delivered_Twice()
     {
         var spec = AlternatingBitSpec.Create(Seq.None, Order.Fifo);
-        spec.Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+        spec.Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("DELIVERED-ONCE[0]");
         await Assert.That(violation.Detail).Contains("more than 1 times");
@@ -46,7 +46,7 @@ public class AlternatingBitTests
     public async Task Reordering_Defeats_One_Bit()
     {
         var spec = AlternatingBitSpec.Create(Seq.OneBit, Order.Reorder);
-        spec.Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+        spec.Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         TUnitX.WriteLine($"caught by {violation!.Id}: {violation.Detail}");
         TUnitX.WriteLine(violation.ToString(AlternatingBitSpec.Show));

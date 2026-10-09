@@ -21,7 +21,7 @@ public class FixEngineTests
     [Test]
     public async Task Exhaustive_Proof()
     {
-        var report = FixEngineSpec.Create().Exhaustive(writeLine: TUnitX.WriteLine);
+        var report = FixEngineSpec.Create().Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsEqualTo(0);
         await Assert.That(report.NeverTriggered).IsEmpty();
@@ -90,7 +90,7 @@ public class FixEngineTests
             trigger: (b, a) => a.GapOpen && !b.GapOpen,
             response: (_, a) => !a.GapOpen || a.Status == FixEngine.ConnectionStatus.Disconnected,
             within: FixEngine.Interval * 2, per: "Tick")
-        .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+        .Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("GAP-RESOLVED");
         TUnitX.WriteLine(violation.ToString(s => s.ToString()));

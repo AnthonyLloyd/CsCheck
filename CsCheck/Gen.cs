@@ -103,17 +103,23 @@ public abstract class Gen<T> : IGen<T>
     public GenOperationAsync<Actual, Model> Operation<Actual, Model>(Func<Actual, T, Task> actual, Func<Model, T, Task> model) => GenOperationAsync.Create(this, actual, model);
     public GenMetamorphic<S> Metamorphic<S>(Func<T, string> name, Action<S, T> action1, Action<S, T> action2) => GenMetamorphic.Create(this, name, action1, action2);
     public GenMetamorphic<S> Metamorphic<S>(Action<S, T> action1, Action<S, T> action2) => GenMetamorphic.Create(this, Check.Print, action1, action2);
+}
 
-    /// <summary>Generator for an array of <typeparamref name="T"/></summary>
-    public GenArray<T> Array => new(this);
-    /// <summary>Generator for a two dimensional array of <typeparamref name="T"/></summary>
-    public GenArray2D<T> Array2D => new(this);
-    /// <summary>Generator for a List of <typeparamref name="T"/></summary>
-    public GenList<T> List => new(this);
-    /// <summary>Generator for a HashSet of <typeparamref name="T"/></summary>
-    public GenHashSet<T> HashSet => new(this);
-    /// <summary>Generator for a unique array of <typeparamref name="T"/></summary>
-    public GenArrayUnique<T> ArrayUnique => new(this);
+public static class GenExtensions
+{
+    extension<T>(Gen<T> gen)
+    {
+        /// <summary>Generator for an array of <typeparamref name="T"/></summary>
+        public GenArray<T> Array => new(gen);
+        /// <summary>Generator for a two dimensional array of <typeparamref name="T"/></summary>
+        public GenArray2D<T> Array2D => new(gen);
+        /// <summary>Generator for a List of <typeparamref name="T"/></summary>
+        public GenList<T> List => new(gen);
+        /// <summary>Generator for a HashSet of <typeparamref name="T"/></summary>
+        public GenHashSet<T> HashSet => new(gen);
+        /// <summary>Generator for a unique array of <typeparamref name="T"/></summary>
+        public GenArrayUnique<T> ArrayUnique => new(gen);
+    }
 }
 
 public delegate T GenMap<T>(T v, ref Size size);

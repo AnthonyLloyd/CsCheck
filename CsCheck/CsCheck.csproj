@@ -30,10 +30,13 @@ Added range indexers to Gen.DateTime.Utc and Gen.DateTime.Local.
 Added Spec.ConformExhaustive: checks an implementation on every transition of the proof.
 Added a Self-loops column and SpecReport.Deadlock to Spec reports.
 Added Check.SingleLimit: Single stops after 1,000,000 tries instead of hanging.
+Added Faster warmUp, Check.WarmUp and CsCheck_WarmUp: wait for tiered compilation to finish before measuring.
+Added Native AOT support.
 Improved Spec Sample, Conform and parallel Exhaustive speed.
 Improved SampleModelBased speed: its classify table is counts only.
 Improved CsCheckException: InnerException is set, and the stack trace points at the test.
 Improved SelectMany: selectors can return IGen&lt;R&gt;.
+Improved Faster output: it shows the JIT mode, and warns when the code may be unoptimised tier 0.
 Fixed Gen.Decimal, Gen.Double and Gen.Float ranges throwing at 0, returning NaN or infinity, and varying by OS or .NET version.
 Fixed Check.Equal for dictionaries, ImmutableArray, rank 3+ arrays, ReadOnlySet and strings.
 Fixed Sample hiding failures and printing the wrong value when the generator throws.
@@ -48,6 +51,10 @@ Fixed an action-scoped Spec.Fault applying to every action in sampled traces.
 Fixed Sample, Faster and Single threads losing AsyncLocal values and culture.
 Fixed Causal.Profile errors being far too small, and overflow on long runs.
 Fixed threads: 0 hanging; below 1 now means the default.
+Fixed Gen Faster favouring slower on large inputs: each function now gets its own freshly generated copy.
+Fixed FasterAsync for 8-tuple Gens having no writeLine.
+Fixed Faster returning before its threads stopped, and holding thread-pool threads for the whole run.
+Fixed Faster with a seed replaying the same inputs on every thread, which overstated sigma: the seed is now only the first input, as in Sample.
 
 BREAKING CHANGES:
 - Now targets net10.0, version 4.9.1 was the last to target net8.0.
@@ -61,11 +68,13 @@ BREAKING CHANGES:
 - Spec checks return SpecReport&lt;S&gt;, Exhaustive takes writeLine first, and AtMost&lt;T&gt; takes times after over.
 - SampleFaults reports FaultOutcome.NotFound, not NotDetected, for a fault it misses.
 - Generator fields such as Gen.Int.Uniform are readonly.
+- Array, Array2D, List, HashSet and ArrayUnique are extension properties, so they need using CsCheck, and Faster and FasterAsync take a warmUp parameter: code built against 4.x needs rebuilding.
 - No longer public: Classifier, MedianEstimator, ThrowHelper, HashHelper, the Timer types, Zigzag, and the Hash and MedianEstimate constructors.
 - CsCheckException.Message no longer includes the inner exception's message.
 - Seeds change for Gen.Decimal, Gen.Double, Gen.Float and about half of Gen.Seed values.
         </PackageReleaseNotes>
         <TargetFramework>net10.0</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <WarningLevel>9999</WarningLevel>
         <Nullable>enable</Nullable>

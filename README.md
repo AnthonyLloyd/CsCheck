@@ -38,7 +38,7 @@ The following tests are in ~~xUnit~~ TUnit but could equally be used in any test
 
 More to see in the [Tests](https://github.com/AnthonyLloyd/CsCheck/tree/master/Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
 
-No Reflection was used in the making of this product. CsCheck is close to being AOT compatible but 'generic recursion is AOT kryptonite'.
+No Reflection was used in the making of this product and CsCheck is now AOT compatible!
 
 ## Generator Creation Example
 
@@ -337,7 +337,7 @@ The performance is raised in an exception if it fails but can also be output if 
 ```
 Tests.CheckTests.Faster_Linq_Random [27ms]
 Standard Output Messages:
-32.29%[29.47%..36.51%] 1.48x[1.42x..1.58x] faster, sigma = 50.0 (2,551 vs 17), min = 208ns vs 375ns, alloc = 0B vs 48B
+32.29%[29.47%..36.51%] 1.48x[1.42x..1.58x] faster, sigma = 50.0 (2,551 vs 17), min = 208ns vs 375ns, alloc = 0B vs 48B, jit = tiering off
 ```
 
  The first number is the estimated percentage median performance improvement with the interquartile range in the square brackets.
@@ -346,7 +346,36 @@ Standard Output Messages:
  The counts of faster vs slower and the corresponding sigma (the number of standard deviations of the binomial
  distribution for the null hypothesis P(faster) = P(slower) = 0.5) are also shown. The default sigma used is 6.0.
  The minimum time taken for faster vs slower is shown as an idea of timing and for additional diagnostics of the result (machine dependent).
- Finally the allocation of a single call of faster vs slower is shown, measured at the end of the run (default on the measuring thread; set allocAll: true to include all threads; async Faster always measures all threads).
+ Then the allocation of a single call of faster vs slower is shown, measured at the end of the run (default on the measuring thread; set allocAll: true to include all threads; async Faster always measures all threads).
+ Finally the JIT mode is shown, see below.
+
+### Faster and the JIT
+
+Run Faster in Release. Debug builds aren't optimised, so their timings say little about the real code.
+
+The JIT mode at the end of the output is `jit = aot`, `tiering off`, `quick jit off` or `tiered`.
+With tiered compilation, the .NET default, a method starts unoptimised and is only optimised after enough calls, so a short Faster run can time that first tier. The output then ends with `MAY BE TIER 0`.
+Two setups give consistent results:
+
+- For a normal test suite running in parallel, as on CI, turn tiering off in the test project. The JIT then optimises each method the first time it's called, so there's no wait and every run times the same code, but there's no dynamic PGO.
+
+  ```xml
+  <TieredCompilation>false</TieredCompilation>
+  ```
+
+- For fully optimised code with dynamic PGO, run the Faster tests on their own (a separate project, or one test at a time), set the tiering delay to 0, and pass `warmUp: true` or set `CsCheck_WarmUp=1`. Faster then calls both functions until the JIT has finished with them before measuring, for up to 5 seconds. In a busy parallel run the JIT rarely goes quiet, so the warm-up mostly times out.
+
+  ```xml
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.Runtime.TieredCompilation.CallCountingDelayMs" Value="0" />
+  </ItemGroup>
+  ```
+
+Dynamic PGO optimises for the types it sees, once per process. When a Gen mixes types behind an interface, which type gets the fast path can change from run to run, so for polymorphic code use a Faster per type.
+
+Each pair of calls gets a freshly generated input, and both functions get their own copy of it. With `repeat` a function is called several times on the same input, so the branch predictor and caches see it again.
+
+The default thread count is the number of logical CPUs, so both functions run under load and share cores with hyperthreads. Ratios can differ from `threads: 1`.
 
 ### Matrix Multiply
 
@@ -402,13 +431,12 @@ Standard Output Messages:
 [Test]
 public void ReverseComplement_Faster()
 {
-    if (!File.Exists(Utils.Fasta.Filename)) Utils.Fasta.NotMain(new[] { "25000000" });
+    if (!File.Exists(FastaUtils.Fasta.Filename)) FastaUtils.Fasta.NotMain(25_000_000, FastaUtils.Fasta.Filename);
 
     Check.Faster(
         ReverseComplementNew.RevComp.NotMain,
         ReverseComplementOld.RevComp.NotMain,
-        threads: 1, timeout: 600_000, sigma: 6
-        writeLine: TUnitX.WriteLine);
+        sigma: 6, threads: 1, timeout: 600, writeLine: TUnitX.WriteLine);
 }
 ```
 

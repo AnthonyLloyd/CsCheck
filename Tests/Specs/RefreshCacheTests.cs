@@ -11,7 +11,7 @@ public class RefreshCacheTests
     [Test]
     public async Task Exhaustive_Proof()
     {
-        var report = RefreshCacheSpec.Create().Exhaustive(writeLine: TUnitX.WriteLine);
+        var report = RefreshCacheSpec.Create().Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsEqualTo(0);
         await Assert.That(report.NeverTriggered).IsEmpty();
@@ -93,7 +93,7 @@ public class RefreshCacheTests
             trigger: (_, a, k) => a.Started && a.Touched == k,
             response: (_, a, k) => !a.Of(k).Stale,
             within: RefreshCache.Ttl, per: "Tick")
-        .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+        .Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("STALE-ALWAYS-CLEARS[A]");
         TUnitX.WriteLine(violation.ToString(s => s.ToString()));

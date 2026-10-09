@@ -243,8 +243,10 @@ default 100).
 Global defaults via environment variables: `CsCheck_Iter`, `CsCheck_Time`,
 `CsCheck_Seed`, `CsCheck_Threads`, `CsCheck_Timeout`, `CsCheck_Sigma` and
 `CsCheck_Replay` set the parameters above. `CsCheck_AllocAll` (default false)
-makes Faster count allocations on all threads. `CsCheck_Ulps` (default 4) lets
-`Check.Print` show a double or float as a shorter number within that many ulps.
+makes Faster count allocations on all threads, and `CsCheck_WarmUp` (default
+false) makes it wait for the JIT before measuring. `CsCheck_Ulps` (default 4)
+lets `Check.Print` show a double or float as a shorter number within that many
+ulps.
 `CsCheck_WhereLimit` (default 100) and `CsCheck_SingleLimit` (default
 1,000,000) are how many tries `Where` and `Single` make before throwing.
 
