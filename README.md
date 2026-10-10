@@ -38,7 +38,7 @@ The following tests are in ~~xUnit~~ TUnit but could equally be used in any test
 
 More to see in the [Tests](https://github.com/AnthonyLloyd/CsCheck/tree/master/Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
 
-No Reflection was used in the making of this product and CsCheck is now AOT compatible!
+No Reflection was used in the making of this product and CsCheck 5.0.0 is now AOT compatible!
 
 ## Generator Creation Example
 
@@ -481,7 +481,7 @@ Standard Output Messages:
 
 Model-based testing needs a model to compare against. Sometimes what you have instead is a *document*: a protocol
 specification, an exchange's rules, a regulation. **Spec** lets you write the requirements down as named,
-quoted rules over a small pure state machine, and then check them four ways from the one definition.
+quoted rules over a small pure state machine, and then check them five ways from the one definition.
 
 ```csharp
 Spec.From(State.Connected)
@@ -729,6 +729,8 @@ dotnet run -c Release --project Tests --no-restore --disable-logo --output Detai
 
 dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/*_Perf -e CsCheck_Threads=1
 ```
+
+The other variables are `CsCheck_Replay`, `CsCheck_Timeout`, `CsCheck_Ulps`, `CsCheck_WhereLimit`, `CsCheck_SingleLimit`, `CsCheck_AllocAll` and `CsCheck_WarmUp`. Each variable sets the `Check` property of the same name, such as `Check.Iter`, which can also be set in code. Numbers are read with the invariant culture, and a value that would run nothing or hang, such as `CsCheck_Iter=0` or `CsCheck_Time=0`, throws.
 
 ## Development
 

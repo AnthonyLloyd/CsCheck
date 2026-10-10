@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using CsCheck;
@@ -271,10 +272,17 @@ public class CheckTests
         await Assert.That(Check.Equal<object?>(new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }, new KeyValuePair<int, byte>[] { new(3, 4), new(1, 2) })).IsFalse();
     }
 
+    /// <summary>Equal by value but hashed by reference, like a type that overrides Equals without GetHashCode.</summary>
+    sealed record InconsistentHash(int Value)
+    {
+        public override int GetHashCode() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
+    }
+
     [Test]
     public void Equal_Matches_Sequence_And_Multiset_Oracles()
     {
         static Dictionary<int, int[]> ToDict(int[] a) => a.Select((x, i) => (i, x)).ToDictionary(t => t.i, t => new[] { t.x });
+        static InconsistentHash? NullOrInconsistent(int x) => x == 0 ? null : new(x);
         Gen.Select(Gen.Int[0, 3].Array[0, 6], Gen.Int[0, 3].Array[0, 6], Gen.Int[0, 2], (xs, other, kind) => (xs, ys: kind switch
         {
             0 => [.. xs.OrderDescending()],
@@ -282,10 +290,15 @@ public class CheckTests
             _ => other,
         }))
         .Sample((xs, ys) =>
-            Check.Equal<object?>(xs, ys.ToList()) == xs.SequenceEqual(ys)
-            && Check.Equal<object?>(new ConcurrentBag<int>(xs), ys.ToList()) == xs.Order().SequenceEqual(ys.Order())
-            && Check.Equal<object?>(xs.Select(x => new[] { x }).ToList(), ys.Select(y => new[] { y }).ToList()) == xs.SequenceEqual(ys)
-            && Check.Equal<object?>(new ConcurrentDictionary<int, int[]>(ToDict(xs)), ToDict(ys)) == xs.SequenceEqual(ys));
+        {
+            var sameItems = xs.Order().SequenceEqual(ys.Order());
+            return Check.Equal<object?>(xs, ys.ToList()) == xs.SequenceEqual(ys)
+                && Check.Equal<object?>(new ConcurrentBag<int>(xs), ys.ToList()) == sameItems
+                && Check.Equal<object?>(new ConcurrentBag<int[]>(xs.Select(x => new[] { x })), ys.Select(y => new[] { y }).ToList()) == sameItems
+                && Check.Equal<object?>(new ConcurrentBag<InconsistentHash?>(xs.Select(NullOrInconsistent)), ys.Select(NullOrInconsistent).ToList()) == sameItems
+                && Check.Equal<object?>(xs.Select(x => new[] { x }).ToList(), ys.Select(y => new[] { y }).ToList()) == xs.SequenceEqual(ys)
+                && Check.Equal<object?>(new ConcurrentDictionary<int, int[]>(ToDict(xs)), ToDict(ys)) == xs.SequenceEqual(ys);
+        });
     }
 
     /// <summary>Sample writes its passed line after the property has already succeeded, so a sink that throws there
@@ -674,6 +687,8 @@ public class CheckTests
             await Assert.That(inFlight).IsEqualTo(0);
             await Check.FasterAsync(() => { Busy(200); return Task.CompletedTask; }, () => { Busy(400); return Task.CompletedTask; }, threads: 4, raiseexception: false);
             await Assert.That(inFlight).IsEqualTo(0);
+            await Check.FasterAsync(async () => { await Task.Yield(); Busy(200); }, async () => { await Task.Yield(); Busy(400); }, threads: 4, raiseexception: false);
+            await Assert.That(inFlight).IsEqualTo(0);
         }
     }
 
@@ -749,6 +764,17 @@ public class CheckTests
         .SampleParallel(
             Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
             Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
+        );
+    }
+
+    /// <summary>A take on the thread that built the bag removes a different item, so this fails if replays run there.</summary>
+    [Test]
+    public void SampleParallel_ConcurrentBag()
+    {
+        Gen.Int[0, 5].List[0, 3].Select(l => new ConcurrentBag<int>(l))
+        .SampleParallel(
+            Gen.Int[0, 9].Operation<ConcurrentBag<int>>(i => $"Add({i})", (bag, i) => bag.Add(i)),
+            Gen.Operation<ConcurrentBag<int>>("TryTake()", bag => bag.TryTake(out _))
         );
     }
 
@@ -1301,7 +1327,7 @@ public class CheckTests
 
 #if NET11_0_OR_GREATER
 // Builds the member -> union conversion (a public constructor `T(TArm)`) once per (T, TArm) pair.
-static class UnionCtor<T, TArm> where T : System.Runtime.CompilerServices.IUnion
+static class UnionCtor<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T, TArm> where T : System.Runtime.CompilerServices.IUnion
 {
     public static readonly Func<TArm, T> Up = Build();
 
@@ -1317,7 +1343,7 @@ static class UnionCtor<T, TArm> where T : System.Runtime.CompilerServices.IUnion
 
 // A builder that scopes case declarations for a C# union type T. Because T is fixed on the builder, Case needs only
 // the arm type argument, and the predicate, down- and up-projections are all derived (IUnion.Value + the constructor).
-sealed class UnionFields<T> where T : System.Runtime.CompilerServices.IUnion
+sealed class UnionFields<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T> where T : System.Runtime.CompilerServices.IUnion
 {
     readonly EqualityFields<T> fields;
     internal UnionFields(EqualityFields<T> fields) => this.fields = fields;
@@ -1334,13 +1360,13 @@ sealed class UnionFields<T> where T : System.Runtime.CompilerServices.IUnion
 static class UnionEqualityFields
 {
     // Top-level union: hand the fields callback a UnionFields<T> so arms read as f.Case<Sensor>(...) with no .Union().
-    public static void Equality<T>(this Gen<T> gen, Func<UnionFields<T>, EqualityFields<T>> fields,
+    public static void Equality<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(this Gen<T> gen, Func<UnionFields<T>, EqualityFields<T>> fields,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T, T), string>? print = null)
         where T : System.Runtime.CompilerServices.IUnion
         => gen.Equality((EqualityFields<T> f) => fields(new UnionFields<T>(f)), seed, iter, time, threads, print);
 
     // Union-typed field: hand the callback a UnionFields<TField> so arms read as sf.Case<Sensor>(...) with no inner .Union().
-    public static EqualityFields<TParent> Union<TParent, TField>(this EqualityFields<TParent> fields,
+    public static EqualityFields<TParent> Union<TParent, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TField>(this EqualityFields<TParent> fields,
         Func<TParent, TField> down, Func<TParent, TField, TParent> up, Func<UnionFields<TField>, EqualityFields<TField>> fieldFields)
         where TField : System.Runtime.CompilerServices.IUnion
         => fields.Union(down, up, sf => fieldFields(new UnionFields<TField>(sf)));

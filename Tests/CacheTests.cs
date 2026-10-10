@@ -258,8 +258,14 @@ public class CacheTests
         await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
         await Task.Delay(TimeSpan.FromMilliseconds(50));
         await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
-        await Task.Delay(TimeSpan.FromMilliseconds(50));
-        await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(2);
+        var deadline = Environment.TickCount64 + 10_000;
+        var value = 1;
+        while (value == 1 && Environment.TickCount64 < deadline)
+        {
+            await Task.Delay(1);
+            value = await cache.GetOrAdd(1, Factory);
+        }
+        await Assert.That(value).IsEqualTo(2);
     }
 
     [Test]

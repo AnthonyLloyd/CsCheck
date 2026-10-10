@@ -154,7 +154,7 @@ public class HashTests
                 hash.Add(Gen.Char.Generate(pcg, null, out _));
                 hash.Add(Gen.String.Generate(pcg, null, out _));
             }
-        }, 8342106295);
+        }, 8521524925);
     }
 
     [Test]

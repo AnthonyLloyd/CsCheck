@@ -32,6 +32,9 @@ jobs:
     env:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
+    strategy:
+      matrix:
+        framework: [net10.0, net11.0]
     steps:
     - uses: actions/checkout@v6
     - uses: actions/setup-dotnet@v5
@@ -42,6 +45,6 @@ jobs:
     - name: Install Native AOT prerequisites
       run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
     - name: Publish
-      run: dotnet publish AotSample -c Release -o aot
-    - name: Run
-      run: ./aot/AotSample
+      run: dotnet publish Tests -c Release -f ${{ matrix.framework }} --use-current-runtime -p:PublishAot=true -o aot
+    - name: Test
+      run: ./aot/Tests --output Detailed --disable-logo --no-progress

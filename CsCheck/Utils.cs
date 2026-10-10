@@ -50,40 +50,40 @@ public static partial class Check
         return $"Set seed: \"{seed}\" or -e CsCheck_Seed={seed} to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{minT}";
     }
 
-    static long ParseEnvironmentVariableToLong(string variable, long defaultValue)
+    internal static long ParseEnvironmentVariableToLong(string variable, long defaultValue)
     {
         var value = Environment.GetEnvironmentVariable(variable);
-        return string.IsNullOrWhiteSpace(value) ? defaultValue : long.Parse(value);
+        return string.IsNullOrWhiteSpace(value) ? defaultValue
+            : long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l) ? l
+            : ThrowHelper.Throw<long>($"{variable} must be an integer, but was \"{value}\".");
     }
 
-    static int ParseEnvironmentVariableToInt(string variable, int defaultValue, int minValue)
+    internal static int ParseEnvironmentVariableToInt(string variable, int defaultValue)
     {
         var value = Environment.GetEnvironmentVariable(variable);
-        return string.IsNullOrWhiteSpace(value) ? defaultValue : Math.Max(int.Parse(value), minValue);
+        return string.IsNullOrWhiteSpace(value) ? defaultValue
+            : int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i) ? i
+            : ThrowHelper.Throw<int>($"{variable} must be an integer, but was \"{value}\".");
     }
 
-    static double ParseEnvironmentVariableToDouble(string variable, double defaultValue)
+    internal static double ParseEnvironmentVariableToDouble(string variable, double defaultValue)
     {
         var value = Environment.GetEnvironmentVariable(variable);
-        return string.IsNullOrWhiteSpace(value) ? defaultValue : double.Parse(value);
+        return string.IsNullOrWhiteSpace(value) ? defaultValue
+            : double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d
+            : ThrowHelper.Throw<double>($"{variable} must be a number, but was \"{value}\".");
     }
 
-static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
-{
-    var value = Environment.GetEnvironmentVariable(variable);
-    if (string.IsNullOrWhiteSpace(value)) return defaultValue;
-
-    value = value.Trim();
-    if (value is "1" or "y" or "Y") return true;
-    if (value is "0" or "n" or "N") return false;
-    if (bool.TryParse(value, out var b)) return b;
-    return defaultValue;
-}
-
-    static string? ParseEnvironmentVariableToSeed(string variable)
+    internal static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
     {
         var value = Environment.GetEnvironmentVariable(variable);
-        return string.IsNullOrWhiteSpace(value) ? null : PCG.Parse(value).ToString();
+        if (string.IsNullOrWhiteSpace(value)) return defaultValue;
+        return value.Trim().ToUpperInvariant() switch
+        {
+            "TRUE" or "YES" or "Y" or "1" => true,
+            "FALSE" or "NO" or "N" or "0" => false,
+            _ => ThrowHelper.Throw<bool>($"{variable} must be true, false, yes, no, y, n, 1 or 0, but was \"{value}\"."),
+        };
     }
 
     static string PrintArray2D(Array a)
@@ -413,14 +413,28 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         if (ao.Length != bo.Length) return false;
         if (ao.Length == 0) return true;
         if (ao.Length == 1) return Equal(ao[0], bo[0]);
-        var unmatched = new List<object>(bo);
+        var unmatched = new Dictionary<int, List<object>>(bo.Length);
+        foreach (var y in bo)
+            (CollectionsMarshal.GetValueRefOrAddDefault(unmatched, Hash(y), out _) ??= []).Add(y);
+        List<object>? leftover = null;
         foreach (var x in ao)
+            if (!(unmatched.TryGetValue(Hash(x), out var bucket) && RemoveEqual(bucket, x)))
+                (leftover ??= []).Add(x);
+        if (leftover is null) return true;
+        // A GetHashCode that disagrees with Equal can leave equal items in different buckets.
+        var rest = unmatched.Values.SelectMany(items => items).ToList();
+        return leftover.TrueForAll(x => RemoveEqual(rest, x));
+
+        // Collections share a bucket because Equal compares their items, which their GetHashCode doesn't.
+        static int Hash(object? o) => o is null or (IEnumerable and not string) ? 0 : o.GetHashCode();
+
+        static bool RemoveEqual(List<object> items, object x)
         {
-            var i = unmatched.FindIndex(y => Equal(x, y));
+            var i = items.FindIndex(y => Equal(x, y));
             if (i == -1) return false;
-            unmatched.RemoveAt(i);
+            items.RemoveAt(i);
+            return true;
         }
-        return true;
     }
 
     private static bool IsUnorderedCollection(Type type)
@@ -484,6 +498,14 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         if (worker.Exception is not null) throw worker.Exception;
     }
 
+    internal static void RunInline<T>(T state, (string, Action<T>)[] sequentialOperations, (string, Action<T>)[] sequence)
+    {
+        for (int i = 0; i < sequentialOperations.Length; i++)
+            sequentialOperations[i].Item2(state);
+        for (int i = 0; i < sequence.Length; i++)
+            sequence[i].Item2(state);
+    }
+
     sealed class RunReplayWorker<T>(T state, (string, Action<T>)[] parallelOperations, int[] threadIds) : IThreadPoolWorkItem
     {
         int threadId = -1;
@@ -531,13 +553,18 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         foreach (var permutation in Interleavings(threadIds, sequence, taken, order, 0))
             yield return permutation;
     }
-    internal static bool Linearizable<T>((string, Action<T>)[] sequentialOperations, (string, Action<T>)[] parallelOperations, int[] threadIds, Func<T> initial, Func<T, bool> matches)
+    internal static bool Linearizable<T>((string, Action<T>)[] sequentialOperations, (string, Action<T>)[] parallelOperations, int[] threadIds, Func<T> initial, Func<T, bool> matches, bool inline = false)
     {
         var linearizable = false;
         Parallel.ForEach(Permutations(threadIds, parallelOperations), (sequence, state) =>
         {
             var linearState = initial();
-            try { Run(linearState, sequentialOperations, sequence, 1); }
+            try
+            {
+                // A real object can depend on the thread, as ConcurrentBag does, so it replays on a new thread as in the parallel run.
+                if (inline) RunInline(linearState, sequentialOperations, sequence);
+                else Run(linearState, sequentialOperations, sequence, 1);
+            }
             catch { return; }
             if (matches(linearState))
             {

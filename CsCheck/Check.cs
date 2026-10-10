@@ -24,29 +24,48 @@ using System.Runtime.InteropServices;
 public static partial class Check
 {
     /// <summary>The number of iterations to run in the sample (default 100).</summary>
-    public static long Iter = ParseEnvironmentVariableToLong("CsCheck_Iter", 100);
-    /// <summary>The number of seconds to run the sample.</summary>
-    public static int Time = ParseEnvironmentVariableToInt("CsCheck_Time" , -1, -1);
+    public static long Iter { get; set => field = value >= 1 ? value : Invalid(value, "at least 1"); }
+    /// <summary>The number of seconds to run the sample, or -1 to run Iter iterations (default -1).</summary>
+    public static int Time { get; set => field = value is -1 or >= 1 ? value : Invalid(value, "-1 or at least 1"); }
     /// <summary>The number of times to retry the seed to reproduce a SampleParallel fail (default 100).</summary>
-    public static int Replay = ParseEnvironmentVariableToInt("CsCheck_Replay", 100, 0);
+    public static int Replay { get; set => field = value >= 0 ? value : Invalid(value, "at least 0"); }
     /// <summary>The number of threads to run the sample on (default number logical CPUs).</summary>
-    public static int Threads = ParseEnvironmentVariableToInt("CsCheck_Threads", Environment.ProcessorCount, 1);
+    public static int Threads { get; set => field = value >= 1 ? value : Invalid(value, "at least 1"); }
     /// <summary>The initial seed to use for the first iteration.</summary>
-    public static string? Seed = ParseEnvironmentVariableToSeed("CsCheck_Seed");
+    public static string? Seed { get; set => field = string.IsNullOrWhiteSpace(value) ? null : PCG.Parse(value).ToString(); }
     /// <summary>The sigma to use for Faster (default 6).</summary>
-    public static double Sigma = ParseEnvironmentVariableToDouble("CsCheck_Sigma", 6.0);
+    public static double Sigma { get; set => field = double.IsFinite(value) && value > 0 ? value : Invalid(value, "positive and finite"); }
     /// <summary>The timeout in seconds to use for Faster (default 60 seconds).</summary>
-    public static int Timeout = ParseEnvironmentVariableToInt("CsCheck_Timeout", 60, 0);
+    public static int Timeout { get; set => field = value >= 0 ? value : Invalid(value, "at least 0"); }
     /// <summary>The number of ulps to approximate to when printing doubles and floats.</summary>
-    public static int Ulps = ParseEnvironmentVariableToInt("CsCheck_Ulps", 4, 0);
+    public static int Ulps { get; set => field = value >= 0 ? value : Invalid(value, "at least 0"); }
     /// <summary>The number of Where Gen iterations before throwing an exception.</summary>
-    public static int WhereLimit = ParseEnvironmentVariableToInt("CsCheck_WhereLimit", 100, 1);
+    public static int WhereLimit { get; set => field = value >= 1 ? value : Invalid(value, "at least 1"); }
     /// <summary>The number of Single Gen iterations before throwing an exception.</summary>
-    public static int SingleLimit = ParseEnvironmentVariableToInt("CsCheck_SingleLimit", 1_000_000, 1);
+    public static int SingleLimit { get; set => field = value >= 1 ? value : Invalid(value, "at least 1"); }
     /// <summary>Measure Faster allocations across all threads rather than just the measuring thread (default false).</summary>
-    public static bool AllocAll = ParseEnvironmentVariableToBool("CsCheck_AllocAll", false);
+    public static bool AllocAll { get; set; }
     /// <summary>Warm up Faster code until the JIT has finished optimising it before measuring (default false).</summary>
-    public static bool WarmUp = ParseEnvironmentVariableToBool("CsCheck_WarmUp", false);
+    public static bool WarmUp { get; set; }
+
+    static Check()
+    {// Through the setters, which property initializers would bypass, so that a setting such as CsCheck_Iter=0 fails every test rather than passing them all.
+        Iter = ParseEnvironmentVariableToLong("CsCheck_Iter", 100);
+        Time = ParseEnvironmentVariableToInt("CsCheck_Time", -1);
+        Replay = ParseEnvironmentVariableToInt("CsCheck_Replay", 100);
+        Threads = ParseEnvironmentVariableToInt("CsCheck_Threads", Environment.ProcessorCount);
+        Seed = Environment.GetEnvironmentVariable("CsCheck_Seed");
+        Sigma = ParseEnvironmentVariableToDouble("CsCheck_Sigma", 6.0);
+        Timeout = ParseEnvironmentVariableToInt("CsCheck_Timeout", 60);
+        Ulps = ParseEnvironmentVariableToInt("CsCheck_Ulps", 4);
+        WhereLimit = ParseEnvironmentVariableToInt("CsCheck_WhereLimit", 100);
+        SingleLimit = ParseEnvironmentVariableToInt("CsCheck_SingleLimit", 1_000_000);
+        AllocAll = ParseEnvironmentVariableToBool("CsCheck_AllocAll", false);
+        WarmUp = ParseEnvironmentVariableToBool("CsCheck_WarmUp", false);
+    }
+
+    static T Invalid<T>(T value, string rule, [CallerMemberName] string name = "")
+        => ThrowHelper.Throw<T>($"Check.{name} (CsCheck_{name}) must be {rule}, but was {value}.");
 
     sealed class SampleActionWorker<T>(Gen<T> gen, Action<T> assert, CountdownEvent cde, string? seed, long target, bool isIter) : IThreadPoolWorkItem
     {
@@ -1945,7 +1964,7 @@ public static partial class Check
                 var modelSequentialOperations = Array.ConvertAll(spd.SequentialOperations, i => (i.Item1, i.Item3));
                 var modelParallelOperations = Array.ConvertAll(spd.ParallelOperations, i => (i.Item1, i.Item3));
                 linearizable = Linearizable(modelSequentialOperations, modelParallelOperations, spd.ThreadIds,
-                    () => initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _).Item2, m => equal(spd.InitialActual, m));
+                    () => initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _).Item2, m => equal(spd.InitialActual, m), inline: true);
             } while (linearizable && firstIteration && seed is not null && --replay > 0);
             firstIteration = false;
             return linearizable;
@@ -1968,7 +1987,7 @@ public static partial class Check
                 string result;
                 try
                 {
-                    Run(initialModel, modelSequentialOperations, sequence, 1);
+                    RunInline(initialModel, modelSequentialOperations, sequence);
                     result = printModel(initialModel);
                 }
                 catch (Exception e)
@@ -2075,29 +2094,42 @@ public static partial class Check
         if (z > sigma) ThrowHelper.Throw("Chi-squared standard deviation = " + z.ToString("0.0"));
     }
 
-    // Dedicated threads: the workers run until Faster ends, and with the CPUs busy the pool rarely adds threads, so other pool work would wait that long.
     static void RunWorkers(ThreadStart execute, int threads)
     {
         if (threads < 1) threads = Threads;
-        var others = new Thread[threads - 1];
-        for (var i = 0; i < others.Length; i++)
+        if (threads == 1)
         {
-            others[i] = new Thread(execute) { IsBackground = true };
-            others[i].Start();
+            execute();
         }
-        execute();
-        foreach (var thread in others) thread.Join();
+        else // Dedicated threads: the workers run until Faster ends, and with the CPUs busy the pool rarely adds threads, so other pool work would wait that long.
+        {
+            var others = new Thread[threads - 1];
+            for (var i = 0; i < others.Length; i++)
+            {
+                var thread = new Thread(execute) { IsBackground = true };
+                thread.Start();
+                others[i] = thread;
+            }
+            execute();
+            for (var i = 0; i < others.Length; i++) others[i].Join();
+        }
     }
 
-    // The same for async: a worker whose tasks complete synchronously never gives its thread back.
-    static Task RunWorkersAsync(Func<Task> worker, int threads)
+    static async Task RunWorkersAsync(Func<Task> worker, int threads)
     {
         if (threads < 1) threads = Threads;
-        var tasks = new Task[threads];
-        while (--threads > 0)
-            tasks[threads] = Task.Factory.StartNew(() => worker().GetAwaiter().GetResult(), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-        tasks[0] = worker();
-        return Task.WhenAll(tasks);
+        if (threads == 1)
+        {
+            await worker().ConfigureAwait(false);
+        }
+        else // The same for async: a worker whose tasks complete synchronously never gives its thread back.
+        {
+            var others = new Task[threads - 1];
+            for (var i = 0; i < others.Length; i++)
+                others[i] = Task.Factory.StartNew(worker, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
+            await worker().ConfigureAwait(false);
+            for (var i = 0; i < others.Length; i++) await others[i].ConfigureAwait(false);
+        }
     }
 
     sealed class FasterActionWorker(ITimerAction fasterTimer, ITimerAction slowerTimer, FasterResult result, int timeout, bool raiseexception)

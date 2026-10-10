@@ -1,6 +1,6 @@
 # Specification testing
 
-`Spec` is a way to write down what a stateful thing is *supposed* to do, once, and then check it four ways:
+`Spec` is a way to write down what a stateful thing is *supposed* to do, once, and then check it five ways:
 
 | | what it gives you | cost |
 |---|---|---|
@@ -8,6 +8,7 @@
 | `Sample` | random walks with CsCheck shrinking; scales to models too big to close | the usual `iter`/`time` budget |
 | `Faults` | injects declared defects and reports which requirement caught each; mutation testing for the spec | one `Exhaustive` per fault, or one walk budget with `SampleFaults` |
 | `Conform` | drives a real implementation down the same walk and checks it conforms to the spec on those traces | the usual `iter`/`time` budget |
+| `ConformExhaustive` | drives the implementation along every transition the proof counts, each from a fresh instance down a shortest path, so a clean run covers the whole model rather than a sample | one `Exhaustive`, plus a shortest path of implementation steps per transition |
 
 `Exhaustive` is the one that sounds impressive, but **[`Faults`](#faults-is-the-specification-any-good) is the one to
 reach for second**. A proof only tells you the requirements hold; `Faults` tells you whether they were worth holding.
@@ -15,7 +16,7 @@ Writing the examples below, it repeatedly found requirements passing *for the wr
 suite was green and only the name of the catching requirement said anything was wrong. In one case it found a
 requirement that could not fail at all.
 
-How the four compose:
+How the five compose:
 
 ```mermaid
 flowchart LR
@@ -27,6 +28,7 @@ flowchart LR
   faults(["Faults"])
   samplefaults(["SampleFaults"])
   conform(["Conform<br/>does the real code agree?"])
+  conformexhaustive(["ConformExhaustive<br/>on every transition"])
 
   spec --> exhaustive --> closed
   closed -->|"yes: proved for the model"| faults
@@ -34,7 +36,7 @@ flowchart LR
   boundary --> exhaustive
   closed -->|"no"| sample
   sample --> samplefaults
-  faults --> conform
+  faults --> conformexhaustive
   samplefaults --> conform
 ```
 

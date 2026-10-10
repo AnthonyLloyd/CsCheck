@@ -35,9 +35,7 @@ public class SolveRootTests
         return QuadraticRoot(a, fa, b, fb, c, fc);
     }
 
-    /// <summary>
-    /// Finds x the root f(x) = 0 accurate to tol where a and b (a<b) bound a root i.e. f(a)f(b) < 0.
-    /// </summary>
+    /// <summary>Finds x the root f(x) = 0 accurate to tol where a and b (a &lt; b) bound a root i.e. f(a) &#x22C5; f(b) &lt; 0.</summary>
     /// <param name="tol">The tolerance of the root required.</param>
     /// <param name="f">The function to find the root of.</param>
     /// <param name="a">The lower boundary.</param>
@@ -46,9 +44,7 @@ public class SolveRootTests
     public static double Root(double tol, Func<double, double> f, double a, double b)
         => Root(tol, f, a, b, a + (b - a) * 0.2, b - (b - a) * 0.2);
 
-    /// <summary>
-    /// Finds x the root f(x) = 0 accurate to tol where a and b (a<ai<bi<b) bound a root i.e. f(a)f(b) < 0.
-    /// </summary>
+    /// <summary>Finds x the root f(x) = 0 accurate to tol where a and b (a &lt; ai &lt; bi &lt; b) bound a root i.e. f(a) &#x22C5; f(b) &lt; 0.</summary>
     /// <param name="tol">The tolerance of the root required.</param>
     /// <param name="f">The function to find the root of.</param>
     /// <param name="a">The lower boundary.</param>

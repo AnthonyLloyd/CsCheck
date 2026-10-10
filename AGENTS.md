@@ -118,10 +118,10 @@ Gen.Dictionary(Gen.Int, Gen.Byte)
         (d, t) => { if (t.Item1 == t.Item3) d[t.Item3] = t.Item4; else { d[t.Item3] = t.Item4; d[t.Item1] = t.Item2; } }));
 ```
 
-### Specification testing: `Spec` + `Exhaustive` / `Sample` / `Faults` / `Conform`
+### Specification testing: `Spec` + `Exhaustive` / `Sample` / `Faults` / `Conform` / `ConformExhaustive`
 For a stateful thing specified by a document (a protocol, exchange rules, a regulation). Write a small pure
 transition system over an immutable `record` state plus named requirements each carrying the sentence it comes
-from, then check it four ways from the one definition. See `docs/Spec.md` for how, `docs/SpecDesign.md` for why, and `Tests/Specs/FixEngineSpec.cs`.
+from, then check it five ways from the one definition. See `docs/Spec.md` for how, `docs/SpecDesign.md` for why, and `Tests/Specs/FixEngineSpec.cs`.
 
 ```csharp
 var spec = Spec.From(State.Connected)

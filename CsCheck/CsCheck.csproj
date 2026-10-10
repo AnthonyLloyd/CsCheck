@@ -34,6 +34,8 @@ Added Faster warmUp, Check.WarmUp and CsCheck_WarmUp: wait for tiered compilatio
 Added Native AOT support.
 Improved Spec Sample, Conform and parallel Exhaustive speed.
 Improved SampleModelBased speed: its classify table is counts only.
+Improved Check.Equal and Check.EqualUnordered speed for sets and bags: items are matched by hash code instead of pairwise.
+Improved SampleParallel speed with a model: replaying the model no longer starts a thread each time.
 Improved CsCheckException: InnerException is set, and the stack trace points at the test.
 Improved SelectMany: selectors can return IGen&lt;R&gt;.
 Improved Faster output: it shows the JIT mode, and warns when the code may be unoptimised tier 0.
@@ -51,6 +53,7 @@ Fixed an action-scoped Spec.Fault applying to every action in sampled traces.
 Fixed Sample, Faster and Single threads losing AsyncLocal values and culture.
 Fixed Causal.Profile errors being far too small, and overflow on long runs.
 Fixed threads: 0 hanging; below 1 now means the default.
+Fixed settings that ran nothing or hung, such as CsCheck_Iter=0 or Check.Threads = 0: they now throw, environment variables are read with the invariant culture, and booleans accept yes/no, y/n and 1/0 as well as true/false.
 Fixed Gen Faster favouring slower on large inputs: each function now gets its own freshly generated copy.
 Fixed FasterAsync for 8-tuple Gens having no writeLine.
 Fixed Faster returning before its threads stopped, and holding thread-pool threads for the whole run.
@@ -68,10 +71,12 @@ BREAKING CHANGES:
 - Spec checks return SpecReport&lt;S&gt;, Exhaustive takes writeLine first, and AtMost&lt;T&gt; takes times after over.
 - SampleFaults reports FaultOutcome.NotFound, not NotDetected, for a fault it misses.
 - Generator fields such as Gen.Int.Uniform are readonly.
-- Array, Array2D, List, HashSet and ArrayUnique are extension properties, so they need using CsCheck, and Faster and FasterAsync take a warmUp parameter: code built against 4.x needs rebuilding.
+- Gen.Short, Gen.Int, Gen.UInt, Gen.Long, Gen.ULong, Gen.Int128, Gen.UInt128, Gen.Int.Positive and Gen.Int.NonNegative return their extremes on about 1 draw in 64, to find boundary bugs: MinValue or MaxValue when signed, MaxValue otherwise. Exclude them with Where, or use a range.
+- Array, Array2D, List, HashSet and ArrayUnique are extension properties, so they need using CsCheck, the Check settings such as Check.Iter are properties, and Faster and FasterAsync take a warmUp parameter: code built against 4.x needs rebuilding.
+- Invalid Check settings and CsCheck_ environment variables throw, where they used to be clamped or ignored.
 - No longer public: Classifier, MedianEstimator, ThrowHelper, HashHelper, the Timer types, Zigzag, and the Hash and MedianEstimate constructors.
 - CsCheckException.Message no longer includes the inner exception's message.
-- Seeds change for Gen.Decimal, Gen.Double, Gen.Float and about half of Gen.Seed values.
+- Seeds and Check.Hash expected values change for Gen.Decimal, Gen.Double, Gen.Float, about half of Gen.Seed values and about 1 in 64 default integer draws.
         </PackageReleaseNotes>
         <TargetFramework>net10.0</TargetFramework>
         <IsAotCompatible>true</IsAotCompatible>
