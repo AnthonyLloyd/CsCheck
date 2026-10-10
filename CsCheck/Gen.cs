@@ -103,17 +103,23 @@ public abstract class Gen<T> : IGen<T>
     public GenOperationAsync<Actual, Model> Operation<Actual, Model>(Func<Actual, T, Task> actual, Func<Model, T, Task> model) => GenOperationAsync.Create(this, actual, model);
     public GenMetamorphic<S> Metamorphic<S>(Func<T, string> name, Action<S, T> action1, Action<S, T> action2) => GenMetamorphic.Create(this, name, action1, action2);
     public GenMetamorphic<S> Metamorphic<S>(Action<S, T> action1, Action<S, T> action2) => GenMetamorphic.Create(this, Check.Print, action1, action2);
+}
 
-    /// <summary>Generator for an array of <typeparamref name="T"/></summary>
-    public GenArray<T> Array => new(this);
-    /// <summary>Generator for a two dimensional array of <typeparamref name="T"/></summary>
-    public GenArray2D<T> Array2D => new(this);
-    /// <summary>Generator for a List of <typeparamref name="T"/></summary>
-    public GenList<T> List => new(this);
-    /// <summary>Generator for a HashSet of <typeparamref name="T"/></summary>
-    public GenHashSet<T> HashSet => new(this);
-    /// <summary>Generator for a unique array of <typeparamref name="T"/></summary>
-    public GenArrayUnique<T> ArrayUnique => new(this);
+public static class GenExtensions
+{
+    extension<T>(Gen<T> gen)
+    {
+        /// <summary>Generator for an array of <typeparamref name="T"/></summary>
+        public GenArray<T> Array => new(gen);
+        /// <summary>Generator for a two dimensional array of <typeparamref name="T"/></summary>
+        public GenArray2D<T> Array2D => new(gen);
+        /// <summary>Generator for a List of <typeparamref name="T"/></summary>
+        public GenList<T> List => new(gen);
+        /// <summary>Generator for a HashSet of <typeparamref name="T"/></summary>
+        public GenHashSet<T> HashSet => new(gen);
+        /// <summary>Generator for a unique array of <typeparamref name="T"/></summary>
+        public GenArrayUnique<T> ArrayUnique => new(gen);
+    }
 }
 
 public delegate T GenMap<T>(T v, ref Size size);
@@ -2037,20 +2043,22 @@ public static class Gen
     public static readonly GenSByte SByte = new();
     /// <summary>Generator for byte.</summary>
     public static readonly GenByte Byte = new();
-    /// <summary>Generator for short.</summary>
+    /// <summary>Generator for short, with MinValue or MaxValue on about 1 draw in 64.</summary>
     public static readonly GenShort Short = new();
     /// <summary>Generator for ushort.</summary>
     public static readonly GenUShort UShort = new();
-    /// <summary>Generator for int.</summary>
+    /// <summary>Generator for int, with MinValue or MaxValue on about 1 draw in 64.</summary>
     public static readonly GenInt Int = new();
     internal static readonly Gen<int> Int9999 = Int[1, 9999];
+    /// <summary>Generator for uint, with MaxValue on about 1 draw in 64.</summary>
     public static readonly GenUInt UInt = new();
+    /// <summary>Generator for long, with MinValue or MaxValue on about 1 draw in 64.</summary>
     public static readonly GenLong Long = new();
-    /// <summary>Generator for ulong.</summary>
+    /// <summary>Generator for ulong, with MaxValue on about 1 draw in 64.</summary>
     public static readonly GenULong ULong = new();
-    /// <summary>Generator for Int128.</summary>
+    /// <summary>Generator for Int128, with MinValue or MaxValue on about 1 draw in 64.</summary>
     public static readonly GenInt128 Int128 = new();
-    /// <summary>Generator for UInt128.</summary>
+    /// <summary>Generator for UInt128, with MaxValue on about 1 draw in 64.</summary>
     public static readonly GenUInt128 UInt128 = new();
     /// <summary>Generator for float.</summary>
     public static readonly GenFloat Float = new();
@@ -2160,9 +2168,15 @@ public sealed class GenShort : Gen<short>
     internal static short Unzigzag(ushort i) => (short)((i >> 1) ^ -(int)(i & 1U));
     public override short Generate(PCG pcg, Size? min, out Size size)
     {
-        uint s = pcg.Next() & 15U;
+        uint r = pcg.Next();
+        uint s = r & 15U;
         ushort i = (ushort)(1U << (int)s);
         i = (ushort)((pcg.Next() & (i - 1) | i) - 1);
+        if ((r & 0x3F0U) == 0)
+        {
+            s = 15;
+            i = (ushort)(0xFFFDU | (r >> 9 & 2U));
+        }
         size = new Size(s << 11 | i & 0x7FFUL);
         return (short)-Unzigzag(i);
     }
@@ -2224,9 +2238,15 @@ public sealed class GenInt : Gen<int>
     internal static int Unzigzag(uint i) => (int)(i >> 1) ^ -(int)(i & 1U);
     public override int Generate(PCG pcg, Size? min, out Size size)
     {
-        uint s = pcg.Next() & 31U;
+        uint r = pcg.Next();
+        uint s = r & 31U;
         uint i = 1U << (int)s;
         i = (pcg.Next() & (i - 1) | i) - 1;
+        if ((r & 0x7E0U) == 0)
+        {
+            s = 31;
+            i = 0xFFFFFFFDU | (r >> 10 & 2U);
+        }
         size = new Size(s << 27 | i & 0x7FFFFFFUL);
         return -Unzigzag(i);
     }
@@ -2245,27 +2265,39 @@ public sealed class GenInt : Gen<int>
     {
         public override int Generate(PCG pcg, Size? min, out Size size)
         {
-            uint s = pcg.Next(31);
+            uint x = pcg.Next(31 * 64);
+            uint s = x % 31;
             int i = 1 << (int)s;
             i = (int)pcg.Next() & (i - 1) | i;
+            if (x < 31)
+            {
+                s = 30;
+                i = int.MaxValue;
+            }
             size = new Size(s << 27 | (ulong)i & 0x7FFFFFFUL);
             return i;
         }
     }
-    /// <summary>Generate a positive int in the range 1 to int.MaxValue inclusive.</summary>
+    /// <summary>Generate a positive int in the range 1 to int.MaxValue inclusive, with MaxValue on about 1 draw in 64.</summary>
     public readonly Gen<int> Positive = new GenPositive();
     sealed class GenNonNegative : Gen<int>
     {
         public override int Generate(PCG pcg, Size? min, out Size size)
         {
-            uint s = pcg.Next(31);
+            uint x = pcg.Next(31 * 64);
+            uint s = x % 31;
             int i = 1 << (int)s;
             i = ((int)pcg.Next() & (i - 1) | i) - 1;
+            if (x < 31)
+            {
+                s = 30;
+                i = int.MaxValue;
+            }
             size = new Size((s << 27 | (ulong)i & 0x7FFFFFFUL) + 1UL);
             return i;
         }
     }
-    /// <summary>Generate a non-negative int in the range 0 to int.MaxValue inclusive.</summary>
+    /// <summary>Generate a non-negative int in the range 0 to int.MaxValue inclusive, with MaxValue on about 1 draw in 64.</summary>
     public readonly Gen<int> NonNegative = new GenNonNegative();
     sealed class Range(int start, uint length) : Gen<int>
     {
@@ -2306,9 +2338,15 @@ public sealed class GenUInt : Gen<uint>
 {
     public override uint Generate(PCG pcg, Size? min, out Size size)
     {
-        uint s = pcg.Next() & 31U;
+        uint r = pcg.Next();
+        uint s = r & 31U;
         uint i = 1U << (int)s;
         i = (pcg.Next() & (i - 1) | i) - 1;
+        if ((r & 0x7E0U) == 0)
+        {
+            s = 31;
+            i = uint.MaxValue;
+        }
         size = new Size(s << 27 | i & 0x7FFF_FFFUL);
         return i;
     }
@@ -2351,9 +2389,15 @@ public sealed class GenLong : Gen<long>
     internal static long Unzigzag(ulong i) => (long)(i >> 1) ^ -(long)(i & 1UL);
     public override long Generate(PCG pcg, Size? min, out Size size)
     {
-        uint s = pcg.Next() & 63U;
+        uint r = pcg.Next();
+        uint s = r & 63U;
         ulong i = 1UL << (int)s;
         i = (pcg.Next64() & (i - 1UL) | i) - 1UL;
+        if ((r & 0xFC0U) == 0)
+        {
+            s = 63;
+            i = 0xFFFF_FFFF_FFFF_FFFDUL | (r >> 11 & 2U);
+        }
         size = new Size((ulong)s << 46 | i & 0x3FFF_FFFF_FFFFU);
         return -Unzigzag(i);
     }
@@ -2392,9 +2436,15 @@ public sealed class GenULong : Gen<ulong>
 {
     public override ulong Generate(PCG pcg, Size? min, out Size size)
     {
-        uint s = pcg.Next() & 63U;
+        uint r = pcg.Next();
+        uint s = r & 63U;
         ulong i = 1UL << (int)s;
         i = (pcg.Next64() & (i - 1UL) | i) - 1UL;
+        if ((r & 0xFC0U) == 0)
+        {
+            s = 63;
+            i = ulong.MaxValue;
+        }
         size = new Size((ulong)s << 46 | i & 0x3FFF_FFFF_FFFFU);
         return i;
     }
@@ -2436,9 +2486,15 @@ public sealed class GenInt128 : Gen<Int128>
     internal static Int128 Unzigzag(UInt128 i) => (Int128)(i >> 1) ^ -(Int128)(i & 1);
     public override Int128 Generate(PCG pcg, Size? min, out Size size)
     {
-        uint s = pcg.Next() & 127U;
+        uint r = pcg.Next();
+        uint s = r & 127U;
         var i = UInt128.One << (int)s;
         i = (pcg.Next128() & (i - 1) | i) - 1;
+        if ((r & 0x1F80U) == 0)
+        {
+            s = 127;
+            i = UInt128.MaxValue - 2 | (r >> 12 & 2U);
+        }
         size = new Size((ulong)s << 46 | (ulong)i & 0x3FFF_FFFF_FFFFUL);
         return -Unzigzag(i);
     }
@@ -2479,9 +2535,15 @@ public sealed class GenUInt128 : Gen<UInt128>
     internal static int SizeShift(UInt128 max) => Math.Max(0, 64 - (int)UInt128.LeadingZeroCount(max));
     public override UInt128 Generate(PCG pcg, Size? min, out Size size)
     {
-        uint s = pcg.Next() & 127U;
+        uint r = pcg.Next();
+        uint s = r & 127U;
         var i = UInt128.One << (int)s;
         i = (pcg.Next128() & (i - 1) | i) - 1;
+        if ((r & 0x1F80U) == 0)
+        {
+            s = 127;
+            i = UInt128.MaxValue;
+        }
         size = new Size((ulong)s << 46 | (ulong)i & 0x3FFF_FFFF_FFFFUL);
         return i;
     }

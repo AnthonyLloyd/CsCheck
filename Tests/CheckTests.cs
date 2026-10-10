@@ -5,6 +5,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using CsCheck;
@@ -270,10 +272,17 @@ public class CheckTests
         await Assert.That(Check.Equal<object?>(new KeyValuePair<int, byte>[] { new(1, 2), new(3, 4) }, new KeyValuePair<int, byte>[] { new(3, 4), new(1, 2) })).IsFalse();
     }
 
+    /// <summary>Equal by value but hashed by reference, like a type that overrides Equals without GetHashCode.</summary>
+    sealed record InconsistentHash(int Value)
+    {
+        public override int GetHashCode() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
+    }
+
     [Test]
     public void Equal_Matches_Sequence_And_Multiset_Oracles()
     {
         static Dictionary<int, int[]> ToDict(int[] a) => a.Select((x, i) => (i, x)).ToDictionary(t => t.i, t => new[] { t.x });
+        static InconsistentHash? NullOrInconsistent(int x) => x == 0 ? null : new(x);
         Gen.Select(Gen.Int[0, 3].Array[0, 6], Gen.Int[0, 3].Array[0, 6], Gen.Int[0, 2], (xs, other, kind) => (xs, ys: kind switch
         {
             0 => [.. xs.OrderDescending()],
@@ -281,10 +290,15 @@ public class CheckTests
             _ => other,
         }))
         .Sample((xs, ys) =>
-            Check.Equal<object?>(xs, ys.ToList()) == xs.SequenceEqual(ys)
-            && Check.Equal<object?>(new ConcurrentBag<int>(xs), ys.ToList()) == xs.Order().SequenceEqual(ys.Order())
-            && Check.Equal<object?>(xs.Select(x => new[] { x }).ToList(), ys.Select(y => new[] { y }).ToList()) == xs.SequenceEqual(ys)
-            && Check.Equal<object?>(new ConcurrentDictionary<int, int[]>(ToDict(xs)), ToDict(ys)) == xs.SequenceEqual(ys));
+        {
+            var sameItems = xs.Order().SequenceEqual(ys.Order());
+            return Check.Equal<object?>(xs, ys.ToList()) == xs.SequenceEqual(ys)
+                && Check.Equal<object?>(new ConcurrentBag<int>(xs), ys.ToList()) == sameItems
+                && Check.Equal<object?>(new ConcurrentBag<int[]>(xs.Select(x => new[] { x })), ys.Select(y => new[] { y }).ToList()) == sameItems
+                && Check.Equal<object?>(new ConcurrentBag<InconsistentHash?>(xs.Select(NullOrInconsistent)), ys.Select(NullOrInconsistent).ToList()) == sameItems
+                && Check.Equal<object?>(xs.Select(x => new[] { x }).ToList(), ys.Select(y => new[] { y }).ToList()) == xs.SequenceEqual(ys)
+                && Check.Equal<object?>(new ConcurrentDictionary<int, int[]>(ToDict(xs)), ToDict(ys)) == xs.SequenceEqual(ys);
+        });
     }
 
     /// <summary>Sample writes its passed line after the property has already succeeded, so a sink that throws there
@@ -598,6 +612,130 @@ public class CheckTests
     }
 
     [Test]
+    public async Task Faster_WarmUp_Runs_For_Each_Kind_Of_Overload()
+    {
+        static int Fast(int i) => i;
+        static int Slow(int i) { var s = 0; for (var j = 0; j < 1000; j++) s += i ^ j; return s; }
+        var outputs = new List<string>();
+        Check.Faster(() => Fast(3), () => Slow(3), Check.EqualSkip, threads: 1, writeLine: outputs.Add, warmUp: true);
+        Gen.Int[0, 100].Faster(Fast, Slow, Check.EqualSkip, threads: 1, writeLine: outputs.Add, warmUp: true);
+        await Check.FasterAsync(() => Task.FromResult(Fast(3)), () => Task.FromResult(Slow(3)), Check.EqualSkip, threads: 1, writeLine: outputs.Add, warmUp: true);
+        await Gen.Int[0, 100].FasterAsync(i => Task.FromResult(Fast(i)), i => Task.FromResult(Slow(i)), Check.EqualSkip, threads: 1, writeLine: outputs.Add, warmUp: true);
+        await Assert.That(outputs.Count).IsEqualTo(4);
+        foreach (var output in outputs) await Assert.That(output).Contains(", jit = ");
+    }
+
+    sealed class Marked(int value)
+    {
+        public readonly int Value = value;
+        public bool Touched;
+    }
+
+    [Test]
+    public async Task Faster_Gen_Gives_Each_Function_Its_Own_Copy()
+    {
+        Marked? seen = null;
+        var sink = 0;
+        int Fast(Marked m) { m.Touched = true; seen = m; return m.Value; }
+        int Slow(Marked m)
+        {
+            if (m.Touched || m.Value != seen!.Value) throw new InvalidOperationException("slower did not get its own copy of faster's input");
+            var s = 0;
+            for (var j = 0; j < 1000; j++) s += m.Value ^ j;
+            return sink = s;
+        }
+        var gen = Gen.Int.Select(i => new Marked(i));
+        gen.Faster(m => { Fast(m); }, m => { Slow(m); }, threads: 1, raiseexception: false, writeLine: _ => { }, warmUp: true);
+        gen.Faster(Fast, Slow, Check.EqualSkip, threads: 1, raiseexception: false, writeLine: _ => { }, warmUp: true);
+        await gen.FasterAsync(m => { Fast(m); return Task.CompletedTask; }, m => { Slow(m); return Task.CompletedTask; }, threads: 1, raiseexception: false, writeLine: _ => { }, warmUp: true);
+        await gen.FasterAsync(m => Task.FromResult(Fast(m)), m => Task.FromResult(Slow(m)), Check.EqualSkip, threads: 1, raiseexception: false, writeLine: _ => { }, warmUp: true);
+    }
+
+    [Test]
+    public async Task Faster_WarmUp_Exception_Has_The_Seed()
+    {
+        static int Throw(int _) => throw new InvalidOperationException("thrown by slower");
+        var gen = Gen.Int[0, 100];
+        CsCheckException[] exceptions =
+        [
+            Assert.Throws<CsCheckException>(() => gen.Faster(_ => { }, i => { Throw(i); }, threads: 1, warmUp: true)),
+            Assert.Throws<CsCheckException>(() => gen.Faster(i => i, Throw, threads: 1, warmUp: true)),
+            (await Assert.ThrowsAsync<CsCheckException>(() => gen.FasterAsync(_ => Task.CompletedTask, i => { Throw(i); return Task.CompletedTask; }, threads: 1, warmUp: true)))!,
+            (await Assert.ThrowsAsync<CsCheckException>(() => gen.FasterAsync(Task.FromResult, i => Task.FromResult(Throw(i)), threads: 1, warmUp: true)))!,
+        ];
+        foreach (var e in exceptions)
+        {
+            await Assert.That(e.Message).Contains("CsCheck_Seed=");
+            await Assert.That(e.InnerException).IsTypeOf<InvalidOperationException>();
+        }
+    }
+
+    [Test]
+    public async Task Faster_Returns_After_Its_Threads_Stop()
+    {
+        var inFlight = 0;
+        void Busy(double microseconds)
+        {
+            Interlocked.Increment(ref inFlight);
+            var end = Stopwatch.GetTimestamp() + (long)(microseconds * Stopwatch.Frequency / 1e6);
+            while (Stopwatch.GetTimestamp() < end) { }
+            Interlocked.Decrement(ref inFlight);
+        }
+        for (var run = 0; run < 5; run++)
+        {
+            Check.Faster(() => Busy(200), () => Busy(400), threads: 4, raiseexception: false);
+            await Assert.That(inFlight).IsEqualTo(0);
+            await Check.FasterAsync(() => { Busy(200); return Task.CompletedTask; }, () => { Busy(400); return Task.CompletedTask; }, threads: 4, raiseexception: false);
+            await Assert.That(inFlight).IsEqualTo(0);
+            await Check.FasterAsync(async () => { await Task.Yield(); Busy(200); }, async () => { await Task.Yield(); Busy(400); }, threads: 4, raiseexception: false);
+            await Assert.That(inFlight).IsEqualTo(0);
+        }
+    }
+
+    [Test]
+    public async Task Faster_Seed_Is_Only_The_First_Input()
+    {
+        const string seed = "0N0XIzNsQ0O2";
+        var gen = Gen.Int.Uniform;
+        var first = gen.Generate(PCG.Parse(seed), null, out _);
+        var counts = new ConcurrentDictionary<int, int>();
+        var sink = 0;
+        int Fast(int i) => counts.AddOrUpdate(i, 1, (_, c) => c + 1);
+        int Slow(int i)
+        {
+            var s = 0;
+            for (var j = 0; j < 20_000; j++) s += i ^ j;
+            return sink = s;
+        }
+        async Task AssertFirstSeenOnce()
+        {
+            await Assert.That(counts.ContainsKey(first)).IsTrue();
+            await Assert.That(counts.Values.Max()).IsEqualTo(1);
+            counts.Clear();
+        }
+        gen.Faster(i => { Fast(i); }, i => { Slow(i); }, seed: seed, sigma: 20, threads: 4, raiseexception: false);
+        await AssertFirstSeenOnce();
+        gen.Faster(Fast, Slow, Check.EqualSkip, seed: seed, sigma: 20, threads: 4, raiseexception: false);
+        await AssertFirstSeenOnce();
+        await gen.FasterAsync(i => { Fast(i); return Task.CompletedTask; }, i => { Slow(i); return Task.CompletedTask; }, seed: seed, sigma: 20, threads: 4, raiseexception: false);
+        await AssertFirstSeenOnce();
+        await gen.FasterAsync(i => Task.FromResult(Fast(i)), i => Task.FromResult(Slow(i)), Check.EqualSkip, seed: seed, sigma: 20, threads: 4, raiseexception: false);
+        await AssertFirstSeenOnce();
+    }
+
+    [Test]
+    public async Task Faster_Seed_Reproduces_Return_Values_Differ()
+    {
+        static int Same(int i) => i;
+        static int Different(int i) => i % 7 == 0 ? i + 1 : i;
+        var gen = Gen.Int.Uniform;
+        var message = Assert.Throws<CsCheckException>(() => gen.Faster(Same, Different, threads: 1))!.Message;
+        var seed = message.Split("CsCheck_Seed=")[1].Split(' ', '\n')[0];
+        var again = Assert.Throws<CsCheckException>(() => gen.Faster(Same, Different, seed: seed, threads: 1))!.Message;
+        await Assert.That(again).IsEqualTo(message);
+    }
+
+    [Test]
     public void FasterResult_Ties_Are_Never_Enough_To_Conclude()
     {
         Gen.Int[1, 50].Sample(ties =>
@@ -626,6 +764,17 @@ public class CheckTests
         .SampleParallel(
             Gen.Int.Operation<ConcurrentQueue<int>>(i => $"Enqueue({i})", (q, i) => q.Enqueue(i)),
             Gen.Operation<ConcurrentQueue<int>>("TryDequeue()", q => q.TryDequeue(out _))
+        );
+    }
+
+    /// <summary>A take on the thread that built the bag removes a different item, so this fails if replays run there.</summary>
+    [Test]
+    public void SampleParallel_ConcurrentBag()
+    {
+        Gen.Int[0, 5].List[0, 3].Select(l => new ConcurrentBag<int>(l))
+        .SampleParallel(
+            Gen.Int[0, 9].Operation<ConcurrentBag<int>>(i => $"Add({i})", (bag, i) => bag.Add(i)),
+            Gen.Operation<ConcurrentBag<int>>("TryTake()", bag => bag.TryTake(out _))
         );
     }
 
@@ -1178,7 +1327,7 @@ public class CheckTests
 
 #if NET11_0_OR_GREATER
 // Builds the member -> union conversion (a public constructor `T(TArm)`) once per (T, TArm) pair.
-static class UnionCtor<T, TArm> where T : System.Runtime.CompilerServices.IUnion
+static class UnionCtor<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T, TArm> where T : System.Runtime.CompilerServices.IUnion
 {
     public static readonly Func<TArm, T> Up = Build();
 
@@ -1194,7 +1343,7 @@ static class UnionCtor<T, TArm> where T : System.Runtime.CompilerServices.IUnion
 
 // A builder that scopes case declarations for a C# union type T. Because T is fixed on the builder, Case needs only
 // the arm type argument, and the predicate, down- and up-projections are all derived (IUnion.Value + the constructor).
-sealed class UnionFields<T> where T : System.Runtime.CompilerServices.IUnion
+sealed class UnionFields<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T> where T : System.Runtime.CompilerServices.IUnion
 {
     readonly EqualityFields<T> fields;
     internal UnionFields(EqualityFields<T> fields) => this.fields = fields;
@@ -1211,13 +1360,13 @@ sealed class UnionFields<T> where T : System.Runtime.CompilerServices.IUnion
 static class UnionEqualityFields
 {
     // Top-level union: hand the fields callback a UnionFields<T> so arms read as f.Case<Sensor>(...) with no .Union().
-    public static void Equality<T>(this Gen<T> gen, Func<UnionFields<T>, EqualityFields<T>> fields,
+    public static void Equality<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(this Gen<T> gen, Func<UnionFields<T>, EqualityFields<T>> fields,
         string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T, T), string>? print = null)
         where T : System.Runtime.CompilerServices.IUnion
         => gen.Equality((EqualityFields<T> f) => fields(new UnionFields<T>(f)), seed, iter, time, threads, print);
 
     // Union-typed field: hand the callback a UnionFields<TField> so arms read as sf.Case<Sensor>(...) with no inner .Union().
-    public static EqualityFields<TParent> Union<TParent, TField>(this EqualityFields<TParent> fields,
+    public static EqualityFields<TParent> Union<TParent, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TField>(this EqualityFields<TParent> fields,
         Func<TParent, TField> down, Func<TParent, TField, TParent> up, Func<UnionFields<TField>, EqualityFields<TField>> fieldFields)
         where TField : System.Runtime.CompilerServices.IUnion
         => fields.Union(down, up, sf => fieldFields(new UnionFields<TField>(sf)));

@@ -17,7 +17,6 @@ namespace CsCheck;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Reflection;
 using System.Runtime.InteropServices;
 
 /// <summary>Main random testing Check functions.</summary>
@@ -25,28 +24,48 @@ using System.Runtime.InteropServices;
 public static partial class Check
 {
     /// <summary>The number of iterations to run in the sample (default 100).</summary>
-    public static long Iter = ParseEnvironmentVariableToLong("CsCheck_Iter", 100);
-    /// <summary>The number of seconds to run the sample.</summary>
-    public static int Time = ParseEnvironmentVariableToInt("CsCheck_Time" , -1, -1);
+    public static long Iter { get; set => field = value >= 1 ? value : Invalid(value, "at least 1"); }
+    /// <summary>The number of seconds to run the sample, or -1 to run Iter iterations (default -1).</summary>
+    public static int Time { get; set => field = value is -1 or >= 1 ? value : Invalid(value, "-1 or at least 1"); }
     /// <summary>The number of times to retry the seed to reproduce a SampleParallel fail (default 100).</summary>
-    public static int Replay = ParseEnvironmentVariableToInt("CsCheck_Replay", 100, 0);
+    public static int Replay { get; set => field = value >= 0 ? value : Invalid(value, "at least 0"); }
     /// <summary>The number of threads to run the sample on (default number logical CPUs).</summary>
-    public static int Threads = ParseEnvironmentVariableToInt("CsCheck_Threads", Environment.ProcessorCount, 1);
+    public static int Threads { get; set => field = value >= 1 ? value : Invalid(value, "at least 1"); }
     /// <summary>The initial seed to use for the first iteration.</summary>
-    public static string? Seed = ParseEnvironmentVariableToSeed("CsCheck_Seed");
+    public static string? Seed { get; set => field = string.IsNullOrWhiteSpace(value) ? null : PCG.Parse(value).ToString(); }
     /// <summary>The sigma to use for Faster (default 6).</summary>
-    public static double Sigma = ParseEnvironmentVariableToDouble("CsCheck_Sigma", 6.0);
+    public static double Sigma { get; set => field = double.IsFinite(value) && value > 0 ? value : Invalid(value, "positive and finite"); }
     /// <summary>The timeout in seconds to use for Faster (default 60 seconds).</summary>
-    public static int Timeout = ParseEnvironmentVariableToInt("CsCheck_Timeout", 60, 0);
+    public static int Timeout { get; set => field = value >= 0 ? value : Invalid(value, "at least 0"); }
     /// <summary>The number of ulps to approximate to when printing doubles and floats.</summary>
-    public static int Ulps = ParseEnvironmentVariableToInt("CsCheck_Ulps", 4, 0);
+    public static int Ulps { get; set => field = value >= 0 ? value : Invalid(value, "at least 0"); }
     /// <summary>The number of Where Gen iterations before throwing an exception.</summary>
-    public static int WhereLimit = ParseEnvironmentVariableToInt("CsCheck_WhereLimit", 100, 1);
+    public static int WhereLimit { get; set => field = value >= 1 ? value : Invalid(value, "at least 1"); }
     /// <summary>The number of Single Gen iterations before throwing an exception.</summary>
-    public static int SingleLimit = ParseEnvironmentVariableToInt("CsCheck_SingleLimit", 1_000_000, 1);
+    public static int SingleLimit { get; set => field = value >= 1 ? value : Invalid(value, "at least 1"); }
     /// <summary>Measure Faster allocations across all threads rather than just the measuring thread (default false).</summary>
-    public static bool AllocAll = ParseEnvironmentVariableToBool("CsCheck_AllocAll", false);
-    internal static bool IsDebug = Assembly.GetCallingAssembly().GetCustomAttribute<DebuggableAttribute>()?.IsJITTrackingEnabled ?? false;
+    public static bool AllocAll { get; set; }
+    /// <summary>Warm up Faster code until the JIT has finished optimising it before measuring (default false).</summary>
+    public static bool WarmUp { get; set; }
+
+    static Check()
+    {// Through the setters, which property initializers would bypass, so that a setting such as CsCheck_Iter=0 fails every test rather than passing them all.
+        Iter = ParseEnvironmentVariableToLong("CsCheck_Iter", 100);
+        Time = ParseEnvironmentVariableToInt("CsCheck_Time", -1);
+        Replay = ParseEnvironmentVariableToInt("CsCheck_Replay", 100);
+        Threads = ParseEnvironmentVariableToInt("CsCheck_Threads", Environment.ProcessorCount);
+        Seed = Environment.GetEnvironmentVariable("CsCheck_Seed");
+        Sigma = ParseEnvironmentVariableToDouble("CsCheck_Sigma", 6.0);
+        Timeout = ParseEnvironmentVariableToInt("CsCheck_Timeout", 60);
+        Ulps = ParseEnvironmentVariableToInt("CsCheck_Ulps", 4);
+        WhereLimit = ParseEnvironmentVariableToInt("CsCheck_WhereLimit", 100);
+        SingleLimit = ParseEnvironmentVariableToInt("CsCheck_SingleLimit", 1_000_000);
+        AllocAll = ParseEnvironmentVariableToBool("CsCheck_AllocAll", false);
+        WarmUp = ParseEnvironmentVariableToBool("CsCheck_WarmUp", false);
+    }
+
+    static T Invalid<T>(T value, string rule, [CallerMemberName] string name = "")
+        => ThrowHelper.Throw<T>($"Check.{name} (CsCheck_{name}) must be {rule}, but was {value}.");
 
     sealed class SampleActionWorker<T>(Gen<T> gen, Action<T> assert, CountdownEvent cde, string? seed, long target, bool isIter) : IThreadPoolWorkItem
     {
@@ -1945,7 +1964,7 @@ public static partial class Check
                 var modelSequentialOperations = Array.ConvertAll(spd.SequentialOperations, i => (i.Item1, i.Item3));
                 var modelParallelOperations = Array.ConvertAll(spd.ParallelOperations, i => (i.Item1, i.Item3));
                 linearizable = Linearizable(modelSequentialOperations, modelParallelOperations, spd.ThreadIds,
-                    () => initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _).Item2, m => equal(spd.InitialActual, m));
+                    () => initial.Generate(new PCG(spd.Stream, spd.Seed), null, out _).Item2, m => equal(spd.InitialActual, m), inline: true);
             } while (linearizable && firstIteration && seed is not null && --replay > 0);
             firstIteration = false;
             return linearizable;
@@ -1968,7 +1987,7 @@ public static partial class Check
                 string result;
                 try
                 {
-                    Run(initialModel, modelSequentialOperations, sequence, 1);
+                    RunInline(initialModel, modelSequentialOperations, sequence);
                     result = printModel(initialModel);
                 }
                 catch (Exception e)
@@ -2075,19 +2094,63 @@ public static partial class Check
         if (z > sigma) ThrowHelper.Throw("Chi-squared standard deviation = " + z.ToString("0.0"));
     }
 
-    sealed class FasterActionWorker(ITimerAction fasterTimer, ITimerAction slowerTimer, FasterResult result, long endTimestamp, bool raiseexception) : IThreadPoolWorkItem
+    static void RunWorkers(ThreadStart execute, int threads)
+    {
+        if (threads < 1) threads = Threads;
+        if (threads == 1)
+        {
+            execute();
+        }
+        else // Dedicated threads: the workers run until Faster ends, and with the CPUs busy the pool rarely adds threads, so other pool work would wait that long.
+        {
+            var others = new Thread[threads - 1];
+            for (var i = 0; i < others.Length; i++)
+            {
+                var thread = new Thread(execute) { IsBackground = true };
+                thread.Start();
+                others[i] = thread;
+            }
+            execute();
+            for (var i = 0; i < others.Length; i++) others[i].Join();
+        }
+    }
+
+    static async Task RunWorkersAsync(Func<Task> worker, int threads)
+    {
+        if (threads < 1) threads = Threads;
+        if (threads == 1)
+        {
+            await worker().ConfigureAwait(false);
+        }
+        else // The same for async: a worker whose tasks complete synchronously never gives its thread back.
+        {
+            var others = new Task[threads - 1];
+            for (var i = 0; i < others.Length; i++)
+                others[i] = Task.Factory.StartNew(worker, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
+            await worker().ConfigureAwait(false);
+            for (var i = 0; i < others.Length; i++) await others[i].ConfigureAwait(false);
+        }
+    }
+
+    sealed class FasterActionWorker(ITimerAction fasterTimer, ITimerAction slowerTimer, FasterResult result, int timeout, bool raiseexception)
     {
         volatile bool running = true;
         public void MeasureAllocations() => result.MeasureAllocations(() => fasterTimer.Time(), () => slowerTimer.Time());
+        public void WarmUpPair()
+        {
+            fasterTimer.Time();
+            slowerTimer.Time();
+        }
         public void Execute()
         {
+            var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
             try
             {
                 while (running)
                 {
                     if (result.Add(fasterTimer.Time(), slowerTimer.Time()))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2118,20 +2181,19 @@ public static partial class Check
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
     /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <param name="warmUp">Call faster and slower until the JIT has finished optimising them before measuring, for up to 5 seconds (default Check.WarmUp).</param>
     public static void Faster(Action faster, Action slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true,
-        Action<string>? writeLine = null, bool? allocAll = null)
+        Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
     {
         var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, allocAll ?? AllocAll);
         var worker = new FasterActionWorker(
             Timer.Create(faster, repeat),
             Timer.Create(slower, repeat),
             result,
-            Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
+            timeout == -1 ? Timeout : timeout,
             raiseexception);
-        if (threads < 1) threads = Threads;
-        while (--threads > 0)
-            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
-        worker.Execute();
+        if (warmUp ?? WarmUp) result.WarmUp(worker.WarmUpPair);
+        RunWorkers(worker.Execute, threads);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
         {
@@ -2140,21 +2202,19 @@ public static partial class Check
         }
     }
 
-    /// <inheritdoc cref="Faster(Action, Action, double, int, int, int, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster(Action, Action, double, int, int, int, bool, Action{string}?, bool?, bool?)"/>
     public static void Faster<I1, I2>(I1 faster, I2 slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true,
-        Action<string>? writeLine = null, bool? allocAll = null) where I1 : IInvoke where I2 : IInvoke
+        Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null) where I1 : IInvoke where I2 : IInvoke
     {
         var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, allocAll ?? AllocAll);
         var worker = new FasterActionWorker(
             Timer.Create(faster, repeat),
             Timer.Create(slower, repeat),
             result,
-            Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
+            timeout == -1 ? Timeout : timeout,
             raiseexception);
-        if (threads < 1) threads = Threads;
-        while (--threads > 0)
-            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
-        worker.Execute();
+        if (warmUp ?? WarmUp) result.WarmUp(worker.WarmUpPair);
+        RunWorkers(worker.Execute, threads);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
         {
@@ -2163,19 +2223,25 @@ public static partial class Check
         }
     }
 
-    sealed class FasterFuncWorker<T>(ITimerFunc<T> fasterTimer, ITimerFunc<T> slowerTimer, FasterResult result, Func<T, T, bool> equal, long endTimestamp, bool raiseexception) : IThreadPoolWorkItem
+    sealed class FasterFuncWorker<T>(ITimerFunc<T> fasterTimer, ITimerFunc<T> slowerTimer, FasterResult result, Func<T, T, bool> equal, int timeout, bool raiseexception)
     {
         volatile bool running = true;
         public void MeasureAllocations() => result.MeasureAllocations(() => fasterTimer.Time(out _), () => slowerTimer.Time(out _));
+        public void WarmUpPair()
+        {
+            fasterTimer.Time(out _);
+            slowerTimer.Time(out _);
+        }
         public void Execute()
         {
+            var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
             try
             {
                 while (running)
                 {
                     if (result.Add(fasterTimer.Time(out var fasterValue), slowerTimer.Time(out var slowerValue)))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2217,8 +2283,9 @@ public static partial class Check
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
     /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <param name="warmUp">Call faster and slower until the JIT has finished optimising them before measuring, for up to 5 seconds (default Check.WarmUp).</param>
     public static void Faster<T>(Func<T> faster, Func<T> slower, Func<T, T, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
     {
         var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, allocAll ?? AllocAll);
         var worker = new FasterFuncWorker<T>(
@@ -2226,12 +2293,10 @@ public static partial class Check
             Timer.Create(slower, repeat),
             result,
             equal ?? Equal,
-            Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
+            timeout == -1 ? Timeout : timeout,
             raiseexception);
-        if (threads < 1) threads = Threads;
-        while (--threads > 0)
-            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
-        worker.Execute();
+        if (warmUp ?? WarmUp) result.WarmUp(worker.WarmUpPair);
+        RunWorkers(worker.Execute, threads);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
         {
@@ -2249,23 +2314,24 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="warmUp">Call faster and slower until the JIT has finished optimising them before measuring, for up to 5 seconds (default Check.WarmUp).</param>
     public static async Task FasterAsync(Func<Task> faster, Func<Task> slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1,
-        bool raiseexception = true, Action<string>? writeLine = null)
+        bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
     {
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
         var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, true);
-        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
         var running = true;
         async Task Worker()
         {
+            var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
             try
             {
                 while (running)
                 {
                     if (result.Add(await fasterTimer.Time().ConfigureAwait(false), await slowerTimer.Time().ConfigureAwait(false)))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2285,10 +2351,13 @@ public static partial class Check
                 running = false;
             }
         }
-        if (threads < 1) threads = Threads;
-        while (--threads > 0)
-            _ = Task.Run(Worker);
-        await Worker().ConfigureAwait(false);
+        if (warmUp ?? WarmUp)
+            await result.WarmUpAsync(async () =>
+            {
+                await fasterTimer.Time().ConfigureAwait(false);
+                await slowerTimer.Time().ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        await RunWorkersAsync(Worker, threads).ConfigureAwait(false);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
         {
@@ -2307,17 +2376,18 @@ public static partial class Check
     /// <param name="timeout">The number of seconds to wait before timing out (default 60). </param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="warmUp">Call faster and slower until the JIT has finished optimising them before measuring, for up to 5 seconds (default Check.WarmUp).</param>
     public static async Task FasterAsync<T>(Func<Task<T>> faster, Func<Task<T>> slower, Func<T, T, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
     {
         equal ??= Equal;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
         var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, true);
-        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
         var running = true;
         async Task Worker()
         {
+            var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
             try
             {
                 while (running)
@@ -2326,7 +2396,7 @@ public static partial class Check
                     var (slowerTime, slowerValue) = await slowerTimer.Time().ConfigureAwait(false);
                     if (result.Add(fasterTime, slowerTime))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2356,10 +2426,13 @@ public static partial class Check
                 running = false;
             }
         }
-        if (threads < 1) threads = Threads;
-        while (--threads > 0)
-            _ = Task.Run(Worker);
-        await Worker().ConfigureAwait(false);
+        if (warmUp ?? WarmUp)
+            await result.WarmUpAsync(async () =>
+            {
+                await fasterTimer.Time().ConfigureAwait(false);
+                await slowerTimer.Time().ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        await RunWorkersAsync(Worker, threads).ConfigureAwait(false);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
         {
@@ -2368,17 +2441,53 @@ public static partial class Check
         }
     }
 
-    sealed class FasterActionWorker<T>(Gen<T> gen, ITimerAction<T> fasterTimer, ITimerAction<T> slowerTimer, FasterResult result, long endTimestamp, string? seed, bool raiseexception) : IThreadPoolWorkItem
+    static CsCheckException SeedException<T>(PCG pcg, ulong state, T t, Exception e)
+    {
+        var tString = Print(t);
+        if (tString.Length > 300) tString = tString[..300];
+        return new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tString}", e);
+    }
+
+    static (T, T) TwoCopies<T>(Gen<T> gen)
+    {
+        var pcg = PCG.ThreadPCG;
+        var state = pcg.State;
+        var t = gen.Single();
+        pcg.State = state;
+        return (t, gen.Single());
+    }
+
+    sealed class FasterActionWorker<T>(Gen<T> gen, ITimerAction<T> fasterTimer, ITimerAction<T> slowerTimer, FasterResult result, int timeout, string? seed, bool raiseexception)
     {
         volatile bool running = true;
+        PCG? warmUpPcg;
         public void MeasureAllocations()
         {
-            var t = gen.Single();
-            result.MeasureAllocations(() => fasterTimer.Time(t), () => slowerTimer.Time(t));
+            var (t, copy) = TwoCopies(gen);
+            result.MeasureAllocations(() => fasterTimer.Time(t), () => slowerTimer.Time(copy));
+        }
+        public void WarmUpPair()
+        {
+            warmUpPcg ??= seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
+            var state = warmUpPcg.State;
+            T t = default!;
+            try
+            {
+                t = gen.Generate(warmUpPcg, null, out _);
+                fasterTimer.Time(t);
+                warmUpPcg.State = state;
+                t = gen.Generate(warmUpPcg, null, out _);
+                slowerTimer.Time(t);
+            }
+            catch (Exception e)
+            {
+                throw SeedException(warmUpPcg, state, t, e);
+            }
         }
         public void Execute()
         {
-            var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
+            var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
+            var pcg = PCG.ThreadPCG;
             ulong state = 0;
             T t = default!;
             try
@@ -2387,9 +2496,12 @@ public static partial class Check
                 {
                     state = pcg.State;
                     t = gen.Generate(pcg, null, out _);
-                    if (running && result.Add(fasterTimer.Time(t), slowerTimer.Time(t)))
+                    var fasterTime = fasterTimer.Time(t);
+                    pcg.State = state;
+                    t = gen.Generate(pcg, null, out _);
+                    if (running && result.Add(fasterTime, slowerTimer.Time(t)))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2405,9 +2517,7 @@ public static partial class Check
             }
             catch (Exception e)
             {
-                var tString = Print(t);
-                if (tString.Length > 300) tString = tString[..300];
-                result.Exception = new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tString}", e);
+                result.Exception = SeedException(pcg, state, t, e);
                 running = false;
             }
         }
@@ -2424,22 +2534,23 @@ public static partial class Check
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
     /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <param name="warmUp">Call faster and slower until the JIT has finished optimising them before measuring, for up to 5 seconds (default Check.WarmUp).</param>
     public static void Faster<T>(this Gen<T> gen, Action<T> faster, Action<T> slower, double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1,
-        string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
     {
+        seed ??= Seed;
         var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, allocAll ?? AllocAll);
         var worker = new FasterActionWorker<T>(
             gen,
             Timer.Create(faster, repeat),
             Timer.Create(slower, repeat),
             result,
-            Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
-            seed ?? Seed,
+            timeout == -1 ? Timeout : timeout,
+            seed,
             raiseexception);
-        if (threads < 1) threads = Threads;
-        while (--threads > 0)
-            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
-        worker.Execute();
+        if (warmUp ?? WarmUp) result.WarmUp(worker.WarmUpPair);
+        else if (seed is not null) worker.WarmUpPair();
+        RunWorkers(worker.Execute, threads);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
         {
@@ -2448,52 +2559,52 @@ public static partial class Check
         }
     }
 
-    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2>(this Gen<(T1, T2)> gen, Action<T1, T2> faster, Action<T1, T2> slower, double sigma = -1.0, int threads = -1, int repeat = 1,
-        int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
-        => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
+        int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
-    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Action<T1, T2, T3> faster, Action<T1, T2, T3> slower, double sigma = -1.0, int threads = -1,
-        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
+        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
-    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Action<T1, T2, T3, T4> faster, Action<T1, T2, T3, T4> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
-    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Action<T1, T2, T3, T4, T5> faster, Action<T1, T2, T3, T4, T5> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
-    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Action<T1, T2, T3, T4, T5, T6> faster, Action<T1, T2, T3, T4, T5, T6> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
-    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Action<T1, T2, T3, T4, T5, T6, T7> faster, Action<T1, T2, T3, T4, T5, T6, T7> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
-    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T}(Gen{T}, Action{T}, Action{T}, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Action<T1, T2, T3, T4, T5, T6, T7, T8> faster, Action<T1, T2, T3, T4, T5, T6, T7, T8> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
     /// <summary>Assert the first function is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2506,31 +2617,35 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="warmUp">Call faster and slower until the JIT has finished optimising them before measuring, for up to 5 seconds (default Check.WarmUp).</param>
     public static async Task FasterAsync<T>(this Gen<T> gen, Func<T, Task> faster, Func<T, Task> slower, double sigma = -1.0, int threads = -1,
-        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
     {
         seed ??= Seed;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
         var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, true);
         var running = true;
         async Task Worker()
         {
-            var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
+            var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
+            var pcg = PCG.ThreadPCG;
             ulong state = 0;
             T t = default!;
             try
             {
                 while (running)
                 {
-                    if (seed is null) pcg = PCG.ThreadPCG; // Re-read every iteration. The await below resumes on whatever thread the pool gives it
+                    pcg = PCG.ThreadPCG; // Re-read every iteration, and regenerate for slower from a copy. The await below resumes on whatever thread the pool gives it
                     state = pcg.State;
+                    var replay = new PCG(pcg.Stream, pcg.Seed);
                     t = gen.Generate(pcg, null, out _);
                     if (!running) return;
-                    if (result.Add(await fasterTimer.Time(t).ConfigureAwait(false), await slowerTimer.Time(t).ConfigureAwait(false)))
+                    var fasterTime = await fasterTimer.Time(t).ConfigureAwait(false);
+                    t = gen.Generate(replay, null, out _);
+                    if (result.Add(fasterTime, await slowerTimer.Time(t).ConfigureAwait(false)))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2546,82 +2661,129 @@ public static partial class Check
             }
             catch (Exception e)
             {
-                var tString = Print(t);
-                if (tString.Length > 300) tString = tString[..300];
-                result.Exception = new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tString}", e);
+                result.Exception = SeedException(pcg, state, t, e);
                 running = false;
             }
         }
-        if (threads < 1) threads = Threads;
-        while (--threads > 0)
-            _ = Task.Run(Worker);
-        await Worker().ConfigureAwait(false);
+        var seedPcg = seed is null ? null : PCG.Parse(seed);
+        async Task WarmUpPair()
+        {
+            var pcg = seedPcg ?? PCG.ThreadPCG;
+            var state = pcg.State;
+            var replay = new PCG(pcg.Stream, pcg.Seed);
+            T t = default!;
+            try
+            {
+                t = gen.Generate(pcg, null, out _);
+                await fasterTimer.Time(t).ConfigureAwait(false);
+                t = gen.Generate(replay, null, out _);
+                await slowerTimer.Time(t).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                throw SeedException(pcg, state, t, e);
+            }
+        }
+        if (warmUp ?? WarmUp) await result.WarmUpAsync(WarmUpPair).ConfigureAwait(false);
+        else if (seedPcg is not null) await WarmUpPair().ConfigureAwait(false);
+        await RunWorkersAsync(Worker, threads).ConfigureAwait(false);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
         {
-            var t = gen.Single();
-            await result.MeasureAllocationsAsync(() => fasterTimer.Time(t), () => slowerTimer.Time(t)).ConfigureAwait(false);
+            var (t, copy) = TwoCopies(gen);
+            await result.MeasureAllocationsAsync(() => fasterTimer.Time(t), () => slowerTimer.Time(copy)).ConfigureAwait(false);
             result.Output(writeLine);
         }
     }
 
-    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2>(this Gen<(T1, T2)> gen, Func<T1, T2, Task> faster, Func<T1, T2, Task> slower, double sigma = -1.0, int threads = -1,
-        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task> faster, Func<T1, T2, T3, Task> slower, double sigma = -1.0, int threads = -1,
-        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task> faster, Func<T1, T2, T3, T4, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task> faster, Func<T1, T2, T3, T4, T5, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task> faster, Func<T1, T2, T3, T4, T5, T6, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
-            sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T}(Gen{T}, Func{T, Task}, Func{T, Task}, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task> slower,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), sigma, threads, repeat, timeout, seed, raiseexception);
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
+            sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    sealed class FasterFuncWorker<T, R>(Gen<T> gen, ITimerFunc<T, R> fasterTimer, ITimerFunc<T, R> slowerTimer, FasterResult result, long endTimestamp, Func<R, R, bool> equal, string? seed, bool raiseexception) : IThreadPoolWorkItem
+    sealed class FasterFuncWorker<T, R>(Gen<T> gen, ITimerFunc<T, R> fasterTimer, ITimerFunc<T, R> slowerTimer, FasterResult result, int timeout, Func<R, R, bool> equal, string? seed, bool raiseexception)
     {
         volatile bool running = true;
+        PCG? warmUpPcg;
         public void MeasureAllocations()
         {
-            var t = gen.Single();
-            result.MeasureAllocations(() => fasterTimer.Time(t, out _), () => slowerTimer.Time(t, out _));
+            var (t, copy) = TwoCopies(gen);
+            result.MeasureAllocations(() => fasterTimer.Time(t, out _), () => slowerTimer.Time(copy, out _));
+        }
+        static CsCheckException ValuesDiffer(PCG pcg, ulong state, R fasterValue, R slowerValue)
+        {
+            var vfs = Print(fasterValue);
+            vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
+            var vss = Print(slowerValue);
+            vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
+            return new CsCheckException($"Return values differ: CsCheck_Seed={pcg.ToString(state)}{vfs}{vss}");
+        }
+        public void WarmUpPair()
+        {
+            warmUpPcg ??= seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
+            var state = warmUpPcg.State;
+            T t = default!;
+            R fasterValue, slowerValue;
+            try
+            {
+                t = gen.Generate(warmUpPcg, null, out _);
+                fasterTimer.Time(t, out fasterValue);
+                warmUpPcg.State = state;
+                t = gen.Generate(warmUpPcg, null, out _);
+                slowerTimer.Time(t, out slowerValue);
+            }
+            catch (Exception e)
+            {
+                throw SeedException(warmUpPcg, state, t, e);
+            }
+            if (!equal(fasterValue, slowerValue)) throw ValuesDiffer(warmUpPcg, state, fasterValue, slowerValue);
         }
         public void Execute()
         {
-            var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
+            var endTimestamp = Stopwatch.GetTimestamp() + timeout * Stopwatch.Frequency;
+            var pcg = PCG.ThreadPCG;
             ulong state = 0;
             T t = default!;
             try
@@ -2630,20 +2792,19 @@ public static partial class Check
                 {
                     state = pcg.State;
                     t = gen.Generate(pcg, null, out _);
-                    if (result.Add(fasterTimer.Time(t, out var fasterValue), slowerTimer.Time(t, out var slowerValue)))
+                    var fasterTime = fasterTimer.Time(t, out var fasterValue);
+                    pcg.State = state;
+                    t = gen.Generate(pcg, null, out _);
+                    if (result.Add(fasterTime, slowerTimer.Time(t, out var slowerValue)))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
                     }
                     if (running && !equal(fasterValue, slowerValue))
                     {
-                        var vfs = Print(fasterValue);
-                        vfs = vfs.Length > 30 ? "\nFaster=" + vfs : " Faster=" + vfs;
-                        var vss = Print(slowerValue);
-                        vss = vss.Length > 30 ? "\nSlower=" + vss : " Slower=" + vss;
-                        result.Exception ??= new CsCheckException($"Return values differ: CsCheck_Seed={pcg.ToString(state)}{vfs}{vss}");
+                        result.Exception ??= ValuesDiffer(pcg, state, fasterValue, slowerValue);
                         running = false;
                         return;
                     }
@@ -2658,9 +2819,7 @@ public static partial class Check
             }
             catch (Exception e)
             {
-                var tString = Print(t);
-                if (tString.Length > 300) tString = tString[..300];
-                result.Exception = new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tString}", e);
+                result.Exception = SeedException(pcg, state, t, e);
                 running = false;
             }
         }
@@ -2678,23 +2837,24 @@ public static partial class Check
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
     /// <param name="allocAll">Measure allocations across all threads rather than just the measuring thread (default Check.AllocAll).</param>
+    /// <param name="warmUp">Call faster and slower until the JIT has finished optimising them before measuring, for up to 5 seconds (default Check.WarmUp).</param>
     public static void Faster<T, R>(this Gen<T> gen, Func<T, R> faster, Func<T, R> slower, Func<R, R, bool>? equal = null, double sigma = -1.0, int threads = -1,
-        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
     {
+        seed ??= Seed;
         var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, allocAll ?? AllocAll);
         var worker = new FasterFuncWorker<T, R>(
             gen,
             Timer.Create(faster, repeat),
             Timer.Create(slower, repeat),
             result,
-            Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
+            timeout == -1 ? Timeout : timeout,
             equal ?? Equal,
-            seed ?? Seed,
+            seed,
             raiseexception);
-        if (threads < 1) threads = Threads;
-        while (--threads > 0)
-            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
-        worker.Execute();
+        if (warmUp ?? WarmUp) result.WarmUp(worker.WarmUpPair);
+        else if (seed is not null) worker.WarmUpPair();
+        RunWorkers(worker.Execute, threads);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
         {
@@ -2703,25 +2863,25 @@ public static partial class Check
         }
     }
 
-    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     public static void Faster<I1, I2, T, R>(this Gen<T> gen, I1 faster, I2 slower, Func<R, R, bool>? equal = null, double sigma = -1.0, int threads = -1, int repeat = 1,
-        int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
             where I1 : IInvoke<T, R> where I2 : IInvoke<T, R>
     {
+        seed ??= Seed;
         var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, allocAll ?? AllocAll);
         var worker = new FasterFuncWorker<T, R>(
             gen,
             Timer.Create<I1, T, R>(faster, repeat),
             Timer.Create<I2, T, R>(slower, repeat),
             result,
-            Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency,
+            timeout == -1 ? Timeout : timeout,
             equal ?? Equal,
-            seed ?? Seed,
+            seed,
             raiseexception);
-        if (threads < 1) threads = Threads;
-        while (--threads > 0)
-            ThreadPool.QueueUserWorkItem(static w => w.Execute(), worker, false);
-        worker.Execute();
+        if (warmUp ?? WarmUp) result.WarmUp(worker.WarmUpPair);
+        else if (seed is not null) worker.WarmUpPair();
+        RunWorkers(worker.Execute, threads);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
         {
@@ -2730,52 +2890,52 @@ public static partial class Check
         }
     }
 
-    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, R> faster, Func<T1, T2, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
-        => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
-    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, R> faster, Func<T1, T2, T3, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
-        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
+        => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
-    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, R> faster, Func<T1, T2, T3, T4, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4), equal, sigma, threads, repeat, timeout, seed,
-            raiseexception, writeLine, allocAll);
+            raiseexception, writeLine, allocAll, warmUp);
 
-    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, R> faster, Func<T1, T2, T3, T4, T5, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), equal, sigma, threads, repeat,
-            timeout, seed, raiseexception, writeLine, allocAll);
+            timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
-    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, R> faster, Func<T1, T2, T3, T4, T5, T6, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), equal, sigma,
-            threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
+            threads, repeat, timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
-    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
-            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
-    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
+    /// <inheritdoc cref="Faster{T, R}(Gen{T}, Func{T, R}, Func{T, R}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Faster<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, R> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? allocAll = null, bool? warmUp = null)
         => Faster(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
-            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll);
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, allocAll, warmUp);
 
     /// <summary>Assert the first function gives the same result and is faster than the second to a given sigma (defaults to 6) across a sample of input data.</summary>
     /// <param name="gen">The input data generator.</param>
@@ -2789,34 +2949,37 @@ public static partial class Check
     /// <param name="seed">The initial seed to use for the first iteration.</param>
     /// <param name="raiseexception">If set an exception will be raised with statistics if slower is actually the fastest (default true).</param>
     /// <param name="writeLine">WriteLine function to use for the summary output.</param>
+    /// <param name="warmUp">Call faster and slower until the JIT has finished optimising them before measuring, for up to 5 seconds (default Check.WarmUp).</param>
     public static async Task FasterAsync<T, R>(this Gen<T> gen, Func<T, Task<R>> faster, Func<T, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
     {
         seed ??= Seed;
         equal ??= Equal;
         var fasterTimer = Timer.Create(faster, repeat);
         var slowerTimer = Timer.Create(slower, repeat);
-        var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
         var result = new FasterResult(sigma == -1 ? Sigma : sigma, repeat, true);
         var running = true;
         async Task Worker()
         {
-            var pcg = seed is null ? PCG.ThreadPCG : PCG.Parse(seed);
+            var endTimestamp = Stopwatch.GetTimestamp() + (timeout == -1 ? Timeout : timeout) * Stopwatch.Frequency;
+            var pcg = PCG.ThreadPCG;
             ulong state = 0;
             T t = default!;
             try
             {
                 while (running)
                 {
-                    if (seed is null) pcg = PCG.ThreadPCG; // Re-read every iteration. The await below resumes on whatever thread the pool gives it
+                    pcg = PCG.ThreadPCG; // Re-read every iteration, and regenerate for slower from a copy. The await below resumes on whatever thread the pool gives it
                     state = pcg.State;
+                    var replay = new PCG(pcg.Stream, pcg.Seed);
                     t = gen.Generate(pcg, null, out _);
                     if (!running) return;
                     var (fasterTime, fasterValue) = await fasterTimer.Time(t).ConfigureAwait(false);
+                    t = gen.Generate(replay, null, out _);
                     var (slowerTime, slowerValue) = await slowerTimer.Time(t).ConfigureAwait(false);
                     if (result.Add(fasterTime, slowerTime))
                     {
-                        if (raiseexception && result.NotFaster && !IsDebug)
+                        if (raiseexception && result.NotFaster)
                             result.Exception ??= new CsCheckException(result.ToString());
                         running = false;
                         return;
@@ -2842,71 +3005,87 @@ public static partial class Check
             }
             catch (Exception e)
             {
-                var tString = Print(t);
-                if (tString.Length > 300) tString = tString[..300];
-                result.Exception = new CsCheckException($"CsCheck_Seed={pcg.ToString(state)} T={tString}", e);
+                result.Exception = SeedException(pcg, state, t, e);
                 running = false;
             }
         }
-        if (threads < 1) threads = Threads;
-        while (--threads > 0)
-            _ = Task.Run(Worker);
-        await Worker().ConfigureAwait(false);
+        var seedPcg = seed is null ? null : PCG.Parse(seed);
+        async Task WarmUpPair()
+        {
+            var pcg = seedPcg ?? PCG.ThreadPCG;
+            var state = pcg.State;
+            var replay = new PCG(pcg.Stream, pcg.Seed);
+            T t = default!;
+            try
+            {
+                t = gen.Generate(pcg, null, out _);
+                await fasterTimer.Time(t).ConfigureAwait(false);
+                t = gen.Generate(replay, null, out _);
+                await slowerTimer.Time(t).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                throw SeedException(pcg, state, t, e);
+            }
+        }
+        if (warmUp ?? WarmUp) await result.WarmUpAsync(WarmUpPair).ConfigureAwait(false);
+        else if (seedPcg is not null) await WarmUpPair().ConfigureAwait(false);
+        await RunWorkersAsync(Worker, threads).ConfigureAwait(false);
         if (result.Exception is not null) throw result.Exception;
         if (writeLine is not null)
         {
-            var t = gen.Single();
-            await result.MeasureAllocationsAsync(() => fasterTimer.Time(t), () => slowerTimer.Time(t)).ConfigureAwait(false);
+            var (t, copy) = TwoCopies(gen);
+            await result.MeasureAllocationsAsync(() => fasterTimer.Time(t), () => slowerTimer.Time(copy)).ConfigureAwait(false);
             result.Output(writeLine);
         }
     }
 
-    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, R>(this Gen<(T1, T2)> gen, Func<T1, T2, Task<R>> faster, Func<T1, T2, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2), t => slower(t.Item1, t.Item2), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, R>(this Gen<(T1, T2, T3)> gen, Func<T1, T2, T3, Task<R>> faster, Func<T1, T2, T3, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
-        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
+        => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3), t => slower(t.Item1, t.Item2, t.Item3), equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, R>(this Gen<(T1, T2, T3, T4)> gen, Func<T1, T2, T3, T4, Task<R>> faster, Func<T1, T2, T3, T4, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4), t => slower(t.Item1, t.Item2, t.Item3, t.Item4),
-            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, R>(this Gen<(T1, T2, T3, T4, T5)> gen, Func<T1, T2, T3, T4, T5, Task<R>> faster, Func<T1, T2, T3, T4, T5, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5),
-            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, R>(this Gen<(T1, T2, T3, T4, T5, T6)> gen, Func<T1, T2, T3, T4, T5, T6, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6),
-            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7)> gen, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7),
-            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
-    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?)"/>
+    /// <inheritdoc cref="FasterAsync{T, R}(Gen{T}, Func{T, Task{R}}, Func{T, Task{R}}, Func{R, R, bool}?, double, int, int, int, string?, bool, Action{string}?, bool?)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FasterAsync<T1, T2, T3, T4, T5, T6, T7, T8, R>(this Gen<(T1, T2, T3, T4, T5, T6, T7, T8)> gen, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> faster, Func<T1, T2, T3, T4, T5, T6, T7, T8, Task<R>> slower, Func<R, R, bool>? equal = null,
-        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null)
+        double sigma = -1.0, int threads = -1, int repeat = 1, int timeout = -1, string? seed = null, bool raiseexception = true, Action<string>? writeLine = null, bool? warmUp = null)
         => FasterAsync(gen, t => faster(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8), t => slower(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5, t.Item6, t.Item7, t.Item8),
-            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine);
+            equal, sigma, threads, repeat, timeout, seed, raiseexception, writeLine, warmUp);
 
     internal sealed class FasterResult(double sigma, int repeat, bool allocAll)
     {
@@ -2918,6 +3097,7 @@ public static partial class Check
         public long FasterBytes, SlowerBytes;
         public MedianEstimator Median = new();
         bool completed, bytesMeasured;
+        long? warmUpTicks;
 
         private float SigmaSquared
         {
@@ -2962,9 +3142,13 @@ public static partial class Check
             }
         }
 
+        public void WarmUp(Action pair) => warmUpTicks = Tiering.WarmUp(pair, Repeat);
+
+        public async Task WarmUpAsync(Func<Task> pair) => warmUpTicks = await Tiering.WarmUpAsync(pair, Repeat).ConfigureAwait(false);
+
         long AllocatedBytes => allocAll ? GC.GetTotalAllocatedBytes(precise: true) : GC.GetAllocatedBytesForCurrentThread();
 
-        /// <summary>Measure the allocations of a single call of each. Run after the statistical loop so the code is fully warmed up and tier-1 jitted.</summary>
+        /// <summary>Measure the allocations of a single call of each. Run after the statistical loop so first-call costs aren't counted.</summary>
         public void MeasureAllocations(Action faster, Action slower)
         {
             var start = AllocatedBytes;
@@ -3008,8 +3192,7 @@ public static partial class Check
             else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
             result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / Repeat)}{timeUnit} vs {timeString((double)SlowerMin / Repeat)}{timeUnit}";
             if (bytesMeasured) result = $"{result}, alloc = {ByteString((double)FasterBytes / Repeat)} vs {ByteString((double)SlowerBytes / Repeat)}";
-            if (IsDebug) result += " - DEBUG MODE - DO NOT TRUST THESE RESULTS";
-            return result;
+            return $"{result}, jit = {Tiering.Describe(warmUpTicks)}";
         }
 
         private static string ByteString(double bytes) =>

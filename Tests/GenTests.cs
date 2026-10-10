@@ -387,7 +387,7 @@ public class GenTests
         const int frequency = 10;
         var expected = new int[buckets];
         Array.Fill(expected, frequency);
-        Gen.Int128
+        Gen.Int128.Where(i => i != Int128.MinValue && i != Int128.MaxValue)
         .Select(i => 127 - (int)UInt128.LeadingZeroCount(GenInt128.Zigzag(i) + 1)).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
@@ -451,10 +451,46 @@ public class GenTests
         const int frequency = 10;
         var expected = new int[buckets];
         Array.Fill(expected, frequency);
-        Gen.UInt128
+        Gen.UInt128.Where(i => i != UInt128.MaxValue)
         .Select(i => 127 - (int)UInt128.LeadingZeroCount(i + 1)).Array[frequency * buckets]
         .Select(sample => Tally(buckets, sample))
         .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
+    }
+
+    [Test]
+    public void Integers_Return_Their_Extremes_About_One_Draw_In_64()
+    {
+        Extremes(Gen.Short, short.MinValue, short.MaxValue);
+        Extremes(Gen.Int, int.MinValue, int.MaxValue);
+        Extremes(Gen.UInt, uint.MaxValue);
+        Extremes(Gen.Long, long.MinValue, long.MaxValue);
+        Extremes(Gen.ULong, ulong.MaxValue);
+        Extremes(Gen.Int128, Int128.MinValue, Int128.MaxValue);
+        Extremes(Gen.UInt128, UInt128.MaxValue);
+        Extremes(Gen.Int.Positive, int.MaxValue);
+        Extremes(Gen.Int.NonNegative, int.MaxValue);
+
+        static void Extremes<T>(Gen<T> gen, params T[] extremes)
+        {
+            const int draws = 64 * 200;
+            var expected = new int[extremes.Length + 1];
+            Array.Fill(expected, 200 / extremes.Length);
+            expected[^1] = draws - 200;
+            gen.Select(v =>
+            {
+                var i = Array.IndexOf(extremes, v);
+                return i < 0 ? extremes.Length : i;
+            }).Array[draws]
+            .Select(sample => Tally(extremes.Length + 1, sample))
+            .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
+        }
+    }
+
+    [Test]
+    public async Task Int_Finds_Math_Abs_Of_MinValue()
+    {
+        var e = Assert.Throws<CsCheckException>(() => Gen.Int.Sample(i => Math.Abs(i) >= 0, iter: 10_000));
+        await Assert.That(e.Message.Split('\n')[^1]).IsEqualTo("-2147483648");
     }
 
     [Test]

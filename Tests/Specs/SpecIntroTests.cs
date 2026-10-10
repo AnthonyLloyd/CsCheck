@@ -101,7 +101,7 @@ public partial class SpecIntroTests
     [Test]
     public async Task Exhaustive_Proof()
     {
-        var report = Create().Exhaustive(writeLine: TUnitX.WriteLine);
+        var report = Create().Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsEqualTo(0);
         await Assert.That(report.NeverTriggered).IsEmpty();
@@ -134,7 +134,7 @@ public partial class SpecIntroTests
     [Test]
     public async Task Missing_Transition_Is_A_Dead_End()
     {
-        var report = Create(refundable: false).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+        var report = Create(refundable: false).Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsEqualTo(1);
         await Assert.That(violation).IsNotNull();

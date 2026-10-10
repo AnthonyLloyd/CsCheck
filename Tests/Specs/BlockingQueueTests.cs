@@ -31,7 +31,7 @@ public partial class BlockingQueueTests
     public async Task Notify_Deadlocks()
     {
         var report = BlockingQueueSpec.Create(Wake.Any, producers: 2, consumers: 2, capacity: 1)
-            .Exhaustive(writeLine: TUnitX.WriteLine);
+            .Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsGreaterThan(0);
         await Assert.That(report.TerminalStates).IsEqualTo(0);
@@ -65,7 +65,7 @@ public partial class BlockingQueueTests
     public async Task The_Fixes_Do_Not_Deadlock(Wake wake)
     {
         var report = BlockingQueueSpec.Create(wake, producers: 2, consumers: 2, capacity: 1)
-            .Exhaustive(writeLine: TUnitX.WriteLine);
+            .Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsEqualTo(0);
         await Assert.That(report.DeadlockTrace).IsNull();
@@ -83,7 +83,7 @@ public partial class BlockingQueueTests
         var all = (1 << (producers + consumers)) - 1;
         BlockingQueueSpec.Create(Wake.Any, producers, consumers, capacity)
             .Invariant("NO-DEADLOCK", "Not every thread may be in the wait set at once.", s => s.Waiting != all)
-            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+            .Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NO-DEADLOCK");
         // TLC counts the initial state, so its published length is one more than the number of steps.

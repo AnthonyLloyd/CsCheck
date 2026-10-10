@@ -13,7 +13,7 @@ public class FencingTests
     [Test]
     public async Task Lease_Alone_Loses_Updates()
     {
-        FencingSpec.Create(FencingSpec.Fence.None).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+        FencingSpec.Create(FencingSpec.Fence.None).Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NO-LOST-UPDATE");
         TUnitX.WriteLine(violation.ToString(s => s.ToString()));
@@ -28,7 +28,7 @@ public class FencingTests
     [Test]
     public async Task Writes_Only_Is_Not_Enough()
     {
-        FencingSpec.Create(FencingSpec.Fence.Writes).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+        FencingSpec.Create(FencingSpec.Fence.Writes).Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("SUPERSEDED-TOKEN-REFUSED[1]");
         TUnitX.WriteLine(violation.ToString(s => s.ToString()));
@@ -39,7 +39,7 @@ public class FencingTests
     [Test]
     public async Task Every_Access_Is_Safe()
     {
-        var report = FencingSpec.Create(FencingSpec.Fence.Every).Exhaustive(writeLine: TUnitX.WriteLine);
+        var report = FencingSpec.Create(FencingSpec.Fence.Every).Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.DeadlockStates).IsEqualTo(0);
         await Assert.That(report.NeverTriggered).IsEmpty();

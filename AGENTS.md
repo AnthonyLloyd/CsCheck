@@ -118,10 +118,10 @@ Gen.Dictionary(Gen.Int, Gen.Byte)
         (d, t) => { if (t.Item1 == t.Item3) d[t.Item3] = t.Item4; else { d[t.Item3] = t.Item4; d[t.Item1] = t.Item2; } }));
 ```
 
-### Specification testing: `Spec` + `Exhaustive` / `Sample` / `Faults` / `Conform`
+### Specification testing: `Spec` + `Exhaustive` / `Sample` / `Faults` / `Conform` / `ConformExhaustive`
 For a stateful thing specified by a document (a protocol, exchange rules, a regulation). Write a small pure
 transition system over an immutable `record` state plus named requirements each carrying the sentence it comes
-from, then check it four ways from the one definition. See `docs/Spec.md` for how, `docs/SpecDesign.md` for why, and `Tests/Specs/FixEngineSpec.cs`.
+from, then check it five ways from the one definition. See `docs/Spec.md` for how, `docs/SpecDesign.md` for why, and `Tests/Specs/FixEngineSpec.cs`.
 
 ```csharp
 var spec = Spec.From(State.Connected)
@@ -243,8 +243,10 @@ default 100).
 Global defaults via environment variables: `CsCheck_Iter`, `CsCheck_Time`,
 `CsCheck_Seed`, `CsCheck_Threads`, `CsCheck_Timeout`, `CsCheck_Sigma` and
 `CsCheck_Replay` set the parameters above. `CsCheck_AllocAll` (default false)
-makes Faster count allocations on all threads. `CsCheck_Ulps` (default 4) lets
-`Check.Print` show a double or float as a shorter number within that many ulps.
+makes Faster count allocations on all threads, and `CsCheck_WarmUp` (default
+false) makes it wait for the JIT before measuring. `CsCheck_Ulps` (default 4)
+lets `Check.Print` show a double or float as a shorter number within that many
+ulps.
 `CsCheck_WhereLimit` (default 100) and `CsCheck_SingleLimit` (default
 1,000,000) are how many tries `Where` and `Single` make before throwing.
 

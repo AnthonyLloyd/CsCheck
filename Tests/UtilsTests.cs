@@ -3,6 +3,7 @@ namespace Tests;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 using CsCheck;
 
@@ -92,6 +93,71 @@ public class UtilsTests
             var expected = OrderPreservingInterleavings(threadIds);
             return actual.Count == expected.Count && actual.ToHashSet().SetEquals(expected);
         });
+    }
+
+    static void Rejects<T>(string name, Gen<T> invalid, Action<T> set, Func<T> get)
+    {
+        var before = get();
+        invalid.Sample(v =>
+            Assert.Throws<CsCheckException>(() => set(v))!.Message.StartsWith($"Check.{name} (CsCheck_{name}) must be ", StringComparison.Ordinal)
+            && Check.Equal(get(), before));
+    }
+
+    [Test]
+    public async Task Settings_Reject_Values_That_Run_Nothing_Or_Hang()
+    {
+        Rejects("Iter", Gen.OneOf(Gen.Const(0L), Gen.Long[long.MinValue, 0]), v => Check.Iter = v, () => Check.Iter);
+        Rejects("Time", Gen.OneOf(Gen.Const(0), Gen.Const(-2), Gen.Int[int.MinValue, 0].Where(t => t != -1)), v => Check.Time = v, () => Check.Time);
+        Rejects("Replay", Gen.OneOf(Gen.Const(-1), Gen.Int[int.MinValue, -1]), v => Check.Replay = v, () => Check.Replay);
+        Rejects("Threads", Gen.OneOf(Gen.Const(0), Gen.Int[int.MinValue, 0]), v => Check.Threads = v, () => Check.Threads);
+        Rejects("Sigma", Gen.OneOf(Gen.Const(0.0), Gen.Const(double.NaN), Gen.Const(double.PositiveInfinity), Gen.Double[-1e300, 0]), v => Check.Sigma = v, () => Check.Sigma);
+        Rejects("Timeout", Gen.OneOf(Gen.Const(-1), Gen.Int[int.MinValue, -1]), v => Check.Timeout = v, () => Check.Timeout);
+        Rejects("Ulps", Gen.OneOf(Gen.Const(-1), Gen.Int[int.MinValue, -1]), v => Check.Ulps = v, () => Check.Ulps);
+        Rejects("WhereLimit", Gen.OneOf(Gen.Const(0), Gen.Int[int.MinValue, 0]), v => Check.WhereLimit = v, () => Check.WhereLimit);
+        Rejects("SingleLimit", Gen.OneOf(Gen.Const(0), Gen.Int[int.MinValue, 0]), v => Check.SingleLimit = v, () => Check.SingleLimit);
+        var seed = Check.Seed;
+        foreach (var invalid in new[] { "abc", "0N0XIzNsQ0O", "0N0XIzNsQ0O2!" })
+            Assert.Throws<CsCheckException>(() => Check.Seed = invalid);
+        await Assert.That(Check.Seed).IsEqualTo(seed);
+    }
+
+    [Test]
+    public async Task Environment_Variables_Use_The_Invariant_Culture_And_Fail_Loudly()
+    {
+        var variable = $"CsCheck_Test_{Guid.NewGuid():N}";
+        var culture = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+        try
+        {
+            Gen.Double.Sample(d =>
+            {
+                Environment.SetEnvironmentVariable(variable, d.ToString("R", CultureInfo.InvariantCulture));
+                return CultureInfo.CurrentCulture.Name == "de-DE" && Check.ParseEnvironmentVariableToDouble(variable, 0).Equals(d);
+            }, threads: 1);
+            Environment.SetEnvironmentVariable(variable, " ");
+            await Assert.That(Check.ParseEnvironmentVariableToInt(variable, 7)).IsEqualTo(7);
+            foreach (var (value, expected) in new[] { ("yes", true), (" No ", false), ("Y", true), ("n", false), ("TRUE", true), ("false", false), ("1", true), ("0", false) })
+            {
+                Environment.SetEnvironmentVariable(variable, value);
+                await Assert.That(Check.ParseEnvironmentVariableToBool(variable, !expected)).IsEqualTo(expected);
+            }
+            foreach (var (value, parse, expected) in new (string, Action, string)[]
+            {
+                ("6,5", () => Check.ParseEnvironmentVariableToDouble(variable, 0), "a number"),
+                ("1.5", () => Check.ParseEnvironmentVariableToInt(variable, 0), "an integer"),
+                ("abc", () => Check.ParseEnvironmentVariableToLong(variable, 0), "an integer"),
+                ("maybe", () => Check.ParseEnvironmentVariableToBool(variable, false), "true, false, yes, no, y, n, 1 or 0"),
+            })
+            {
+                Environment.SetEnvironmentVariable(variable, value);
+                await Assert.That(Assert.Throws<CsCheckException>(parse)!.Message).IsEqualTo($"{variable} must be {expected}, but was \"{value}\".");
+            }
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = culture;
+            Environment.SetEnvironmentVariable(variable, null);
+        }
     }
 }
 

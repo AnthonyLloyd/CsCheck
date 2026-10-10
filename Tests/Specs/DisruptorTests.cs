@@ -13,7 +13,7 @@ public class DisruptorTests
     [Test]
     public async Task No_Data_Races_Within_The_Boundary()
     {
-        var report = DisruptorSpec.Create(size: 3, sequences: 9).Exhaustive(writeLine: TUnitX.WriteLine);
+        var report = DisruptorSpec.Create(size: 3, sequences: 9).Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.Pruned).IsGreaterThan(0);
         await Assert.That(report.NeverTriggered).IsEmpty();
@@ -51,7 +51,7 @@ public class DisruptorTests
     [Arguments(4)]
     public async Task No_Data_Races_For_Any_Ring_Size(int size)
     {
-        var report = DisruptorSpec.Create(size, sequences: 4 * size).Exhaustive(maxStates: 2_000_000, writeLine: TUnitX.WriteLine);
+        var report = DisruptorSpec.Create(size, sequences: 4 * size).Exhaustive(TUnitX.WriteLine, maxStates: 2_000_000);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.NeverTriggered).IsEmpty();
     }
@@ -67,7 +67,7 @@ public class DisruptorTests
         var report = DisruptorSpec.Create(size: 3, sequences: 9)
             .Invariant("WITHIN-ONE-CYCLE", "Are we clear of all consumers? (Potentially a full cycle behind).",
                 s => s.Next - s.MinCursor <= 3 + 1)
-            .Exhaustive(maxStates: 2_000_000, writeLine: TUnitX.WriteLine);
+            .Exhaustive(TUnitX.WriteLine, maxStates: 2_000_000);
         await Assert.That(report.Closed).IsTrue();
     }
 
@@ -78,7 +78,7 @@ public class DisruptorTests
     public async Task Loosening_The_Gate_By_One_Produces_A_Race()
     {
         var spec = DisruptorSpec.CreateWithGate(size: 3, sequences: 9, slack: 1);
-        spec.Exhaustive(out var violation, maxStates: 2_000_000, writeLine: TUnitX.WriteLine);
+        spec.Exhaustive(out var violation, TUnitX.WriteLine, maxStates: 2_000_000);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NO-DATA-RACES");
         TUnitX.WriteLine(violation.ToString(s => DisruptorSpec.Show(s, 3)));

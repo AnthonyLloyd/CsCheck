@@ -15,19 +15,22 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Tests, PublicKey=002400000480000094000000060200000024000052534131000400000100010089f5f142bc30ab84c70e4ccd0b09a684c3d822a99d269cac850f155421fced34048c0e3869a38db5cca81cd8ffcb7469a79422c3a2438a234c7534885471c1cc856ae40461a1ec4a4c5b1d897ba50f70ff486801a482505e0ec506c22da4a6ac5a1d8417e47985aa95caffd180dab750815989d43fcf0a7ee06ce8f1825106d0")]
 namespace CsCheck;
 
-using System.Text;
-using System.Collections;
-using System.Runtime.CompilerServices;
-using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System;
-using System.Diagnostics.CodeAnalysis;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Collections.Frozen;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Tracing;
+using System.Globalization;
+using System.Runtime;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
 
 #pragma warning disable MA0193 // Use an overload with a MidpointRounding argument
 
@@ -47,40 +50,40 @@ public static partial class Check
         return $"Set seed: \"{seed}\" or -e CsCheck_Seed={seed} to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{minT}";
     }
 
-    static long ParseEnvironmentVariableToLong(string variable, long defaultValue)
+    internal static long ParseEnvironmentVariableToLong(string variable, long defaultValue)
     {
         var value = Environment.GetEnvironmentVariable(variable);
-        return string.IsNullOrWhiteSpace(value) ? defaultValue : long.Parse(value);
+        return string.IsNullOrWhiteSpace(value) ? defaultValue
+            : long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l) ? l
+            : ThrowHelper.Throw<long>($"{variable} must be an integer, but was \"{value}\".");
     }
 
-    static int ParseEnvironmentVariableToInt(string variable, int defaultValue, int minValue)
+    internal static int ParseEnvironmentVariableToInt(string variable, int defaultValue)
     {
         var value = Environment.GetEnvironmentVariable(variable);
-        return string.IsNullOrWhiteSpace(value) ? defaultValue : Math.Max(int.Parse(value), minValue);
+        return string.IsNullOrWhiteSpace(value) ? defaultValue
+            : int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i) ? i
+            : ThrowHelper.Throw<int>($"{variable} must be an integer, but was \"{value}\".");
     }
 
-    static double ParseEnvironmentVariableToDouble(string variable, double defaultValue)
+    internal static double ParseEnvironmentVariableToDouble(string variable, double defaultValue)
     {
         var value = Environment.GetEnvironmentVariable(variable);
-        return string.IsNullOrWhiteSpace(value) ? defaultValue : double.Parse(value);
+        return string.IsNullOrWhiteSpace(value) ? defaultValue
+            : double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d
+            : ThrowHelper.Throw<double>($"{variable} must be a number, but was \"{value}\".");
     }
 
-static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
-{
-    var value = Environment.GetEnvironmentVariable(variable);
-    if (string.IsNullOrWhiteSpace(value)) return defaultValue;
-
-    value = value.Trim();
-    if (value is "1" or "y" or "Y") return true;
-    if (value is "0" or "n" or "N") return false;
-    if (bool.TryParse(value, out var b)) return b;
-    return defaultValue;
-}
-
-    static string? ParseEnvironmentVariableToSeed(string variable)
+    internal static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
     {
         var value = Environment.GetEnvironmentVariable(variable);
-        return string.IsNullOrWhiteSpace(value) ? null : PCG.Parse(value).ToString();
+        if (string.IsNullOrWhiteSpace(value)) return defaultValue;
+        return value.Trim().ToUpperInvariant() switch
+        {
+            "TRUE" or "YES" or "Y" or "1" => true,
+            "FALSE" or "NO" or "N" or "0" => false,
+            _ => ThrowHelper.Throw<bool>($"{variable} must be true, false, yes, no, y, n, 1 or 0, but was \"{value}\"."),
+        };
     }
 
     static string PrintArray2D(Array a)
@@ -410,14 +413,28 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         if (ao.Length != bo.Length) return false;
         if (ao.Length == 0) return true;
         if (ao.Length == 1) return Equal(ao[0], bo[0]);
-        var unmatched = new List<object>(bo);
+        var unmatched = new Dictionary<int, List<object>>(bo.Length);
+        foreach (var y in bo)
+            (CollectionsMarshal.GetValueRefOrAddDefault(unmatched, Hash(y), out _) ??= []).Add(y);
+        List<object>? leftover = null;
         foreach (var x in ao)
+            if (!(unmatched.TryGetValue(Hash(x), out var bucket) && RemoveEqual(bucket, x)))
+                (leftover ??= []).Add(x);
+        if (leftover is null) return true;
+        // A GetHashCode that disagrees with Equal can leave equal items in different buckets.
+        var rest = unmatched.Values.SelectMany(items => items).ToList();
+        return leftover.TrueForAll(x => RemoveEqual(rest, x));
+
+        // Collections share a bucket because Equal compares their items, which their GetHashCode doesn't.
+        static int Hash(object? o) => o is null or (IEnumerable and not string) ? 0 : o.GetHashCode();
+
+        static bool RemoveEqual(List<object> items, object x)
         {
-            var i = unmatched.FindIndex(y => Equal(x, y));
+            var i = items.FindIndex(y => Equal(x, y));
             if (i == -1) return false;
-            unmatched.RemoveAt(i);
+            items.RemoveAt(i);
+            return true;
         }
-        return true;
     }
 
     private static bool IsUnorderedCollection(Type type)
@@ -481,6 +498,14 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         if (worker.Exception is not null) throw worker.Exception;
     }
 
+    internal static void RunInline<T>(T state, (string, Action<T>)[] sequentialOperations, (string, Action<T>)[] sequence)
+    {
+        for (int i = 0; i < sequentialOperations.Length; i++)
+            sequentialOperations[i].Item2(state);
+        for (int i = 0; i < sequence.Length; i++)
+            sequence[i].Item2(state);
+    }
+
     sealed class RunReplayWorker<T>(T state, (string, Action<T>)[] parallelOperations, int[] threadIds) : IThreadPoolWorkItem
     {
         int threadId = -1;
@@ -528,13 +553,18 @@ static bool ParseEnvironmentVariableToBool(string variable, bool defaultValue)
         foreach (var permutation in Interleavings(threadIds, sequence, taken, order, 0))
             yield return permutation;
     }
-    internal static bool Linearizable<T>((string, Action<T>)[] sequentialOperations, (string, Action<T>)[] parallelOperations, int[] threadIds, Func<T> initial, Func<T, bool> matches)
+    internal static bool Linearizable<T>((string, Action<T>)[] sequentialOperations, (string, Action<T>)[] parallelOperations, int[] threadIds, Func<T> initial, Func<T, bool> matches, bool inline = false)
     {
         var linearizable = false;
         Parallel.ForEach(Permutations(threadIds, parallelOperations), (sequence, state) =>
         {
             var linearState = initial();
-            try { Run(linearState, sequentialOperations, sequence, 1); }
+            try
+            {
+                // A real object can depend on the thread, as ConcurrentBag does, so it replays on a new thread as in the parallel run.
+                if (inline) RunInline(linearState, sequentialOperations, sequence);
+                else Run(linearState, sequentialOperations, sequence, 1);
+            }
             catch { return; }
             if (matches(linearState))
             {
@@ -1161,4 +1191,174 @@ public enum BigO
     Logarithmic,
     Linearithmic,
     Exponential,
+}
+
+/// <summary>The JIT tiering settings as the runtime reads them, and a warm-up that waits for tiered compilation to finish.</summary>
+internal static class Tiering
+{
+    const long SettleMs = 30, MaxWarmUpMs = 5_000;
+    static readonly bool IsJit = RuntimeFeature.IsDynamicCodeCompiled || JitInfo.GetCompiledMethodCount() > 0;
+    static readonly bool IsTiered = IsJit && Flag("TieredCompilation", "System.Runtime.TieredCompilation", true);
+    static readonly bool IsQuickJit = IsTiered && Flag("TC_QuickJit", "System.Runtime.TieredCompilation.QuickJit", true);
+    static readonly bool IsAggressive = Env("TC_AggressiveTiering") is > 0;
+    static readonly uint CallCountThreshold = IsAggressive ? 1
+        : Math.Clamp(Env("TC_CallCountThreshold") ?? Knob("System.Runtime.TieredCompilation.CallCountThreshold") ?? 30, 1, ushort.MaxValue);
+    static readonly long CallCountingDelayMs = IsAggressive ? 0
+        : SingleProcessorDelay(Env("TC_CallCountingDelayMs") ?? Knob("System.Runtime.TieredCompilation.CallCountingDelayMs") ?? 100);
+    static readonly string Mode = !IsJit ? "aot" : !IsTiered ? "tiering off" : !IsQuickJit ? "quick jit off" : "tiered";
+
+    // The runtime parses these environment variables as hex.
+    static uint? Env(string name)
+    {
+        var value = (Environment.GetEnvironmentVariable("DOTNET_" + name) ?? Environment.GetEnvironmentVariable("COMPlus_" + name))?.Trim();
+        if (value is null) return null;
+        if (value.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) value = value[2..];
+        return uint.TryParse(value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var result) ? result : null;
+    }
+
+    static uint? Knob(string name)
+    {
+        if (AppContext.GetData(name) is not string value) return null;
+        value = value.Trim();
+        return value.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+            ? uint.TryParse(value[2..], NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var hex) ? hex : 0
+            : uint.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var dec) ? dec : 0;
+    }
+
+    static bool Flag(string env, string knob, bool defaultValue)
+        => Env(env) is { } value ? value != 0
+         : AppContext.GetData(knob) is string s ? string.Equals(s, "true", StringComparison.Ordinal)
+         : defaultValue;
+
+    static long SingleProcessorDelay(uint delayMs)
+    {
+        if (Environment.ProcessorCount != 1) return delayMs;
+        var multiplier = Env("TC_DelaySingleProcMultiplier") ?? 10;
+        var delay = (ulong)delayMs * multiplier;
+        return multiplier > 1 && delay <= uint.MaxValue ? (long)delay : delayMs;
+    }
+
+    /// <summary>Describes the JIT the measured code ran under, warning when it may have been unoptimised tier 0 code.</summary>
+    public static string Describe(long? warmUpTicks)
+    {
+        if (!IsTiered || warmUpTicks is null && !IsQuickJit) return Mode;
+        if (warmUpTicks is null) return $"{Mode} - MAY BE TIER 0, use warmUp OR <TieredCompilation>false</TieredCompilation>";
+        var ms = Math.Abs(warmUpTicks.Value) * 1000 / Stopwatch.Frequency;
+        return warmUpTicks >= 0 ? $"{Mode}, warmed up in {ms}ms"
+             : IsQuickJit ? $"{Mode}, warm up timed out after {ms}ms - MAY BE TIER 0"
+             : $"{Mode}, warm up timed out after {ms}ms";
+    }
+
+    /// <summary>Calls pair until the JIT has stopped compiling it, for at most 5 seconds. Returns the ticks taken, negative if it timed out.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    public static long WarmUp(Action pair, int repeat)
+    {
+        var settler = new Settler(repeat);
+        do pair(); while (!settler.Done());
+        return settler.Elapsed;
+    }
+
+    /// <inheritdoc cref="WarmUp(Action, int)"/>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    public static async Task<long> WarmUpAsync(Func<Task> pair, int repeat)
+    {
+        var settler = new Settler(repeat);
+        do await pair().ConfigureAwait(false); while (!settler.Done());
+        return settler.Elapsed;
+    }
+
+    // One listener for the process, never disposed: disposing EventListeners concurrently can deadlock the runtime (dotnet/runtime#96219).
+    static readonly Lazy<Listener?> SharedListener = new(Listener.Create);
+
+    sealed class Settler(int repeat)
+    {
+        readonly long start = Stopwatch.GetTimestamp();
+        readonly int pairsNeeded = IsTiered ? (int)((CallCountThreshold + repeat - 1) / repeat) + 1 : 2;
+        readonly Listener? listener = IsTiered ? SharedListener.Value : null;
+        long jitCount = JitInfo.GetCompiledMethodCount(), lastChange = Stopwatch.GetTimestamp(), ready;
+        int events, pairs;
+        public long Elapsed;
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        public bool Done()
+        {
+            var now = Stopwatch.GetTimestamp();
+            if (!IsTiered)
+            {
+                Elapsed = now - start;
+                return ++pairs >= pairsNeeded;
+            }
+            var count = JitInfo.GetCompiledMethodCount();
+            var tieringEvents = listener?.Events ?? 0;
+            if (count != jitCount || tieringEvents != events)
+            {
+                jitCount = count;
+                events = tieringEvents;
+                lastChange = now;
+                pairs = 0;
+                ready = 0;
+            }
+            else if (++pairs == pairsNeeded)
+            {
+                ready = now;
+            }
+            if (now - start > MaxWarmUpMs * Stopwatch.Frequency / 1000)
+            {
+                Elapsed = start - now;
+                return true;
+            }
+            if (ready == 0 || now - ready < SettleMs * Stopwatch.Frequency / 1000 || listener is { Paused: true } or { Busy: true })
+                return false;
+            // Nothing reports an active tiering delay except the Pause event sent when it starts, and it ends up to two delays after the last first call.
+            if (CallCountingDelayMs > 0 && listener is not { Resumed: true } && now - lastChange < (2 * CallCountingDelayMs + SettleMs) * Stopwatch.Frequency / 1000)
+                return false;
+            Elapsed = now - start;
+            return true;
+        }
+    }
+
+    sealed class Listener : EventListener
+    {
+        const EventKeywords CompilationKeyword = (EventKeywords)0x1000000000;
+        const int Pause = 281, Resume = 282, BackgroundJitStart = 283, BackgroundJitStop = 284;
+        EventSource? runtime;
+        volatile bool paused, resumed, busy;
+        int events;
+        public bool Paused => paused;
+        public bool Resumed => resumed;
+        public bool Busy => busy;
+        public int Events => Volatile.Read(ref events);
+
+        public static Listener? Create()
+        {
+            var listener = new Listener();
+            if (listener.runtime is not null)
+            {
+                listener.EnableEvents(listener.runtime, EventLevel.Informational, CompilationKeyword);
+                if (listener.runtime.IsEnabled(EventLevel.Informational, CompilationKeyword)) return listener;
+            }
+            listener.Dispose();
+            return null;
+        }
+
+        // The base constructor calls this before the listener is ready, so only capture the source.
+        protected override void OnEventSourceCreated(EventSource eventSource)
+        {
+            if (string.Equals(eventSource.Name, "Microsoft-Windows-DotNETRuntime", StringComparison.Ordinal)) runtime = eventSource;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        protected override void OnEventWritten(EventWrittenEventArgs eventData)
+        {
+            switch (eventData.EventId)
+            {
+                case Pause: paused = true; break;
+                case Resume: paused = false; resumed = true; break;
+                case BackgroundJitStart: busy = true; break;
+                case BackgroundJitStop: busy = eventData.Payload is [_, uint pending, ..] && pending != 0; break;
+                default: return;
+            }
+            Interlocked.Increment(ref events);
+        }
+    }
 }

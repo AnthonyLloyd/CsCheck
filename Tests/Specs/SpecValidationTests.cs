@@ -342,7 +342,7 @@ public partial class SpecValidationTests
         var report = Spec.From(new Tagged(0, 0))
             .Action("Step", t => t.Step < 3, t => new Tagged(t.Step + 1, t.Tag + 1))
             .Action("Churn", t => t with { Tag = t.Tag + 1 })
-            .Exhaustive(writeLine: TUnitX.WriteLine);
+            .Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.States).IsEqualTo(4);
     }
@@ -359,7 +359,7 @@ public partial class SpecValidationTests
             .Action("Grow", w => w with { Counter = w.Counter + 1 })
             .Action("Flip", w => w with { Flag = !w.Flag })
             .Action("Bump", w => w with { Small = (w.Small + 1) % 3 })
-            .Exhaustive(maxStates: 2_000, writeLine: TUnitX.WriteLine);
+            .Exhaustive(TUnitX.WriteLine, maxStates: 2_000);
         await Assert.That(report.Closed).IsFalse();
         await Assert.That(report.Note).Contains("widest state fields are Counter");
         await Assert.That(report.Note!.IndexOf("Counter", StringComparison.Ordinal))
@@ -377,7 +377,7 @@ public partial class SpecValidationTests
     [Test]
     public async Task Widest_Field_Diagnostic_Is_Omitted_When_It_Cannot_Parse()
     {
-        var report = Spec.From(0).Action("Inc", i => i + 1).Exhaustive(maxStates: 100, writeLine: TUnitX.WriteLine);
+        var report = Spec.From(0).Action("Inc", i => i + 1).Exhaustive(TUnitX.WriteLine, maxStates: 100);
         await Assert.That(report.Closed).IsFalse();
         await Assert.That(report.Note).Contains("gave up at 100 states");
         await Assert.That(report.Note).DoesNotContain("widest");
@@ -404,7 +404,7 @@ public partial class SpecValidationTests
     [Test]
     public async Task A_Tree_Shaped_Space_Is_Observed_Not_Blamed()
     {
-        var chain = Spec.From(0).Action("Inc", i => i < 10, i => i + 1).Exhaustive(writeLine: TUnitX.WriteLine);
+        var chain = Spec.From(0).Action("Inc", i => i < 10, i => i + 1).Exhaustive(TUnitX.WriteLine);
         await Assert.That(chain.Closed).IsTrue();
         await Assert.That(chain.States).IsEqualTo(11);
         await Assert.That(chain.Revisits).IsEqualTo(0);
@@ -427,7 +427,7 @@ public partial class SpecValidationTests
         await Assert.That(unbounded.Closed).IsFalse();
         await Assert.That(unbounded.Note).Contains("gave up");
 
-        var report = Spec.From(0).Action("Inc", i => i + 1).Boundary(i => i <= 5).Exhaustive(writeLine: TUnitX.WriteLine);
+        var report = Spec.From(0).Action("Inc", i => i + 1).Boundary(i => i <= 5).Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.States).IsEqualTo(6);
         await Assert.That(report.Pruned).IsEqualTo(1);
@@ -461,7 +461,7 @@ public partial class SpecValidationTests
             .Action("Inc", i => i + 1)
             .Boundary(i => i <= 5)
             .Reachable("TEN", "the counter can reach ten", i => i == 10)
-            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+            .Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNull();
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.Note).Contains("TEN");
@@ -493,7 +493,7 @@ public partial class SpecValidationTests
                 trigger: (b, a) => b == 0 && a == 1,
                 response: (_, _) => false,
                 within: 3, per: "Tick")
-            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+            .Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NEVER-SETTLES");
         await Assert.That(violation.Trace.Steps.Length).IsEqualTo(4);
@@ -507,7 +507,7 @@ public partial class SpecValidationTests
     {
         var report = Counter()
             .Invariant("POSITIVE", "the counter is always positive", i => i > 0)
-            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+            .Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("POSITIVE");
         await Assert.That(violation.Detail).Contains("initial state");
@@ -534,11 +534,11 @@ public partial class SpecValidationTests
             .Response("ANSWERED", "a raised request is answered",
                 trigger: (_, a) => a == 1, response: (_, a) => a == 3, within: 1, cancel: cancel);
 
-        Waiting(null).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+        Waiting(null).Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("ANSWERED");
 
-        var report = Waiting((_, a) => a == 2).Exhaustive(out var none, writeLine: TUnitX.WriteLine);
+        var report = Waiting((_, a) => a == 2).Exhaustive(out var none, TUnitX.WriteLine);
         await Assert.That(none).IsNull();
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.NeverTriggered).IsEmpty();
@@ -619,7 +619,7 @@ public partial class SpecValidationTests
             .Action("Go", i => i < 4, i => i + 1)
             .Response("SAME-STEP", "reaching one is answered by reaching one",
                 trigger: (_, a) => a == 1, response: (_, a) => a == 1, within: 1)
-            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+            .Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("SAME-STEP");
 
@@ -645,7 +645,7 @@ public partial class SpecValidationTests
         var ok = Retries(4).Exhaustive();
         await Assert.That(ok.Closed).IsTrue();
 
-        Retries(3).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+        Retries(3).Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("AT-MOST-THREE");
         await Assert.That(violation.Detail).Contains("more than 3 times");
@@ -662,7 +662,7 @@ public partial class SpecValidationTests
         Spec.From(0)
             .Action("Tick", i => (i + 1) % 2)
             .AtMost("AT-MOST-TWICE", "at most twice", 2, (b, a) => b == 0 && a == 1)
-            .Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+            .Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("AT-MOST-TWICE");
         await Assert.That(violation.Trace.Steps.Length).IsEqualTo(5);
@@ -688,7 +688,7 @@ public partial class SpecValidationTests
         var report = Spec.From(0)
             .Action("Inc", i => i < 4, i => i + 1)
             .Rule("ADVANCES", "every step advances the counter by one", (b, a) => a == b + 1)
-            .Exhaustive(writeLine: TUnitX.WriteLine);
+            .Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(report.NeverTriggered).IsEmpty();
         await Assert.That(report.ToString()).Contains("| ADVANCES    |  every step |");
@@ -845,7 +845,7 @@ public partial class SpecValidationTests
     {
         var report = Spec.From(0)
             .Action("Set", [1, 2, 3], (_, v) => v != 2, (_, v) => v)
-            .Exhaustive(writeLine: TUnitX.WriteLine);
+            .Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.Closed).IsTrue();
         await Assert.That(string.Join(",", report.NeverFired)).IsEqualTo("Set(2)");
         await Assert.That(report.ToString()).Contains("| Set(2)      |       NEVER |");
@@ -864,7 +864,7 @@ public partial class SpecValidationTests
         for (int i = 0; i < 8; i++) spec.AtMost($"PAD{i}", "cannot occur", 3, (_, _) => false);
         spec.Response("NINTH", "entering one must be followed by settling",
             trigger: (b, a) => b == 0 && a == 1, response: (_, _) => false, within: 3, per: "Tick");
-        spec.Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+        spec.Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NINTH");
         await Assert.That(violation.Trace.Steps.Length).IsEqualTo(4);
@@ -1173,7 +1173,7 @@ public partial class SpecValidationTests
     public async Task Exhaustive_Reports_An_Obligation_Outstanding_At_A_Trace_End()
     {
         var spec = NeverAnswered();
-        var exhaustive = spec.Exhaustive(out var violation, maxStates: 10_000, writeLine: null);
+        var exhaustive = spec.Exhaustive(out var violation, maxStates: 10_000);
         await Assert.That(violation).IsNull();
         await Assert.That(exhaustive.Closed).IsTrue();
         await Assert.That(exhaustive.RequirementUnresolved[0]).IsGreaterThan(0);
@@ -1339,7 +1339,7 @@ public partial class SpecValidationTests
     {
         var report = Spec.From(0)
             .Action("Set", Enumerable.Range(0, 12).ToArray(), (n, _) => n == 0, (_, v) => v)
-            .Exhaustive(writeLine: TUnitX.WriteLine);
+            .Exhaustive(TUnitX.WriteLine);
         await Assert.That(report.DeadlockStates).IsGreaterThan(0);
         await Assert.That(report.DeadlockTrace)
             .Contains("or Set(0), Set(2), Set(3), Set(4), Set(5), Set(6), Set(7), Set(8) +3 more");
@@ -1536,7 +1536,7 @@ public partial class SpecValidationTests
         var ok = Ninth(6).Exhaustive();
         await Assert.That(ok.Closed).IsTrue();
 
-        Ninth(3).Exhaustive(out var violation, writeLine: TUnitX.WriteLine);
+        Ninth(3).Exhaustive(out var violation, TUnitX.WriteLine);
         await Assert.That(violation).IsNotNull();
         await Assert.That(violation!.Id).IsEqualTo("NINTH");
         await Assert.That(violation.Detail).Contains("more than 3 times");

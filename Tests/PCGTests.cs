@@ -124,74 +124,28 @@ public class PCGTests
         Gen.Select(Gen.UInt, Gen.ULong,
             (stream, seed) => new PCG(stream, seed));
 
-    [Test]
-    public void PCG_Next()
+    /// <summary>Each bit's count of ones is its own binomial, not a share of one multinomial, so each bit gets a two-bucket test.</summary>
+    void EveryBitIsFair(Func<PCG, UInt128> next, int bits)
     {
-        genPCG
-        .Select(i => i.Next())
-        .Array[20]
-        .Sample(t =>
+        const int n = 1000;
+        genPCG.Select(next).Array[n].Sample(values =>
         {
-            var expected = Enumerable.Repeat(10, 32).ToArray();
-            var actual = new int[32];
-            foreach (var i in t)
+            for (int b = 0; b < bits; b++)
             {
-                var mask = 1U;
-                for (int m = 0; m < 32; m++)
-                {
-                    if ((i & mask) == mask) actual[m]++;
-                    mask <<= 1;
-                }
+                var ones = values.Count(v => UInt128.IsOddInteger(v >> b));
+                Check.ChiSquared([n / 2, n / 2], [ones, n - ones]);
             }
-            Check.ChiSquared(expected, actual);
-        }, iter: 1);
+        }, iter: 1, time: -2);
     }
 
     [Test]
-    public void PCG_Next64()
-    {
-        genPCG
-        .Select(i => i.Next64())
-        .Array[20]
-        .Sample(t =>
-        {
-            var expected = Enumerable.Repeat(10, 64).ToArray();
-            var actual = new int[64];
-            foreach (var i in t)
-            {
-                var mask = 1UL;
-                for (int m = 0; m < 64; m++)
-                {
-                    if ((i & mask) == mask) actual[m]++;
-                    mask <<= 1;
-                }
-            }
-            Check.ChiSquared(expected, actual);
-        }, iter: 1);
-    }
+    public void PCG_Next() => EveryBitIsFair(pcg => pcg.Next(), 32);
 
     [Test]
-    public void PCG_Next128()
-    {
-        genPCG
-        .Select(i => i.Next128())
-        .Array[20]
-        .Sample(t =>
-        {
-            var expected = Enumerable.Repeat(10, 128).ToArray();
-            var actual = new int[128];
-            foreach (var i in t)
-            {
-                var mask = UInt128.One;
-                for (int m = 0; m < 128; m++)
-                {
-                    if ((i & mask) == mask) actual[m]++;
-                    mask <<= 1;
-                }
-            }
-            Check.ChiSquared(expected, actual);
-        }, iter: 1);
-    }
+    public void PCG_Next64() => EveryBitIsFair(pcg => pcg.Next64(), 64);
+
+    [Test]
+    public void PCG_Next128() => EveryBitIsFair(pcg => pcg.Next128(), 128);
 
     [Test]
     public void PCG_Next_UInt()
@@ -212,7 +166,7 @@ public class PCGTests
     [Test]
     public void PCG_Next128_UInt128()
     {
-        Gen.UInt128.Select(i => i + 1).Select(genPCG)
+        Gen.UInt128.Where(i => i > 0).Select(genPCG)
         .Select((max, pcg) => (max, pcg.Next128(max)))
         .Sample((max, x) => x < max);
     }
