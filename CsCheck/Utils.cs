@@ -1242,7 +1242,7 @@ internal static class Tiering
     public static string Describe(long? warmUpTicks)
     {
         if (!IsTiered || warmUpTicks is null && !IsQuickJit) return Mode;
-        if (warmUpTicks is null) return $"{Mode} - MAY BE TIER 0, use warmUp OR <TieredCompilation>false</TieredCompilation>";
+        if (warmUpTicks is null) return $"{Mode} - MAY BE TIER 0";
         var ms = Math.Abs(warmUpTicks.Value) * 1000 / Stopwatch.Frequency;
         return warmUpTicks >= 0 ? $"{Mode}, warmed up in {ms}ms"
              : IsQuickJit ? $"{Mode}, warm up timed out after {ms}ms - MAY BE TIER 0"

@@ -713,13 +713,13 @@ public class CheckTests
             await Assert.That(counts.Values.Max()).IsEqualTo(1);
             counts.Clear();
         }
-        gen.Faster(i => { Fast(i); }, i => { Slow(i); }, seed: seed, sigma: 20, threads: 4, raiseexception: false);
+        gen.Faster(i => { Fast(i); }, i => { Slow(i); }, sigma: 20, threads: 4, seed: seed, raiseexception: false);
         await AssertFirstSeenOnce();
-        gen.Faster(Fast, Slow, Check.EqualSkip, seed: seed, sigma: 20, threads: 4, raiseexception: false);
+        gen.Faster(Fast, Slow, Check.EqualSkip, sigma: 20, threads: 4, seed: seed, raiseexception: false);
         await AssertFirstSeenOnce();
-        await gen.FasterAsync(i => { Fast(i); return Task.CompletedTask; }, i => { Slow(i); return Task.CompletedTask; }, seed: seed, sigma: 20, threads: 4, raiseexception: false);
+        await gen.FasterAsync(i => { Fast(i); return Task.CompletedTask; }, i => { Slow(i); return Task.CompletedTask; }, sigma: 20, threads: 4, seed: seed, raiseexception: false);
         await AssertFirstSeenOnce();
-        await gen.FasterAsync(i => Task.FromResult(Fast(i)), i => Task.FromResult(Slow(i)), Check.EqualSkip, seed: seed, sigma: 20, threads: 4, raiseexception: false);
+        await gen.FasterAsync(i => Task.FromResult(Fast(i)), i => Task.FromResult(Slow(i)), Check.EqualSkip, sigma: 20, threads: 4, seed: seed, raiseexception: false);
         await AssertFirstSeenOnce();
     }
 
@@ -731,7 +731,7 @@ public class CheckTests
         var gen = Gen.Int.Uniform;
         var message = Assert.Throws<CsCheckException>(() => gen.Faster(Same, Different, threads: 1))!.Message;
         var seed = message.Split("CsCheck_Seed=")[1].Split(' ', '\n')[0];
-        var again = Assert.Throws<CsCheckException>(() => gen.Faster(Same, Different, seed: seed, threads: 1))!.Message;
+        var again = Assert.Throws<CsCheckException>(() => gen.Faster(Same, Different, threads: 1, seed: seed))!.Message;
         await Assert.That(again).IsEqualTo(message);
     }
 
