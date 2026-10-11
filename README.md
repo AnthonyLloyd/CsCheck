@@ -38,7 +38,7 @@ The following tests are in ~~xUnit~~ TUnit but could equally be used in any test
 
 More to see in the [Tests](https://github.com/AnthonyLloyd/CsCheck/tree/master/Tests). There are also 1,000+ F# tests using CsCheck in [MKL.NET](https://github.com/MKL-NET/MKL.NET/tree/master/Tests).
 
-No Reflection was used in the making of this product and CsCheck 5.0.0 is now AOT compatible!
+No Reflection was used in the making of this product and CsCheck 5 is now AOT compatible!
 
 ## Generator Creation Example
 

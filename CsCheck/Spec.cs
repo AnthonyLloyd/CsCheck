@@ -1893,7 +1893,13 @@ public static partial class Check
     }
 
     // Generic types (ValueTuple`4, anonymous types) produce unreadable names, so they are left out.
-    static string SutClause<TSut>() => typeof(TSut).Name.Contains('`') ? "" : $" of {typeof(TSut).Name}";
+    static string SutClause<TSut>()
+    {
+        var name = typeof(TSut).Name;
+        if (name.StartsWith('<') && name.IndexOf("__", name.IndexOf('>') + 1, StringComparison.Ordinal) is >= 0 and var at)
+            name = name[(at + 2)..];
+        return name.Contains('`') ? "" : $" of {name}";
+    }
 
     /// <summary>Check a real implementation conforms to the specification on every transition of its reachable state space, rather than on sampled traces. The space is enumerated as <see cref="Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> enumerates it, proving the requirements on the way, and then for every state in breadth first order a fresh implementation is driven down a shortest path to it and one step further on each action enabled there, with <paramref name="apply"/> comparing it to the model after every step. So a clean run means the implementation took every transition the model has and agreed on each, and a divergence is reported on a shortest path to it, with no shrinking needed.</summary>
     /// <remarks>Each state is reached by one path. Behaviour that depends on how a state was reached, beyond what the model state records, is only covered by <see cref="Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>'s random walks, so the two are complementary. <para>The implementation must be deterministic, as for Conform: the steps of a path are driven again for every transition out of the state it reaches, and a step that conformed once and then diverges is reported as nondeterminism. Nondeterminism the abstraction never reads, such as a fresh Guid only ever compared for equality, is fine.</para> <para>The cost in implementation steps is the sum, over transitions, of the depth of the state each leaves plus one, so a deep space takes many more steps than it has transitions. The report gives the count.</para></remarks>

@@ -22,7 +22,7 @@ CsCheck also makes specification, performance and regression testing simple and 
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;specification;model-checking;temporal;parallel;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>5.0.0-beta1</Version>
+        <Version>5.0.0-rc2</Version>
         <PackageReleaseNotes>
 Added Gen.Int128, Gen.UInt128 and PCG.Next128.
 Added Gen.Select overloads for 9 to 16 generators.
@@ -39,6 +39,7 @@ Improved SampleParallel speed with a model: replaying the model no longer starts
 Improved CsCheckException: InnerException is set, and the stack trace points at the test.
 Improved SelectMany: selectors can return IGen&lt;R&gt;.
 Improved Faster output: it shows the JIT mode, and warns when the code may be unoptimised tier 0.
+Improved Check.ChiSquared with Wilson-Hilferty correction.
 Fixed Gen.Decimal, Gen.Double and Gen.Float ranges throwing at 0, returning NaN or infinity, and varying by OS or .NET version.
 Fixed Check.Equal for dictionaries, ImmutableArray, rank 3+ arrays, ReadOnlySet and strings.
 Fixed Sample hiding failures and printing the wrong value when the generator throws.
@@ -46,7 +47,6 @@ Fixed SampleParallel false failures and seed replay.
 Fixed SampleModelBased writing timed operation tables when only writeLine is set.
 Fixed classify tables: Op1 counting Op10, a throwing writeLine, and overflow on long runs.
 Fixed Gen.Frequency with negative weights or totals over int.MaxValue.
-Fixed Check.ChiSquared failing correct distributions.
 Fixed Check.Hash with null strings, repeated HashStream.GetHashCode, and parallel test hosts.
 Fixed Check.Equality accepting an assignment setter that binds as a functional one.
 Fixed an action-scoped Spec.Fault applying to every action in sampled traces.
