@@ -719,15 +719,15 @@ replay - The number of times to retry the seed to reproduce a SampleParallel fai
 Global defaults can also be set via environment variables:
 
 ```powershell
-dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/GenTests/* -e CsCheck_Iter=10000
+dotnet run --treenode-filter /*/*/GenTests/* -e CsCheck_Iter=10000 -c Release --project Tests --framework net11.0 --no-restore --disable-logo --output Detailed
 
-dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/FloatingPointTests/* -e CsCheck_Time=10
+dotnet run --treenode-filter /*/*/FloatingPointTests/* -e CsCheck_Time=10 -c Release --project Tests --framework net11.0 --no-restore --disable-logo --output Detailed
 
-dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/NSum_Shuffle_Check -e CsCheck_Seed="0N0XIzNsQ0O2"
+dotnet run --treenode-filter /*/*/*/NSum_Shuffle_Check -e CsCheck_Seed="0N0XIzNsQ0O2" -c Release --project Tests --framework net11.0 --no-restore --disable-logo --output Detailed
 
-dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/*_Faster -e CsCheck_Sigma=50
+dotnet run --treenode-filter /*/*/*/*_Faster -e CsCheck_Sigma=50 -c Release --project Tests --framework net11.0 --no-restore --disable-logo --output Detailed
 
-dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/*/*_Perf -e CsCheck_Threads=1
+dotnet run --treenode-filter /*/*/*/*_Perf -e CsCheck_Threads=1 -c Release --project Tests --framework net11.0 --no-restore --disable-logo --output Detailed
 ```
 
 The other variables are `CsCheck_Replay`, `CsCheck_Timeout`, `CsCheck_Ulps`, `CsCheck_WhereLimit`, `CsCheck_SingleLimit`, `CsCheck_AllocAll` and `CsCheck_WarmUp`. Each variable sets the `Check` property of the same name, such as `Check.Iter`, which can also be set in code. Numbers are read with the invariant culture, and a value that would run nothing or hang, such as `CsCheck_Iter=0` or `CsCheck_Time=0`, throws.
