@@ -294,7 +294,7 @@ public class SpecScaleTests
 
     sealed class TinySut { public Tiny State; public int Steps; }
 
-    static (SpecReport<Tiny>? Report, string? Message, bool Contiguous) Conform(Planted p, int threads)
+    static (SpecReport<Tiny>? Report, string? Message, bool Contiguous) Conform(Planted p, int threads, bool clone = false)
     {
         var contiguous = true;
         try
@@ -305,10 +305,12 @@ public class SpecScaleTests
                 if (t.Index != sut.Steps++ || !t.Before.Equals(sut.State)) contiguous = false;
                 sut.State = t.After;
                 return p.Diverges(t) ? "planted" : null;
-            }, maxStates: 100_000, threads: threads), null, contiguous);
+            }, maxStates: 100_000, threads: threads, clone: clone ? sut => new() { State = sut.State, Steps = sut.Steps } : null), null, contiguous);
         }
         catch (CsCheckException e) { return (null, e.Message, contiguous); }
     }
+
+    static string Count(long n, string noun) => n == 1 ? $"1 {noun}" : $"{n:#,0} {noun}s";
 
     static string WithoutModeOrConformed(SpecReport<Tiny> report)
         => string.Join('\n', report.ToString().Split('\n')[1..]
@@ -318,7 +320,8 @@ public class SpecScaleTests
     /// proof's breadth first order is the order conformance drives the implementation in, so the counterexample and the
     /// divergence must be the same trace, not merely as short. Where nothing diverges, every node and transition the
     /// proof counted must have been driven, and the proof must read the same apart from the line saying so. Throughout,
-    /// the implementation must only ever be stepped from where it was, and four threads must give what one does.</summary>
+    /// the implementation must only ever be stepped from where it was, and four threads must give what one does. Cloning
+    /// must give the same result too, taking one step per transition.</summary>
     [Test]
     public async Task ConformExhaustive_Finds_The_Divergence_Exhaustive_Would()
     {
@@ -328,9 +331,11 @@ public class SpecScaleTests
             p.Oracle().Exhaustive(out var expected, maxStates: 100_000);
             var one = Conform(p, 1);
             var many = Conform(p, 4);
-            if (!one.Contiguous || !many.Contiguous) return false;
+            var cloned = Conform(p, 4, clone: true);
+            if (!one.Contiguous || !many.Contiguous || !cloned.Contiguous) return false;
             if (!string.Equals(one.Message ?? one.Report!.ToString(), many.Message ?? many.Report!.ToString(), StringComparison.Ordinal))
                 return false;
+            if (!string.Equals(one.Message, cloned.Message, StringComparison.Ordinal)) return false;
             if (expected is null)
             {
                 clean++;
@@ -338,7 +343,13 @@ public class SpecScaleTests
                 return one.Report is { Closed: true } report
                     && report.ConformedStates == proof.States
                     && report.ConformedTransitions == proof.Transitions
-                    && string.Equals(WithoutModeOrConformed(report), WithoutModeOrConformed(proof), StringComparison.Ordinal);
+                    && string.Equals(WithoutModeOrConformed(report), WithoutModeOrConformed(proof), StringComparison.Ordinal)
+                    && cloned.Report is { Closed: true } copied
+                    && copied.ConformedStates == proof.States
+                    && copied.ConformedTransitions == proof.Transitions
+                    && copied.ToString().Split('\n').Contains(
+                        $"  conformed on {Count(proof.Transitions, "transition")} from {Count(proof.States, "state")}, {Count(proof.Transitions, "implementation step")}")
+                    && string.Equals(WithoutModeOrConformed(copied), WithoutModeOrConformed(proof), StringComparison.Ordinal);
             }
             diverged++;
             return one.Message is { } message

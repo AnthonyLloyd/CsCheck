@@ -78,6 +78,18 @@ public class RefreshCacheTests
             .Single(b => b.StartsWith("  conformed on ", StringComparison.Ordinal)).TrimEnd('\n'));
     }
 
+    /// <summary>The same with a clone: each transition is one step on a copy of the cache that reached the state it
+    /// leaves, so the counts are the proof's and the steps fall to one per transition.</summary>
+    [Test]
+    public async Task Conforms_On_Every_Transition_By_Cloning()
+    {
+        var report = RefreshCacheSpec.Create().ConformExhaustive(() => new RefreshCache(), Apply, TUnitX.WriteLine, clone: c => c.Clone());
+        await Assert.That(report.Closed).IsTrue();
+        await Assert.That(report.ConformedStates).IsEqualTo(1_445);
+        await Assert.That(report.ConformedTransitions).IsEqualTo(6_713);
+        await Assert.That(report.ToString()).Contains("conformed on 6,713 transitions from 1,445 states, 6,713 implementation steps");
+    }
+
     /// <summary>The cache has no liveness property of its own: a stale value only becomes fresh if something reads it
     /// and the loader returns, and neither is bounded by anything the cache controls. Asserting the property anyway
     /// puts the counterexample on the record, which is the argument for whichever behaviour you choose to ship.

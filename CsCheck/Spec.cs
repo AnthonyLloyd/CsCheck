@@ -19,7 +19,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 
-/// <summary>One step of a <see cref="Trace{S}"/>: the action applied and the model state either side of it. This is what <see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see> and <see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int)">ConformExhaustive</see> hand to their <c>apply</c>, so it carries both the printable names and the indices needed to recover the typed argument.</summary>
+/// <summary>One step of a <see cref="Trace{S}"/>: the action applied and the model state either side of it. This is what <see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see> and <see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int, Func{TSut, TSut}?)">ConformExhaustive</see> hand to their <c>apply</c>, so it carries both the printable names and the indices needed to recover the typed argument.</summary>
 /// <param name="Index">Zero based position of this step in the trace.</param>
 /// <param name="ActionIndex">Position of the action in the order they were declared on the <see cref="Spec{S}"/>.</param>
 /// <param name="ArgIndex">Index into the array passed as the action's domain, so a conformance test can recover the typed argument as domain[<paramref name="ArgIndex"/>]. Zero for an action declared without one.</param>
@@ -194,7 +194,7 @@ public static class Spec
     public static Spec<S> From<S>(S initial) => new(initial);
 }
 
-/// <summary>An executable specification: a pure transition system plus named requirements quoted from a document. The same spec can be explored exhaustively (<see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see>) or randomly (<see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see>), mutated (<see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see>), or run against a real implementation on sampled traces (<see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>) or on every transition (<see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int)">ConformExhaustive</see>).</summary>
+/// <summary>An executable specification: a pure transition system plus named requirements quoted from a document. The same spec can be explored exhaustively (<see cref="Check.Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see>) or randomly (<see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see>), mutated (<see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see>), or run against a real implementation on sampled traces (<see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>) or on every transition (<see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int, Func{TSut, TSut}?)">ConformExhaustive</see>).</summary>
 /// <remarks>The builder methods add to this instance and return it. The spec freezes the first time an engine runs it; adding after that throws. Return a fresh Spec from a method and derive variants from that.</remarks>
 public sealed class Spec<S>(S initial)
 {
@@ -564,15 +564,15 @@ public sealed class SpecReport<S>
     public long TracesWalked { get; internal set; }
     /// <summary>Steps taken across every walk. Named apart from <see cref="Trace{S}.Steps"/>, which is one walk's transitions rather than a count of them.</summary>
     public long StepsWalked { get; internal set; }
-    /// <summary>States whose every enabled transition <see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int)">ConformExhaustive</see> drove the implementation along and saw conform. Equal to <see cref="States"/> when the space closed and nothing diverged, and zero for the other engines.</summary>
+    /// <summary>States whose every enabled transition <see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int, Func{TSut, TSut}?)">ConformExhaustive</see> drove the implementation along and saw conform. Equal to <see cref="States"/> when the space closed and nothing diverged, and zero for the other engines.</summary>
     public int ConformedStates { get; internal set; }
-    /// <summary>Transitions <see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int)">ConformExhaustive</see> drove the implementation along, each from a fresh instance taken down a shortest path to the state it leaves, and saw conform. Equal to <see cref="Transitions"/> when the space closed and nothing diverged, and zero for the other engines.</summary>
+    /// <summary>Transitions <see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int, Func{TSut, TSut}?)">ConformExhaustive</see> drove the implementation along, each from a fresh instance taken down a shortest path to the state it leaves, or on a clone of the one that reached it, and saw conform. Equal to <see cref="Transitions"/> when the space closed and nothing diverged, and zero for the other engines.</summary>
     public long ConformedTransitions { get; internal set; }
     /// <summary>A diagnostic when the exploration could not finish or the model looks wrong.</summary>
     public string? Note { get; internal set; }
 
     internal string Mode = "";
-    // Implementation steps behind ConformedTransitions, each the depth of the state it leaves plus one, so the cost of the run.
+    // Implementation steps behind ConformedTransitions, each the depth of the state it leaves plus one, or one on a clone, so the cost of the run.
     internal long ConformedSteps;
     internal string[] ActionNames = [];
     internal long[] ActionFired = [];
@@ -852,7 +852,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport<S> re
         return new(_spec.Initial, steps, false);
     }
 
-    readonly record struct ConformFailure(Transition<S> Last, int Step, string? Reason, Exception? Error);
+    readonly record struct ConformFailure(Transition<S> Last, int Step, string? Reason, Exception? Error, bool OnClone = false);
 
     // Drive the implementation along every transition the walk counted: for each node in breadth first order, a fresh
     // implementation follows the node's path and then takes one transition enabled there. The first failure in that order
@@ -906,6 +906,95 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport<S> re
         return null;
     }
 
+    // With a clone, the implementation that took the transition into a node is kept as the node's, and each transition
+    // out of it is one step on a clone, so no path is replayed. A level is driven before the next, holding the next
+    // level's implementations, so the order is still breadth first. The initial state's transitions take fresh ones.
+    public string? Conform<TSut>(Func<TSut> create, Func<TSut, Transition<S>, string?> apply, Func<TSut, TSut> clone, int threads, out Exception? error)
+    {
+        error = null;
+        var count = _gaveUp ? _gaveUpAt : Nodes.Count;
+        while (count > 0 && _depths[count - 1] == _maxDepth) count--;
+        var chunk = Math.Clamp(16384 / _pairs, 1, 4096);
+        var conformed = new int[chunk];
+        var failures = new ConformFailure?[chunk];
+        var options = new ParallelOptions { MaxDegreeOfParallelism = threads };
+        var level = new TSut[1];
+        for (int levelStart = 0, levelEnd = 1; levelStart < count;)
+        {
+            var end = Math.Min(levelEnd, count);
+            // A node's children follow those of the nodes before it, in the order of the transitions that found them.
+            var firstChild = new int[end - levelStart + 1];
+            var child = levelEnd;
+            for (int k = 0; k < end - levelStart; k++)
+            {
+                firstChild[k] = child;
+                while (child < Nodes.Count && _parent[child] == levelStart + k) child++;
+            }
+            firstChild[^1] = child;
+            var next = new TSut[Math.Max(Math.Min(child, count) - levelEnd, 0)];
+            var current = level;
+            int start = levelStart, nextStart = levelEnd;
+            for (int chunkStart = levelStart; chunkStart < end; chunkStart += chunk)
+            {
+                var width = Math.Min(chunk, end - chunkStart);
+                var from = chunkStart;
+                System.Threading.Tasks.Parallel.For(0, width, options, i =>
+                {
+                    var node = from + i;
+                    var k = node - start;
+                    var sut = current[k];
+                    current[k] = default!;
+                    var state = Nodes[node].State;
+                    var depth = _depths[node];
+                    int c = firstChild[k], passed = 0;
+                    ConformFailure? failure = null;
+                    for (int a = 0; a < _actions.Count && failure is null; a++)
+                    {
+                        var action = _actions[a];
+                        for (int g = 0; g < action.ArgCount; g++)
+                        {
+                            if (!action.Enabled(state, g)) continue;
+                            var last = new Transition<S>(depth, a, g, action.Name, _spec.ArgName(a, g), state, action.Apply(state, g));
+                            var step = node == 0 ? -1 : depth;
+                            try
+                            {
+                                var taken = node == 0 ? create() : clone(sut);
+                                step = depth;
+                                if (apply(taken, last) is { } reason) failure = new(last, step, reason, null);
+                                else if (c < firstChild[k + 1] && _edgeAction[c] == a && _edgeArg[c] == g)
+                                {
+                                    if (c - nextStart < next.Length) next[c - nextStart] = taken;
+                                    c++;
+                                }
+                            }
+                            catch (Exception e) { failure = new(last, step, null, e); }
+                            if (failure is not null) break;
+                            passed++;
+                        }
+                    }
+                    conformed[i] = passed;
+                    failures[i] = failure;
+                });
+                for (int i = 0; i < width; i++)
+                {
+                    _report.ConformedTransitions += conformed[i];
+                    _report.ConformedSteps += conformed[i];
+                    if (failures[i] is { } failure) return Diverged(chunkStart + i, Replayed(create, apply, chunkStart + i, failure), out error);
+                    _report.ConformedStates++;
+                }
+            }
+            level = next;
+            levelStart = levelEnd;
+            levelEnd = child;
+        }
+        return null;
+    }
+
+    // A divergence on a clone is driven again from a fresh implementation down the node's path, so it reads as it would
+    // without one, and one that does not recur is put down to the clone.
+    ConformFailure Replayed<TSut>(Func<TSut> create, Func<TSut, Transition<S>, string?> apply, int node, ConformFailure failure)
+        => node == 0 ? failure : Drive(create, apply, PathTo(node), failure.Last) ?? failure with { OnClone = true };
+
     // Step is -1 when create threw, below the path's length when a step of the path failed, and the path's length when the transition itself did.
     static ConformFailure? Drive<TSut>(Func<TSut> create, Func<TSut, Transition<S>, string?> apply, Transition<S>[] path, Transition<S> last)
     {
@@ -933,6 +1022,7 @@ sealed class SpecFrontier<S>(Spec<S> spec, SpecFault<S>? fault, SpecReport<S> re
                                                  : "\n  Implementation threw at step ").Append(failure.Step + 1);
         // Each step of a path was the transition taken when the node it leaves was conformed, so it had already conformed once.
         if (onPath) sb.Append(", on a path that had already conformed: the implementation is not deterministic, or its instances share state");
+        else if (failure.OnClone) sb.Append(", on a clone but not when replayed on a fresh instance: the clone is not a faithful copy, or the implementation is not deterministic");
         if (error is not null) sb.Append("\n         Error: ").Append(error.GetType().Name).Append(": ").Append(error.Message);
         else if (failure.Reason!.Length != 0) sb.Append("\n        Reason: ").Append(failure.Reason);
         sb.Append("\n         Trace: ");
@@ -1299,7 +1389,7 @@ public static partial class Check
     /// <summary>Enumerate the whole reachable state space breadth first, checking every requirement on every transition. Outstanding <see cref="Spec{S}.Response(string, string, Func{S, S, bool}, Func{S, S, bool}, int, Func{S, S, bool}?, string?)">Response</see> deadlines and <see cref="Spec{S}.Precedes(string, string, Func{S, S, bool}, Func{S, S, bool})">Precedes</see> history are part of the search state, so when the space closes every requirement is proved for the model, not sampled. Any violation is reported with a shortest path to it.</summary>
     /// <param name="spec">The specification to explore.</param>
     /// <param name="writeLine">WriteLine function for the proof certificate.</param>
-    /// <param name="maxStates">Give up after this many distinct states (default 10,000,000, measured at 2.0GB peak and under four seconds when actually reached). Hitting this proves nothing; declare a <see cref="Spec{S}.Boundary">Boundary</see> instead and the exploration closes over a region you chose. The boundary applies here, to <see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see> and to <see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int)">ConformExhaustive</see>, not to <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see> or <see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>, whose walks are already bounded by their step count and so cannot fail to terminate. Raising it much further is not free: the cost is linear in states, so ten times this is twenty gigabytes, and the point of the limit is to turn an unbounded model into a report rather than into an out of memory.</param>
+    /// <param name="maxStates">Give up after this many distinct states (default 10,000,000, measured at 2.0GB peak and under four seconds when actually reached). Hitting this proves nothing; declare a <see cref="Spec{S}.Boundary">Boundary</see> instead and the exploration closes over a region you chose. The boundary applies here, to <see cref="Check.Faults{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Faults</see> and to <see cref="Check.ConformExhaustive{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, int, Func{TSut, TSut}?)">ConformExhaustive</see>, not to <see cref="Check.Sample{S}(Spec{S}, System.Action{string}?, int, int, string?, long, int, int)">Sample</see> or <see cref="Check.Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>, whose walks are already bounded by their step count and so cannot fail to terminate. Raising it much further is not free: the cost is linear in states, so ten times this is twenty gigabytes, and the point of the limit is to turn an unbounded model into a report rather than into an out of memory.</param>
     /// <param name="maxDepth">Stop after this many steps from the initial state. Like <paramref name="maxStates"/> and unlike <see cref="Spec{S}.Boundary">Boundary</see> this truncates rather than scopes, so the report is not closed and proves nothing.</param>
     /// <param name="threads">Threads to expand each frontier level on, default 1. Results do not depend on it: expansion is parallel but insertion is sequential in source order, so the state count, the counterexample chosen among several at the same depth, and every coverage number are the same on one thread as on many. That holds for a failing run too: a violation stops the inserting, but the node it was found in is evaluated to the end either way, because the parallel path expands a whole node before inserting any of it. It is opt in because the sequential visited set bounds the speedup, so it only pays when guards, transitions and requirement predicates are expensive - measured on 22 cores at about 2x for costly delegates and about 0.8x for free ones, in Tests/SpecScaleTests - or when the model is cyclic, since a successor already seen is then recognised off the main thread, which made the cyclic worked examples 17% to 34% faster. Cheap delegates are the reason it is off by default: buffering a level and handing it out costs more than it saves, so this is a loss rather than a wash. Above one thread the delegates, and the state's Equals and GetHashCode, must also be thread safe, not merely pure.</param>
     /// <param name="throwOnViolation">Throw a <see cref="CsCheckException"/> on the first violation (default true).</param>
@@ -1902,16 +1992,17 @@ public static partial class Check
     }
 
     /// <summary>Check a real implementation conforms to the specification on every transition of its reachable state space, rather than on sampled traces. The space is enumerated as <see cref="Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> enumerates it, proving the requirements on the way, and then for every state in breadth first order a fresh implementation is driven down a shortest path to it and one step further on each action enabled there, with <paramref name="apply"/> comparing it to the model after every step. So a clean run means the implementation took every transition the model has and agreed on each, and a divergence is reported on a shortest path to it, with no shrinking needed.</summary>
-    /// <remarks>Each state is reached by one path. Behaviour that depends on how a state was reached, beyond what the model state records, is only covered by <see cref="Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>'s random walks, so the two are complementary. <para>The implementation must be deterministic, as for Conform: the steps of a path are driven again for every transition out of the state it reaches, and a step that conformed once and then diverges is reported as nondeterminism. Nondeterminism the abstraction never reads, such as a fresh Guid only ever compared for equality, is fine.</para> <para>The cost in implementation steps is the sum, over transitions, of the depth of the state each leaves plus one, so a deep space takes many more steps than it has transitions. The report gives the count.</para></remarks>
+    /// <remarks>Each state is reached by one path. Behaviour that depends on how a state was reached, beyond what the model state records, is only covered by <see cref="Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>'s random walks, so the two are complementary. <para>The implementation must be deterministic, as for Conform: without <paramref name="clone"/> the steps of a path are driven again for every transition out of the state it reaches, and a step that conformed once and then diverges is reported as nondeterminism. Nondeterminism the abstraction never reads, such as a fresh Guid only ever compared for equality, is fine.</para> <para>The cost in implementation steps is the sum, over transitions, of the depth of the state each leaves plus one, so a deep space takes many more steps than it has transitions. The report gives the count. With <paramref name="clone"/> it is one step per transition.</para></remarks>
     /// <param name="spec">The specification to conform to.</param>
-    /// <param name="create">Creates a fresh implementation for each transition checked.</param>
+    /// <param name="create">Creates a fresh implementation for each transition checked, or with <paramref name="clone"/> for each transition out of the initial state.</param>
     /// <param name="apply">Performs one step on the implementation, returning null when it agrees with the model state the specification reached, or a short description of the divergence for the failure message.</param>
     /// <param name="writeLine">WriteLine function for the report.</param>
     /// <param name="maxStates">Give up after this many distinct states (default 10,000,000). The states reached before then are still conformed, but the report is not closed.</param>
     /// <param name="maxDepth">Stop after this many steps from the initial state. The states short of it are still conformed, but the report is not closed.</param>
-    /// <param name="threads">The number of threads to drive the implementation on (default number logical CPUs), so <paramref name="create"/> and <paramref name="apply"/> must be safe to call on different instances at once, as for Conform. The model is explored on one thread first. Results do not depend on it.</param>
+    /// <param name="threads">The number of threads to drive the implementation on (default number logical CPUs), so <paramref name="create"/>, <paramref name="apply"/> and <paramref name="clone"/> must be safe to call on different instances at once, as for Conform. The model is explored on one thread first. Results do not depend on it.</param>
+    /// <param name="clone">Copies an implementation. Each state then keeps the implementation that took the transition into it, and each transition out of it is one step on a copy, so a path is only replayed to confirm a divergence: one seen on a copy is replayed on a fresh instance before it is reported, and put down to the copy if it does not recur. A copy must share nothing a step changes. An implementation is held for every state of the next breadth first level.</param>
     public static SpecReport<S> ConformExhaustive<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, string?> apply,
-        Action<string>? writeLine = null, int maxStates = 10_000_000, int maxDepth = int.MaxValue, int threads = -1)
+        Action<string>? writeLine = null, int maxStates = 10_000_000, int maxDepth = int.MaxValue, int threads = -1, Func<TSut, TSut>? clone = null)
     {
         var report = Explore(spec, null, $"Spec.ConformExhaustive{SutClause<TSut>()} to {Plural(spec.Requirements.Count, "requirement")}",
                              maxStates, maxDepth, 1, out var violation, out var frontier);
@@ -1920,7 +2011,10 @@ public static partial class Check
             Reporter.Write(writeLine, report);
             ThrowHelper.Throw(violation.ToString(spec.Printer));
         }
-        var divergence = frontier!.Conform(create, apply, threads < 1 ? Threads : threads, out var error);
+        if (threads < 1) threads = Threads;
+        Exception? error;
+        var divergence = clone is null ? frontier!.Conform(create, apply, threads, out error)
+                                       : frontier!.Conform(create, apply, clone, threads, out error);
         Reporter.Write(writeLine, report);
         if (divergence is not null) ThrowHelper.Throw(divergence, error);
         return report;
@@ -1928,6 +2022,6 @@ public static partial class Check
 
     /// <summary>Check a real implementation conforms to the specification on every transition of its reachable state space, with <paramref name="apply"/> returning false when the implementation disagrees with the model. See the overload whose <c>apply</c> returns the reason.</summary>
     public static SpecReport<S> ConformExhaustive<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, bool> apply,
-        Action<string>? writeLine = null, int maxStates = 10_000_000, int maxDepth = int.MaxValue, int threads = -1)
-        => ConformExhaustive(spec, create, (sut, t) => apply(sut, t) ? null : "", writeLine, maxStates, maxDepth, threads);
+        Action<string>? writeLine = null, int maxStates = 10_000_000, int maxDepth = int.MaxValue, int threads = -1, Func<TSut, TSut>? clone = null)
+        => ConformExhaustive(spec, create, (sut, t) => apply(sut, t) ? null : "", writeLine, maxStates, maxDepth, threads, clone);
 }

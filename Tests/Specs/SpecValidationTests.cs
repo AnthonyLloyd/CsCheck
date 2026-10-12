@@ -1058,6 +1058,39 @@ public partial class SpecValidationTests
         await Assert.That(message).Contains(">>  3 Stay");
     }
 
+    /// <summary>With a clone, each transition is one step on a copy of the implementation that reached the state it
+    /// leaves, and no path is replayed: the initial state's transitions take fresh instances and every other one a clone.</summary>
+    [Test]
+    public async Task ConformExhaustive_With_Clone_Takes_Each_Transition_Once()
+    {
+        int created = 0, cloned = 0, applied = 0;
+        var report = IncOrStay().ConformExhaustive(() => { created++; return new int[1]; }, (sut, t) =>
+        {
+            applied++;
+            var from = sut[0] == t.Before;
+            sut[0] = t.After;
+            return from;
+        }, threads: 1, clone: sut => { cloned++; return [.. sut]; });
+        await Assert.That(report.ConformedTransitions).IsEqualTo(report.Transitions);
+        await Assert.That((created, cloned, applied)).IsEqualTo((2, 5, 7));
+        await Assert.That(report.ToString()).Contains("conformed on 7 transitions from 4 states, 7 implementation steps");
+    }
+
+    /// <summary>A clone that shares the implementation's state lets one transition's step leak into the next taken from
+    /// the same state. The divergence that causes is replayed on a fresh instance, does not recur, and is put down to the
+    /// clone rather than to the step.</summary>
+    [Test]
+    public async Task ConformExhaustive_Puts_A_Divergence_That_Does_Not_Recur_Down_To_The_Clone()
+    {
+        var message = Assert.Throws<CsCheckException>(() => IncOrStay().ConformExhaustive(() => new int[1], (sut, t) =>
+        {
+            var from = sut[0] == t.Before;
+            sut[0] = t.After;
+            return from;
+        }, clone: sut => sut))!.Message;
+        await Assert.That(message).Contains("at step 2, on a clone but not when replayed on a fresh instance");
+    }
+
     /// <summary>An implementation that throws fails at the step it threw on, with its exception kept as the inner
     /// exception, and one that cannot be created fails before any step.</summary>
     [Test]
@@ -1076,6 +1109,17 @@ public partial class SpecValidationTests
             () => throw new InvalidOperationException("create boom"), (_, _) => true))!;
         await Assert.That(created.InnerException!.Message).IsEqualTo("create boom");
         await Assert.That(created.Message).Contains("Implementation threw when created");
+        var onClone = Assert.Throws<CsCheckException>(() => IncOrStay().ConformExhaustive(() => new int[1], (sut, t) =>
+        {
+            if (t.Before == 2 && t.Action == "Inc") throw new InvalidOperationException("apply boom");
+            sut[0] = t.After;
+            return true;
+        }, clone: sut => [.. sut]))!;
+        await Assert.That(onClone.Message).IsEqualTo(e.Message);
+        var cloneThrew = Assert.Throws<CsCheckException>(() => IncOrStay().ConformExhaustive<int, int[]>(() => new int[1], (_, _) => true,
+            clone: _ => throw new InvalidOperationException("clone boom")))!;
+        await Assert.That(cloneThrew.InnerException!.Message).IsEqualTo("clone boom");
+        await Assert.That(cloneThrew.Message).Contains("Implementation threw at step 2, on a clone but not when replayed");
     }
 
     /// <summary>A specification that fails its own requirements says nothing about an implementation, so the violation
@@ -1110,11 +1154,16 @@ public partial class SpecValidationTests
         await Assert.That(report.ConformedStates).IsEqualTo(4);
         await Assert.That(report.ConformedTransitions).IsEqualTo(report.Transitions);
         await Assert.That(report.ToString()).Contains("conformed on 8 transitions from 4 states, 20 implementation steps");
+        var cloned = unbounded.ConformExhaustive(() => new int[1], Track, maxDepth: 4, clone: sut => [.. sut]);
+        await Assert.That(cloned.ToString()).Contains("conformed on 8 transitions from 4 states, 8 implementation steps");
         // Giving up stops mid state, so that state is left out and the count falls short of the report's by its edges.
         var gaveUp = Spec.From(0).Action("Inc", i => i + 1).ConformExhaustive(() => new int[1], Track, maxStates: 5);
         await Assert.That(gaveUp.Closed).IsFalse();
         await Assert.That(gaveUp.ConformedStates).IsEqualTo(4);
         await Assert.That(gaveUp.ConformedTransitions).IsEqualTo(gaveUp.Transitions - 1);
+        var gaveUpCloned = Spec.From(0).Action("Inc", i => i + 1).ConformExhaustive(() => new int[1], Track, maxStates: 5, clone: sut => [.. sut]);
+        await Assert.That(gaveUpCloned.ConformedStates).IsEqualTo(4);
+        await Assert.That(gaveUpCloned.ConformedTransitions).IsEqualTo(gaveUpCloned.Transitions - 1);
     }
 
     /// <summary>A model that throws surfaces its own exception rather than a NullReferenceException from the printer.</summary>

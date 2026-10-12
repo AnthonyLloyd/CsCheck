@@ -58,4 +58,12 @@ public sealed class RefreshCache
         foreach (var e in _entries.Values)
             e.Age = Math.Min(e.Age + 1, Cap);
     }
+
+    /// <summary>A copy that shares no entry with this cache, so stepping one leaves the other as it was.</summary>
+    public RefreshCache Clone()
+    {
+        var copy = new RefreshCache();
+        foreach (var (k, e) in _entries) copy._entries[k] = new() { Version = e.Version, Age = e.Age, Loads = e.Loads };
+        return copy;
+    }
 }

@@ -679,11 +679,11 @@ Three things to know:
 
 - **It is one path per state.** Behaviour that depends on how a state was reached, beyond what the model state
   records, is only covered by `Conform`'s random walks, so run both.
-- **The implementation must be deterministic**, as for `Conform`. Each step of a path is driven again for every
-  transition out of the state it reaches, and was itself the transition under test when the state before it was
-  conformed, so a step that conformed then and diverges now is reported as the implementation's nondeterminism (or
-  state shared between instances) rather than as a defect in that step. Nondeterminism the abstraction never reads,
-  such as a fresh `Guid` only compared for equality, is fine.
+- **The implementation must be deterministic**, as for `Conform`. Without `clone`, each step of a path is driven
+  again for every transition out of the state it reaches, and was itself the transition under test when the state
+  before it was conformed, so a step that conformed then and diverges now is reported as the implementation's
+  nondeterminism (or state shared between instances) rather than as a defect in that step. Nondeterminism the
+  abstraction never reads, such as a fresh `Guid` only compared for equality, is fine.
 - **The cost is the depth.** Each transition costs one implementation step more than the depth of the state it
   leaves, and the third number in the line is their total. The model is explored on one thread and the implementation is
   driven on all of them by default, so `create` and `apply` must be safe to call on different instances at once,
@@ -692,6 +692,12 @@ Three things to know:
 A model that does not close can still be conformed as far as the search went: every state short of `maxDepth`, or
 before the state where it gave up at `maxStates`, has all its transitions driven, and the report says it is not
 closed.
+
+When the implementation can be copied, pass `clone:`. Each state keeps the implementation that took the transition
+into it, and each transition out of it is one step on a copy, so the refresh cache takes 6,713 steps instead of
+92,114. A copy must share nothing a step changes. A path is only replayed to confirm a divergence: one seen on a copy
+is replayed on a fresh instance before it is reported, so it reads as it would without `clone`, and one that does not
+recur is put down to the copy. An implementation is held for every state of the next breadth-first level.
 
 **The dependency runs implementation → specification → tests, and never back.** The engine owns the vocabulary (the
 message kinds, the sequence relations, what a step emits, the connection status), and the specification does
