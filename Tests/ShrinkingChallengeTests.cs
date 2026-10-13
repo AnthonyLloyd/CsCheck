@@ -7,7 +7,7 @@ using CsCheck;
 
 public class ShrinkingChallengeTests
 {
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No1_Bound5()
     {
         static short Sum(short[] l)
@@ -25,7 +25,7 @@ public class ShrinkingChallengeTests
         });
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No2_LargeUnionList()
     {
         Gen.Int.Array.Array
@@ -41,7 +41,7 @@ public class ShrinkingChallengeTests
         });
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No3_Reverse()
     {
         Gen.Int.Array
@@ -55,7 +55,7 @@ public class ShrinkingChallengeTests
         });
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No4_Calculator()
     {
         static bool DivSubTerms(object o) => o switch
@@ -88,7 +88,7 @@ public class ShrinkingChallengeTests
         });
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No5_LengthList()
     {
         Gen.Int.Array
@@ -100,21 +100,21 @@ public class ShrinkingChallengeTests
         });
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No6_Difference_MustNotBeZero()
     {
         Gen.Int.Positive.Select(Gen.Int.Positive)
         .Sample((i0, i1) => i0 < 10 || i0 != i1);
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No6_Difference_MustNotBeSmall()
     {
         Gen.Int.Positive.Select(Gen.Int.Positive)
         .Sample((i0, i1) => i0 < 10 || Math.Abs(i0 - i1) > 4 || i0 == i1);
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No6_Difference_MustNotBeOne()
     {
         Gen.Int.Positive.Select(Gen.Int.Positive)
@@ -123,7 +123,7 @@ public class ShrinkingChallengeTests
 
     class Heap { public int Head; public Heap? Left; public Heap? Right; }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No7_BinHeap()
     {
         static uint Count(Heap? h) => h is null ? 0 : 1 + Count(h.Left) + Count(h.Right);
@@ -185,7 +185,7 @@ public class ShrinkingChallengeTests
         }, print: Print);
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No8_Coupling()
     {
         Gen.Int[0, 100].SelectMany(l => Gen.Int[0, l - 1].Array[l])
@@ -200,7 +200,7 @@ public class ShrinkingChallengeTests
         });
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No9_Deletion()
     {
         Gen.Int.List[1, 100].SelectMany(l => Gen.Int[0, l.Count - 1].Select(i => (l, i)))
@@ -213,14 +213,14 @@ public class ShrinkingChallengeTests
         });
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No10_Distinct()
     {
         Gen.Int.Array
         .Sample(a => a.ToHashSet().Count < 3);
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("meant to fail")]
     public void No11_NestedLists()
     {
         Gen.Int.Array.Array
