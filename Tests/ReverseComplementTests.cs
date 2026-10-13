@@ -11,7 +11,7 @@ namespace Tests
 
     public class ReverseComplementTests()
     {
-        [Test, Skip("Long running test.")]
+        [Test, Explicit("Long running test.")]
         public void ReverseComplement_Faster()
         {
             if (!File.Exists(FastaUtils.Fasta.Filename)) FastaUtils.Fasta.NotMain(25_000_000, FastaUtils.Fasta.Filename);
@@ -25,7 +25,7 @@ namespace Tests
 
     public class CausalTests
     {
-        [Test, Skip("Long running test.")]
+        [Test, Explicit("Long running test.")]
         public void Fasta()
         {
             Causal.Profile(() => FastaUtils.Fasta.NotMain(10_000_000, null)).Output(TUnitX.WriteLine);

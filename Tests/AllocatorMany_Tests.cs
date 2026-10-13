@@ -154,7 +154,7 @@ public class AllocatorMany_Tests
         ])).IsTrue();
     }
 
-    [Test][Skip("Takes too long")]
+    [Test][Explicit("Takes too long")]
     public async Task Example05()
     {
         var actual = AllocatorMany.Allocate(
@@ -186,7 +186,7 @@ public class AllocatorMany_Tests
         await Assert.That(actual.KnownGlobal).IsTrue();
     }
 
-    [Test][Skip("fails in parallel")]
+    [Test][Explicit("fails in parallel")]
     public async Task Example08()
     {
         var actual = AllocatorMany.Allocate(
@@ -218,7 +218,7 @@ public class AllocatorMany_Tests
         ])).IsTrue();
     }
 
-    [Test][Skip("fails in parallel")]
+    [Test][Explicit("fails in parallel")]
     public async Task Example10()
     {
         Gen.Int[2, 20].SelectMany(rows =>
@@ -270,25 +270,6 @@ public class AllocatorMany_Tests
         var actual = AllocatorMany.Allocate(p, q, accounts, new Random(123), 10);
     }
 
-    [Test][Skip("remove?")]
-    public async Task AllocateTest()
-    {
-        Gen.Int[2, 20].SelectMany(rows =>
-            Gen.Select(
-                Gen.Int[1, 300].Array[rows],
-                Gen.Int[1, 100].Array[rows],
-                Gen.Int[1, 1000].Select(i => (double)i).Array[2, 10],
-                Gen.Int.Uniform))
-        .Sample((rowPrice, rowTotal, weight, seed) =>
-        {
-            var random = new Random(seed);
-            var colTotal = Allocator.Allocate(rowTotal.Sum(), weight);
-            var allocation1 = AllocatorMany.Allocate(rowPrice, rowTotal, colTotal, random, 60);
-            var allocation2 = AllocatorMany.Allocate(rowPrice, rowTotal, colTotal, random, 60);
-            return allocation1.RMSE == allocation2.RMSE;
-        }, seed: "0001n4MP9UR1", iter: 1);
-    }
-
     private static bool TotalsCorrectly(int[] rowTotal, int[] colTotal, int[][] results)
     {
         for (int i = 0; i < rowTotal.Length; i++)
@@ -300,7 +281,7 @@ public class AllocatorMany_Tests
         return true;
     }
 
-    [Test, Skip("Long-running; run explicitly")]
+    [Test, Explicit("Long-running; run explicitly")]
     public void CertificateNeverCertifiesNonOptimum()
     {
         var iter = EnvInt("SOUND_ITER", 20000);
@@ -321,7 +302,7 @@ public class AllocatorMany_Tests
         TUnitX.WriteLine($"checked={checkedN} withCertifiedOptimum={withCert}");
     }
 
-    [Test, Skip("Long-running; run explicitly")]
+    [Test, Explicit("Long-running; run explicitly")]
     public void EveryCombinationFindsAndProvesOptimum()
     {
         var iter = EnvInt("EC_ITER", 40000);
@@ -351,7 +332,7 @@ public class AllocatorMany_Tests
         TUnitX.WriteLine($"checked={checkedN} provedGlobal={provedGlobal}");
     }
 
-    [Test, Skip("Long-running; run explicitly")]
+    [Test, Explicit("Long-running; run explicitly")]
     public void AllocateGlobalClaimsAreCorrect()
     {
         var iter = EnvInt("E2E_ITER", 4000);

@@ -6,7 +6,7 @@ using CsCheck;
 
 public class StressTests()
 {
-    [Test, Skip("don't normally run the stress test")]
+    [Test, Explicit("don't normally run the stress test")]
     public async Task Stress_Test()
     {
         const long oneMB = 1024 * 1024;

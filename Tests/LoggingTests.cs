@@ -63,7 +63,7 @@ public class LoggingTests
     }
 
     //Test below can be used to see example of output
-    [Test][Skip("Only run if you want to verify Tyche output")]
+    [Test][Explicit("Only run if you want to verify Tyche output")]
     [Arguments(1)]
     public void Bool_Distribution_WithTycheLogs_ToFile(int generatedIntUponTrue)
     {

@@ -72,7 +72,7 @@ public class TerminationDetectionTests
     /// <summary>How the space grows with the bound, and evidence the bound is not what makes the algorithm look correct.
     /// The original's own constraint is the largest row. Skipped in normal CI because the final row (1.5M states)
     /// takes several seconds; run explicitly to see the scaling table.</summary>
-    [Test, Skip("Long-running; run explicitly")]
+    [Test, Explicit("Long-running; run explicitly")]
     public async Task Growth_With_The_Bound()
     {
         // (2,2,4) and (2,2,9) produce identical state counts: the token accumulator bound only matters when it

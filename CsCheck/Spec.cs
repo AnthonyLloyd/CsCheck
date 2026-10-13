@@ -2012,15 +2012,23 @@ public static partial class Check
             ThrowHelper.Throw(violation.ToString(spec.Printer));
         }
         if (threads < 1) threads = Threads;
-        Exception? error;
-        var divergence = clone is null ? frontier!.Conform(create, apply, threads, out error)
+        var divergence = clone is null ? frontier!.Conform(create, apply, threads, out Exception? error)
                                        : frontier!.Conform(create, apply, clone, threads, out error);
         Reporter.Write(writeLine, report);
         if (divergence is not null) ThrowHelper.Throw(divergence, error);
         return report;
     }
 
-    /// <summary>Check a real implementation conforms to the specification on every transition of its reachable state space, with <paramref name="apply"/> returning false when the implementation disagrees with the model. See the overload whose <c>apply</c> returns the reason.</summary>
+    /// <summary>Check a real implementation conforms to the specification on every transition of its reachable state space, rather than on sampled traces. The space is enumerated as <see cref="Exhaustive{S}(Spec{S}, System.Action{string}?, int, int, int, bool)">Exhaustive</see> enumerates it, proving the requirements on the way, and then for every state in breadth first order a fresh implementation is driven down a shortest path to it and one step further on each action enabled there, with <paramref name="apply"/> comparing it to the model after every step. So a clean run means the implementation took every transition the model has and agreed on each, and a divergence is reported on a shortest path to it, with no shrinking needed.</summary>
+    /// <remarks>Each state is reached by one path. Behaviour that depends on how a state was reached, beyond what the model state records, is only covered by <see cref="Conform{S, TSut}(Spec{S}, Func{TSut}, Func{TSut, Transition{S}, bool}, Action{string}?, int, int, string?, long, int, int)">Conform</see>'s random walks, so the two are complementary. <para>The implementation must be deterministic, as for Conform: without <paramref name="clone"/> the steps of a path are driven again for every transition out of the state it reaches, and a step that conformed once and then diverges is reported as nondeterminism. Nondeterminism the abstraction never reads, such as a fresh Guid only ever compared for equality, is fine.</para> <para>The cost in implementation steps is the sum, over transitions, of the depth of the state each leaves plus one, so a deep space takes many more steps than it has transitions. The report gives the count. With <paramref name="clone"/> it is one step per transition.</para></remarks>
+    /// <param name="spec">The specification to conform to.</param>
+    /// <param name="create">Creates a fresh implementation for each transition checked, or with <paramref name="clone"/> for each transition out of the initial state.</param>
+    /// <param name="apply">Performs one step on the implementation, returning true when it agrees with the model state the specification reached, or false for failure.</param>
+    /// <param name="writeLine">WriteLine function for the report.</param>
+    /// <param name="maxStates">Give up after this many distinct states (default 10,000,000). The states reached before then are still conformed, but the report is not closed.</param>
+    /// <param name="maxDepth">Stop after this many steps from the initial state. The states short of it are still conformed, but the report is not closed.</param>
+    /// <param name="threads">The number of threads to drive the implementation on (default number logical CPUs), so <paramref name="create"/>, <paramref name="apply"/> and <paramref name="clone"/> must be safe to call on different instances at once, as for Conform. The model is explored on one thread first. Results do not depend on it.</param>
+    /// <param name="clone">Copies an implementation. Each state then keeps the implementation that took the transition into it, and each transition out of it is one step on a copy, so a path is only replayed to confirm a divergence: one seen on a copy is replayed on a fresh instance before it is reported, and put down to the copy if it does not recur. A copy must share nothing a step changes. An implementation is held for every state of the next breadth first level.</param>
     public static SpecReport<S> ConformExhaustive<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, bool> apply,
         Action<string>? writeLine = null, int maxStates = 10_000_000, int maxDepth = int.MaxValue, int threads = -1, Func<TSut, TSut>? clone = null)
         => ConformExhaustive(spec, create, (sut, t) => apply(sut, t) ? null : "", writeLine, maxStates, maxDepth, threads, clone);

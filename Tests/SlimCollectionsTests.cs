@@ -44,7 +44,7 @@ public class SlimCollectionsTests()
         );
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("fails")]
     public void SetSlim_Parallel()
     {
         Gen.Byte.Array.Select(a => new SetSlim<byte>(a))
@@ -74,7 +74,7 @@ public class SlimCollectionsTests()
             repeat: 100, raiseexception: false, writeLine: TUnitX.WriteLine);
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("fails")]
     public void SetSlim_Performance_Contains()
     {
         Gen.Int.Array.Select(a => (a, new SetSlim<int>(a), new HashSet<int>(a)))
@@ -144,7 +144,7 @@ public class SlimCollectionsTests()
             repeat: 100, raiseexception: false, writeLine: TUnitX.WriteLine);
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("fails")]
     public void MapSlim_Performance_IndexOf()
     {
         Gen.Dictionary(Gen.Int, Gen.Byte)
@@ -161,7 +161,7 @@ public class SlimCollectionsTests()
             repeat: 100, writeLine: TUnitX.WriteLine);
     }
 
-    [Test, Skip("fails")]
+    [Test, Explicit("fails")]
     public void MapSlim_Performance_Increment()
     {
         Gen.Int[0, 255].Array

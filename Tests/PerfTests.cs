@@ -26,7 +26,7 @@ public class PerfTests()
         , repeat: 100, raiseexception: false, writeLine: TUnitX.WriteLine);
     }
 
-    [Test][Skip("They are equal")]
+    [Test][Explicit("They are equal")]
     public void TryChecked_Vs_If()
     {
         static ulong TryChecked(ulong a, ulong b)
@@ -54,7 +54,7 @@ public class PerfTests()
             If
         , repeat: 100);
     }
-    [Test, Skip("If is a lot faster")]
+    [Test]
     public void TryChecked_Vs_If_Overflow()
     {
         static ulong TryChecked(ulong a, ulong b)

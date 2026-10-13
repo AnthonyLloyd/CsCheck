@@ -574,7 +574,7 @@ public class CheckTests
         await Assert.That(lines.All(l => l.StartsWith("Passed ", StringComparison.Ordinal))).IsTrue();
     }
 
-    [Test, Skip("failing")]
+    [Test, Explicit("failing")]
     public void SampleParallel_ConcurrentDictionary()
     {
         Gen.Dictionary(Gen.Int[0, 100], Gen.Byte)[0, 10].Select(l => new ConcurrentDictionary<int, byte>(l))
