@@ -97,7 +97,7 @@ BREAKING CHANGES:
         <AnalysisMode>All</AnalysisMode>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.299" PrivateAssets="All" />
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.303" PrivateAssets="All" />
         <None Include="../CsCheck.png" Pack="true" PackagePath="" Visible="False" />
         <None Include="../README.md" Pack="true" PackagePath="" Visible="False" />
     </ItemGroup>
