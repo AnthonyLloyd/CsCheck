@@ -732,6 +732,15 @@ dotnet run --treenode-filter /*/*/*/*_Perf -e CsCheck_Threads=1 -c Release --pro
 
 The other variables are `CsCheck_Replay`, `CsCheck_Timeout`, `CsCheck_Ulps`, `CsCheck_WhereLimit`, `CsCheck_SingleLimit`, `CsCheck_AllocAll` and `CsCheck_WarmUp`. Each variable sets the `Check` property of the same name, such as `Check.Iter`, which can also be set in code. Numbers are read with the invariant culture, and a value that would run nothing or hang, such as `CsCheck_Iter=0` or `CsCheck_Time=0`, throws.
 
+## For AI assistants
+
+If you are generating code that uses CsCheck, read these first:
+
+- [llms.txt](https://github.com/AnthonyLloyd/CsCheck/blob/master/llms.txt) - a condensed API cheat sheet, key facts, and gotchas in the [llms.txt](https://llmstxt.org) format.
+- [AGENTS.md](https://github.com/AnthonyLloyd/CsCheck/blob/master/AGENTS.md) - repo conventions, build/test commands, and worked examples for every testing style.
+
+Both files are packed into the NuGet package alongside this README, so they travel with the dependency. The [Tests](https://github.com/AnthonyLloyd/CsCheck/tree/master/Tests) project is the maintained example collection.
+
 ## Development
 
 Contributions are very welcome!
