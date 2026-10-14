@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using CsCheck;
@@ -1216,12 +1215,28 @@ public class CheckTests
             Gen.Select(Gen.String, Gen.Int, (name, whiskers) => new Pet(new Cat(name, whiskers))),
             Gen.Select(Gen.String, Gen.String, (name, breed) => new Pet(new Dog(name, breed))))
         .Equality(f => f
-            .Case<Cat>(cf => cf
+            .Case<Cat>(c => c, cf => cf
                 .Compared((c, s) => c with { Name = s }, Gen.String)
                 .Ignored((c, w) => c with { Whiskers = w }, Gen.Int))
-            .Case<Dog>(df => df
+            .Case<Dog>(d => d, df => df
                 .Compared((d, s) => d with { Name = s }, Gen.String)
                 .Compared((d, b) => d with { Breed = b }, Gen.String)));
+    }
+
+    [Test]
+    public void Equality_Fields_Union_Detects_Ignored_Declared_As_Compared()
+    {
+        Assert.Throws<CsCheckException>(() =>
+            Gen.OneOf(
+                Gen.Select(Gen.String, Gen.Int, (name, whiskers) => new Pet(new Cat(name, whiskers))),
+                Gen.Select(Gen.String, Gen.String, (name, breed) => new Pet(new Dog(name, breed))))
+            .Equality(f => f
+                .Case<Cat>(c => c, cf => cf
+                    .Compared((c, s) => c with { Name = s }, Gen.String)
+                    .Compared((c, w) => c with { Whiskers = w }, Gen.Int)) // Whiskers is actually ignored
+                .Case<Dog>(d => d, df => df
+                    .Compared((d, s) => d with { Name = s }, Gen.String)
+                    .Compared((d, b) => d with { Breed = b }, Gen.String))));
     }
 
     // Two similar-but-different arms, each with two compared fields and one ignored field (Timestamp).
@@ -1248,11 +1263,11 @@ public class CheckTests
     public void Equality_Fields_Union_Both_Arms_Mixed()
     {
         GenSignal.Equality(f => f
-            .Case<Sensor>(sf => sf
+            .Case<Sensor>(s => s, sf => sf
                 .Compared((x, id) => x with { Id = id }, Gen.String)
                 .Compared((x, r) => x with { Reading = r }, Gen.Double.Unit)
                 .Ignored((x, t) => x with { Timestamp = t }, Gen.Long))
-            .Case<Gauge>(gf => gf
+            .Case<Gauge>(g => g, gf => gf
                 .Compared((x, id) => x with { Id = id }, Gen.String)
                 .Compared((x, v) => x with { Value = v }, Gen.Double.Unit)
                 .Ignored((x, t) => x with { Timestamp = t }, Gen.Long)));
@@ -1269,11 +1284,11 @@ public class CheckTests
         GenTagged.Equality(f => f
             .Compared((o, s) => o with { Tag = s }, Gen.String)
             .Union(o => o.Signal, (o, sig) => o with { Signal = sig }, sf => sf
-                .Case<Sensor>(ssf => ssf
+                .Case<Sensor>(s => s, ssf => ssf
                     .Compared((x, id) => x with { Id = id }, Gen.String)
                     .Compared((x, r) => x with { Reading = r }, Gen.Double.Unit)
                     .Ignored((x, t) => x with { Timestamp = t }, Gen.Long))
-                .Case<Gauge>(gf => gf
+                .Case<Gauge>(g => g, gf => gf
                     .Compared((x, id) => x with { Id = id }, Gen.String)
                     .Compared((x, v) => x with { Value = v }, Gen.Double.Unit)
                     .Ignored((x, t) => x with { Timestamp = t }, Gen.Long))));
@@ -1326,49 +1341,4 @@ public class CheckTests
 }
 
 #if NET11_0_OR_GREATER
-// Builds the member -> union conversion (a public constructor `T(TArm)`) once per (T, TArm) pair.
-static class UnionCtor<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T, TArm> where T : System.Runtime.CompilerServices.IUnion
-{
-    public static readonly Func<TArm, T> Up = Build();
-
-    static Func<TArm, T> Build()
-    {
-        var p = System.Linq.Expressions.Expression.Parameter(typeof(TArm), "a");
-        var ctor = typeof(T).GetConstructor([typeof(TArm)])
-            ?? throw new InvalidOperationException($"{typeof(T).Name} has no constructor taking a {typeof(TArm).Name}.");
-        return System.Linq.Expressions.Expression.Lambda<Func<TArm, T>>(
-            System.Linq.Expressions.Expression.New(ctor, p), p).Compile();
-    }
-}
-
-// A builder that scopes case declarations for a C# union type T. Because T is fixed on the builder, Case needs only
-// the arm type argument, and the predicate, down- and up-projections are all derived (IUnion.Value + the constructor).
-sealed class UnionFields<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T> where T : System.Runtime.CompilerServices.IUnion
-{
-    readonly EqualityFields<T> fields;
-    internal UnionFields(EqualityFields<T> fields) => this.fields = fields;
-
-    public UnionFields<T> Case<TArm>(Func<EqualityFields<TArm>, EqualityFields<TArm>> armFields)
-    {
-        fields.Case(t => t.Value is TArm, t => (TArm)t.Value!, (_, a) => UnionCtor<T, TArm>.Up(a), armFields);
-        return this;
-    }
-
-    public static implicit operator EqualityFields<T>(UnionFields<T> u) => u.fields;
-}
-
-static class UnionEqualityFields
-{
-    // Top-level union: hand the fields callback a UnionFields<T> so arms read as f.Case<Sensor>(...) with no .Union().
-    public static void Equality<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(this Gen<T> gen, Func<UnionFields<T>, EqualityFields<T>> fields,
-        string? seed = null, long iter = -1, int time = -1, int threads = -1, Func<(T, T), string>? print = null)
-        where T : System.Runtime.CompilerServices.IUnion
-        => gen.Equality((EqualityFields<T> f) => fields(new UnionFields<T>(f)), seed, iter, time, threads, print);
-
-    // Union-typed field: hand the callback a UnionFields<TField> so arms read as sf.Case<Sensor>(...) with no inner .Union().
-    public static EqualityFields<TParent> Union<TParent, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TField>(this EqualityFields<TParent> fields,
-        Func<TParent, TField> down, Func<TParent, TField, TParent> up, Func<UnionFields<TField>, EqualityFields<TField>> fieldFields)
-        where TField : System.Runtime.CompilerServices.IUnion
-        => fields.Union(down, up, sf => fieldFields(new UnionFields<TField>(sf)));
-}
 #endif

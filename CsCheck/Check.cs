@@ -3417,6 +3417,22 @@ public static partial class Check
         }
     }
 
+#if NET11_0_OR_GREATER
+    /// <summary>Check the equality of a C# <see langword="union"/> type, declaring each arm with the union's <c>Case</c>.
+    /// An arm's compared/ignored fields are declared against the arm payload and only exercised on instances of that arm;
+    /// instances of different arms are additionally checked to compare unequal.</summary>
+    /// <param name="gen">The sample input data generator.</param>
+    /// <param name="fields">Declares each arm of the union with <c>Case</c>, giving the arm-to-union conversion (e.g. <c>a => a</c>) and the arm's compared/ignored fields.</param>
+    /// <param name="seed">The initial seed to use for the first iteration.</param>
+    /// <param name="iter">The number of iterations to run in the sample (default 100).</param>
+    /// <param name="time">The number of seconds to run the sample.</param>
+    /// <param name="threads">The number of threads to run the sample on (default number logical CPUs).</param>
+    /// <param name="print">A function to convert the input data to a string for error reporting (default Check.Print).</param>
+    public static void Equality<T>(this Gen<T> gen, Func<UnionFields<T>, EqualityFields<T>> fields, string? seed = null, long iter = -1, int time = -1, int threads = -1,
+        Func<(T, T), string>? print = null) where T : System.Runtime.CompilerServices.IUnion
+        => gen.Equality((EqualityFields<T> f) => fields(new UnionFields<T>(f)), seed, iter, time, threads, print);
+#endif
+
     /// <summary>Check an <see cref="IEqualityComparer{T}"/> Equals and GetHashCode are consistent.</summary>
     /// <param name="gen">The sample input data generator.</param>
     /// <param name="comparer">The equality comparer to test.</param>
@@ -3698,8 +3714,9 @@ public sealed class EqualityFields<T>
     /// <summary>Add a case (arm) of a sum type whose arm payload type <typeparamref name="TArm"/> is a subtype of
     /// <typeparamref name="T"/> (e.g. an abstract record hierarchy, class hierarchy, or subtype-based One-of). The case
     /// predicate and the down/up projections are derived automatically, so only the arm's fields need to be declared.
-    /// Use the four-argument overload for sum types whose arms are not subtypes of <typeparamref name="T"/> (e.g. a C#
-    /// <see langword="union"/> whose members are distinct types).</summary>
+    /// Use the four-argument overload for sum types whose arms are not subtypes of <typeparamref name="T"/>. For a C#
+    /// <see langword="union"/> type, whose arms are not subtypes, declare the arms with the union <c>Case</c> that takes
+    /// the arm-to-union conversion (reached through the union <c>Equality</c> or <c>Union</c> overload).</summary>
     /// <param name="armFields">Declares the compared/ignored fields (and any nested cases) of the arm payload.</param>
     public EqualityFields<T> Case<TArm>(Func<EqualityFields<TArm>, EqualityFields<TArm>> armFields) where TArm : T
         => Case(static t => t is TArm, static t => (TArm)(object)t!, static (_, a) => a, armFields);
@@ -3712,7 +3729,19 @@ public sealed class EqualityFields<T>
         Func<EqualityFields<TField>, EqualityFields<TField>> fieldFields)
         => Case(static _ => true, down, up, fieldFields);
 
-    /// <summary>Descend into a sum-typed field of <typeparamref name="T"/> and return a builder whose <see cref="UnionFields{T, TField}.Case{TArm}(Func{EqualityFields{TArm}, EqualityFields{TArm}})">Case</see> declares each arm. The arm type is constrained to be a subtype of the field type <typeparamref name="TField"/>, giving compile-time safety that only real arms are declared. For a field that is a C# <see langword="union"/> (arms not subtypes) use the three-argument <see cref="Union{TField}(Func{T, TField}, Func{T, TField, T}, Func{EqualityFields{TField}, EqualityFields{TField}})">Union</see> and declare the arms with the four-argument <see cref="Case{TArm}(Func{T, bool}, Func{T, TArm}, Func{T, TArm, T}, Func{EqualityFields{TArm}, EqualityFields{TArm}})">Case</see>.</summary>
+#if NET11_0_OR_GREATER
+    /// <summary>Descend into a C# <see langword="union"/>-typed field of <typeparamref name="T"/> and declare its arms
+    /// with the union's <c>Case</c>. Like the subtype <c>Union</c> but for a field that is a C# <see langword="union"/>
+    /// (arms not subtypes), so each arm's <c>Case</c> takes its arm-to-union conversion.</summary>
+    /// <param name="down">Projects an instance to the union-typed field.</param>
+    /// <param name="up">Rebuilds an instance from a (possibly modified) field value.</param>
+    /// <param name="fieldFields">Declares the arms of the union field with <c>Case</c>.</param>
+    public EqualityFields<T> Union<TField>(Func<T, TField> down, Func<T, TField, T> up,
+        Func<UnionFields<TField>, EqualityFields<TField>> fieldFields) where TField : System.Runtime.CompilerServices.IUnion
+        => Union(down, up, (EqualityFields<TField> sf) => fieldFields(new UnionFields<TField>(sf)));
+#endif
+
+    /// <summary>Descend into a sum-typed field of <typeparamref name="T"/> and return a builder whose <see cref="UnionFields{T, TField}.Case{TArm}(Func{EqualityFields{TArm}, EqualityFields{TArm}})">Case</see> declares each arm. The arm type is constrained to be a subtype of the field type <typeparamref name="TField"/>, giving compile-time safety that only real arms are declared. For a field that is a C# <see langword="union"/> (arms not subtypes) use the union <c>Union</c> overload, whose arm builder derives the projections from the union.</summary>
     /// <param name="down">Projects an instance to the sum-typed field.</param>
     /// <param name="up">Rebuilds an instance from a (possibly modified) field value.</param>
     public UnionFields<T, TField> Union<TField>(Func<T, TField> down, Func<T, TField, T> up)
@@ -3749,3 +3778,28 @@ public sealed class UnionFields<T, TField>
     /// <summary>Return the parent builder to continue declaring fields.</summary>
     public static implicit operator EqualityFields<T>(UnionFields<T, TField> builder) => builder.fields;
 }
+
+#if NET11_0_OR_GREATER
+/// <summary>A builder that scopes case declarations for a C# <see langword="union"/> type <typeparamref name="T"/>,
+/// handed to the <c>fields</c> callback of the union <c>Equality</c> and <c>Union</c> overloads. Because the union
+/// type is fixed on the builder, <see cref="Case{TArm}(Func{TArm, T}, Func{EqualityFields{TArm}, EqualityFields{TArm}})">Case</see>
+/// needs only the arm type and its arm-to-union conversion; the arm predicate and down-projection are derived from the
+/// union's stored value. Implicitly converts back to the parent <see cref="EqualityFields{T}"/>.</summary>
+public sealed class UnionFields<T> where T : System.Runtime.CompilerServices.IUnion
+{
+    readonly EqualityFields<T> fields;
+    internal UnionFields(EqualityFields<T> fields) => this.fields = fields;
+
+    /// <summary>Declare an arm of the union. The arm's compared/ignored fields are declared against the arm payload type <typeparamref name="TArm"/> and are only exercised on instances of this arm.</summary>
+    /// <param name="up">Lifts a (possibly modified) arm payload back into the union, e.g. <c>a => a</c> using the union's implicit conversion.</param>
+    /// <param name="armFields">Declares the compared/ignored fields (and any nested cases) of the arm payload.</param>
+    public UnionFields<T> Case<TArm>(Func<TArm, T> up, Func<EqualityFields<TArm>, EqualityFields<TArm>> armFields)
+    {
+        fields.Case(t => t.Value is TArm, t => (TArm)t.Value!, (_, a) => up(a), armFields);
+        return this;
+    }
+
+    /// <summary>Return the parent builder to continue declaring arms.</summary>
+    public static implicit operator EqualityFields<T>(UnionFields<T> u) => u.fields;
+}
+#endif

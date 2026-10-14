@@ -782,6 +782,42 @@ public class GenTests
         .Sample(actual => Check.ChiSquared(expected, actual), iter: 1, time: -2);
     }
 
+    // .NET 11 made decimal/BigInteger <-> binary-float conversions correctly rounded, with no compatibility switch, so
+    // those conversions can give different results on the net11 runtime than net10. The float/double/decimal generators
+    // deliberately build values from bit patterns (FloatConverter/BitConverter) and integer/decimal arithmetic, never
+    // those conversions, so a fixed seed must produce bit-identical sequences on every runtime. This test runs on both
+    // the net10 and net11 TFMs against the same expected hash; a mismatch means a generator picked up a runtime-dependent
+    // floating-point conversion and broke cross-runtime determinism (and every stored Check.Hash golden with it).
+    [Test]
+    public async Task FloatingPoint_Generation_Is_Runtime_Deterministic()
+    {
+        const int n = 1000;
+        ulong hash = 14695981039346656037UL;
+        static void Mix(ref ulong h, ulong v)
+        {
+            for (int b = 0; b < 8; b++)
+            {
+                h = (h ^ (v & 0xFF)) * 1099511628211UL;
+                v >>= 8;
+            }
+        }
+        var pcg = PCG.Parse("0000000000aa");
+        Gen<double>[] doubles = [Gen.Double, Gen.Double.Unit, Gen.Double.OneTwo, Gen.Double.Special, Gen.Double[-1000.0, 1000.0], Gen.Double[1e10, 1e20]];
+        foreach (var g in doubles)
+            for (int i = 0; i < n; i++)
+                Mix(ref hash, (ulong)BitConverter.DoubleToInt64Bits(g.Generate(pcg, null, out _)));
+        Gen<float>[] floats = [Gen.Float, Gen.Float.Unit, Gen.Float.OneTwo, Gen.Float.Special, Gen.Float[-1000f, 1000f], Gen.Float[1e10f, 1e20f]];
+        foreach (var g in floats)
+            for (int i = 0; i < n; i++)
+                Mix(ref hash, (uint)BitConverter.SingleToInt32Bits(g.Generate(pcg, null, out _)));
+        Gen<decimal>[] decimals = [Gen.Decimal, Gen.Decimal.Unit, Gen.Decimal[-1000M, 1000M], Gen.Decimal[1e10M, 1e20M]];
+        foreach (var g in decimals)
+            for (int i = 0; i < n; i++)
+                foreach (var bit in decimal.GetBits(g.Generate(pcg, null, out _)))
+                    Mix(ref hash, (uint)bit);
+        await Assert.That(hash).IsEqualTo(14809328324404156276UL); // identical on the net10 and net11 runtimes
+    }
+
     [Test]
     public void Date_MinMax()
     {
