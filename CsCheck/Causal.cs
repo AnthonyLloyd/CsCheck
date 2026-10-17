@@ -16,6 +16,7 @@ namespace CsCheck;
 
 using System.Text;
 using System.Diagnostics;
+using System.Globalization;
 
 /// <summary>Causal profiling functionality.</summary>
 public static class Causal
@@ -209,13 +210,13 @@ public static class Causal
                 sb.Append(" | ");
                 sb.Append(r.Count.ToString().PadLeft(7));
                 sb.Append(" | ");
-                sb.Append(r.Time.ToString("0.0").PadLeft(7));
+                sb.Append(r.Time.ToString("0.0", CultureInfo.InvariantCulture).PadLeft(7));
                 sb.Append(" | ").Append(r.P10).Append(" | ").Append(r.P5);
                 sb.Append(" | ").Append(r.N5).Append(" | ").Append(r.N10).Append(" | ").Append(r.N15).Append(" | ").Append(r.N20);
                 sb.Append(" |\n");
             }
             return sb.ToString();
         }
-        public void Output(Action<string> output) => output(ToString());
+        public void Output(Action<string> output) => Reporter.Write(output, this);
     }
 }

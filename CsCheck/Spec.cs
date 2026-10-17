@@ -16,6 +16,7 @@ namespace CsCheck;
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using System.Threading;
 
@@ -612,15 +613,15 @@ public sealed class SpecReport<S>
         if (States != 0)
         {
             sb.Append(!Closed ? "\n  state space NOT closed: " : Pruned == 0 ? "\n  state space CLOSED: " : "\n  state space CLOSED within boundary: ")
-              .Append(States.ToString("#,0")).Append(" states, ")
-              .Append(Transitions.ToString("#,0")).Append(" transitions, depth ").Append(Depth)
+              .Append(States.ToString("#,0", CultureInfo.InvariantCulture)).Append(" states, ")
+              .Append(Transitions.ToString("#,0", CultureInfo.InvariantCulture)).Append(" transitions, depth ").Append(Depth)
               .Append(", ").Append(TerminalStates).Append(" terminal, ").Append(DeadlockStates).Append(" deadlock");
-            if (Pruned != 0) sb.Append(", ").Append(Pruned.ToString("#,0")).Append(" outside");
+            if (Pruned != 0) sb.Append(", ").Append(Pruned.ToString("#,0", CultureInfo.InvariantCulture)).Append(" outside");
         }
         if (TracesWalked != 0)
-            sb.Append("\n  ").Append(TracesWalked.ToString("#,0")).Append(" traces, ")
-              .Append(StepsWalked.ToString("#,0")).Append(" steps, ")
-              .Append(DeadlockTraces.ToString("#,0")).Append(" deadlocked");
+            sb.Append("\n  ").Append(TracesWalked.ToString("#,0", CultureInfo.InvariantCulture)).Append(" traces, ")
+              .Append(StepsWalked.ToString("#,0", CultureInfo.InvariantCulture)).Append(" steps, ")
+              .Append(DeadlockTraces.ToString("#,0", CultureInfo.InvariantCulture)).Append(" deadlocked");
         if (ConformedStates != 0)
             sb.Append("\n  conformed on ").Append(Count(ConformedTransitions, "transition")).Append(" from ")
               .Append(Count(ConformedStates, "state")).Append(", ").Append(Count(ConformedSteps, "implementation step"));
@@ -634,19 +635,19 @@ public sealed class SpecReport<S>
         {
             sb.Append("\n  | ").Append(RequirementIds[i].PadRight(w)).Append(" | ")
               .Append((!RequirementGuarded[i] ? "every step" : RequirementTriggered[i] == 0 ? "NEVER"
-                       : RequirementTriggered[i].ToString("#,0")).PadLeft(11)).Append(" | ")
-              .Append((RequirementUnresolved[i] == 0 ? "" : RequirementUnresolved[i].ToString("#,0")).PadLeft(10)).Append(" |");
+                       : RequirementTriggered[i].ToString("#,0", CultureInfo.InvariantCulture)).PadLeft(11)).Append(" | ")
+              .Append((RequirementUnresolved[i] == 0 ? "" : RequirementUnresolved[i].ToString("#,0", CultureInfo.InvariantCulture)).PadLeft(10)).Append(" |");
         }
         sb.Append("\n  | ").Append("Action".PadRight(w)).Append(" |       Fired | Self-loops |");
         for (int i = 0; i < ActionNames.Length; i++)
         {
             sb.Append("\n  | ").Append(ActionNames[i].PadRight(w)).Append(" | ")
-              .Append((ActionFired[i] == 0 ? "NEVER" : ActionFired[i].ToString("#,0")).PadLeft(11)).Append(" | ")
-              .Append((ActionSelfLoops[i] == 0 ? "" : ActionSelfLoops[i].ToString("#,0")).PadLeft(10)).Append(" |");
+              .Append((ActionFired[i] == 0 ? "NEVER" : ActionFired[i].ToString("#,0", CultureInfo.InvariantCulture)).PadLeft(11)).Append(" | ")
+              .Append((ActionSelfLoops[i] == 0 ? "" : ActionSelfLoops[i].ToString("#,0", CultureInfo.InvariantCulture)).PadLeft(10)).Append(" |");
         }
         return sb.ToString();
 
-        static string Count(long n, string noun) => n == 1 ? $"1 {noun}" : $"{n:#,0} {noun}s";
+        static string Count(long n, string noun) => n == 1 ? $"1 {noun}" : string.Create(CultureInfo.InvariantCulture, $"{n:#,0} {noun}s");
     }
 }
 
@@ -1457,7 +1458,7 @@ public static partial class Check
         if (walk.GaveUp)
         {
             var widest = WidestFields(spec, walk.Nodes);
-            report.Note = $"gave up at {maxStates:#,0} states - "
+            report.Note = string.Create(CultureInfo.InvariantCulture, $"gave up at {maxStates:#,0} states - ")
                 + (widest is null ? "abstract the model further"
                                   : $"widest state fields are {widest}; saturate or bound the widest")
                 + ", or drop from the state's Equals and GetHashCode whatever the behaviour never reads"

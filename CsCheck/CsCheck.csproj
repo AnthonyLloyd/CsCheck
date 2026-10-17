@@ -75,7 +75,7 @@ BREAKING CHANGES:
 - Gen.Short, .Int, .UInt, .Long, .ULong, .Int128, .UInt128, .Int.Positive and .Int.NonNegative range.
 - Array, Array2D, List, HashSet and ArrayUnique are extension properties for AOT.
 - Invalid Check settings and CsCheck_ environment variables throw, where they used to be clamped or ignored.
-- No longer public: Classifier, MedianEstimator, ThrowHelper, HashHelper, Timer types, Zigzag, Hash and MedianEstimate.
+- Now internal: Classifier, MedianEstimator, ThrowHelper, HashHelper, Timer types, Zigzag, Hash, MedianEstimate.
 - CsCheckException.Message no longer includes the inner exception's message.
 - Seeds and Check.Hash expected values change for Gen.Decimal, Gen.Double, Gen.Float.
         </PackageReleaseNotes>
@@ -98,7 +98,7 @@ BREAKING CHANGES:
         <AnalysisMode>All</AnalysisMode>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.303" PrivateAssets="All" />
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.304" PrivateAssets="All" />
         <None Include="../CsCheck.png" Pack="true" PackagePath="" Visible="False" />
         <None Include="../README.md" Pack="true" PackagePath="" Visible="False" />
         <None Include="../llms.txt" Pack="true" PackagePath="" Visible="False" />

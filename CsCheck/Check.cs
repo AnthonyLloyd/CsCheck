@@ -15,6 +15,7 @@
 namespace CsCheck;
 
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Runtime.InteropServices;
@@ -2091,7 +2092,7 @@ public static partial class Check
         int k = expected.Length - 1;
         double variance = 2.0 / (9 * k);
         double z = (Math.Cbrt(chi / k) - 1 + variance) / Math.Sqrt(variance);
-        if (z > sigma) ThrowHelper.Throw("Chi-squared standard deviation = " + z.ToString("0.0"));
+        if (z > sigma) ThrowHelper.Throw("Chi-squared standard deviation = " + z.ToString("0.0", CultureInfo.InvariantCulture));
     }
 
     static void RunWorkers(ThreadStart execute, int threads)
@@ -3187,10 +3188,10 @@ public static partial class Check
                 (q1Times, q3Times) = (1 / q3Times, 1 / q1Times);
             }
             var (timeString, timeUnit) = TimeFormat((double)Math.Min(FasterMin, SlowerMin) / Repeat);
-            var result = $"{Median.Median:P2}[{Median.Q1:P2}..{Median.Q3:P2}] {times:#0.00}x[{q1Times:#0.00}x..{q3Times:#0.00}x] {faster}";
+            var result = string.Create(CultureInfo.InvariantCulture, $"{Median.Median:0.00%}[{Median.Q1:0.00%}..{Median.Q3:0.00%}] {times:#0.00}x[{q1Times:#0.00}x..{q3Times:#0.00}x] {faster}");
             if (double.IsNaN(Median.Median)) result = $"Time resolution too small try using repeat.\n{result}";
             else if ((Median.Median >= 0.0) != (Faster > Slower)) result = $"Inconsistent result try using repeat or increasing sigma.\n{result}";
-            result = $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / Repeat)}{timeUnit} vs {timeString((double)SlowerMin / Repeat)}{timeUnit}";
+            result = string.Create(CultureInfo.InvariantCulture, $"{result}, sigma = {Math.Sqrt(SigmaSquared):#0.0} ({Faster:#,0} vs {Slower:#,0}), min = {timeString((double)FasterMin / Repeat)}{timeUnit} vs {timeString((double)SlowerMin / Repeat)}{timeUnit}");
             if (bytesMeasured) result = $"{result}, alloc = {ByteString((double)FasterBytes / Repeat)} vs {ByteString((double)SlowerBytes / Repeat)}";
             return $"{result}, jit = {Tiering.Describe(warmUpTicks)}";
         }
@@ -3198,31 +3199,31 @@ public static partial class Check
         private static string ByteString(double bytes) =>
             bytes switch
             {
-                >= 1_048_576 => (bytes / 1_048_576).ToString("###0.##") + "MB",
-                >= 1_024 => (bytes / 1_024).ToString("###0.##") + "KB",
-                _ => bytes.ToString("###0.##") + "B",
+                >= 1_048_576 => (bytes / 1_048_576).ToString("###0.##", CultureInfo.InvariantCulture) + "MB",
+                >= 1_024 => (bytes / 1_024).ToString("###0.##", CultureInfo.InvariantCulture) + "KB",
+                _ => bytes.ToString("###0.##", CultureInfo.InvariantCulture) + "B",
             };
 
         private static (Func<double, string>, string) TimeFormat(double maxValue) =>
             (maxValue * 1000 / Stopwatch.Frequency) switch
             {
-                >= 1000000 => (d => (d / Stopwatch.Frequency).ToString("###0"), "s"),
-                >= 100000 => (d => (d / Stopwatch.Frequency).ToString("###0.#"), "s"),
-                >= 10000 => (d => (d / Stopwatch.Frequency).ToString("###0.##"), "s"),
-                >= 1000 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0"), "ms"),
-                >= 100 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.#"), "ms"),
-                >= 10 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.##"), "ms"),
-                >= 1 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.###"), "ms"),
-                >= 0.1 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.#"), "μs"),
-                >= 0.01 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.##"), "μs"),
-                >= 0.001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0"), "ns"),
-                >= 0.0001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.#"), "ns"),
-                >= 0.00001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.##"), "ns"),
-                >= 0.000001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.###"), "ns"),
-                _ => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.####"), "ns"),
+                >= 1000000 => (d => (d / Stopwatch.Frequency).ToString("###0", CultureInfo.InvariantCulture), "s"),
+                >= 100000 => (d => (d / Stopwatch.Frequency).ToString("###0.#", CultureInfo.InvariantCulture), "s"),
+                >= 10000 => (d => (d / Stopwatch.Frequency).ToString("###0.##", CultureInfo.InvariantCulture), "s"),
+                >= 1000 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0", CultureInfo.InvariantCulture), "ms"),
+                >= 100 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.#", CultureInfo.InvariantCulture), "ms"),
+                >= 10 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.##", CultureInfo.InvariantCulture), "ms"),
+                >= 1 => (d => (d * 1000 / Stopwatch.Frequency).ToString("###0.###", CultureInfo.InvariantCulture), "ms"),
+                >= 0.1 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.#", CultureInfo.InvariantCulture), "μs"),
+                >= 0.01 => (d => (d * 1_000_000 / Stopwatch.Frequency).ToString("###0.##", CultureInfo.InvariantCulture), "μs"),
+                >= 0.001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0", CultureInfo.InvariantCulture), "ns"),
+                >= 0.0001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.#", CultureInfo.InvariantCulture), "ns"),
+                >= 0.00001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.##", CultureInfo.InvariantCulture), "ns"),
+                >= 0.000001 => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.###", CultureInfo.InvariantCulture), "ns"),
+                _ => (d => (d * 1_000_000_000 / Stopwatch.Frequency).ToString("###0.####", CultureInfo.InvariantCulture), "ns"),
             };
 
-        public void Output(Action<string> output) => output(ToString());
+        public void Output(Action<string> output) => Reporter.Write(output, this);
     }
 
     /// <summary>Generate a single random example.</summary>

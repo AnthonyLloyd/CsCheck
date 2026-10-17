@@ -32,8 +32,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
-#pragma warning disable MA0193 // Use an overload with a MidpointRounding argument
-
 public sealed class CsCheckException : Exception
 {
     private CsCheckException() { }
@@ -47,7 +45,7 @@ public static partial class Check
     {
         const int MAX_LENGTH = 5000;
         if (minT.Length > MAX_LENGTH) minT = $"{minT.AsSpan(0, MAX_LENGTH)} ...";
-        return $"Set seed: \"{seed}\" or -e CsCheck_Seed={seed} to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{minT}";
+        return string.Create(CultureInfo.InvariantCulture, $"Set seed: \"{seed}\" or -e CsCheck_Seed={seed} to reproduce ({shrinks:#,0} shrinks, {skipped:#,0} skipped, {total:#,0} total).\n{minT}");
     }
 
     internal static long ParseEnvironmentVariableToLong(string variable, long defaultValue)
@@ -995,7 +993,7 @@ public struct MedianEstimate
         Error = Math.Sqrt(Sqr(a.Error / a.Median) + Sqr(b.Error / b.Median)) * Math.Abs(a.Median / b.Median),
     };
     public override readonly string ToString() =>
-        Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0").PadLeft(5) + " ±" + Math.Min(Error, 99.9).ToString("0.0").PadLeft(4);
+        Math.Min(Math.Max(Median, -99.9), 99.9).ToString("0.0", CultureInfo.InvariantCulture).PadLeft(5) + " ±" + Math.Min(Error, 99.9).ToString("0.0", CultureInfo.InvariantCulture).PadLeft(4);
 }
 
 internal sealed class Classifier
@@ -1060,7 +1058,7 @@ internal sealed class Classifier
         double MaxTime(Func<MedianEstimator, double> time) => rows.Values.Max(r => r.Times is null ? 0 : time(r.Times));
         var (timeString, timeUnit) = TimeFormat(MaxTime(i => i.Median));
 
-        var nLength = Math.Max(rows.Values.Max(r => r.Count).ToString("#,##0").Length, 5);
+        var nLength = Math.Max(rows.Values.Max(r => r.Count).ToString("#,##0", CultureInfo.InvariantCulture).Length, 5);
         var lowerLength = Math.Max(timeString(MaxTime(i => i.LowerQuartile)).Length, 7);
         var medianLength = Math.Max(timeString(MaxTime(i => i.Median)).Length, 7);
         var upperLength = Math.Max(timeString(MaxTime(i => i.UpperQuartile)).Length, 7);
@@ -1096,7 +1094,7 @@ internal sealed class Classifier
         {
             var a = key.Split('/');
             var name = (new string((char)160, 2 * (a.Length - 1)) + a[^1]).PadRight(maxLength);
-            var output = $"| {name} | {count.ToString("#,##0").PadLeft(nLength)} | {(float)count / total,7:0.00%} |";
+            var output = string.Create(CultureInfo.InvariantCulture, $"| {name} | {count.ToString("#,##0", CultureInfo.InvariantCulture).PadLeft(nLength)} | {(float)count / total,7:0.00%} |");
             if (times is not null && times.Q2 != 0)
             {
                 var median = timeString(times.Median).PadLeft(medianLength);
@@ -1175,6 +1173,16 @@ internal static class Reporter
         if (writeLine is null) return;
         string text;
         try { text = report.ToString() ?? ""; }
+        catch (Exception e) { text = $"The report could not be formatted: {e.GetType().Name}: {e.Message}"; }
+        try { writeLine(text); }
+        catch { }
+    }
+
+    public static void Write(Action<string>? writeLine, FormattableString report)
+    {
+        if (writeLine is null) return;
+        string text;
+        try { text = report.ToString(CultureInfo.InvariantCulture); }
         catch (Exception e) { text = $"The report could not be formatted: {e.GetType().Name}: {e.Message}"; }
         try { writeLine(text); }
         catch { }

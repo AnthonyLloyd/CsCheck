@@ -50,3 +50,4 @@ dotnet_diagnostic.MA0075.severity = none # Do not use implicit culture-sensitive
 dotnet_diagnostic.MA0001.severity = none # StringComparison is missing
 dotnet_diagnostic.MA0016.severity = none # Prefer using collection abstraction instead of implementation
 dotnet_diagnostic.MA0004.severity = none # Use Task.ConfigureAwait
+dotnet_diagnostic.MA0193.severity = none # MA0193: Use an overload with a MidpointRounding argument
