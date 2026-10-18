@@ -2,7 +2,6 @@ namespace Tests;
 
 using System.Diagnostics.CodeAnalysis;
 using CsCheck;
-using TUnit.Assertions.Extensions;
 
 public class SieveLruCacheTests
 {

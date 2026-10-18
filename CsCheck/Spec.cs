@@ -1734,7 +1734,7 @@ public static partial class Check
             catch { return null; }
             if (!ParseFields(printed, pairs)) return null;
             if (names.Count == 0)
-                foreach (var (name, _) in pairs) { names.Add(name); distinct.Add(new(StringComparer.Ordinal)); }
+                foreach (var (name, _) in pairs) { names.Add(name); distinct.Add([with(StringComparer.Ordinal)]); }
             else if (pairs.Count != names.Count) return null;
             for (int f = 0; f < pairs.Count; f++)
             {

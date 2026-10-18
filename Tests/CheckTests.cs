@@ -10,6 +10,8 @@ using System.Globalization;
 using System.Linq;
 using CsCheck;
 
+#pragma warning disable RCS1021 // Convert lambda expression body to expression body
+
 public class CheckTests
 {
     static void Assert_Commutative<T, R>(Gen<T> gen, Func<T, T, R> operation)

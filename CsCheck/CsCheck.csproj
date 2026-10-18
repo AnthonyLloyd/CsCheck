@@ -22,17 +22,17 @@ CsCheck also makes specification, performance and regression testing simple and 
         <PackageProjectUrl>http://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;specification;model-checking;temporal;parallel;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>5.0.0-rc2</Version>
+        <Version>5.0.0</Version>
         <PackageReleaseNotes>
-Added Gen.Int128, Gen.UInt128 and PCG.Next128.
-Added Gen.Select overloads for 9 to 16 generators.
-Added range indexers to Gen.DateTime.Utc and Gen.DateTime.Local.
-Added Spec.ConformExhaustive: checks an implementation on every transition of the proof.
-Added Check.Equality support for C# union types on net11.
-Added a Self-loops column and SpecReport.Deadlock to Spec reports.
-Added Check.SingleLimit: Single stops after 1,000,000 tries instead of hanging.
-Added Faster warmUp, Check.WarmUp and CsCheck_WarmUp: wait for tiered compilation to finish before measuring.
 Added Native AOT support.
+Added Spec.ConformExhaustive: checks an implementation on every transition of the proof.
+Added a Self-loops column and SpecReport.Deadlock to Spec reports.
+Added Faster warmUp, Check.WarmUp and CsCheck_WarmUp: wait for tiered compilation to finish before measuring.
+Added net11 FrameworkTarget and Check.Equality support for C# union types.
+Added Gen.Select overloads for 9 to 16 generators.
+Added Gen.Int128, Gen.UInt128 and PCG.Next128.
+Added range indexers to Gen.DateTime.Utc and Gen.DateTime.Local.
+Added Check.SingleLimit: Single stops after 1,000,000 tries instead of hanging.
 Improved Spec Sample, Conform and parallel Exhaustive speed.
 Improved SampleModelBased speed: its classify table is counts only.
 Improved Check.Equal and Check.EqualUnordered speed for sets and bags.
@@ -62,11 +62,11 @@ Fixed Faster with a seed replaying the same inputs on every thread.
 
 BREAKING CHANGES:
 - Now targets net10.0 and net11.0, version 4.9.1 was the last to target net8.0.
-- Removed Gen.UInt4 to Gen.UInt2048, Gen.UInt[0, N - 1] gives the same values. Gen.UInt128 now generates UInt128.
+- Removed Gen.UInt4 to Gen.UInt2048, Gen.UInt[0, N-1] gives the same values. Gen.UInt128 now generates UInt128.
 - OneOfConst and FrequencyConst are now OneOf and Frequency overloads.
 - Removed Check.ModelEqual; models default to Check.Equal, so bags count duplicates.
 - Removed Dbg, IRegression and RegressionExtensions; Hash.Add takes collections.
-- Removed GenOperationAsync&lt;T&gt;; Gen.Operation with an async lambda is a compile error.
+- Removed GenOperationAsync&lt;T&gt;. Gen.Operation with an async lambda is a compile error.
 - Removed Logging.LogProcessor and Logging.CreateLogger.
 - Renamed ILogger to ISampleLogger.
 - Spec checks return SpecReport&lt;S&gt;, Exhaustive takes writeLine first, and AtMost&lt;T&gt; takes times after over.
@@ -80,6 +80,7 @@ BREAKING CHANGES:
 - Seeds and Check.Hash expected values change for Gen.Decimal, Gen.Double, Gen.Float.
         </PackageReleaseNotes>
         <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+        <LangVersion>15</LangVersion>
         <IsAotCompatible>true</IsAotCompatible>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <WarningLevel>9999</WarningLevel>
@@ -96,9 +97,12 @@ BREAKING CHANGES:
         <NoWarn>CS1591,MA0143,CA1724</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <AnalysisMode>All</AnalysisMode>
+         <!--Uncomment after the 5.0.0 release to catch accidental breaking API changes in later 5.x versions.
+         <EnablePackageValidation>true</EnablePackageValidation> 
+         <PackageValidationBaselineVersion>5.0.0</PackageValidationBaselineVersion>-->
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.304" PrivateAssets="All" />
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.307" PrivateAssets="All" />
         <None Include="../CsCheck.png" Pack="true" PackagePath="" Visible="False" />
         <None Include="../README.md" Pack="true" PackagePath="" Visible="False" />
         <None Include="../llms.txt" Pack="true" PackagePath="" Visible="False" />
