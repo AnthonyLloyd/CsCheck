@@ -531,8 +531,8 @@ Spec.Exhaustive of 31 requirements
 
 (`every step` means this requirement is checked on every step. There is no `when` / `on` / `trigger` that can be missed.)
 
-Start with [Tests/Specs/SpecIntroTests.cs](Tests/Specs/SpecIntroTests.cs), an order lifecycle in one file, seven reachable
-states, small enough to check by hand. Then [docs/Spec.md](docs/Spec.md) for the seven worked examples: the FIX 4.4
+Start with [Tests/Specs/SpecIntroTests.cs](https://github.com/AnthonyLloyd/CsCheck/blob/master/Tests/Specs/SpecIntroTests.cs), an order lifecycle in one file, seven reachable
+states, small enough to check by hand. Then [docs/Spec.md](https://github.com/AnthonyLloyd/CsCheck/blob/master/docs/Spec.md) for the seven worked examples: the FIX 4.4
 session core, a refresh-on-access cache, a distributed lease specified in three configurations to show which one is
 actually safe, and four reimplementations of published specifications: a `wait` / `notify` queue that deadlocks, the
 Alternating Bit Protocol, the LMAX Disruptor and Safra's EWD 998 termination detection, each checked against the
