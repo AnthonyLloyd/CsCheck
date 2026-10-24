@@ -685,9 +685,10 @@ Three things to know:
   nondeterminism (or state shared between instances) rather than as a defect in that step. Nondeterminism the
   abstraction never reads, such as a fresh `Guid` only compared for equality, is fine.
 - **The cost is the depth.** Each transition costs one implementation step more than the depth of the state it
-  leaves, and the third number in the line is their total. The model is explored on one thread and the implementation is
-  driven on all of them by default, so `create` and `apply` must be safe to call on different instances at once,
-  as for `Conform`; the result does not depend on the thread count.
+  leaves, and the third number in the line is their total. The model is explored and the implementation driven on
+  all threads by default, so the specification's delegates and the state's `Equals` and `GetHashCode` must be thread
+  safe, and `create` and `apply` safe to call on different instances at once, as for `Conform`; the result does not
+  depend on the thread count.
 
 A model that does not close can still be conformed as far as the search went: every state short of `maxDepth`, or
 before the state where it gave up at `maxStates`, has all its transitions driven, and the report says it is not

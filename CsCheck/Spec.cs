@@ -2000,19 +2000,19 @@ public static partial class Check
     /// <param name="writeLine">WriteLine function for the report.</param>
     /// <param name="maxStates">Give up after this many distinct states (default 10,000,000). The states reached before then are still conformed, but the report is not closed.</param>
     /// <param name="maxDepth">Stop after this many steps from the initial state. The states short of it are still conformed, but the report is not closed.</param>
-    /// <param name="threads">The number of threads to drive the implementation on (default number logical CPUs), so <paramref name="create"/>, <paramref name="apply"/> and <paramref name="clone"/> must be safe to call on different instances at once, as for Conform. The model is explored on one thread first. Results do not depend on it.</param>
+    /// <param name="threads">The number of threads to explore the model and drive the implementation on (default number logical CPUs), so the specification's delegates and the state's Equals and GetHashCode must be thread safe, and <paramref name="create"/>, <paramref name="apply"/> and <paramref name="clone"/> safe to call on different instances at once, as for Conform. Results do not depend on it.</param>
     /// <param name="clone">Copies an implementation. Each state then keeps the implementation that took the transition into it, and each transition out of it is one step on a copy, so a path is only replayed to confirm a divergence: one seen on a copy is replayed on a fresh instance before it is reported, and put down to the copy if it does not recur. A copy must share nothing a step changes. An implementation is held for every state of the next breadth first level.</param>
     public static SpecReport<S> ConformExhaustive<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, string?> apply,
         Action<string>? writeLine = null, int maxStates = 10_000_000, int maxDepth = int.MaxValue, int threads = -1, Func<TSut, TSut>? clone = null)
     {
+        if (threads < 1) threads = Threads;
         var report = Explore(spec, null, $"Spec.ConformExhaustive{SutClause<TSut>()} to {Plural(spec.Requirements.Count, "requirement")}",
-                             maxStates, maxDepth, 1, out var violation, out var frontier);
+                             maxStates, maxDepth, threads, out var violation, out var frontier);
         if (violation is not null)
         {
             Reporter.Write(writeLine, report);
             ThrowHelper.Throw(violation.ToString(spec.Printer));
         }
-        if (threads < 1) threads = Threads;
         var divergence = clone is null ? frontier!.Conform(create, apply, threads, out Exception? error)
                                        : frontier!.Conform(create, apply, clone, threads, out error);
         Reporter.Write(writeLine, report);
@@ -2028,7 +2028,7 @@ public static partial class Check
     /// <param name="writeLine">WriteLine function for the report.</param>
     /// <param name="maxStates">Give up after this many distinct states (default 10,000,000). The states reached before then are still conformed, but the report is not closed.</param>
     /// <param name="maxDepth">Stop after this many steps from the initial state. The states short of it are still conformed, but the report is not closed.</param>
-    /// <param name="threads">The number of threads to drive the implementation on (default number logical CPUs), so <paramref name="create"/>, <paramref name="apply"/> and <paramref name="clone"/> must be safe to call on different instances at once, as for Conform. The model is explored on one thread first. Results do not depend on it.</param>
+    /// <param name="threads">The number of threads to explore the model and drive the implementation on (default number logical CPUs), so the specification's delegates and the state's Equals and GetHashCode must be thread safe, and <paramref name="create"/>, <paramref name="apply"/> and <paramref name="clone"/> safe to call on different instances at once, as for Conform. Results do not depend on it.</param>
     /// <param name="clone">Copies an implementation. Each state then keeps the implementation that took the transition into it, and each transition out of it is one step on a copy, so a path is only replayed to confirm a divergence: one seen on a copy is replayed on a fresh instance before it is reported, and put down to the copy if it does not recur. A copy must share nothing a step changes. An implementation is held for every state of the next breadth first level.</param>
     public static SpecReport<S> ConformExhaustive<S, TSut>(this Spec<S> spec, Func<TSut> create, Func<TSut, Transition<S>, bool> apply,
         Action<string>? writeLine = null, int maxStates = 10_000_000, int maxDepth = int.MaxValue, int threads = -1, Func<TSut, TSut>? clone = null)
