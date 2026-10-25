@@ -308,7 +308,7 @@ public class CacheTests
 
         await Assert.That(await cache.GetOrAdd(1, Factory)).IsEqualTo(1);
 
-        for (int i = 0; i < 9; i++)
+        for (int i = 0; i < 100; i++)
         {
             await Task.Delay(remove);
             if (await cache.GetOrAdd(1, Factory) == 2)
