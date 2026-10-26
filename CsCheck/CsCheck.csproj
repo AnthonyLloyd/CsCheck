@@ -102,7 +102,7 @@ BREAKING CHANGES:
          <PackageValidationBaselineVersion>5.0.0</PackageValidationBaselineVersion>-->
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.307" PrivateAssets="All" />
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.317" PrivateAssets="All" />
         <None Include="../CsCheck.png" Pack="true" PackagePath="" Visible="False" />
         <None Include="../README.md" Pack="true" PackagePath="" Visible="False" />
         <None Include="../llms.txt" Pack="true" PackagePath="" Visible="False" />
