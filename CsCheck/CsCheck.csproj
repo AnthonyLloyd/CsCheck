@@ -24,6 +24,7 @@ CsCheck also makes specification, performance and regression testing simple and 
         <PackageTags>quickcheck;random;model-based;metamorphic;specification;model-checking;temporal;parallel;performance;causal-profiling;regression;testing</PackageTags>
         <Version>5.0.1</Version>
         <PackageReleaseNotes>
+Fixed type initializers for  WebAssembly.
 Improved Spec.ConformExhaustive now fully parallel.
         </PackageReleaseNotes>
         <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
