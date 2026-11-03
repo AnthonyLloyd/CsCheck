@@ -2064,10 +2064,14 @@ public static class Gen
     public static readonly GenFloat Float = new();
     /// <summary>Generator for float.</summary>
     public static readonly GenFloat Single = Float;
+    // Default generators are defined here, after their generator field, so they initialise in order within Gen's static constructor. Defining them in the Gen* subclasses makes the subclass type initializer read a Gen.* field during Gen's own static init, a cross-type cycle that throws on Mono (browser-wasm). See PR #79.
+    internal static readonly Gen<float> DefaultFloat = Float[-1e25f, 1e25f];
     /// <summary>Generator for double.</summary>
     public static readonly GenDouble Double = new();
+    internal static readonly Gen<double> DefaultDouble = Double[-1e50, 1e50];
     /// <summary>Generator for decimal.</summary>
     public static readonly GenDecimal Decimal = new();
+    internal static readonly Gen<decimal> DefaultDecimal = Decimal[-1e25m, 1e25m];
     /// <summary>Generator for Date.</summary>
     public static readonly GenDate Date = new();
     /// <summary>Generator for DateOnly.</summary>
@@ -2084,8 +2088,10 @@ public static class Gen
     public static readonly GenGuid Guid = new();
     /// <summary>Generator for char.</summary>
     public static readonly GenChar Char = new();
+    internal static readonly Gen<char> DefaultChar = Char[' ', '~'];
     /// <summary>Generator for string.</summary>
     public static readonly GenString String = new();
+    internal static readonly Gen<string> DefaultString = Char.Array.Select(i => new string(i));
     /// <summary>Generator for a PCG seed.</summary>
     public static readonly GenSeed Seed = new();
 }
@@ -2588,9 +2594,8 @@ public sealed class GenFloat : Gen<float>
         [FieldOffset(0)] public float F;
     }
 
-    readonly static Gen<float> DefaultFloat = Gen.Float[-1e25f, 1e25f];
     public override float Generate(PCG pcg, Size? min, out Size size)
-        => DefaultFloat.Generate(pcg, min, out size);
+        => Gen.DefaultFloat.Generate(pcg, min, out size);
 
     static float Pow10(int e) => (float)GenDouble.Pow10(e);
     static int Log10Floor(float f) => GenDouble.Log10Floor(f);
@@ -2720,9 +2725,8 @@ public sealed class GenFloat : Gen<float>
 public sealed class GenDouble : Gen<double>
 {
     static readonly double[] pow10 = [.. Enumerable.Range(-324, 633).Select(e => double.Parse("1e" + e.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture))];
-    readonly static Gen<double> DefaultDouble = Gen.Double[-1e50, 1e50];
     public override double Generate(PCG pcg, Size? min, out Size size)
-        => DefaultDouble.Generate(pcg, min, out size);
+        => Gen.DefaultDouble.Generate(pcg, min, out size);
     internal static double Pow10(int e) => pow10[e + 324];
     internal static int Log10Floor(double d)
     {
@@ -2864,9 +2868,8 @@ public sealed class GenDecimal : Gen<decimal>
         1e-14m, 1e-13m, 1e-12m, 1e-11m, 1e-10m, 1e-9m, 1e-8m, 1e-7m, 1e-6m, 1e-5m, 1e-4m, 1e-3m, 1e-2m, 1e-1m, 1e0m, 1e1m, 1e2m, 1e3m, 1e4m,
         1e5m, 1e6m, 1e7m, 1e8m, 1e9m, 1e10m, 1e11m, 1e12m, 1e13m, 1e14m, 1e15m, 1e16m, 1e17m, 1e18m, 1e19m, 1e20m, 1e21m, 1e22m, 1e23m, 1e24m,
         1e25m, 1e26m, 1e27m, 1e28m ];
-    readonly static Gen<decimal> DefaultDecimal = Gen.Decimal[-1e25m, 1e25m];
     public override decimal Generate(PCG pcg, Size? min, out Size size)
-        => DefaultDecimal.Generate(pcg, min, out size);
+        => Gen.DefaultDecimal.Generate(pcg, min, out size);
     static decimal Pow10(int e) => pow10[e + 28];
     static int Log10Floor(decimal d)
     {
@@ -3211,9 +3214,8 @@ public sealed class GenGuid : Gen<Guid>
 
 public sealed class GenChar : Gen<char>
 {
-    static readonly Gen<char> StandardChar = Gen.Char[' ', '~'];
     public override char Generate(PCG pcg, Size? min, out Size size)
-        => StandardChar.Generate(pcg, min, out size);
+        => Gen.DefaultChar.Generate(pcg, min, out size);
     sealed class Range(uint start, uint length) : Gen<char>
     {
         public override char Generate(PCG pcg, Size? min, out Size size)
@@ -3257,9 +3259,8 @@ public sealed class GenChar : Gen<char>
 
 public sealed class GenString : Gen<string>
 {
-    static readonly Gen<string> d = Gen.Char.Array.Select(i => new string(i));
     public override string Generate(PCG pcg, Size? min, out Size size)
-        => d.Generate(pcg, min, out size);
+        => Gen.DefaultString.Generate(pcg, min, out size);
     /// <summary>Generate string with length in the range <paramref name="start"/> to <paramref name="finish"/> both inclusive.</summary>
     public Gen<string> this[int start, int finish]
     {
