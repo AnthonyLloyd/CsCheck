@@ -151,24 +151,24 @@ public class PCGTests
     public void PCG_Next_UInt()
     {
         Gen.UInt[1, uint.MaxValue].Select(genPCG)
-        .Select((max, pcg) => (max, pcg.Next(max)))
-        .Sample((max, x) => x <= max);
+        .Select((maxExclusive, pcg) => (maxExclusive, pcg.Next(maxExclusive)))
+        .Sample((maxExclusive, x) => x < maxExclusive);
     }
 
     [Test]
     public void PCG_Next64_ULong()
     {
         Gen.ULong[1, ulong.MaxValue].Select(genPCG)
-        .Select((max, pcg) => (max, pcg.Next64(max)))
-        .Sample((max, x) => x <= max);
+        .Select((maxExclusive, pcg) => (maxExclusive, pcg.Next64(maxExclusive)))
+        .Sample((maxExclusive, x) => x < maxExclusive);
     }
 
     [Test]
     public void PCG_Next128_UInt128()
     {
         Gen.UInt128.Where(i => i > 0).Select(genPCG)
-        .Select((max, pcg) => (max, pcg.Next128(max)))
-        .Sample((max, x) => x < max);
+        .Select((maxExclusive, pcg) => (maxExclusive, pcg.Next128(maxExclusive)))
+        .Sample((maxExclusive, x) => x < maxExclusive);
     }
 
     [Test]

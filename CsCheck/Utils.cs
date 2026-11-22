@@ -682,7 +682,7 @@ public static partial class Check
         if (error < bestError)
         {
             bestError = error;
-            bestResult = (n.Max() - n.Min()) * a < b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Linear;
+            bestResult = (n.Max() - n.Min()) * a <= b * constantFactor ? CsCheck.BigO.Constant : CsCheck.BigO.Linear;
         }
         error = RegressionFit(n, time, Quadratic, Id, Id, out a, out b);
         if (error < bestError)
