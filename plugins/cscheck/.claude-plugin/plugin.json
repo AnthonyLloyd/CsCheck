@@ -1,7 +1,7 @@
 {
   "name": "cscheck",
   "version": "0.1.0",
-  "description": "Find what a C# project's tests miss, and write CsCheck tests that find bugs.",
+  "description": "Find what a C# project's tests miss, and write tests that find bugs.",
   "author": {
     "name": "Anthony Lloyd"
   },

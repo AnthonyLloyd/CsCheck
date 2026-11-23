@@ -1,24 +1,24 @@
 # cscheck
 
-Agent skills for [CsCheck](https://github.com/AnthonyLloyd/CsCheck), the C# random testing library. Each `SKILL.md` follows the [agentskills.io](https://agentskills.io) standard, so the skills load in any agent that reads it. They were built and tested in Claude Code; the install steps for the other agents follow their documentation.
+Agent skills for [CsCheck](https://github.com/AnthonyLloyd/CsCheck). Each `SKILL.md` follows the [agentskills.io](https://agentskills.io) standard, so the skills load in any agent that reads it. They were built and tested in Claude Code. The install steps for the other agents follow their documentation.
 
 ## Skills
 
-- [finding-test-gaps](skills/finding-test-gaps/SKILL.md) measures what a project's C# tests don't check, with any test framework, CsCheck or not. Code coverage shows code no test runs, and a sweep of hand-picked mutants shows code the tests run but don't check. Each mutant is compiled and tested in a copy, so no source file in the repo changes. It reports the gaps, and writes the tests they need when asked.
-- [closing-test-gaps](skills/closing-test-gaps/SKILL.md) hunts for bugs in C# code by reading it against its siblings, docs, callers and history, and probing the edges of what it must support. It confirms each candidate with a probe or a CsCheck property, and ranks them by how likely each is to be real and to be live.
-- [writing-cscheck-tests](skills/writing-cscheck-tests/SKILL.md) writes CsCheck tests that find bugs rather than just pass. It covers `Sample`, `Equality`, `SampleModelBased`, `SampleMetamorphic`, `SampleParallel`, `Spec`, `Faster`, causal profiling, `Single` and `Check.Hash`. It also covers generators that give usable inputs and hit the edges, readable shrunk failures, how long to run before trusting a pass, when a property can replace example tests, and what changed in CsCheck 5.
+- [writing-cscheck-tests](skills/writing-cscheck-tests/SKILL.md) writes or strengthens tests, preferring CsCheck properties when appropriate, falling back to normal tests for specific bugs. It covers `Sample`, `Equality`, `SampleModelBased`, `SampleMetamorphic`, `SampleParallel`, `Spec`, `Faster`, causal profiling, `Single` and `Check.Hash`. It also covers generators that give usable inputs and hit the edges, readable shrunk failures, how long to run before trusting a pass, when a property can replace example tests, and what changed in CsCheck 5.
+- [finding-test-gaps](skills/finding-test-gaps/SKILL.md) finds the weak spots that coverage and mutants reveal. Code coverage shows code no test runs, and a sweep of hand-picked mutants shows code the tests run but don't check. Each mutant is compiled and tested in a copy, so no source file in the repo changes. It reports the gaps, and writes the tests they need when asked.
+- [closing-test-gaps](skills/closing-test-gaps/SKILL.md) hunts for the bugs behind the gaps by reading code against its siblings, docs, callers and history, and probing the edges of what it must support. It confirms each candidate with a probe or a CsCheck property, and ranks them by how likely each is to be real and to be live.
 
 Together they make a loop: finding-test-gaps shows what the tests miss, closing-test-gaps finds the bugs behind it, writing-cscheck-tests writes the properties that close the gaps, and finding-test-gaps checks the new properties aren't hollow.
 
 ## Requirements
 
+- **writing-cscheck-tests:** CsCheck 5, which targets net10.0 and net11.0. A project on an older framework needs CsCheck 4.9.1, whose differences the skill lists.
 - **finding-test-gaps:**
   - The .NET 10 SDK or later, since its tools are C# file-based apps. The first run of `mutants.cs` or `candidates.cs` restores Roslyn from nuget.org, or the feed your NuGet.config names.
   - SDK-style C# test projects on VSTest or Microsoft.Testing.Platform, with NUnit, xUnit, MSTest or TUnit, and one or more target frameworks. A Microsoft.Testing.Platform project needs the `Microsoft.Testing.Extensions.CodeCoverage` and `Microsoft.Testing.Extensions.TrxReport` packages, which TUnit and MSTest's `MSTest` package bring.
   - git, to compare with a branch. Without it, `uncovered.cs` also leaves out the use counts, the callers and the projects with no tests of their own.
   - Windows, Linux or macOS, which the Skills workflow checks.
 - **closing-test-gaps:** the .NET 10 SDK, for its probes, small programs that confirm a bug.
-- **writing-cscheck-tests:** CsCheck 5, which targets net10.0 and net11.0. A project on an older framework needs CsCheck 4.9.1, whose differences the skill lists.
 
 ## What it costs, and what it changes
 
