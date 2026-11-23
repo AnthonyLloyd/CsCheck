@@ -83,6 +83,7 @@ if (coverageFrom is not null && coverage is null)
 var paths = new SortedDictionary<string, string>(OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 foreach (var name in files) paths.TryAdd(Path.GetFullPath(Path.Combine(root, name)), name);
 var found = new List<Candidate>();
+var declared = new List<(string FullType, string Member)>();
 foreach (var (path, name) in paths)
 {
     if (!File.Exists(path))
@@ -98,10 +99,12 @@ foreach (var (path, name) in paths)
     }
     var finder = new Finder(path, Path.GetRelativePath(root, path).Replace('\\', '/'), hits);
     found.AddRange(finder.Find());
+    declared.AddRange(finder.Members);
     if (finder.ParseErrors > 0) Console.WriteLine($"warning: {name} has {finder.ParseErrors} parts this Roslyn can't parse, such as newer C#, so candidates near them may be wrong or missing");
 }
 foreach (var member in members ?? [])
-    if (!found.Exists(c => Finder.Matches(member, c.FullType, c.Member))) Console.WriteLine($"warning: no candidates in a member named {member}");
+    if (!found.Exists(c => Finder.Matches(member, c.FullType, c.Member)))
+        Console.WriteLine(declared.Exists(d => Finder.Matches(member, d.FullType, d.Member)) ? $"{member} has no candidates." : $"warning: there's no member named {member} in the files");
 
 // A member's id is its name, or its type's and its name when two types in the files have it, with the type named as uncovered.cs names it.
 var owners = found.Select(c => (c.File, c.FullType, c.Member)).ToHashSet().CountBy(o => o.Member).ToDictionary();
@@ -351,6 +354,9 @@ sealed partial class Finder(string path, string file, Dictionary<int, int>? hits
 
     public int ParseErrors { get; private set; }
 
+    // Every member uncovered.cs can name, so a member named with --members that has nothing to mutate isn't taken for a misspelling.
+    public List<(string FullType, string Member)> Members { get; } = [];
+
     public List<Candidate> Find()
     {
         var (text, encoding) = ReadSource(path);
@@ -361,6 +367,10 @@ sealed partial class Finder(string path, string file, Dictionary<int, int>? hits
         // Roslyn's lines, which are the PDB's and so the coverage's, even in a file with a lone CR or a Unicode line break.
         _lines = tree.GetText().Lines;
         ParseErrors = tree.GetDiagnostics().Count(d => d.Severity == DiagnosticSeverity.Error);
+        // A class, record or struct has a constructor even when it declares none, where its initializers run.
+        foreach (var node in tree.GetRoot().DescendantNodes())
+            if (node is ClassDeclarationSyntax or RecordDeclarationSyntax or StructDeclarationSyntax) Members.Add((FullType(node), "ctor"));
+            else if (node is MemberDeclarationSyntax and not BaseTypeDeclarationSyntax and not BaseNamespaceDeclarationSyntax && Owner(node) is { Member.Length: > 0 } owner) Members.Add((owner.FullType, owner.Member));
         foreach (var node in tree.GetRoot().DescendantNodes(SearchInside))
         {
             if (node is AttributeListSyntax attributes)

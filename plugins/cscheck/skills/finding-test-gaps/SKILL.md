@@ -92,6 +92,7 @@ If the request was only to measure, stop here and report the groups with the tes
 
 - Coverage doesn't move for a property in code that already runs, so the `--only` rerun is its measure: the group's survivors are the mutants only it should kill, and one that still survives a long run shows the test is hollow.
 - A mutant that only a CsCheck property kills can survive one run and die the next, since every run draws new inputs. Set `CsCheck_Iter` (such as 1000) in the environment of the run, which the tests inherit, to lengthen every check that doesn't pass its own `iter:` or `time:`. To settle one survivor, rerun it with `--only <id> --filter-only` and `CsCheck_Time` (such as 10), which overrides a check's `iter:` too. Without `--filter-only`, a mutant that survives again is rerun against the whole project, where every property takes that long.
+- To show what new tests add, such as for a pull request, run the mutants they killed from a copy of the spec that lists them in `exclude`: one that survives there, rerun against the whole project, is a gap no other test closes. The copy keeps the sweep's own results.
 
 ## 4. Report
 

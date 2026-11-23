@@ -1,6 +1,6 @@
 {
   "name": "cscheck",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Find what a C# project's tests miss, and write tests that find bugs.",
   "skills": ["./skills/"]
 }
