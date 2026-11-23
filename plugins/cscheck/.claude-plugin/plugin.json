@@ -1,0 +1,12 @@
+{
+  "name": "cscheck",
+  "version": "0.1.0",
+  "description": "Find what a C# project's tests miss, and write tests that find bugs.",
+  "author": {
+    "name": "Anthony Lloyd"
+  },
+  "homepage": "https://github.com/AnthonyLloyd/CsCheck",
+  "repository": "https://github.com/AnthonyLloyd/CsCheck",
+  "license": "Apache-2.0",
+  "keywords": ["csharp", "dotnet", "testing", "property-based-testing", "mutation-testing", "cscheck"]
+}

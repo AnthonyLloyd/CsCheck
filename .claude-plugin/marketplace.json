@@ -1,0 +1,16 @@
+{
+  "name": "cscheck",
+  "owner": {
+    "name": "Anthony Lloyd"
+  },
+  "metadata": {
+    "description": "Agent skills for CsCheck, the C# random testing library."
+  },
+  "plugins": [
+    {
+      "name": "cscheck",
+      "source": "./plugins/cscheck",
+      "description": "Find what a C# project's tests miss, and write CsCheck tests that find bugs."
+    }
+  ]
+}

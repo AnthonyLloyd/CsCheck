@@ -437,9 +437,11 @@ public static partial class Check
 
     private static bool IsUnorderedCollection(Type type)
     {
-        if (type.IsGenericType)
+        // A FrozenSet is always an internal subclass, so the base types count too.
+        for (var t = type; t is not null; t = t.BaseType)
         {
-            var genericType = type.GetGenericTypeDefinition();
+            if (!t.IsGenericType) continue;
+            var genericType = t.GetGenericTypeDefinition();
             if (genericType == typeof(Dictionary<,>)
              || genericType == typeof(HashSet<>)
              || genericType == typeof(ConcurrentDictionary<,>)

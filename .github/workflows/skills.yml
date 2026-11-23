@@ -1,0 +1,55 @@
+name: Skills
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'plugins/cscheck/skills/finding-test-gaps/scripts/**'
+      - '.github/skills-check.ps1'
+      - '.github/workflows/skills.yml'
+      - 'CsCheck/PCG.cs'
+      - 'CsCheck/CsCheck.csproj'
+      - 'Tests/PCGTests.cs'
+      - 'Tests/Tests.csproj'
+      - 'global.json'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'plugins/cscheck/skills/finding-test-gaps/scripts/**'
+      - '.github/skills-check.ps1'
+      - '.github/workflows/skills.yml'
+      - 'CsCheck/PCG.cs'
+      - 'CsCheck/CsCheck.csproj'
+      - 'Tests/PCGTests.cs'
+      - 'Tests/Tests.csproj'
+      - 'global.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      TUNIT_DISABLE_LOGO: true
+      TUNIT_DISABLE_HTML_REPORTER: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macOS-latest]
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: |
+          10.0.x
+          11.0.x
+    - name: Check the finding-test-gaps scripts
+      shell: pwsh
+      run: ./.github/skills-check.ps1
