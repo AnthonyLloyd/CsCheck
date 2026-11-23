@@ -25,6 +25,7 @@ CsCheck also makes specification, performance and regression testing simple and 
         <Version>5.0.2</Version>
         <PackageReleaseNotes>
 Fixed Check.Equal to compare FrozenSet, FrozenDictionary and subclasses of the known set and dictionary types as unordered collections.
+Fixed Check.Equality to still run when time is set below three.
         </PackageReleaseNotes>
         <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
         <LangVersion>15</LangVersion>
