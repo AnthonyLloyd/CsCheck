@@ -1,6 +1,6 @@
 # cscheck
 
-Agent skills for [CsCheck](https://github.com/AnthonyLloyd/CsCheck). Each `SKILL.md` follows the [agentskills.io](https://agentskills.io) standard, so the skills load in any agent that reads it. They were built and tested in Claude Code. The install steps for the other agents follow their documentation.
+Agent skills for [CsCheck](https://github.com/AnthonyLloyd/CsCheck). Each `SKILL.md` follows the [agentskills.io](https://agentskills.io) standard, so the skills load in any agent that reads it.
 
 ## Skills
 
