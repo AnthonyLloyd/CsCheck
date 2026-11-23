@@ -3392,7 +3392,7 @@ public static partial class Check
     {
         if (iter == -1) iter = Iter;
         if (time == -1) time = Time;
-        if (time > 1) time /= 3;
+        if (time > 0) time = Math.Max(1, time / 3);
 
         gen.Clone().Sample((t1, t2) =>
             t1!.Equals(t2) && t2!.Equals(t1) && Equals(t1, t2) && t1.GetHashCode() == t2.GetHashCode()

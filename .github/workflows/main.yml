@@ -31,7 +31,7 @@ jobs:
           10.0.x
           11.0.x
     - name: Test
-      run: dotnet run -c Release --project Tests --framework ${{ matrix.framework }} --output Detailed --no-progress
+      run: dotnet run -c Release --project Tests --framework ${{ matrix.framework }} --output Detailed
 
   aot:
     runs-on: ubuntu-latest
@@ -55,4 +55,4 @@ jobs:
     - name: Publish
       run: dotnet publish Tests -c Release -f ${{ matrix.framework }} --use-current-runtime -p:PublishAot=true -o aot
     - name: Test
-      run: ./aot/Tests --output Detailed --no-progress
+      run: ./aot/Tests --output Detailed

@@ -38,7 +38,7 @@ this repo, not a CsCheck requirement.
 dotnet build CsCheck/CsCheck.csproj -c Release
 
 # Run the full test suite (this is the CI command)
-dotnet run -c Release --project Tests --output Detailed --disable-logo --no-progress
+dotnet run -c Release --project Tests --output Detailed --disable-logo
 
 # Run a subset by test tree filter
 dotnet run -c Release --project Tests --no-restore --disable-logo --output Detailed --treenode-filter /*/*/GenTests/*

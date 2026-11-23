@@ -2,6 +2,7 @@ namespace Tests;
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
@@ -254,6 +255,16 @@ public class CheckTests
     public async Task Equal_ReadOnlySet_Is_Unordered()
     {
         await Assert.That(Check.Equal(new ReadOnlySet<int>(new HashSet<int> { 1, 2 }), new ReadOnlySet<int>(new HashSet<int> { 2, 1 }))).IsTrue();
+    }
+
+    [Test]
+    public async Task Equal_FrozenSet_Is_Unordered()
+    {
+        // A FrozenSet's runtime type depends on its contents: generic for these 5 ints, and not generic for 11 or more.
+        var small = new[] { 1, 2, 3, 4, 5 }.ToFrozenSet();
+        var large = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }.ToFrozenSet();
+        await Assert.That(Check.Equal<IEnumerable<int>>(small, small.Reverse().ToArray())).IsTrue();
+        await Assert.That(Check.Equal<IEnumerable<int>>(large, large.Reverse().ToArray())).IsTrue();
     }
 
     [Test]
@@ -1020,6 +1031,18 @@ public class CheckTests
     {
         Assert.Throws<CsCheckException>(() => GenAccount.Equality(f => f
             .Compared((a, v) => a with { Id = v }, Gen.Const(0))));
+    }
+
+    sealed record NeverEqual(int Value)
+    {
+        public bool Equals(NeverEqual? other) => false;
+        public override int GetHashCode() => 0;
+    }
+
+    [Test]
+    public void Equality_Time_Below_Three_Still_Runs()
+    {
+        Assert.Throws<CsCheckException>(() => Gen.Int.Select(i => new NeverEqual(i)).Equality(time: 2, threads: 1));
     }
 
     [Test]
