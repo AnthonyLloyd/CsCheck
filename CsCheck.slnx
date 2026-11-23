@@ -9,6 +9,30 @@
     <File Path="docs/Why.md" />
     <File Path="README.md" />
   </Folder>
+  <Folder Name="/Skills/">
+    <File Path="plugins/cscheck/README.md" />
+    <File Path="plugins/cscheck/plugin.json" />
+    <File Path="plugins/cscheck/.claude-plugin/plugin.json" />
+    <File Path="plugins/cscheck/.codex-plugin/plugin.json" />
+  </Folder>
+  <Folder Name="/Skills/closing-test-gaps/">
+    <File Path="plugins/cscheck/skills/closing-test-gaps/SKILL.md" />
+  </Folder>
+  <Folder Name="/Skills/finding-test-gaps/">
+    <File Path="plugins/cscheck/skills/finding-test-gaps/SKILL.md" />
+    <File Path="plugins/cscheck/skills/finding-test-gaps/references/coverage.md" />
+    <File Path="plugins/cscheck/skills/finding-test-gaps/references/mutants.md" />
+    <File Path="plugins/cscheck/skills/finding-test-gaps/scripts/candidates.cs" />
+    <File Path="plugins/cscheck/skills/finding-test-gaps/scripts/mutants.cs" />
+    <File Path="plugins/cscheck/skills/finding-test-gaps/scripts/uncovered.cs" />
+  </Folder>
+  <Folder Name="/Skills/writing-cscheck-tests/">
+    <File Path="plugins/cscheck/skills/writing-cscheck-tests/SKILL.md" />
+    <File Path="plugins/cscheck/skills/writing-cscheck-tests/references/performance.md" />
+    <File Path="plugins/cscheck/skills/writing-cscheck-tests/references/regression.md" />
+    <File Path="plugins/cscheck/skills/writing-cscheck-tests/references/spec.md" />
+    <File Path="plugins/cscheck/skills/writing-cscheck-tests/references/stateful.md" />
+  </Folder>
   <Project Path="CsCheck/CsCheck.csproj" />
   <Project Path="Tests/Tests.csproj" />
 </Solution>

@@ -22,10 +22,9 @@ CsCheck also makes specification, performance and regression testing simple and 
         <PackageProjectUrl>https://github.com/AnthonyLloyd/CsCheck</PackageProjectUrl>
         <PackageIcon>CsCheck.png</PackageIcon>
         <PackageTags>quickcheck;random;model-based;metamorphic;specification;model-checking;temporal;parallel;performance;causal-profiling;regression;testing</PackageTags>
-        <Version>5.0.1</Version>
+        <Version>5.0.2</Version>
         <PackageReleaseNotes>
-Fixed type initializers for WebAssembly.
-Improved Spec.ConformExhaustive now fully parallel.
+Fixed Check.Equal to compare FrozenSet, FrozenDictionary and subclasses of the known set and dictionary types as unordered collections.
         </PackageReleaseNotes>
         <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
         <LangVersion>15</LangVersion>
@@ -46,7 +45,7 @@ Improved Spec.ConformExhaustive now fully parallel.
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <AnalysisMode>All</AnalysisMode>
         <EnablePackageValidation>true</EnablePackageValidation> 
-        <PackageValidationBaselineVersion>5.0.0</PackageValidationBaselineVersion>
+        <PackageValidationBaselineVersion>5.0.1</PackageValidationBaselineVersion>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Meziantou.Analyzer" Version="3.0.341" PrivateAssets="All" />
