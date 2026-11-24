@@ -50,9 +50,8 @@ usage pattern, find a similar test there first and follow it.
 ## Conventions
 
 - **Framework**: CsCheck is framework-agnostic; it signals failure by throwing
-  an exception (or `Sample` returning `false`), so it works with any test
-  framework or none. The conventions below are specific to *this repo's* test
-  suite, which uses TUnit.
+  an exception, so it works with any test framework or none. The conventions
+  below are specific to *this repo's* test suite, which uses TUnit.
 - **Repo tests**: marked `[Test]` (TUnit) and live in `Tests/`.
 - **Output**: in this repo, pass `TUnitX.WriteLine` to any `writeLine:`
   parameter (see `Tests/TUnitX.cs`). In another project, pass that framework's
@@ -261,5 +260,5 @@ ulps.
   candidates whose generated `Size` was not smaller than the current smallest
   failure, so they were skipped rather than asserted. It does **not** mean
   inputs threw, were `Where`-filtered, or that coverage was lost. It only
-  becomes non-zero *after* a failure triggers shrinking; a passing test always
-  reports `0 skipped`. Do not treat a large `skipped` count as a secondary bug.
+  becomes non-zero *after* a failure triggers shrinking. Do not treat a large
+  `skipped` count as a secondary bug.

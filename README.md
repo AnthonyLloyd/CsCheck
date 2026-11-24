@@ -240,7 +240,7 @@ public void AllocatorMany_Classify()
 
 Model-based is often the most economical form of random testing.
 Only a small amount of code is needed to fully test functionality.
-SampleModelBased generates an initial actual and model, then applies a random sequence of operations to both, checking that the actual and model stay equal after each operation.
+SampleModelBased generates an initial actual and model, then applies a random sequence of operations to both, checking that the actual and model stay equal.
 
 ### SetSlim Add
 ```csharp
@@ -543,7 +543,7 @@ original's own published results.
 ### Portfolio Calculation
 **Single** is used to find, pin and continue to check a suitable generated example e.g. to cover a certain codepath.  
 **Hash** is used to find and check a hash for a number of results.  
-It saves a temp cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
+It saves a cache of the results on a successful hash check and each subsequent run will fail with actual vs expected at the first point of any difference.  
 Together **Single** and **Hash** eliminate the need to commit data files in regression testing while also giving detailed information of any change.
 
 ```csharp

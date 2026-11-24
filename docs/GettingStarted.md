@@ -144,7 +144,7 @@ Add(99)
 Remove(7)
 ```
 
-It performs each generated sequence on both collections and checks they stay equal after every operation. If a long sequence fails, shrinking can reduce it to a short sequence such as `Add(4)`, `Remove(4)`, `Add(4)`. In other words: use a simple trusted implementation as the reference model for a more complicated implementation.
+It performs each generated sequence on both collections and checks they stay equal. If a long sequence fails, shrinking can reduce it to a short sequence such as `Add(4)`, `Remove(4)`, `Add(4)`. In other words: use a simple trusted implementation as the reference model for a more complicated implementation.
 
 CsCheck supports this directly with `SampleModelBased`; see the [SetSlim example in the README](../README.md#model-based-testing) for the real API.
 

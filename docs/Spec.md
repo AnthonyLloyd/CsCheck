@@ -395,7 +395,7 @@ Spec.Faults over 17 faults
   | app sent before the second logon                | NO-APP-UNTIL-LOGGED-ON |     4 |
   | reject sent before logon                        | NO-REJECT-BEFORE-LOGON |     1 |
   | test request never times out                    | TESTREQ-TIMEOUT        |     6 |
-  no declared fault exercises: EXPECT-POSITIVE, LOGON-REPLY, ...
+  requirements not targeted by any declared fault: EXPECT-POSITIVE, LOGON-REPLY, ...
 ```
 
 A fault caught by `NOTHING` means a requirement is missing. A fault caught by a *different* requirement than you
