@@ -20,6 +20,8 @@ See [why](https://github.com/AnthonyLloyd/CsCheck/blob/master/docs/Why.md) you s
 In one [shrinking challenge test](https://github.com/jlink/shrinking-challenge/blob/main/challenges/binheap.md) CsCheck managed to shrink to a new smaller example than was thought possible and is not reached by any other testing library.
 CsCheck is the only random testing library that can always shrink to the simplest example (given enough time).
 
+Using an AI coding agent? CsCheck ships [agent skills](https://github.com/AnthonyLloyd/CsCheck/blob/master/plugins/cscheck/README.md) for writing CsCheck tests and finding/closing test gaps, installable in Claude Code, Copilot CLI, VS Code, Cursor and Codex.
+
 CsCheck also has functionality to make multiple types of testing simple and fast:
 
 - [Random testing](#Random-testing)
@@ -738,8 +740,9 @@ If you are generating code that uses CsCheck, read these first:
 
 - [llms.txt](https://github.com/AnthonyLloyd/CsCheck/blob/master/llms.txt) - a condensed API cheat sheet, key facts, and gotchas in the [llms.txt](https://llmstxt.org) format.
 - [AGENTS.md](https://github.com/AnthonyLloyd/CsCheck/blob/master/AGENTS.md) - repo conventions, build/test commands, and worked examples for every testing style.
+- [Agent skills](https://github.com/AnthonyLloyd/CsCheck/blob/master/plugins/cscheck/README.md) - installable skills for writing CsCheck tests and finding/closing test gaps, for Claude Code, Copilot CLI, VS Code, Cursor and Codex.
 
-Both files are packed into the NuGet package alongside this README, so they travel with the dependency. The [Tests](https://github.com/AnthonyLloyd/CsCheck/tree/master/Tests) project is the maintained example collection.
+The llms.txt and AGENTS.md files are packed into the NuGet package alongside this README, so they travel with the dependency; the agent skills are installed separately as described in their README. The [Tests](https://github.com/AnthonyLloyd/CsCheck/tree/master/Tests) project is the maintained example collection.
 
 ## Development
 
