@@ -1,6 +1,15 @@
 ---
 name: finding-test-gaps
-description: Measures what C# unit tests don't check, with any test framework, CsCheck or not: code coverage for code no test runs, and a sweep of hand-picked mutants, compiled and run without editing the repo, for code the tests run but don't check. Use when asked how good the tests are or what they miss, e.g. "how good are the tests for LruCache", "what's untested in this project", "mutation test this method", "what do the tests on my branch miss", "do these tests actually check anything". It takes a test project, a source file, types or members, or a branch to compare with. To hunt for the bugs themselves, use closing-test-gaps, and to write the tests, writing-cscheck-tests.
+description: >-
+  Measures what C# unit tests don't check, with any test framework, CsCheck or not:
+  code coverage for code no test runs, and a sweep of hand-picked mutants, compiled
+  and run without editing the repo, for code the tests run but don't check. Use when
+  asked how good the tests are or what they miss, e.g. "how good are the tests for
+  LruCache", "what's untested in this project", "mutation test this method", "what do
+  the tests on my branch miss", "do these tests actually check anything". It takes a
+  test project, a source file, types or members, or a branch to compare with. To hunt
+  for the bugs themselves, use closing-test-gaps, and to write the tests,
+  writing-cscheck-tests.
 license: Apache-2.0
 compatibility: Needs the .NET 10 SDK or later, since the tools are C# file-based apps, NuGet access on their first run, and git to compare with a branch and for the use counts and callers. For SDK-style C# test projects on VSTest or Microsoft.Testing.Platform.
 ---
