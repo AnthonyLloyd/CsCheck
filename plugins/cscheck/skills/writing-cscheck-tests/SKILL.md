@@ -13,7 +13,7 @@ CsCheck is a random testing library for .NET. You compose a generator, `Gen<T>`,
 
 | To check | Use | Read |
 |---|---|---|
-| A rule over many inputs: a round trip, an oracle, an invariant | `gen.Sample(...)` | this file |
+| A rule over many inputs: a model, a metamorphic relation, a round trip, an invariant | `gen.Sample(...)` | this file |
 | `Equals`, `GetHashCode` and `IEquatable<T>` agree, and each field counts or doesn't on purpose | `gen.Equality(...)` | this file |
 | A stateful type against a simple model of it, such as a `HashSet` | `SampleModelBased` | [stateful.md](references/stateful.md) |
 | Two ways of reaching one result agree | `SampleMetamorphic` | [stateful.md](references/stateful.md) |
@@ -58,29 +58,49 @@ What makes a generator find bugs:
 - **Give usable inputs.** Build them so every sample tests something, such as valid dates in the range the code handles rather than any `DateTime`; then the code rejecting one is a failure. Where filtering is simpler than building, use `Where`: it draws again, and after `CsCheck_WhereLimit` (100) rejections in a row the test fails with "The generator threw." and the inner exception "Failing Where max count", so a generator that rarely gives usable inputs fails loudly.
 - **Never skip inside the check**, such as an early `return true` for inputs the code rejects: a skipped sample counts as a pass. One property skipped nearly all of its random dates like that, and the skip hid a bug in the fifth week of a month. Don't check less for some inputs either: a property that checked only the median below 5 items, with `if (a.Length < 5) return <a weaker check>`, hid a bug in the quartiles at 1 and 2 items. Where the rule really differs for some inputs, state it for them, or give them a property of their own.
 - **Generate the edges on purpose,** since a uniform range almost never hits them: `Gen.Frequency((1, Gen.OneOf(a, b)), (9, Gen.Int[a, b]))` gives the ends a tenth of the time. An offset of exactly 0 was 1 value in 36,001 of one generator, and a bug at 0 survived until it was `Gen.OneOf(Gen.Const(0), Gen.Int[0, 36_000])`. Making half of the generated ranges 1-10 days long found two bugs that longer ranges never hit.
+- **Generate ties, and one value written different ways.** Two values drawn on their own are almost never equal, so make the second a copy of the first some of the time: `Gen.Select(Gen.Int, Gen.Int, Gen.Int[0, 3], (a, b, c) => (a, c == 0 ? a : b))` ties a quarter of the time. Keys, timestamps and anything sorted, matched or deduplicated need ties. Equal values can differ too: `1m` and `1.00m` are equal but print as `1` and `1.00`, `-0.0` equals `0.0` but prints as `-0`, `==` on two `DateTime`s ignores their `Kind`, two `DateTimeOffset`s at different offsets can be one instant, and strings can be equal under the comparer used. Code that groups, caches, deduplicates or keys on such values should treat them alike: SQLite dropped rows when a group held both 1 and 1.0.
 - **Don't filter away a region.** A `Where`, or an implication, that drops a whole region hollows a property as a skip does: a `Where` that kept business hours dropped every weekend, which is where the bug was. Generate such regions on purpose: weekends, holidays, the hours either side of a cut-off, and time zones with and without daylight saving. Pass the code a `TimeZoneInfo` or a `TimeProvider` rather than relying on the machine's zone.
 - **Generate what production passes, and the rest of the domain.** Find how the callers build the input and the values every caller passes, and make sure the generator gives those, since one built from the types alone can miss them. Don't stop there: a failure on input the code must support but no caller makes yet, such as a weekend date where today's callers only pass business days, is a bug too, only a less urgent one.
 - **For an `IEnumerable<T>` parameter, generate lazy sequences too,** not only arrays: a `Count` fast path answers arrays and lists, so its bug only shows on a sequence that can be enumerated only once. Where the code returns lazy sequences of sequences, enumerate them in the order the real caller does, since some only work when each inner one is read before the next.
 - **For a wire format such as JSON, build both sides' inputs through their real serialisers,** not hand-written JSON, fixtures or comments. In one planted case the fixtures lacked a field one side adds, which was the bug.
 - **Generate every shape the format's spec or doc comment allows,** not only those in the sample data: each fraction length from 0 to 9 digits, and both `Z` and offsets. A timestamp parser threw for the 1-6 digits its doc comment allows, because every sample payload had 9, and an RFC 3339 parser rejected the 8-9 digits that Go and Java write.
 - **Give a parser malformed input too:** valid input with junk or a stray delimiter after it should be rejected. Parser combinators such as Pidgin stop where the grammar does unless it ends by requiring the end of input, so a template with a stray `}` after it parsed silently, as if the `}` weren't there.
-- **Look at what a generator gives** by running it once through the classify overload, `gen.Sample(x => x.Kind.ToString(), writeLine)`, whose string is a label, not a failure message: it writes how often each label came up, even when the test fails. A `/` in a label nests rows with subtotals, and a null label counts as `Null Count`. `logger: Logging.CreateTycheLogger()` writes the samples for Tyche, a viewer for property-based testing data, instead; dispose it when done.
+- **Look at what a generator gives** by running it once through the classify overload, `gen.Sample(x => x.Kind.ToString(), writeLine)`, whose string is a label, not a failure message: it writes how often each label came up, even when the test fails. Label the shapes the code treats differently, such as empty, one item, all equal or on a boundary: a shape in 1% of samples is missed by over a third of 100-iteration runs, so give it more weight. A `/` in a label nests rows with subtotals, and a null label counts as `Null Count`. `logger: Logging.CreateTycheLogger()` writes the samples for Tyche, a viewer for property-based testing data, instead; dispose it when done.
 - **Keep each sample cheap,** since a longer run is how you trust a pass. Moq's `Mock.Of<T>(x => x.P == value)` costs about 1 ms a call, dozens of times slower than `new Mock<T>()` with `Setup(x => x.P).Returns(value)`.
 
 ## Properties that find bugs
 
-Write them against the public API. Three kinds find bugs:
-- **A round trip**: format then parse, serialise then deserialise, an id to its display name and back.
-- **An oracle**: a simple version to compare with, such as counting business days one at a time; a rule the docs state; or, for a port of another library, the original's definition. Compare a port with its original first: that found one bug before any test ran, and explained three more within a minute of their shrunk cases.
-- **An invariant**: a schedule's dates increase from start to end, a sorted output stays sorted, or a value that should change smoothly, such as one interpolated between dates, has no jumps. The smoothness one found two bugs the round trips couldn't see.
+Write them against the public API, and take what each one checks from outside the code under test: a simpler version of it, its docs, a standard it follows, another system's output, or a rule all code must keep, such as not throwing on valid input. What the code returns today isn't a source, since a property built on it locks its bugs in.
 
-Idempotency (normalising twice gives what normalising once does) and commutativity (independent updates in either order give the same result) are cheap to check too. Prefer a generator and `Sample` to a loop over hand-picked values: it covers more, and shrinks a failure to a simple case.
+- **A model** is the most powerful property: a simple, obviously correct version of the code to compare every output with, so any wrong answer fails it, not only one that breaks a rule. Write it the slow, plain way, and not with the code's own helpers, or it shares their bugs:
+  - counting business days one at a time, for code that works the count out in one step;
+  - brute force over a small input, such as trying every pair or every subset, for an optimised search;
+  - the formula in the docs or a standard, written out plainly, for code that computes it a faster way;
+  - `BigInteger` arithmetic, for integer code with tricks to avoid overflow, such as a midpoint or the high half of a multiply;
+  - the old version, for a rewrite or an optimisation, kept in the tests until the new one is trusted;
+  - the original's definition, for a port of another library. Compare a port with its original first: that found one bug before any test ran, and explained three more within a minute of their shrunk cases;
+  - a `List<T>`, `HashSet<T>` or `Dictionary<TKey, TValue>`, for a custom collection, with `SampleModelBased` ([stateful.md](references/stateful.md)).
+- **A metamorphic relation**, where no model can be found: run the code on related inputs and check their outputs relate as they must, which needs no expected value:
+  - with and without a fast path, a cache or parallelism, and an incremental update against recomputing from scratch;
+  - the input in another order, where order shouldn't matter;
+  - the input split in two, against the two parts' results combined, such as for a sum or a count;
+  - the input scaled, such as every amount doubled, which should double a total;
+  - an item added that can't change the answer, such as one with no weight, or one a filter drops;
+  - more input, for a result that can only grow, such as a count or a maximum;
+  - idempotency, where normalising twice gives what normalising once does, and commutativity, where independent updates give the same result in either order.
+
+  `SampleMetamorphic` ([stateful.md](references/stateful.md)) checks two ways of changing a stateful type from one start.
+- **A round trip**: format then parse, serialise then deserialise, encode then decode, compress then decompress, an id to its display name and back.
+- **An invariant**: a sort's output is in order and holds the input's items, rounded shares still sum to the total, a cache never holds more than its capacity, a schedule's dates increase from start to end, an interpolated value lies between its neighbours, and a value that should change smoothly, such as one interpolated between dates, has no jumps. The smoothness one found two bugs the round trips couldn't see.
+- **No unexpected exception**: for every input the code must support, it returns, or throws only what its docs name, so a `TryParse` never throws and a second `Dispose` does nothing. It checks the least, but costs the least, so give one to any code that takes input from outside.
+
+Prefer a generator and `Sample` to a loop over hand-picked values: it covers more, and shrinks a failure to a simple case.
 
 Then:
-- A round trip, or a property that compares a method with itself, can't see a bug both sides share, such as a holiday rule both directions call, or a formula that's wrong the same way both times. That needs an oracle, an invariant or an example test.
+- A round trip or a metamorphic relation compares the code with itself, so it can't see a bug both sides share, such as a holiday rule both directions call, or a formula that's wrong the same way both times. That needs a model, an invariant or an example test.
 - Compare canonical values, such as a date or a regenerated output, not strings, when inputs have old spellings.
 - To test that a distribution is right, such as a shuffle being uniform, count outcomes into buckets and call `Check.ChiSquared(expected, actual)`, which needs every bucket to expect more than 5.
-- A new property that fails has probably found a bug. Check the shrunk case against the code and its docs before changing the property, and never weaken the generator or the check to make it pass.
+- A new property that fails has probably found a bug. Check the shrunk case against the code and its docs before changing the property, and never weaken the generator or the check to make it pass. If it fails on most inputs of code already in use, though, suspect the property first, since a bug that common would usually have been noticed. `Sample` stops at the first failure, so see the rate with the classify overload, labelling each input by whether it holds.
 
 ### Equality
 
@@ -102,7 +122,7 @@ genOrder.Equality(f => f
 
 - **Never assert inside `Sample`.** NUnit records every failing `Assert.That`, which buries the shrunk case under dozens of failures. An exception the code throws is fine: CsCheck catches it and shrinks it like a false, and keeps it as the `InnerException`. Since CsCheck 5 its text isn't copied into the message.
 - A failure's message is a seed line with `(N shrinks, M skipped, K total)`, then the shrunk input, cut at 5,000 characters, with an array or list of more than 12 items shown as `L=n [first 6 ... last 6]` and other collections in full up to 999 items: pass `print:` to see more. `The generator threw.` means the generator failed, not the check. `skipped` counts shrink candidates that weren't smaller than the failure found so far, so they never ran: it isn't errors or `Where`-filtered inputs, and a large count is no problem.
-- **Shrinking spends the same budget:** after the first failure, the remaining iterations or seconds only try smaller cases, so a failing run of the default 100 iterations barely shrinks. To shrink further, rerun with the printed seed as `seed:` and a larger `iter` or `time`; the seed's case runs first.
+- **Shrinking spends the same budget:** after the first failure, the remaining iterations or seconds only try smaller cases, so a failing run of the default 100 iterations barely shrinks. To shrink further, rerun with the printed seed as `seed:` and a larger `iter` or `time`; the seed's case runs first. If that rerun passes, the failure depended on more than its input, such as the clock or state shared between samples or threads; `threads: 1` shows whether threads are the cause.
 - **CsCheck reports only the smallest failure.** To find the other kinds, leave the kind just found out of the generator with a `Where` on its input shape, rerun, and repeat until the property passes: one property showed three bugs in three runs. Then take the `Where` out, so the test still fails on the first kind. Where the domain is small enough to list, such as every weekday for a few years, a probe that loops over all of it once shows every kind of failure with its count in one run.
 - **Once a bug is fixed, keep its shrunk case as a plain example test.** A seed reproduces it only while the generator and CsCheck stay the same.
 
@@ -112,8 +132,11 @@ One passing run isn't proof, since every run draws new inputs. Before trusting a
 - Run it longer in Release, filtered to the test: `dotnet test -c Release -e CsCheck_Time=60 --filter <name>`, or `time: 60` while you try it; a `SampleFaults` test then takes (faults + 1) times as long. Or repeat the test. One property passed several runs before it found its bug. A seed only reproduces a failure; it adds no coverage.
 - Then remove the `time:` or `iter:` you added, as with `writeLine:`, so the test runs at the suite's default. If 100 iterations can miss a case, such as the one failing name among a few dozen, make each iteration check every name rather than raising `iter`.
 - Break the code on purpose, with one small change the property should catch, and check it fails within a long run. If it passes, the property is hollow. finding-test-gaps' `mutants.cs` does this without editing the repo; its `--only` rerun of a sweep's survivors is this check.
+- See what it reaches: collect coverage as finding-test-gaps' step 1 does, with only the new property running and `CsCheck_Time` set, into a folder of its own, and read what `uncovered.cs` shows not run or partly taken in the members the property calls. Each is a kind of input the generator never makes, or dead code: widen the generator for each, one at a time, and measure again. The whole suite's coverage can't show this, since an example test that runs a line hides that the property never does.
 - `Sample` runs on every logical CPU at once, so the check must be thread-safe: make what it changes inside it or in the generator, with `Gen.Const(() => new ...)`, or pass `threads: 1`.
 - `iter: 0` or `time: 0` passed as arguments runs nothing and passes: only the settings are validated, not the arguments.
+
+Once a property is trusted, another kind of property on the same code, such as an invariant beside a round trip, finds more bugs than running the first one longer: a new property often fails on its first run, where an old one given more time rarely does.
 
 ## Replacing example tests
 
